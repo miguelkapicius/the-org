@@ -14,7 +14,7 @@ Precisávamos definir quais melhorias o manager pode comprar para o time.
 2. **Melhorias soltas** (comprar qualquer coisa a qualquer momento) — mais simples, mas sem sensação de construir o clube.
 
 ## Decisão
-O time tem uma única instalação, a **Gaming House**. Não subir o nível dela **bloqueia** outras melhorias, como treinos e scouts. O custo de cada nível deve ser **balanceado**: nem tão fácil de subir, nem tão difícil. Quantidade de níveis: a definir.
+O time tem uma única instalação, a **Gaming House**. Não subir o nível dela **bloqueia** outras melhorias, como treinos e scouts. O custo de cada nível deve ser **balanceado**: nem tão fácil de subir, nem tão difícil. A evolução entre níveis deve ser **gradativa**. Quantidade de níveis e o que cada um libera: a definir.
 
 ## Por quê
 Cria o loop de longo prazo do manager (construir o clube) e dá peso às decisões da economia do clube.

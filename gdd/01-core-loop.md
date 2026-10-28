@@ -11,7 +11,7 @@ _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 Durante a partida, o jogador **assiste**: troca de câmera entre jogadores, vê a visão em primeira pessoa, acompanha a vida do time e o minimapa.
 
 - **Primeira versão:** só assistir, sem interferir (decisão 0001).
-- **Mais para frente:** o manager poderá pedir **timeouts**. É a **única** intervenção durante a partida; fora isso, ele só assiste.
+- **Mais para frente:** o manager poderá pedir **timeouts** (**3 por partida**). É a **única** intervenção durante a partida; fora isso, ele só assiste.
 
 ## Loop de sessão
 
@@ -32,6 +32,6 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 
 ## Perguntas em aberto
 
-- Quantos timeouts por partida? O que acontece no timeout (o que muda no time depois dele)?
+- O que acontece no timeout (o que muda no time depois dele)?
 - Dá para pular/simular rápido uma partida sem assistir?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)

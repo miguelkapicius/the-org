@@ -35,7 +35,7 @@ O time tem **uma** instalação: a **Gaming House**. O manager investe para subi
 
 O nível da Gaming House **libera** outras coisas que o manager pode melhorar, como **treinos** e **scouts**. Sem subir a Gaming House, essas opções ficam bloqueadas.
 
-- **Níveis:** quantidade a definir mais para frente.
+- **Níveis:** quantidade a definir. A evolução deve ser **gradativa**: cada nível libera um pouco mais, sem saltos grandes.
 - **Custo:** precisa ser **balanceado**: nem tão fácil de subir, nem tão difícil.
 
 ## Perguntas em aberto
