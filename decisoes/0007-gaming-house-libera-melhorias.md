@@ -1,4 +1,4 @@
-# 0007 — Instalações do time liberam outras melhorias
+# 0007 — Gaming House libera outras melhorias
 
 - **Status:** proposta
 - **Data:** 2026-10-28
@@ -10,15 +10,15 @@
 Precisávamos definir quais melhorias o manager pode comprar para o time.
 
 ## Opções consideradas
-1. **Instalações que liberam outras melhorias** — CT, gaming house e base; o nível delas desbloqueia treinos, scouts etc. Dá uma progressão clara de longo prazo.
+1. **Gaming House com níveis que liberam outras melhorias** — o nível dela desbloqueia treinos, scouts etc. Dá uma progressão clara de longo prazo.
 2. **Melhorias soltas** (comprar qualquer coisa a qualquer momento) — mais simples, mas sem sensação de construir o clube.
 
 ## Decisão
-As melhorias principais são as **instalações** do time: **CT** (centro de treinamento), **gaming house** e **base**. Não melhorar uma instalação **bloqueia** outras melhorias ligadas a ela, como treinos e scouts.
+O time tem uma única instalação, a **Gaming House**. Não subir o nível dela **bloqueia** outras melhorias, como treinos e scouts. O custo de cada nível deve ser **balanceado**: nem tão fácil de subir, nem tão difícil. Quantidade de níveis: a definir.
 
 ## Por quê
 Cria o loop de longo prazo do manager (construir o clube) e dá peso às decisões da economia do clube.
 
 ## Consequências
-- Precisamos definir o que cada instalação libera, níveis e custos.
+- Precisamos definir os níveis, o que cada um libera e a curva de custo.
 - Pelo pilar "Gestão que aparece na partida", os treinos e scouts liberados devem ter efeito visível no jogo dos bots.

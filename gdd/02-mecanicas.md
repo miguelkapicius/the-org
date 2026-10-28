@@ -36,7 +36,7 @@ Os bots devem jogar como profissionais jogariam. Comportamentos que precisam exi
 
 ### Gestão do time
 - **Economia do time** (dinheiro do clube, salários, prêmios).
-- **Instalações** do time (CT, gaming house, base) que liberam outras melhorias, como treinos e scouts. Detalhes em `03-progressao.md` (decisão 0007).
+- **Gaming House** do time: o nível dela libera outras melhorias, como treinos e scouts. Detalhes em `03-progressao.md` (decisão 0007).
 - **[Sugestão]** Elenco: contratar, vender, treinar jogadores com atributos.
 
 ## Regras e fórmulas
