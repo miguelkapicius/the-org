@@ -10,7 +10,9 @@ _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 
 Durante a partida, o jogador **assiste**: troca de câmera entre jogadores, vê a visão em primeira pessoa, acompanha a vida do time e o minimapa.
 
-- **[Sugestão]** Ações possíveis durante a partida (a validar): pausar/timeout tático, mudar a estratégia do próximo round, definir a compra do próximo round.
+- **Primeira versão:** só assistir, sem interferir (decisão 0001).
+- **Mais para frente:** intervenções de técnico, como pedir timeouts.
+- **[Sugestão]** Outras intervenções futuras possíveis: mudar a estratégia do próximo round, definir a compra do próximo round.
 
 ## Loop de sessão
 
@@ -19,7 +21,7 @@ Durante a partida, o jogador **assiste**: troca de câmera entre jogadores, vê 
 1. **Antes da partida:** ver adversário, escolher veto de mapas, definir estratégias e compras padrão.
 2. **Partida:** assistir (ou simular rápido) e reagir nos intervalos.
 3. **Depois da partida:** resultado, dinheiro, desempenho individual, moral.
-4. **Gestão:** treinos, contratações, melhorias, economia do time.
+4. **Gestão:** treinos, scouts, contratações, melhorias de instalações (decisão 0007), economia do time.
 
 ## Loop de longo prazo
 
@@ -31,6 +33,6 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 
 ## Perguntas em aberto
 
-- O jogador interfere na partida (timeouts, táticas, compras) ou só assiste?
+- Quais intervenções o manager terá na fase futura, além do timeout? Quantos timeouts por partida?
 - Dá para pular/simular rápido uma partida sem assistir?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)

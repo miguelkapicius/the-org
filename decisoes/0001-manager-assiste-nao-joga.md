@@ -15,10 +15,12 @@ Precisamos definir o papel do jogador durante a partida.
 3. **Só resultado em texto** — barato, mas perde o principal diferencial.
 
 ## Decisão
-O jogador **não controla** os bots com mouse e teclado. Ele assiste à partida como numa transmissão. Se haverá intervenções táticas (timeout, compra, estratégia), fica em aberto.
+O jogador **não controla** os bots com mouse e teclado. Ele assiste à partida como numa transmissão. Intervenção em fases:
+- **Primeira versão:** o manager só assiste, sem interferir.
+- **Mais para frente:** o manager pode interferir como um técnico de verdade, por exemplo pedindo timeouts. Quais intervenções exatamente fica para depois.
 
 ## Por quê
 Sustenta os pilares "Bots que jogam como profissionais" e "Assistir é o prêmio".
 
 ## Consequências
-A qualidade da IA e da câmera vira o centro do produto. Não precisamos de netcode de FPS nem de sensação de tiro jogável.
+A qualidade da IA e da câmera vira o centro do produto. Não precisamos de netcode de FPS nem de sensação de tiro jogável. A partida deve ser pensada desde já para aceitar intervenções do manager depois (ex.: pontos de pausa entre rounds), mesmo que a primeira versão não as use.

@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -36,7 +36,7 @@ Os bots devem jogar como profissionais jogariam. Comportamentos que precisam exi
 
 ### Gestão do time
 - **Economia do time** (dinheiro do clube, salários, prêmios).
-- **Melhorias** para o time.
+- **Instalações** do time (CT, gaming house, base) que liberam outras melhorias, como treinos e scouts. Detalhes em `03-progressao.md` (decisão 0007).
 - **[Sugestão]** Elenco: contratar, vender, treinar jogadores com atributos.
 
 ## Regras e fórmulas
@@ -50,5 +50,4 @@ _A definir (de partida e de carreira)._
 ## Perguntas em aberto
 
 - Quais atributos um jogador tem e como cada um afeta a IA?
-- "Melhorias para o time": o que exatamente? (estrutura, bootcamp, equipamento, staff?)
 - A economia do round segue valores próximos aos do CS ou própria?

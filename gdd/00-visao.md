@@ -1,6 +1,6 @@
 # Visão
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0007
 
 _A base de tudo. Toda outra seção deve respeitar os pilares definidos aqui._
 
@@ -35,7 +35,7 @@ _A definir (ver perguntas em aberto)._
 
 ## O que o jogo NÃO é
 
-- Não é um FPS jogável: o jogador **não controla** os bots com mouse e teclado durante a partida. (decisão 0001; se haverá intervenção tática, está em aberto)
+- Não é um FPS jogável: o jogador **não controla** os bots com mouse e teclado durante a partida. (decisão 0001). No começo o manager só assiste; mais para frente poderá interferir como técnico, por exemplo pedindo timeouts.
 - Não é uma cópia do CS: não usamos mapas, armas, marcas ou assets da Valve.
 - **[Sugestão]** Não é um manager de planilha: a partida em 3D é o centro, não um resumo em texto.
 
