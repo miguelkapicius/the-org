@@ -11,7 +11,9 @@ _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 Durante a partida, o jogador **assiste**: troca de câmera entre jogadores, vê a visão em primeira pessoa, acompanha a vida do time e o minimapa.
 
 - **Primeira versão:** só assistir, sem interferir (decisão 0001).
-- **Mais para frente:** o manager poderá pedir **timeouts** (**3 por partida**). Depois de um timeout, o time tem uma **chance** de melhorar e de mudar a forma de jogar. Não é garantido. É a **única** intervenção durante a partida; fora isso, ele só assiste.
+- **Mais para frente:** o manager poderá pedir **timeouts** (**3 por partida**). Depois de um timeout, o time tem uma **chance** de melhorar e de mudar a forma de jogar. Não é garantido.
+  - **A chance depende de:** atributos dos jogadores, nível da Gaming House e momento da partida.
+  - **O que pode mudar:** o estilo do time, por exemplo ficar **mais agressivo** ou **mais defensivo**. É a **única** intervenção durante a partida; fora isso, ele só assiste.
 
 ## Loop de sessão
 
@@ -32,7 +34,7 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 
 ## Perguntas em aberto
 
-- Do que depende a chance de o timeout funcionar? (ex.: atributos dos jogadores, nível da Gaming House, momento da partida)
-- O que exatamente pode mudar na forma de jogar depois do timeout?
+- O manager escolhe a mudança de estilo no timeout (agressivo/defensivo) ou ela acontece sozinha?
+- Quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar?
 - Dá para pular/simular rápido uma partida sem assistir?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)

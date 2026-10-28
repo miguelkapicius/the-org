@@ -17,7 +17,7 @@ Precisamos definir o papel do jogador durante a partida.
 ## Decisão
 O jogador **não controla** os bots com mouse e teclado. Ele assiste à partida como numa transmissão. Intervenção em fases:
 - **Primeira versão:** o manager só assiste, sem interferir.
-- **Mais para frente:** o manager poderá pedir **timeouts**, **3 por partida**. Depois de um timeout, o time tem uma chance de melhorar e de mudar a forma de jogar. É a **única** intervenção durante a partida.
+- **Mais para frente:** o manager poderá pedir **timeouts**, **3 por partida**. Depois de um timeout, o time tem uma chance de melhorar e de mudar a forma de jogar (ex.: mais agressivo ou mais defensivo). A chance depende dos atributos dos jogadores, do nível da Gaming House e do momento da partida. É a **única** intervenção durante a partida.
 
 ## Por quê
 Sustenta os pilares "Bots que jogam como profissionais" e "Assistir é o prêmio".
