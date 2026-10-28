@@ -13,4 +13,6 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Economia do clube | Dinheiro do time para salários, contratações e melhorias. | — | 03-progressao |
 | Melhoria | Algo que o manager compra para evoluir o time (detalhes em aberto). | upgrade | 03-progressao |
 | Abrir pixel | Expor o mínimo do corpo para ver/atirar num ângulo. | — | 02-mecanicas |
+| Bomba | Objeto que o ataque planta para vencer o round (nome próprio a definir). | C4 | 02-mecanicas |
+| Bombsite | Local do mapa onde a bomba pode ser plantada. | site | 02-mecanicas |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |

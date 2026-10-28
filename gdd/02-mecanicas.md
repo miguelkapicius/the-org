@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -21,7 +21,7 @@ _Movimento dos bots: ver "IA dos bots" abaixo._
 ## Sistemas principais
 
 ### Partida (simulação)
-- **[Sugestão]** Formato 5v5, ataque x defesa, objetivo de plantar/desarmar (ou equivalente com identidade própria, ver decisão 0004).
+- Formato 5v5, ataque x defesa, **modo bomba igual ao do CS** (decisão 0005): o ataque planta a bomba em um dos bombsites, a defesa impede ou desarma. Vence o round quem eliminar o outro time, explodir a bomba, desarmar a bomba ou (defesa) segurar até o tempo acabar.
 - Economia por round: dinheiro ganho por vitória, derrota, abates, objetivo; compra de armas e utilitárias.
 
 ### IA dos bots (feature principal, decisão 0003)
@@ -49,7 +49,6 @@ _A definir (de partida e de carreira)._
 
 ## Perguntas em aberto
 
-- O modo de jogo é o mesmo do CS (bomba) ou criamos um objetivo próprio?
 - Quais atributos um jogador tem e como cada um afeta a IA?
 - "Melhorias para o time": o que exatamente? (estrutura, bootcamp, equipamento, staff?)
 - A economia do round segue valores próximos aos do CS ou própria?

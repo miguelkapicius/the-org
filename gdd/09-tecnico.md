@@ -1,6 +1,6 @@
 # Técnico
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003, 0006
 
 _Engine, arquitetura e restrições técnicas._
 
@@ -8,7 +8,7 @@ _Engine, arquitetura e restrições técnicas._
 
 ## Engine e ferramentas
 
-_A definir (Unity, Unreal, Godot...)._
+**Unity** (decisão 0006).
 
 ## Requisitos de performance
 
@@ -28,6 +28,7 @@ _A definir._
 
 ## Perguntas em aberto
 
-- Engine?
+- Versão da Unity e pipeline de render (URP ou HDRP)?
+- Quais pacotes usar para IA e navegação (NavMesh nativo, ML-Agents, solução própria)?
 - A simulação precisa ser determinística (mesmo resultado ao rever um round/replay)?
 - Haverá replays das partidas?

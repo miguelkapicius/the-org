@@ -20,4 +20,4 @@ Ritmo, formato competitivo e sensação parecidos com o CS, mas **mapas, armas, 
 Evita problemas de propriedade intelectual e dá espaço para criarmos nossas próprias ideias.
 
 ## Consequências
-Precisamos criar mapas, arsenal e nomes próprios. Usar CS como referência é ok; copiar assets ou marcas não.
+Precisamos criar mapas, arsenal e nomes próprios. Usar CS como referência é ok; copiar assets ou marcas não. Regras e formato de jogo podem ser iguais (ver 0005); o que precisa ser nosso é a apresentação.
