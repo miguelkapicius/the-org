@@ -1,6 +1,6 @@
 # Progressão e economia
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010
 
 _Como o jogador evolui e quais recursos circulam._
 
@@ -23,6 +23,14 @@ Existem **duas economias** diferentes:
 - Fontes: prêmios de campeonato, patrocínios, venda de jogadores.
 - Sumidouros: salários, contratações, melhorias da Gaming House, viagens/bootcamps.
 
+## Falência
+
+Se o dinheiro do clube acabar, o time **pode falir** e o jogo acaba (**game over**).
+
+## Evolução dos jogadores
+
+A evolução dos jogadores é **multifatorial**: o jogo mistura vários dados, como **treino**, **experiência em partida** e **idade**.
+
 ## Curva de dificuldade
 
 _A definir._
@@ -44,5 +52,5 @@ O nível da Gaming House **libera** outras coisas que o manager pode melhorar, c
 - Quantos níveis a Gaming House tem e o que cada nível libera?
 - Qual a curva de custo por nível (para ficar balanceada)?
 - A Gaming House tem custo de manutenção mensal?
-- Existe falência / game over por dinheiro?
-- Como os jogadores evoluem: treino, experiência em partida, idade?
+- Falência: o jogador recebe avisos antes? Existe empréstimo ou alguma saída antes do game over?
+- Evolução: quanto pesa cada fator (treino, experiência, idade)? Existe pico de idade e declínio?

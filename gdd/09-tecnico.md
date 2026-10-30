@@ -1,6 +1,6 @@
 # Técnico
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003, 0006
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003, 0006, 0008, 0009
 
 _Engine, arquitetura e restrições técnicas._
 
@@ -9,6 +9,21 @@ _Engine, arquitetura e restrições técnicas._
 ## Engine e ferramentas
 
 **Unity** (decisão 0006).
+
+### IA dos bots (decisão 0009 — recomendação do agente, a validar)
+
+| Camada | O que faz | Ferramenta |
+|---|---|---|
+| Navegação | Caminhos pelo mapa | **NavMesh** da Unity (pacote AI Navigation) |
+| Decisão de time | Estratégia do round, execução, rotação, retake | **IA própria** (Utility AI ou behavior tree) |
+| Decisão individual | Posição, peek, abrir pixel, utilitária | **IA própria** |
+| Visão e mira | Quem vê quem, tempo de reação, erro de mira | **Sistema próprio** (raycasts + modelo de erro) |
+
+**ML-Agents fica de fora no começo.** Treinar bots por aprendizado de máquina é lento, difícil de controlar e difícil de ligar aos atributos dos jogadores. Pode voltar no futuro para comportamentos específicos.
+
+### Partida pulada (decisão 0008)
+
+O resultado de uma partida pulada é calculado por probabilidade. **[Sugestão]** Para não ficar diferente da partida assistida, calibrar essa fórmula rodando muitas partidas da IA real sem gráficos e comparando os resultados.
 
 ## Requisitos de performance
 
@@ -29,6 +44,5 @@ _A definir._
 ## Perguntas em aberto
 
 - Versão da Unity e pipeline de render (URP ou HDRP)?
-- Quais pacotes usar para IA e navegação (NavMesh nativo, ML-Agents, solução própria)?
 - A simulação precisa ser determinística (mesmo resultado ao rever um round/replay)?
 - Haverá replays das partidas?

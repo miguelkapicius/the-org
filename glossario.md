@@ -17,4 +17,6 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Abrir pixel | Expor o mínimo do corpo para ver/atirar num ângulo. | — | 02-mecanicas |
 | Bomba | Objeto que o ataque planta para vencer o round (nome próprio a definir). | C4 | 02-mecanicas |
 | Bombsite | Local do mapa onde a bomba pode ser plantada. | site | 02-mecanicas |
+| Pular partida | Ver só o resultado, calculado por probabilidade, sem assistir. | simular (ambíguo) | 01-core-loop |
+| Falência | Fim do jogo quando o dinheiro do clube acaba. | game over (usar só como descrição) | 03-progressao |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |

@@ -1,4 +1,4 @@
-# 0005 — Modo de jogo com bomba, igual ao CS
+# 0005 — Modo bomba e economia do round iguais ao CS
 
 - **Status:** proposta
 - **Data:** 2026-10-28
@@ -14,7 +14,7 @@ Precisávamos definir o objetivo da partida.
 2. **Objetivo próprio** — mais original, mas o público precisa aprender e perdemos referências para a IA.
 
 ## Decisão
-Partidas 5v5 no **modo bomba, com as mesmas regras do CS**: ataque planta, defesa defende ou desarma.
+Partidas 5v5 no **modo bomba, com as mesmas regras do CS**: ataque planta, defesa defende ou desarma. A **economia do round** usa os **mesmos valores do CS** (recompensas por vitória, derrota, abate e objetivo).
 
 ## Por quê
 Reforça o pilar "Bots que jogam como profissionais": podemos usar o jogo profissional de CS como referência direta para o comportamento da IA. Regras de jogo não são protegidas como marca ou asset, então isso não contradiz a 0004.

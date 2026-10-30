@@ -22,7 +22,7 @@ _Movimento dos bots: ver "IA dos bots" abaixo._
 
 ### Partida (simulação)
 - Formato 5v5, ataque x defesa, **modo bomba igual ao do CS** (decisão 0005): o ataque planta a bomba em um dos bombsites, a defesa impede ou desarma. Vence o round quem eliminar o outro time, explodir a bomba, desarmar a bomba ou (defesa) segurar até o tempo acabar.
-- Economia por round: dinheiro ganho por vitória, derrota, abates, objetivo; compra de armas e utilitárias.
+- Economia do round **com os mesmos valores do CS** (decisão 0005): dinheiro por vitória, derrota, abates e objetivo; compra de armas e utilitárias.
 
 ### IA dos bots (feature principal, decisão 0003)
 Os bots devem jogar como profissionais jogariam. Comportamentos que precisam existir:
@@ -50,4 +50,3 @@ _A definir (de partida e de carreira)._
 ## Perguntas em aberto
 
 - Quais atributos um jogador tem e como cada um afeta a IA?
-- A economia do round segue valores próximos aos do CS ou própria?

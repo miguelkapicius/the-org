@@ -24,7 +24,7 @@ Um jogo de **manager de um time de tático-FPS competitivo**, em que você monta
 
 ## Plataformas
 
-_A definir (ver perguntas em aberto)._
+**PC, na Steam.**
 
 ## Pilares de design (3 a 5)
 
@@ -41,7 +41,6 @@ _A definir (ver perguntas em aberto)._
 
 ## Perguntas em aberto
 
-- Plataforma: só PC? Steam?
 - Single-player apenas, ou terá algum modo online (ligas entre amigos, ranking)?
 - Nome do jogo e do "esporte" fictício.
 - Modelo de negócio: jogo pago, free-to-play, early access?
