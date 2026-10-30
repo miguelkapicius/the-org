@@ -52,5 +52,6 @@ O nível da Gaming House **libera** outras coisas que o manager pode melhorar, c
 - Quantos níveis a Gaming House tem e o que cada nível libera?
 - Qual a curva de custo por nível (para ficar balanceada)?
 - A Gaming House tem custo de manutenção mensal?
+- Elenco: como funcionam contratações, vendas, salários e contratos?
 - Falência: o jogador recebe avisos antes? Existe empréstimo ou alguma saída antes do game over?
 - Evolução: quanto pesa cada fator (treino, experiência, idade)? Existe pico de idade e declínio?

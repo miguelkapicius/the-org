@@ -44,3 +44,4 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 - Balanceamento: quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar?
 - Quais estilos o manager pode escolher além de agressivo e defensivo?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)
+- Carreira: formato dos campeonatos (MD1/MD3, grupos, mata-mata) e calendário.

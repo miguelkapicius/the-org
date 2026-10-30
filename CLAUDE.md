@@ -8,8 +8,9 @@ Este repositório é o **GDD (Game Design Document)** de um jogo escrito por dua
 
 1. Leia `gdd/00-visao.md` (pilares do jogo — tudo deve respeitá-los).
 2. Leia `glossario.md` e use **somente** os termos definidos lá.
-3. Liste `decisoes/` e leia as decisões com status `aceita` que tocam no assunto da tarefa.
-4. Verifique se há PRs ou issues abertas sobre a mesma seção (`gh pr list`, `gh issue list`, se disponível). Se houver, avise o usuário antes de editar a mesma seção.
+3. Leia `perguntas-abertas.md` para saber o que ainda não foi decidido.
+4. Liste `decisoes/` e leia as decisões com status `aceita` que tocam no assunto da tarefa.
+5. Verifique se há PRs ou issues abertas sobre a mesma seção (`gh pr list`, `gh issue list`, se disponível). Se houver, avise o usuário antes de editar a mesma seção.
 
 ## Hierarquia de verdade
 
@@ -28,7 +29,18 @@ Nunca contradiga um nível mais forte. Se a tarefa exigir isso, **pare e proponh
 - Só o humano revisor muda uma seção para `aprovado` (no merge do PR).
 - Termo novo? Adicione ao `glossario.md` no mesmo PR.
 - Escolha relevante (afeta outras seções, difícil de desfazer, ou já foi debatida)? Registre em `decisoes/`.
-- Dúvida sem resposta? Não invente: registre em "Perguntas em aberto" da seção ou abra uma issue.
+- Dúvida sem resposta? Não invente: registre em "Perguntas em aberto" da seção **e** em `perguntas-abertas.md`.
+
+## Perguntas em aberto (manter sempre sincronizado)
+
+`perguntas-abertas.md` é a lista central do que falta decidir. **Toda vez** que algo for respondido, decidido ou alterado:
+
+1. Registre a resposta na seção do GDD (e em `decisoes/`, se for relevante).
+2. **Remova** a pergunta respondida de `perguntas-abertas.md` **e** de "Perguntas em aberto" da seção, no mesmo commit.
+3. Se a resposta abrir dúvidas novas, adicione-as nos dois lugares, na prioridade certa.
+4. Se uma mudança tornar uma resposta antiga inválida, reabra a pergunta nos dois lugares.
+
+Antes de commitar, confira: nenhuma pergunta já respondida pode continuar na lista.
 - Commits pequenos, mensagem em português, dizendo **o quê** e **por quê**.
 
 ## Ao terminar uma sessão

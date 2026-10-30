@@ -6,7 +6,8 @@ description: Consolida o trabalho da sessão no repositório antes de sair
    - decisões relevantes → `decisoes/`
    - conteúdo → seção certa em `gdd/` (atualize o cabeçalho e `gdd/README.md`)
    - termos novos → `glossario.md`
-   - dúvidas → "Perguntas em aberto" da seção ou uma issue
+   - dúvidas → "Perguntas em aberto" da seção **e** `perguntas-abertas.md`
+   - perguntas respondidas → removidas de `perguntas-abertas.md` e da seção
    Escreva o que faltar.
 3. Mostre ao usuário o resumo do que vai ser commitado e peça confirmação.
 4. Commite (mensagem em português: o quê e por quê) e faça push da branch.

@@ -26,6 +26,9 @@ if [ -n "$propostas" ]; then
   echo; echo "Decisões em discussão:"; echo "$propostas" | sed 's/^/- /'
 fi
 
+abertas=$(grep -c '^- \[ \]' perguntas-abertas.md 2>/dev/null)
+[ -n "$abertas" ] && { echo; echo "Perguntas em aberto: $abertas (ver perguntas-abertas.md)"; }
+
 if command -v gh >/dev/null 2>&1; then
   prs=$(gh pr list --limit 10 2>/dev/null)
   [ -n "$prs" ] && { echo; echo "PRs abertos:"; echo "$prs"; }

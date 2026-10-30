@@ -10,6 +10,7 @@ Game Design Document do jogo. Este repositório é o **contrato** do que o jogo 
 | `gdd/` | O GDD, uma seção por arquivo |
 | `decisoes/` | Registro de decisões: o que foi decidido e **por quê** |
 | `glossario.md` | Termos oficiais do jogo |
+| `perguntas-abertas.md` | Tudo que ainda falta decidir, por prioridade |
 | `.claude/commands/` | Comandos compartilhados (`/sincronizar`, `/propor-decisao`, ...) |
 | `.claude/hooks/` | Hook que sincroniza o repo ao abrir uma sessão |
 
