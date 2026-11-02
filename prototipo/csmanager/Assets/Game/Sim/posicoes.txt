@@ -1,0 +1,27 @@
+TR curta de cima|19|6
+TR dobra da rampa|106|42
+TR cobrindo plataforma|60|31
+TR dobra da rampa (do lado)|26|14
+TR cobrindo descida do CT|61|33
+TR dobra do casarão|67|44
+TR cobrindo viela|31|21
+TR cobrindo mercado|48|35
+TR de olho no bomb|26|20
+TR topo do meio|42|35
+TR cobrindo conector|47|40
+CT rua do CT|41|35
+CT janelão|240|207
+TR meio|243|224
+CT viela|31|29
+CT canto do tapete|60|59
+CT retomada do B|25|26
+TR sala do palácio|21|23
+CT banca|95|109
+CT C4 caído|76|93
+CT agressão no meio|27|34
+CT pilar do B|43|60
+CT quina da rampa|63|91
+CT plataforma|73|116
+CT canto do A|28|47
+CT praça|17|30
+CT retomada do A|16|32
