@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using CSM.Map;
@@ -12,7 +12,10 @@ namespace CSM.Sim
     /// </summary>
     public static class Pixels
     {
-        public const int N = 48; public const float MAX = 450, STEP = MathF.PI * 2 / N;
+        // MAX: até onde procura quina. Com 450 a janela/ângulo longo (janelão, meio, AWP) nunca virava quina — o raio
+        // cortado em 450 dos dois lados da abertura não dava o salto — e o bot não tinha como mirar no ângulo longo
+        public const int N = 48; public const float STEP = MathF.PI * 2 / N;
+        public const float MAX = 450;   // testado 900: não mudou a mira (o ângulo longo do meio é posição, não quina — ver Brain.PosicaoDeles)
         /// <summary>
         /// ponto = pra onde mirar (colado na borda, do lado visível); dp = distância até a quina; lado = por onde abrir
         /// (+1/-1, ângulo pra se afastar da parede); atras = pontos escondidos atrás da quina (onde mora o perigo).

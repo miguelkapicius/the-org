@@ -222,6 +222,73 @@ def ik(s, h, l1, l2, pole):
     p = pole - u * pole.dot(u); p = p.normalized() if p.length > 1e-6 else Vector((0, 0, -1))
     return s + u * a + p * hh, s + u * dd
 
+def trilha(t, chaves):
+    """Posição em t por pontos-chave [(t, Vector)] com smoothstep entre eles (antes do 1º = 1º; depois do último = último)."""
+    if t <= chaves[0][0]: return chaves[0][1].copy()
+    for (ta, a), (tb, b) in zip(chaves[:-1], chaves[1:]):
+        if t <= tb:
+            u = (t - ta) / max(tb - ta, 1e-6); u = u * u * (3 - 2 * u)
+            return a.lerp(b, u)
+    return chaves[-1][1].copy()
+
+def _norma(q, pot):
+    if pot == 2: return q.length
+    return (abs(q.x) ** pot + abs(q.y) ** pot + abs(q.z) ** pot) ** (1.0 / pot)
+
+def _fundo(p, r, obst):
+    """Quanto o ponto p (esfera de raio r) entra nos obstáculos [(centro, raios, expoente)] (2 = elipsoide, 4 = caixa
+    arredondada)."""
+    d = 0.0
+    for c, R, pot in obst:
+        q = Vector(((p.x - c.x) / (R.x + r), (p.y - c.y) / (R.y + r), (p.z - c.z) / (R.z + r)))
+        e = _norma(q, pot)
+        if e < 1: d += 1 - e
+    return d
+
+COTOVELO_ANT = {}   # ângulo do cotovelo no quadro anterior da MESMA animação (por braço): continuidade entre quadros
+
+def ik_desvia(s, h, l1, l2, pole, obst_mao, obst_braco, meio=None, chave=None):
+    """IK do braço que não atravessa o corpo: a mão sai de dentro da cabeça/tronco (vai pra superfície) e o cotovelo
+    gira em volta do eixo ombro-mão até o braço passar por fora (preferindo o polo pedido; custo contínuo pra não
+    trocar de lado de um quadro pro outro)."""
+    for _ in range(2):
+        for c, R, pot in obst_mao:
+            # a mão inteira fica fora da cabeça/máscara; no tronco/colete só o centro (encosta: a mão no punho da arma
+            # perto do peito é a pose de mira aprovada)
+            mg = 0.03 if R.x > 0.15 else 0.015
+            q = Vector(((h.x - c.x) / (R.x + mg), (h.y - c.y) / (R.y + mg), (h.z - c.z) / (R.z + mg)))
+            e = _norma(q, pot)
+            if 1e-4 < e < 1:
+                h = c + Vector((q.x / e * (R.x + mg), q.y / e * (R.y + mg), q.z / e * (R.z + mg)))
+    v = h - s; dd = min(v.length, l1 + l2 - 1e-3); u = v.normalized()
+    a = (l1 * l1 - l2 * l2 + dd * dd) / (2 * dd); hh = math.sqrt(max(l1 * l1 - a * a, 0))
+    p0 = pole - u * pole.dot(u); p0 = p0.normalized() if p0.length > 1e-6 else Vector((0, 0, -1))
+    p1 = u.cross(p0)
+    hd = s + u * dd
+    def custo(ang):
+        elb = s + u * a + (p0 * math.cos(ang) + p1 * math.sin(ang)) * hh
+        c = 0.0
+        for i in range(3, 9): c += _fundo(s.lerp(elb, i / 8), 0.036, obst_braco)
+        for i in range(0, 9): c += _fundo(elb.lerp(hd, i / 8), 0.032, obst_braco)
+        if meio is not None:   # antebraço que nasce no meio do braço (TR): a peça corta o cotovelo
+            m = s.lerp(elb, meio)
+            for i in range(0, 9): c += _fundo(m.lerp(hd, i / 8), 0.034, obst_braco)
+        return c * 6 + 0.02 * ang * ang + (0.3 * (ang - ant) ** 2 if ant is not None else 0.0), elb
+    # desce a ladeira a partir do polo pedido (não pula pro outro lado do corpo de um quadro pro outro): passo de 8°,
+    # depois 2°, depois 0,5°
+    ant = COTOVELO_ANT.get(chave) if chave else None
+    ang = ant if ant is not None else 0.0
+    c0, elb = custo(ang)
+    if c0 > 1e-6:
+        for passo in (math.radians(8), math.radians(2), math.radians(0.5)):
+            while abs(ang) < math.radians(160):
+                cm, em = custo(ang - passo); cp, ep = custo(ang + passo)
+                if min(cm, cp) >= c0: break
+                if cm < cp: ang -= passo; c0, elb = cm, em
+                else: ang += passo; c0, elb = cp, ep
+    if chave: COTOVELO_ANT[chave] = ang
+    return elb, hd
+
 # ------------------------------------------------------------------ armas autorais
 def build_deagle(L):
     """Desert Eagle autoral (procedural): ferrolho grande de aço escovado com sulcos atrás, cano triangular com
@@ -378,14 +445,18 @@ class Gun:
             return Vector((((a + b) / 2) * s.L, 0, (z0 * 0.65 + z1 * 0.35) if low else (z0 + z1) / 2))
         s.grip = mid(*cfg["grip"], low=True)
         s.fore = mid(*cfg["fore"])
+        if cfg["kind"] == "rifle":   # mão esquerda POR BAIXO do guarda-mão (palma apoiando), não de lado no meio dele
+            sl = [v for v in vs if cfg["fore"][0] * s.L <= v.x <= cfg["fore"][1] * s.L] or vs
+            s.fore = Vector((s.fore.x, 0.004, min(v.z for v in sl) - 0.016))
         s.bolt = Vector((0.40 * s.L, -0.03, 0.012))
+        s.ocular = Vector((0.215 * s.L, 0, 0.042)) if cfg.get("bolt") else None
         for o in (s.obj, s.mag, s.mag2, s.magp, s.magp2):
             if o: hide(o)
 
 # ------------------------------------------------------------------ agentes
 CORES = {
-    "ct": dict(pele="#e2ad86", capuz="#2c3446", borracha="#3b3e44", aro="#8f959c", vidro="#5e9fb2", brilho="#ffffff", valvula="#25272b",
-               filtro="#55595f", farda="#3a4562", colete="#5c6644", preto="#1f2024", luva="#2b2c30", bota="#1d1d20"),
+    "ct": dict(pele="#e2ad86", capuz="#2c3446", borracha="#4a4e52", aro="#b3b9c0", vidro="#5e9fb2", brilho="#ffffff", valvula="#25272b",
+               filtro="#62676d", farda="#3a4562", colete="#5c6644", preto="#1f2024", luva="#2b2c30", bota="#1d1d20"),
     # TR mercenário de balaclava: camiseta cinza, colete grafite com placa, calça cáqui manchada, coldre de couro
     "tr": dict(pele="#c68a62", balaclava="#3a2a22", olho="#1a1414", brilho="#ffffff", labio="#a0574a", branco="#f2ede6",
                camiseta="#6f7175", colete="#3a3b40", placa="#46474c", couro="#4e3220", fivela="#b8923e",
@@ -402,15 +473,21 @@ NADE_GEOM = {
     "mo_garrafa": ((0, 0, 0), (0.032, 0.032, 0.045)), "mo_gargalo": ((0, 0, 0.055), (0.012, 0.012, 0.025)), "mo_pano": ((0, 0, 0.086), (0.017, 0.017, 0.02)),
     "he_corpo": ((0, 0, 0), (0.035, 0.035, 0.038)), "he_topo": ((0, 0, 0.042), (0.012, 0.012, 0.012)),
 }
+C4_K = 2.0   # tamanho da C4 (usuário: maiorzinha, não gigante)
+# C4 (CS): tijolo de explosivo embrulhado em papel pardo, duas fitas pretas, teclado com tela verde e botões, fio vermelho
+C4_PECAS = {"bomba": ((0.058, 0.042, 0.024), "#a8875a"), "bombaF0": ((0.009, 0.0445, 0.0255), "#2b2b2b"),
+            "bombaF1": ((0.009, 0.0445, 0.0255), "#2b2b2b"), "bombaT": ((0.03, 0.028, 0.006), "#3a3d40"),
+            "bombaL": ((0.011, 0.02, 0.002), "#8fdc6a"), **{"bombaK%d" % i: ((0.0048, 0.0048, 0.002), "#c9ccd0") for i in range(4)}}
 PROP_COR = {"sm_corpo": "#7a7d80", "sm_faixa": "#d8d8d0", "sm_topo": "#2a2b2e", "fl_corpo": "#c9cbc6", "fl_faixa": "#2a2b2e",
             "fl_topo": "#3a3b3e", "mo_garrafa": "#4f8a4a", "mo_gargalo": "#4f8a4a", "mo_pano": "#e07a2a", "he_corpo": "#5a6638",
             "he_topo": "#3a3b3e", "capsula": "#c9a24a", "pino": "#9aa0a6", "bomba": "#4a5530", "alicate": "#8a2a20",
-            "alca_arma": "#2a2420"}
+            "alca_arma": "#2a2420", "isqueiro": "#b9bec4", "isq_tampa": "#8d9298"}
 # peças da cabeça (giram juntas no "cego")
 HEAD_KEYS = ["cabeca", "mascara", "focinho", "filtro", "tampa", "aroL", "aroR", "lenteL", "lenteR", "reflexoL", "reflexoR",
-             "furoL", "furoR", "boca", "labio", "brancoL", "brancoR", "olhoL", "olhoR", "brilhoL", "brilhoR"]
+             *["mascaraV%d" % i for i in range(3)], "furoL", "furoR", "boca", "labio", "brancoL", "brancoR", "olhoL", "olhoR", "brilhoL", "brilhoR"]
 PROP_BRILHO = {"clarao": "#ffd25a", "clarao2": "#fff6d8", "estrela0": "#ffe36a", "estrela1": "#ffe36a", "estrela2": "#ffe36a",
-               "visor": "#ff3a2a", "luneta": "#9fe6ff", **{"rastro%d" % i: "#f6f4ea" for i in range(10)}}
+               "visor": "#ff3a2a", "luneta": "#9fe6ff", **{"rastro%d" % i: "#f6f4ea" for i in range(10)},
+               "chama_isq": "#ffb43a", "fogo0": "#ff7a1a", "fogo1": "#ffb43a", "fogo2": "#ffe08a"}
 
 
 def build_knife(team, parent):
@@ -489,21 +566,24 @@ class Agent:
         E("quadril", legs)
         E("cinto", "preto" if ct else "couro")
         if ct:
-            B("coldre", "preto", (0.035, 0.022, 0.05)); E("perneira", "preto")
-            E("tronco", "farda"); B("colete", "colete", (0.088, 0.128, 0.092), 0.018)
+            B("coldre", "preto", (0.034, 0.02, 0.07), 0.012); E("perneira", "preto"); E("perneira2", "preto")
+            B("coldreAba", "preto", (0.037, 0.024, 0.013), 0.008); B("coldreCabo", "luva", (0.015, 0.012, 0.028), 0.006); E("coldreAlca", "preto")
+            E("tronco", "farda"); B("colete", "colete", (0.106, 0.134, 0.094), 0.018)
             for i in range(3): B("pente%d" % i, "colete", (0.022, 0.026, 0.042), 0.006)
             for i in range(2): B("bolsinho%d" % i, "colete", (0.018, 0.03, 0.02), 0.005)
             B("radio", "preto", (0.02, 0.018, 0.034), 0.005); E("antena", "preto")
             for sd in ("L", "R"): B("alca" + sd, "colete", (0.07, 0.03, 0.012), 0.005)
             E("gola", "farda")
-            E("cabeca", "capuz", 32); E("mascara", "borracha", 32); E("focinho", "valvula"); E("filtro", "filtro"); E("tampa", "valvula")
+            E("cabeca", "capuz", 32); E("mascara", "borracha", 32); B("focinho", "borracha", (0.022, 0.044, 0.034), 0.014); E("filtro", "filtro"); E("tampa", "aro")
+            for i in range(3): B("mascaraV%d" % i, "valvula", (0.004, 0.024, 0.004), 0.002)   # grade da válvula de fala   # tiras da máscara por cima do capuz (aparecem de cima)
             for sd in ("L", "R"):
                 E("aro" + sd, "aro"); E("lente" + sd, "vidro"); E("reflexo" + sd, "brilho")
 
         else:
             B("bolsa", "couro", (0.03, 0.02, 0.035)); B("fivela", "fivela", (0.006, 0.02, 0.014), 0.003)
-            B("coldre", "couro", (0.035, 0.022, 0.05)); E("perneira", "couro")
-            E("tronco", "camiseta"); B("colete", "colete", (0.085, 0.125, 0.09), 0.016)
+            B("coldre", "couro", (0.034, 0.02, 0.07), 0.012); E("perneira", "couro"); E("perneira2", "couro")
+            B("coldreAba", "couro", (0.037, 0.024, 0.013), 0.008); B("coldreCabo", "luva", (0.015, 0.012, 0.028), 0.006); E("coldreAlca", "couro")
+            E("tronco", "camiseta"); B("colete", "colete", (0.104, 0.134, 0.092), 0.016)
             B("placa", "placa", (0.012, 0.085, 0.07), 0.01)
             for i in range(2): B("pente%d" % i, "colete", (0.02, 0.028, 0.03), 0.006)
             for sd in ("L", "R"): B("alca" + sd, "colete", (0.07, 0.03, 0.012), 0.005)
@@ -513,17 +593,23 @@ class Agent:
         for sd in ("L", "R"):
             E("braco" + sd, "farda" if ct else "camiseta")
             E("ante" + sd, "farda" if ct else "pele")
+            if not ct: E("pulso" + sd, "pele")   # TR (manga curta): pele do braço até o cotovelo + antebraço
             E("mao" + sd, "luva")
         s.guns = {}
         # objetos de cena que o boneco usa (ficam escondidos até a animação pedir)
         s.knife = build_knife(team, s.root)
         s.props = {}
         for nm, col in PROP_COR.items():
-            if nm == "bomba": o = box(team + nm, toon(team + nm, col, molle=True), (0.05, 0.035, 0.03))
+            if nm == "bomba": continue   # (a C4 sai do C4_PECAS, logo abaixo)
+            elif nm in ("isqueiro", "isq_tampa"): o = box(team + nm, toon(team + nm, col), (0.016, 0.01, 0.024 if nm == "isqueiro" else 0.01), 0.004)
             else: o = ell(team + nm, toon(team + nm, col))
             o.parent = s.root; s.props[nm] = o
+        for nm, (half, col) in C4_PECAS.items():
+            half = tuple(h * C4_K for h in half)
+            o = box(team + nm, toon(team + nm, col), half, min(half) * 0.5); o.parent = s.root; s.props[nm] = o
+        o = ell(team + "bombaFio", toon(team + "bombaFio", "#c0392b")); o.parent = s.root; s.props["bombaFio"] = o
         for nm, col in PROP_BRILHO.items():
-            if nm == "visor": o = box(team + nm, glow(team + nm, col), (0.02, 0.022, 0.005), 0.002)
+            if nm == "visor": o = box(team + nm, glow(team + nm, col), (0.005, 0.005, 0.004), 0.002)   # LED vermelho
             else: o = ell(team + nm, glow(team + nm, col))
             o.parent = s.root; s.props[nm] = o
 
@@ -539,6 +625,9 @@ class Agent:
         """Pose no instante t (0..1) da animação. Movimento: mira, andar, devagar, correr, agachar, agachado,
         pular, escada. Ação: tiro, recarga, granada, cego, plantar, desarmar, morrer."""
         P = s.P; ct = s.team == "ct"
+        _id = (anim, gname, nade, round(pitch, 4), from_scope)
+        if getattr(s, "_pose_id", None) != _id or t < getattr(s, "_pose_t", -1): COTOVELO_ANT.clear()
+        s._pose_id, s._pose_t = _id, t
         for g in s.guns.values():
             for o in (g.obj, g.mag, g.mag2, g.magp, g.magp2):
                 if o: hide(o)
@@ -549,7 +638,7 @@ class Agent:
         def k(a, b): return min(max((t - a) / (b - a), 0), 1)
         def sm(x): return x * x * (3 - 2 * x)
         # ---------------------------------------------------------- pernas e altura do quadril
-        hipz = 0.30; lean = 0.0; stride = lift = bob = 0.0; step = None
+        hipz = 0.30; lean = 0.0; twist = 0.0; stride = lift = bob = 0.0; step = None
         feet = {"L": Vector((0.0, 0.07, 0.06)), "R": Vector((0.0, -0.07, 0.06))}
         kneel = False
         # andar como no CS: normal, devagar (shift), de costas, de lado (AD) e com a faca (mais rápido);
@@ -595,8 +684,20 @@ class Agent:
                 feet[sd] = Vector((0.1, 0.06 if sd == "L" else -0.06, 0.06 + 0.16 * u))
         # bomba: agachado (pés afastados, tronco pra frente) ou em pé (debruçado), como no CS
         if anim in ("plantar", "desarmar"):
-            hipz = 0.2; lean = 0.38
-            feet["L"] = Vector((0.07, 0.08, 0.06)); feet["R"] = Vector((-0.07, -0.08, 0.06))
+            # ajoelhado no joelho direito, pé esquerdo à frente (antes pés abertos com os joelhos caindo pra dentro)
+            hipz = 0.17; lean = 0.36; kneel = True
+            feet["L"] = Vector((0.1, 0.085, 0.06)); feet["R"] = Vector((-0.11, -0.065, 0.06))
+        # pegar do chão / largar (arma, granada, C4): agacha e debruça; comemorar: pulinhos; lamentar: ombro caído
+        if anim == "pegar":
+            dobra = sm(k(0.0, 0.38)) - sm(k(0.62, 1.0))
+            hipz -= 0.1 * dobra; lean = 0.42 * dobra
+            for sd, sg in (("L", 1), ("R", -1)): feet[sd] = feet[sd].lerp(Vector((sg * 0.07, sg * 0.08, 0.06)), dobra)
+        if anim == "comemorar":
+            pulo = abs(math.sin(2 * math.pi * t)); s.root.location.z = 0.07 * pulo
+        if anim == "lamentar":
+            lean = -0.04; hipz -= 0.01
+        if anim == "morrer_frente":   # pernas esticadas (tomba de cara)
+            feet["L"] = Vector((0.0, 0.075, 0.045)); feet["R"] = Vector((0.0, -0.075, 0.045))
         if anim in ("plantar_pe", "desarmar_pe"):
             lean = 0.62
             feet["L"] = Vector((0.03, 0.08, 0.06)); feet["R"] = Vector((-0.03, -0.08, 0.06))
@@ -629,7 +730,7 @@ class Agent:
                     else:
                         v = (u - stf) / (1 - stf); dx = -stride + 2 * stride * sm(v); up = math.sin(math.pi * v) * lift
                     ank.x += walk_dir.x * dx; ank.z += up
-            pole = Vector((1, 0, 0.2))
+            pole = Vector((1, sg * 0.3, 0.2)) if kneel else Vector((1, 0, 0.2))   # ajoelhado: joelho da frente pra fora
             if kneel and sd == "R": pole = Vector((0.2, 0, -1))   # joelho direito no chão
             knee, ank = ik(hip, ank, 0.13, 0.13, pole)
             if kneel and sd == "R": knee = Vector((knee.x, knee.y, max(knee.z, 0.05)))
@@ -637,15 +738,27 @@ class Agent:
             place(P["bota" + sd], ank + Vector((0.03, 0, -0.03)), (0.078, 0.05, 0.042))
             LOWER += [P["coxa" + sd], P["canela" + sd], P["bota" + sd]]
             if ct: place(P["joelheira" + sd], knee + Vector((0.038, 0, 0)), (0.026, 0.042, 0.04)); LOWER.append(P["joelheira" + sd])
-            if sd == "R":   # coldre de perna (os dois times)
-                place(P["coldre"], hip.lerp(knee, 0.45) + Vector((0.0, -0.05, 0)))
-                place_seg(P["perneira"], hip.lerp(knee, 0.7) + Vector((0, -0.045, 0)), hip.lerp(knee, 0.7) + Vector((0, -0.045, 0.004)), 0.05)
-                LOWER += [P["coldre"], P["perneira"]]
+            if sd == "R":   # coldre de perna (os dois times): segue a coxa, duas faixas em volta dela, alça no cinto
+                up = (hip - knee).normalized(); fora = Vector((0, -1, 0)); fora = (fora - up * fora.dot(up)).normalized()
+                qc = Matrix((fora.cross(up), fora, up)).transposed().to_quaternion()   # X frente, Y fora, Z sobe a coxa
+                cc = hip.lerp(knee, 0.6) + fora * 0.07
+                coldre_em = (cc, up, fora)   # a pistola guardada entra aqui (back_pos da pistola)
+                place(P["coldre"], cc, None, qc)
+                place(P["coldreAba"], cc + up * 0.067 + fora * 0.002, None, qc)
+                # cabo da pistola saindo do coldre (só quando a pistola não é a arma: aí ela mesma vai pro coldre)
+                if kind != "pistol":
+                    place(P["coldreCabo"], cc + up * 0.089 - fora.cross(up) * 0.012, None, qc @ Quaternion((0, 1, 0), math.radians(-18)))
+                    LOWER.append(P["coldreCabo"])
+                else: hide(P["coldreCabo"])
+                for nm, f in (("perneira", 0.42), ("perneira2", 0.72)):   # faixa = disco fino atravessando a coxa
+                    place(P[nm], hip.lerp(knee, f), (0.06, 0.06, 0.008), up.to_track_quat("Z", "Y"))
+                place_seg(P["coldreAlca"], Vector((0.0, -0.105, hipz + 0.04)), cc + up * 0.075 + fora * 0.004, 0.009)
+                LOWER += [P["coldre"], P["coldreAba"], P["perneira"], P["perneira2"], P["coldreAlca"]]
         place(P["quadril"], Vector((0, 0, hipz + 0.01)), (0.085, 0.115, 0.06))
         place(P["cinto"], Vector((0, 0, hipz + 0.045)), (0.095, 0.122, 0.022))
         ch = Vector((0, 0, hipz + 0.15))
         place(P["tronco"], ch, (0.1, 0.13, 0.13))
-        place(P["colete"], ch + Vector((0.012, 0, 0.005)))
+        place(P["colete"], ch + Vector((0.0, 0, 0.005)))   # centrado no tronco: cobre frente E costas
         for sd, sg in (("L", 1), ("R", -1)): place(P["alca" + sd], ch + Vector((0, sg * 0.085, 0.1)))
         if ct:
             for i in range(3): place(P["pente%d" % i], ch + Vector((0.1, (i - 1) * 0.06, -0.035)))
@@ -654,7 +767,7 @@ class Agent:
             place_seg(P["antena"], ch + Vector((0.07, 0.1, 0.11)), ch + Vector((0.055, 0.11, 0.21)), 0.006)
             place(P["gola"], ch + Vector((0, 0, 0.12)), (0.07, 0.09, 0.035))
         else:
-            place(P["placa"], ch + Vector((0.1, 0, 0.012)))
+            place(P["placa"], ch + Vector((0.104, 0, 0.012)))
             for i in range(2): place(P["pente%d" % i], ch + Vector((0.098, (i - 0.5) * 0.1, -0.06)))
             place(P["bolsa"], Vector((0.03, -0.12, hipz + 0.02))); place(P["fivela"], Vector((0.098, 0, hipz + 0.045)))
             place(P["gola"], ch + Vector((0, 0, 0.12)), (0.068, 0.088, 0.032))
@@ -667,14 +780,22 @@ class Agent:
         if ct:
             # máscara de gás: peça cinza no rosto, lentes grandes com aro claro e reflexo, válvula no meio,
             # filtro curto na bochecha esquerda (traços no alto do rosto: a câmera vem de cima)
+            # borracha cinza (contrasta com o capuz azul) e aro de metal claro nas lentes
             place(P["mascara"], hc + Vector((0.09, 0, -0.015)), (0.105, 0.148, 0.13))
             for sd, sg in (("L", 1), ("R", -1)):
-                place(P["aro" + sd], hc + Vector((0.165, sg * 0.06, 0.038)), (0.018, 0.054, 0.054))
-                place(P["lente" + sd], hc + Vector((0.176, sg * 0.06, 0.038)), (0.012, 0.043, 0.043))
-                place(P["reflexo" + sd], hc + Vector((0.186, sg * 0.05, 0.056)), (0.005, 0.014, 0.012))
-            place(P["focinho"], hc + Vector((0.19, 0, -0.055)), (0.03, 0.04, 0.034))
-            place_seg(P["filtro"], hc + Vector((0.15, 0.1, -0.07)), hc + Vector((0.18, 0.135, -0.09)), 0.028)
-            place(P["tampa"], hc + Vector((0.186, 0.142, -0.094)), (0.012, 0.024, 0.024))
+                place(P["aro" + sd], hc + Vector((0.166, sg * 0.06, 0.04)), (0.02, 0.058, 0.058))
+                place(P["lente" + sd], hc + Vector((0.178, sg * 0.06, 0.04)), (0.012, 0.045, 0.045))
+                place(P["reflexo" + sd], hc + Vector((0.188, sg * 0.048, 0.06)), (0.005, 0.015, 0.012))
+            # máscara S10/FM12 (CT SAS do CS): na frente só a válvula de exalação baixa e larga, colada na borracha, com
+            # a grade de fala; o filtro é uma lata redonda rosqueada de lado, na bochecha esquerda, apontando pra baixo
+            qv = Quaternion((0, 1, 0), math.radians(28))   # a frente da válvula olha pra frente e pra baixo
+            vf = hc + Vector((0.186, 0, -0.066))
+            place(P["focinho"], vf, (0.022, 0.044, 0.034), qv)
+            for i in range(3): place(P["mascaraV%d" % i], vf + qv @ Vector((0.022, 0, 0.016 - i * 0.016)), (0.004, 0.026 - abs(i - 1) * 0.005, 0.004), qv)
+            eixo = Vector((0.62, 0.62, -0.48)).normalized()   # pra frente, pra fora e pra baixo
+            base = hc + Vector((0.15, 0.095, -0.088))
+            place(P["filtro"], base + eixo * 0.026, (0.042, 0.042, 0.034), eixo.to_track_quat("Z", "X"))
+            place(P["tampa"], base + eixo * 0.058, (0.034, 0.034, 0.007), eixo.to_track_quat("Z", "X"))
         else:
             # balaclava lisa: furos dos olhos e da boca são "adesivos" achatados deitados na superfície da cabeça
             # (nada sai pra fora), com o olho por cima em camadas finas: pele, branco, pupila, brilho
@@ -691,10 +812,23 @@ class Agent:
             decal(P["labio"], Vector((0.15, 0, -0.06)), 0.017, 0.005, 0.002)
         # ---------------------------------------------------------- arma e mãos
         PR = s.props
+        def c4(c, q=None):
+            """Monta a C4 com centro em c (q: giro; padrão alinhado com o boneco, teclado em cima)."""
+            q = q or Quaternion(); R = q.to_matrix()
+            for nm, (half, _) in C4_PECAS.items():
+                off = {"bomba": (0, 0, 0), "bombaF0": (0.032, 0, 0), "bombaF1": (-0.032, 0, 0), "bombaT": (-0.006, 0, 0.029),
+                       "bombaL": (0.006, 0, 0.036)}.get(nm)
+                if off is None:   # botões 2x2 atrás da tela
+                    i = int(nm[-1]); off = (-0.014 - 0.012 * (i // 2), (i % 2 - 0.5) * 0.016, 0.036)
+                place(PR[nm], c + R @ (Vector(off) * C4_K), None, q)
+            place(PR["visor"], c + R @ (Vector((0.006, 0.026, 0.036)) * C4_K), None, q)
+            place_seg(PR["bombaFio"], c + R @ (Vector((-0.03, -0.024, 0.03)) * C4_K), c + R @ (Vector((-0.05, -0.04, 0.012)) * C4_K), 0.0045 * C4_K)
         gq = Quaternion()
         if kind == "pistol": gpos = ch + Vector((0.2, -0.02, 0.06))
         elif kind == "smg": gpos = ch + Vector((0.0, -0.06, 0.03))
-        else: gpos = ch + Vector((-0.09, -0.06, 0.03))
+        else:   # fuzil do lado direito, rente por FORA do colete (antes no meio do peito: a coronha entrava 9 cm no
+            # colete e o braço direito cruzava o peito), apontando um tiquinho pro centro
+            gpos = ch + Vector((0.0, -0.145, -0.01)); gq = Quaternion((0, 0, 1), math.radians(5))
         aim_pos, aim_q = gpos.copy(), gq.copy()
         # arma baixa (correndo / segurando com a esquerda do lado) e nas costas (escada, bomba)
         low_q = Quaternion((0, 1, 0), math.radians(32)) @ Quaternion((0, 0, 1), math.radians(20))
@@ -704,15 +838,25 @@ class Agent:
         # diagonal até passar do ombro direito, lado de cima da arma virado pra fora (pra trás). Pistola: coldre.
         dx = Vector((-0.06, -0.3, 0.95)).normalized(); dz = Vector((-1, 0, 0)); dz = (dz - dx * dz.dot(dx)).normalized()
         back_q = Matrix((dx, dz.cross(dx), dz)).transposed().to_quaternion()
-        back_pos = ch + Vector((-0.15, 0.1, -0.2))
-        if kind == "pistol":
-            back_q = Quaternion((0, 1, 0), math.radians(90)) @ Quaternion((1, 0, 0), math.radians(-90))
-            back_pos = Vector((0.01, -0.13, hipz - 0.01))
+        back_pos = ch + Vector((-0.17, 0.1, -0.2))   # (2 cm mais pra trás: o punho não fica dentro do colete)
+        if kind == "pistol":   # dentro do coldre da coxa: cano pra baixo, cabo pra trás saindo por cima
+            cc_, up_, fora_ = coldre_em; fr_ = fora_.cross(up_)
+            back_q = Matrix((-up_, fr_.cross(up_), -fr_)).transposed().to_quaternion()
+            back_pos = cc_ + up_ * 0.088 + fr_ * 0.008
         def blend(p0, q0, p1, q1, u): return p0.lerp(p1, u), q0.slerp(q1, u)
         free_hands = False      # mãos não seguem a arma
         if anim == "correr" and kind != "pistol":
             gpos, gq = low_pos, low_q
-        SCOPED = ch + Vector((0.02, -0.09, 0.235))   # AWP na luneta: luneta no olho, coronha na bochecha
+        # AWP na luneta (referência: AWPer do CS2 em 3ª pessoa): ocular da luneta colada na lente do olho direito
+        # (lente em hc + (0,176; -0,06; 0,038); luneta ~0,045 acima do cano, ocular a ~0,28 do fim da coronha), fuzil
+        # nivelado na altura do olho, coronha entrando na bochecha (cheek weld; o chibi tem a cabeça grande)
+        # (com a cabeça já inclinada/virada pra luneta: head_turn 0,1/-0,12 leva a lente pra ~(0,203; -0,082; 0,289))
+        # o olho direito com a cabeça na pose da luneta (HT_LUNETA) + 3,5 cm de alívio; a arma vai onde a ocular cai ali
+        HT_LUNETA = (0.2, -0.12)   # cabeça desce pra luneta (olho mais perto da arma e do braço curto)
+        _n = ch + Vector((0, 0, 0.13))
+        _Mh = Matrix.Translation(_n) @ Matrix.Rotation(HT_LUNETA[1], 4, "Z") @ Matrix.Rotation(HT_LUNETA[0], 4, "Y") @ Matrix.Translation(-_n)
+        olho_d = _Mh @ (ch + Vector((0.01, 0, 0.27)) + Vector((0.176, -0.06, 0.038 if ct else 0.05)))
+        SCOPED = (olho_d + _Mh.to_3x3() @ Vector((0.035, 0, 0)) - G.ocular) if G.ocular is not None else ch + Vector((-0.065, -0.08, 0.245))
         scope_u = 0.0
         if anim == "recarga":
             if from_scope:   # sai da luneta pra posição normal antes de recarregar
@@ -741,9 +885,14 @@ class Agent:
             gpos, gq = back_pos, back_q; free_hands = True
             if kind != "pistol":   # alça da bandoleira atravessando o peito
                 place_seg(s.props["alca_arma"], ch + Vector((0.09, -0.085, 0.1)), ch + Vector((0.1, 0.09, -0.1)), 0.01)
-        if anim == "granada":
-            u = sm(k(0.0, 0.12)) - sm(k(0.86, 1.0))
-            gpos, gq = blend(aim_pos, aim_q, side_pos, side_q, u)
+        if anim in ("granada", "granada_fim"):   # troca de arma como no CS: o fuzil vai pras costas (bandoleira), a
+            # pistola pro coldre; depois de soltar volta pra mira
+            u = sm(k(0.0, 0.16)) if anim == "granada" else 1 - sm(k(0.4, 1.0))
+            fora = ch + Vector((0.02, -0.24, -0.06)) if kind != "pistol" else ch + Vector((0.06, -0.2, -0.1))
+            fq = Quaternion((0, 1, 0), math.radians(75))
+            if u < 0.5: gpos, gq = blend(aim_pos, aim_q, fora, fq, sm(u * 2))
+            else: gpos, gq = blend(fora, fq, back_pos, back_q, sm(u * 2 - 1))
+            if kind != "pistol" and u > 0.5: place_seg(s.props["alca_arma"], ch + Vector((0.09, -0.085, 0.1)), ch + Vector((0.1, 0.09, -0.1)), 0.01)
         if anim in ("awp_mirar", "awp_mirando"):
             # entra na luneta: sobe a arma até o olho, encosta a coronha bem no ombro; na luneta fica parado
             scope_u = sm(k(0.0, 0.7)) if anim == "awp_mirar" else 1.0
@@ -752,7 +901,19 @@ class Agent:
             gpos = aim_pos.lerp(SCOPED, scope_u); gq = aim_q
             lean = 0.06 * scope_u + (0.004 * math.sin(t * 2 * math.pi) if anim == "awp_mirando" else 0)
         if anim == "cego":   # arma caída, quase apontando pro chão
-            gpos, gq = low_pos + Vector((0.02, 0, -0.03)), Quaternion((0, 1, 0), math.radians(58)) @ Quaternion((0, 0, 1), math.radians(25))
+            # (de lado e pra fora da coxa direita: antes o cano cruzava pra dentro e entrava na perna)
+            gpos, gq = low_pos + Vector((0.05, -0.07, 0.0)), Quaternion((0, 1, 0), math.radians(50)) @ Quaternion((0, 0, 1), math.radians(-18))
+        if anim == "meio_cego":   # meio cego: a arma desce um pouco, segue mais ou menos na frente
+            gpos, gq = blend(aim_pos, aim_q, low_pos, low_q, 0.35)
+        if anim == "pegar":   # arma desce pro lado de FORA enquanto a esquerda pega no chão (antes entrava na coxa)
+            dobra = sm(k(0.0, 0.38)) - sm(k(0.62, 1.0))
+            fora_pos = ch + Vector((0.06, -0.16, -0.03)); fora_q = Quaternion((0, 1, 0), math.radians(42)) @ Quaternion((0, 0, 1), math.radians(-15))
+            gpos, gq = blend(aim_pos, aim_q, fora_pos, fora_q, dobra)
+        if anim == "comemorar":   # arma pro alto, cano pro céu, sobe e desce com o pulo
+            gpos = ch + Vector((0.08, -0.1, 0.3 + 0.04 * abs(math.sin(2 * math.pi * t))))
+            gq = Quaternion((0, 1, 0), -math.radians(70))
+        if anim == "lamentar":
+            gpos, gq = low_pos + Vector((0, 0, -0.04)), low_q
         draw_u = None
         if anim == "sacar":
             # saca: fuzil vem de baixo (cano pro chão, do lado direito) até a mira, passando um pouco; pistola sai do
@@ -763,14 +924,32 @@ class Agent:
             gpos, gq = blend(p0, q0, aim_pos, aim_q, u)
             gq = Quaternion((0, 1, 0), -over) @ gq
             draw_u = u
+        if anim == "sacar_costas" and kind != "pistol":
+            # puxa das costas por cima do ombro direito (depois de plantar, escada, faca): fica nas costas até a mão
+            # chegar no guarda-mão, passa por cima do ombro com o cano pro alto e desce pra mira
+            u = sm(k(0.36, 0.8)); over = 0.05 * math.sin(math.pi * k(0.66, 0.92))
+            # o PUNHO faz o caminho (a mão segura nele): sai do meio das costas, contorna por fora do lado direito na altura
+            # do ombro (o braço nunca sobe do lado da cabeça grande) e chega na mira; o cano vai subindo por cima do
+            # ombro no meio do caminho e desce pra frente no fim
+            gb = back_pos + back_q @ G.grip; ga = aim_pos + aim_q @ G.grip
+            mid_q = Quaternion((0, 1, 0), math.radians(-60))
+            gp = trilha(u, [(0.0, gb), (0.35, ch + Vector((-0.14, -0.3, 0.0))), (0.65, ch + Vector((0.03, -0.3, 0.04))), (1.0, ga)])
+            gq = back_q.slerp(mid_q, sm(min(1.0, u / 0.55))) if u < 0.55 else mid_q.slerp(aim_q, sm((u - 0.55) / 0.45))
+            gpos = gp - gq @ G.grip
+            gq = Quaternion((0, 1, 0), -over) @ gq
+            draw_u = u
         knife = anim.startswith("faca") or anim == "sacar_faca"
         if knife:   # com a faca o fuzil vai pras costas (pistola no coldre)
             gpos, gq = back_pos, back_q; free_hands = True
             if kind != "pistol": place_seg(s.props["alca_arma"], ch + Vector((0.09, -0.085, 0.1)), ch + Vector((0.1, 0.09, -0.1)), 0.01)
         if pitch and not (free_hands or knife):
             # olhando pra cima/baixo: a arma gira em volta do ombro (positivo = pra cima); a cabeça acompanha
-            piv = ch + Vector((0, -0.05, 0.08)); Rp = Quaternion((0, 1, 0), -pitch)
+            # até 60°: 70% na arma (gira no ombro) e 30% no tronco (inclina pra trás olhando pra cima, pra frente pra baixo)
+            piv = ch + Vector((0, -0.05, 0.08)); Rp = Quaternion((0, 1, 0), -0.7 * pitch)
             gpos = piv + Rp @ (gpos - piv); gq = Rp @ gq
+            if pitch < 0:   # mirando baixo: arma sai do peito (mais longe quanto mais baixo: a 60° o punho entrava no colete)
+                f_ = -pitch / math.radians(25)
+                gpos = gpos + Vector((0.045, -0.01, 0.0)) * min(1.0, f_) + Vector((0.05, -0.012, 0.01)) * max(0.0, f_ - 1.0)   # mirando baixo: arma sai do peito
         GM = Matrix.Translation(gpos) @ gq.to_matrix().to_4x4()
         W = lambda p: GM @ p
         L = G.L
@@ -779,7 +958,7 @@ class Agent:
         mag_pos, mag_q, mag2_pos = mag_home, gq, None
         bolt = W(Vector((0.4 * L, -0.03, 0.012))) if kind != "pistol" else W(Vector((0.06 * L, 0, 0.05 * L)))
         if anim == "recarga" and G.mag:
-            pouch = ch + Vector((0.1, 0.06, -0.04))
+            pouch = ch + Vector((0.135, 0.06, -0.04))   # na frente do bolso do colete (a mão encosta, não entra)
             under = mag_home + Vector((0, 0, -0.06))
             # pente velho: sai na mão, cai girando e fica deitado no chão até o fim
             if t >= 0.14:
@@ -814,7 +993,7 @@ class Agent:
                     bo = bolt + Vector((0.02, -0.03, 0.02))
                     lh_t = under.lerp(bo, k(0.66, 0.74)) + Vector((-0.05, 0, 0)) * (k(0.74, 0.79) - k(0.79, 0.84))
             else:
-                lh_t = (bolt + Vector((0.02, -0.03, 0.02))).lerp(W(G.fore), k(0.86, 0.98))
+                lh_t = W(G.fore) if G.cfg.get("bolt") else (bolt + Vector((0.02, -0.03, 0.02))).lerp(W(G.fore), k(0.86, 0.98))
                 if G.cfg.get("bolt"): rh_t = (bolt + Vector((0, -0.03, 0.02))).lerp(W(G.grip), k(0.86, 0.98))
         if anim == "tiro":
             muz = W(Vector((L, 0, 0)))
@@ -839,56 +1018,114 @@ class Agent:
             place(PR["clarao2"], muz + gq @ Vector((0.03, 0, 0)), (0.03, 0.06, 0.06), q)
         # pontos pra quem compõe o vídeo/jogo: boca do cano e janela de ejeção (espaço do boneco)
         s.muzzle_local = W(Vector((L, 0, 0))); s.eject_local = W(Vector((0.42 * L if kind != "pistol" else 0.35 * L, -0.03, 0.02)))
-        if anim == "granada":
-            # a direita pega a granada no colete, a esquerda tira o pino, arma o braço pra trás e lança
-            chest = ch + Vector((0.12, -0.02, 0.0)); pouch = ch + Vector((0.1, -0.06, -0.06))
-            wind = ch + Vector((-0.08, -0.14, 0.24)); rel = ch + Vector((0.26, -0.05, 0.24)); follow = ch + Vector((0.24, 0.0, -0.02))
-            lh_t = W(G.fore)
-            if t < 0.12: rh_t = W(G.grip).lerp(pouch, sm(k(0.02, 0.12)))
-            elif t < 0.24: rh_t = pouch.lerp(chest, sm(k(0.12, 0.24)))
-            elif t < 0.38:
-                rh_t = chest; lh_t = W(G.fore).lerp(chest + Vector((0.02, 0.03, 0.06)), sm(k(0.24, 0.3)))
-                lh_t = lh_t + Vector((0, 0.1, 0.05)) * sm(k(0.3, 0.38))   # puxa o pino
-            elif t < 0.55: rh_t = chest.lerp(wind, sm(k(0.38, 0.55))); lh_t = (chest + Vector((0.12, 0.18, 0.06)))
-            elif t < 0.66: rh_t = wind.lerp(rel, sm(k(0.55, 0.66))); lh_t = ch + Vector((0.05, 0.2, -0.02))
-            elif t < 0.86: rh_t = rel.lerp(follow, sm(k(0.66, 0.8))); lh_t = ch + Vector((0.05, 0.2, -0.02))
-            else: rh_t = follow.lerp(W(G.grip), sm(k(0.86, 1.0))); lh_t = W(G.fore)
-            lean = 0.12 * (sm(k(0.55, 0.66)) - sm(k(0.8, 1.0))) - 0.08 * (sm(k(0.38, 0.55)) - sm(k(0.55, 0.62)))
-            if 0.24 < t < 0.38 + 0.0:   # pino na mão esquerda
-                place(PR["pino"], lh_t + Vector((0.0, 0.0, 0.03)), (0.014, 0.014, 0.005))
-            if 0.06 < t < 0.62:
-                s.nade(nade, rh_t + Vector((0, 0, 0.04)))
-            elif 0.62 <= t < 0.86:   # sai voando pra frente em arco
-                u = (t - 0.62) / 0.24
-                s.nade(nade, rel + Vector((0.6 * u, 0, 0.2 * u - 0.25 * u * u)), spin=u * 9)
+        if anim in ("granada", "granada_fim"):
+            mol = nade == "molotov"
+            chest = ch + Vector((0.16, -0.05, 0.02)); pouch = ch + Vector((0.12, -0.07, -0.06))
+            orelha = ch + Vector((-0.01, -0.25, 0.22))     # mão armada: do lado da cabeça, não atrás
+            solta = ch + Vector((0.22, -0.25, 0.33))        # soltura: na frente e acima do ombro (por fora do rosto)
+            segue = ch + Vector((0.25, 0.04, -0.04))        # continuação: desce cruzando na frente do corpo
+            aponta = ch + Vector((0.3, 0.12, 0.2))          # esquerda apontando pro alvo
+            if anim == "granada":
+                rh_t = trilha(t, [(0.0, W(G.grip)), (0.05, ch + Vector((0.14, -0.12, -0.04))), (0.12, pouch), (0.2, chest), (0.4, chest), (0.58, orelha + Vector((0.03, 0.02, -0.06))),
+                                  (0.72, orelha), (1.0, solta)])
+                if mol:   # a esquerda pega o isqueiro na cintura, acende o pano e vai pra frente
+                    isq = ch + Vector((0.1, 0.12, -0.1)); acende = chest + Vector((0.0, 0.07, 0.12))
+                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.08, ch + Vector((0.12, 0.13, -0.04))), (0.18, isq), (0.28, acende), (0.38, acende), (0.5, ch + Vector((0.12, 0.2, 0.02))),
+                                      (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
+                else:     # a esquerda tira o pino e vai pra frente apontando
+                    pino = chest + Vector((0.02, 0.04, 0.07))
+                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.1, ch + Vector((0.12, 0.13, -0.04))), (0.24, pino), (0.3, pino), (0.38, pino + Vector((0.0, 0.1, 0.04))),
+                                      (0.5, ch + Vector((0.12, 0.2, 0.06))), (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
+                twist = -0.4 * (sm(k(0.42, 0.72)) - sm(k(0.72, 1.0))) + 0.25 * sm(k(0.82, 1.0))
+                lean = -0.06 * (sm(k(0.42, 0.72)) - sm(k(0.72, 0.9))) + 0.1 * sm(k(0.85, 1.0))
+                nade_pos = rh_t + Vector((0, 0, 0.04))
+                if 0.06 < t: s.nade(nade, nade_pos, spin=0.0)
+                if not mol and 0.3 < t < 0.5:   # pino na mão esquerda
+                    place(PR["pino"], lh_t + Vector((0.0, 0.0, 0.03)), (0.014, 0.014, 0.005))
+                if mol:
+                    if 0.14 < t < 0.44:   # isqueiro na esquerda; a chama aparece quando chega no pano
+                        place(PR["isqueiro"], lh_t + Vector((0.0, 0.0, 0.026)))
+                        place(PR["isq_tampa"], lh_t + Vector((-0.02, 0.0, 0.056)), q=Quaternion((0, 1, 0), -0.9))
+                        if t > 0.24:
+                            f = 0.8 + 0.25 * math.sin(t * 90)
+                            place(PR["chama_isq"], lh_t + Vector((0.0, 0.0, 0.058)), (0.014 * f, 0.014 * f, 0.026 * f))
+                    if t > 0.3:   # pano pegando fogo e crescendo
+                        cresce = sm(k(0.3, 0.45))
+                        for fi in range(3):
+                            ph = t * (70 + 17 * fi) + fi * 2.1
+                            r = (0.032 + 0.01 * math.sin(ph)) * cresce * (1.0 - 0.25 * fi)
+                            place(PR["fogo%d" % fi], nade_pos + Vector((0.006 * math.sin(ph), 0.006 * math.cos(ph * 1.3), 0.1 + 0.03 * fi * cresce)),
+                                  (r, r, r * 1.8))
+            else:   # granada_fim: continuação depois de soltar (mão vazia) e volta pra arma
+                rh_t = trilha(t, [(0.0, solta), (0.35, segue), (0.55, segue), (0.8, ch + Vector((0.14, -0.12, -0.04)))])
+                lh_t = trilha(t, [(0.0, aponta + Vector((-0.08, 0.04, -0.12))), (0.35, ch + Vector((0.02, 0.2, -0.04))), (0.6, ch + Vector((0.12, 0.13, -0.04)))])
+                v = sm(k(0.75, 1.0)); rh_t = rh_t.lerp(W(G.grip), v); lh_t = lh_t.lerp(W(G.fore), v)
+                twist = 0.25 * (1 - sm(k(0.3, 1.0))); lean = 0.1 * (1 - sm(k(0.3, 1.0)))
         head_turn = None
         if scope_u > 0:   # bochecha na coronha, olho na luneta (cabeça inclina pro lado da arma)
-            head_turn = (0.1 * scope_u, -0.12 * scope_u)
+            head_turn = (HT_LUNETA[0] * scope_u, HT_LUNETA[1] * scope_u)
         if pitch:   # olha pra cima/baixo junto com a arma
-            ht = head_turn or (0.0, 0.0); head_turn = (ht[0] - 0.6 * pitch, ht[1])
-        if anim == "cego":
-            # cegado: vira o rosto pra baixo e de lado, antebraço esquerdo na frente dos olhos, arma caída na direita,
-            # cambaleia pra trás; o boneco todo fica branco e vai voltando à cor (set_branco, fora daqui)
-            lh_t = hc + Vector((0.21, -0.02, 0.035)) + Vector((0, 0.01, 0.006)) * math.sin(t * 2 * math.pi)   # antebraço cobrindo os olhos
-            s.root.location = (-0.03 * sm(k(0.0, 0.3)) + 0.012 * math.sin(t * 2 * math.pi), 0.015 * math.sin(t * 4 * math.pi), 0)
-            lean = -0.1 + 0.03 * math.sin(t * 2 * math.pi)
-            head_turn = (0.22, -0.18)   # cabeça: abaixa e vira um pouco (o braço fica na frente do rosto)
+            ht = head_turn or (0.0, 0.0); head_turn = (ht[0] - 0.45 * pitch, ht[1])
+            lean += -0.3 * pitch
+        if anim in ("cego", "meio_cego"):
+            # cegado: vira o rosto pra baixo e de lado, mão esquerda tapando os olhos, arma caída na direita, cambaleia
+            # pra trás, estrelinhas girando em volta da cabeça. Meio cego (flash de lado): vira o rosto pro outro lado
+            # e faz aba com a mão na testa, a arma continua na frente (direita).
+            # O alvo da mão sai do olho JÁ com a cabeça virada (antes a cabeça girava depois e o rosto saía da mão).
+            forte = anim == "cego"
+            # cabeça baixa e de lado (encolhe da luz); a mão esquerda vai pra FRENTE das lentes/olhos (o resolvedor
+            # do braço passa o antebraço por fora da cabeça grande: antes o braço atravessava o rosto)
+            # (braço curto de chibi + cabeça grande: a mão chega pelo lado ESQUERDO e tapa os olhos com a palma; o rosto
+            # vira um pouco pra mão)
+            head_turn = (0.22, 0.3) if forte else (0.16, 0.22)
+            tilt, yaw = head_turn; neck = ch + Vector((0, 0, 0.13))
+            Mh = Matrix.Translation(neck) @ Matrix.Rotation(yaw, 4, "Z") @ Matrix.Rotation(tilt, 4, "Y") @ Matrix.Translation(-neck)
+            olhos = Mh @ (hc + Vector((0.176, 0.03, 0.045)))
+            frente = Mh.to_3x3() @ Vector((1, 0, 0))
+            treme = 0.005 * math.sin(t * 2 * math.pi)
+            lh_t = olhos + frente * 0.05 + Vector((0.0, 0.0, treme))
+            if forte:
+                s.root.location = (-0.03 * sm(k(0.0, 0.3)) + 0.01 * math.sin(t * 2 * math.pi), 0.012 * math.sin(t * 4 * math.pi), 0)
+                lean = -0.06 + 0.025 * math.sin(t * 2 * math.pi)
+                for i in range(3):   # estrelinhas
+                    ang = t * 2 * math.pi + i * 2.094
+                    place(PR["estrela%d" % i], Mh @ (hc + Vector((0.15 * math.cos(ang), 0.15 * math.sin(ang), 0.21 + 0.02 * math.sin(ang * 2)))), (0.022, 0.022, 0.022))
+            else:
+                lean = -0.03
+        if scope_u > 0 and anim != "recarga":   # na luneta: esquerda lá na frente, no guarda-mão (como no CS2)
+            lh_t = lh_t.lerp(W(G.fore + Vector((0.03 * L, 0, -0.01))), scope_u)
         fixed = anim in ("plantar", "desarmar", "plantar_pe", "desarmar_pe", "escada")   # mãos em coisa parada no mundo
         Mlean = Matrix.Translation((0, 0, hipz)) @ Matrix.Rotation(lean, 4, "Y") @ Matrix.Translation((0, 0, -hipz))
         if anim in ("plantar", "desarmar", "plantar_pe", "desarmar_pe"):
-            bomb = Vector((0.27, 0.0, 0.035)) if anim in ("plantar", "desarmar") else Vector((0.3, 0.0, 0.035))
+            bomb = Vector((0.29, 0.0, 0.037 * C4_K)) if anim in ("plantar", "desarmar") else Vector((0.32, 0.0, 0.037 * C4_K))
             if anim.startswith("plantar"):
-                u = sm(k(0.0, 0.25)); bpos = (Mlean @ (ch + Vector((0.14, 0, -0.06)))).lerp(bomb, u)
+                u = sm(k(0.0, 0.25)); bpos = (Mlean @ (ch + Vector((0.2, 0, -0.08)))).lerp(bomb, u)   # na frente do colete
             else:
                 bpos = bomb
-            place(PR["bomba"], bpos); place(PR["visor"], bpos + Vector((0.012, 0, 0.034)))
+            qc4 = Quaternion((0, 0, 1), math.pi / 2)   # deitada atravessada: o comprido de lado, teclado pra cima
+            c4(bpos, qc4)
             tap = 0.02 * abs(math.sin(t * 6 * math.pi))
             if anim.startswith("plantar"):
-                lh_t = bpos + Vector((-0.02, 0.05, 0.05 + tap)) if t > 0.25 else bpos + Vector((-0.02, 0.06, 0.02))
-                rh_t = bpos + Vector((0.01, -0.03, 0.06 + 0.02 * abs(math.sin(t * 6 * math.pi + 1.5)))) if t > 0.25 else bpos + Vector((-0.02, -0.06, 0.02))
+                v = sm(k(0.2, 0.32)); tap *= v
+                # segura pelos lados com as duas mãos; no chão a esquerda firma em cima e a direita digita no teclado
+                lado = 0.058 * C4_K + 0.016; topo = 0.036 * C4_K
+                lh_t = (bpos + Vector((0.0, lado, 0.0))).lerp(bpos + Vector((0.03, 0.03, topo + 0.02 + tap)), v)
+                rh_t = (bpos + Vector((0.0, -lado, 0.0))).lerp(bpos + Vector((-0.02, -0.01, topo + 0.03 + 0.02 * v * abs(math.sin(t * 6 * math.pi + 1.5)))), v)
             else:
-                lh_t = bpos + Vector((-0.02, 0.06, 0.04))
-                rh_t = bpos + Vector((0.03, -0.02, 0.07 + tap)); place(PR["alicate"], rh_t + Vector((0.025, 0, -0.02)), (0.03, 0.008, 0.008))
+                lh_t = bpos + Vector((0.02, 0.04, 0.036 * C4_K + 0.02))
+                rh_t = bpos + Vector((0.03, -0.02, 0.036 * C4_K + 0.04 + tap)); place(PR["alicate"], rh_t + Vector((0.025, 0, -0.02)), (0.03, 0.008, 0.008))
+        if anim == "pegar":
+            dobra = sm(k(0.0, 0.38)) - sm(k(0.62, 1.0)); pega = sm(k(0.3, 0.42)) - sm(k(0.58, 0.7))
+            Ml = Matrix.Translation((0, 0, hipz)) @ Matrix.Rotation(lean, 4, "Y") @ Matrix.Translation((0, 0, -hipz))
+            alvo = Ml.inverted() @ Vector((0.26, 0.07, 0.05))   # ponto do chão, antes de inclinar o tronco
+            lh_t = W(G.fore).lerp(alvo, max(pega, dobra * 0.85))
+        if anim == "comemorar":   # punho esquerdo pro alto batendo no ritmo do pulo
+            lh_t = ch + Vector((0.06, 0.16, 0.36 + 0.1 * abs(math.sin(2 * math.pi * t))))
+        if anim == "lamentar":
+            lh_t = W(G.fore) + Vector((0, 0.02, -0.02)); head_turn = (0.35, 0.0)   # cabeça baixa
+        if anim == "apontar":   # call no rádio: aponta com a esquerda pra frente, a direita segura a arma
+            u = sm(k(0.0, 0.25)) - sm(k(0.7, 1.0)); ht = head_turn or (0.0, 0.0)
+            lh_t = W(G.fore).lerp(ch + Vector((0.34, 0.1, 0.2)), u); head_turn = (ht[0] - 0.08 * u, ht[1] + 0.12 * u)
         if anim == "escada":
             for sd, ph, sg in (("L", math.pi, 1), ("R", 0.0, -1)):
                 u = 0.5 + 0.5 * math.sin(2 * math.pi * t + ph)
@@ -896,35 +1133,46 @@ class Agent:
                 if sd == "L": lh_t = tgt
                 else: rh_t = tgt
             lean = 0.06
+        if anim == "sacar_costas" and kind != "pistol":
+            # direita sobe por cima do ombro e pega o guarda-mão nas costas, puxa e escorrega pro punho; a esquerda
+            # vem do lado e encaixa no guarda-mão quando a arma chega na frente
+            rest_r = ch + Vector((0.05, -0.17, -0.12)); rest_l = ch + Vector((0.03, 0.165, -0.2))
+            # a mão vai por trás das costas até o punho do fuzil (lá em cima o cano passa atrás da cabeça grande: o braço
+            # atravessava ela) e segura nele o resto do saque: o fuzil sobe pelo lado de fora do ombro e vem pra frente
+            if t < 0.36: rh_t = trilha(t, [(0.0, rest_r), (0.13, ch + Vector((-0.1, -0.28, -0.02))), (0.25, ch + Vector((-0.17, -0.12, -0.02))), (0.36, W(G.grip))])
+            else: rh_t = W(G.grip)
+            lh_t = rest_l.lerp(W(G.fore), sm(k(0.66, 0.9)))
         if anim == "sacar":
             # direita no punho o tempo todo; esquerda vem do lado e pega a arma no fim (fuzil: puxa o ferrolho)
             side = ch + Vector((0.02, 0.16, -0.14))
             lh_t = side.lerp(W(G.fore) + (Vector((0, 0.03, -0.01)) if kind == "pistol" else Vector()), sm(k(0.35, 0.6)))
             if kind != "pistol":
                 if G.cfg.get("bolt"):
-                    rh_t = W(G.grip).lerp(bolt + Vector((0, -0.03, 0.02)), k(0.62, 0.7)) + Vector((-0.06, 0, 0)) * (k(0.7, 0.78) - k(0.78, 0.86))
+                    rh_t = W(G.grip).lerp(bolt + Vector((0, -0.03, 0.02)), sm(k(0.56, 0.72))) + Vector((-0.06, 0, 0)) * (sm(k(0.72, 0.8)) - sm(k(0.8, 0.88)))
                     rh_t = rh_t.lerp(W(G.grip), k(0.86, 0.96))
                 else:
                     bo = bolt + Vector((0.02, -0.03, 0.02))
-                    lh_t = lh_t.lerp(bo, k(0.62, 0.7)) + Vector((-0.05, 0, 0)) * (k(0.7, 0.76) - k(0.76, 0.82))
+                    lh_t = lh_t.lerp(bo, sm(k(0.56, 0.72))) + Vector((-0.05, 0, 0)) * (sm(k(0.72, 0.78)) - sm(k(0.78, 0.84)))
                     lh_t = lh_t.lerp(W(G.fore), k(0.84, 0.96))
-        kd = Vector((0.75, 0, 0.66))   # direção da lâmina
+        KD_FACA = Vector((0.2, 1, -0.05)).normalized()   # parado/andando: faca deitada, atravessada pra dentro (CS2)
+        kd = KD_FACA   # direção da lâmina
         if knife:
-            hold_r = ch + Vector((0.17, -0.1, -0.06)); hold_l = ch + Vector((0.04, 0.15, -0.16))
+            # como no CS2: cotovelo do lado do corpo, antebraço pra frente e a faca na horizontal, atravessada
+            hold_r = ch + Vector((0.2, -0.12, -0.1)); hold_l = ch + Vector((0.03, 0.165, -0.25))
             rh_t, lh_t = hold_r, hold_l
             if anim == "faca_andar":   # braços balançam com o passo
                 sw = math.sin(t * 2 * math.pi)
-                rh_t = hold_r + Vector((0.05 * sw, 0, 0.02 * abs(sw))); lh_t = hold_l + Vector((-0.07 * sw, 0, 0.02 * abs(sw)))
+                rh_t = hold_r + Vector((0.07 * sw, 0, 0.02 * abs(sw))); lh_t = hold_l + Vector((-0.07 * sw, 0, 0.02 * abs(sw)))
             def bz(a, b, c, u): return a.lerp(b, u).lerp(b.lerp(c, u), u)
             trail = []   # pontos do rastro (do mais novo pro mais velho)
             if anim == "faca_m1":
                 # M1: corte rápido na diagonal, do alto à direita pra baixo à esquerda, na frente do corpo, e volta
-                a0 = ch + Vector((0.16, -0.2, 0.2)); a1 = ch + Vector((0.34, -0.01, 0.04)); a2 = ch + Vector((0.18, 0.17, -0.12))
+                a0 = ch + Vector((0.16, -0.2, 0.2)); a1 = ch + Vector((0.34, -0.01, 0.04)); a2 = ch + Vector((0.26, 0.12, -0.1))
                 d0 = Vector((0.4, -0.6, 0.7)); d1 = Vector((1, 0, 0)); d2 = Vector((0.4, 0.6, -0.6))
                 u = sm(k(0.18, 0.48))
-                if t < 0.18: rh_t = hold_r.lerp(a0, sm(k(0.0, 0.18))); kd = Vector((0.75, 0, 0.66)).lerp(d0, sm(k(0.0, 0.18)))
+                if t < 0.18: rh_t = hold_r.lerp(a0, sm(k(0.0, 0.18))); kd = KD_FACA.lerp(d0, sm(k(0.0, 0.18)))
                 elif t < 0.55: rh_t = bz(a0, a1, a2, u); kd = d0.lerp(d1, min(1, u * 2)) if u < 0.5 else d1.lerp(d2, (u - 0.5) * 2)
-                else: rh_t = a2.lerp(hold_r, sm(k(0.55, 1.0))); kd = d2.lerp(Vector((0.75, 0, 0.66)), sm(k(0.55, 1.0)))
+                else: rh_t = a2.lerp(hold_r, sm(k(0.55, 1.0))); kd = d2.lerp(KD_FACA, sm(k(0.55, 1.0)))
                 lean = 0.1 * (sm(k(0.15, 0.4)) - sm(k(0.55, 1.0)))
                 if 0.2 < t < 0.62:   # arco contínuo atrás da ponta da lâmina
                     for i in range(10):
@@ -933,37 +1181,84 @@ class Agent:
             if anim == "faca_m2":
                 # M2: estocada pesada — puxa a faca pra trás (corpo recua), enfia pra frente com o peso, segura, volta
                 back = ch + Vector((-0.04, -0.17, 0.02)); thrust = ch + Vector((0.36, -0.03, 0.05))
-                if t < 0.35: rh_t = hold_r.lerp(back, sm(k(0.0, 0.35))); kd = Vector((0.75, 0, 0.66)).lerp(Vector((1, 0, 0.05)), sm(k(0.0, 0.35))); lean = -0.08 * sm(k(0.0, 0.35))
-                elif t < 0.5: rh_t = back.lerp(thrust, sm(k(0.35, 0.5))); kd = Vector((1, 0, 0.05)); lean = -0.08 + 0.28 * sm(k(0.35, 0.5))
+                if t < 0.3: rh_t = hold_r.lerp(back, sm(k(0.0, 0.3))); kd = KD_FACA.lerp(Vector((1, 0, 0.05)), sm(k(0.0, 0.3))); lean = -0.08 * sm(k(0.0, 0.3))
+                elif t < 0.5: rh_t = back.lerp(thrust, sm(k(0.3, 0.5))); kd = Vector((1, 0, 0.05)); lean = -0.08 + 0.28 * sm(k(0.3, 0.5))
                 elif t < 0.7: rh_t = thrust; kd = Vector((1, 0, 0.05)); lean = 0.2
-                else: rh_t = thrust.lerp(hold_r, sm(k(0.7, 1.0))); kd = Vector((1, 0, 0.05)).lerp(Vector((0.75, 0, 0.66)), sm(k(0.7, 1.0))); lean = 0.2 * (1 - sm(k(0.7, 1.0)))
+                else: rh_t = thrust.lerp(hold_r, sm(k(0.7, 1.0))); kd = Vector((1, 0, 0.05)).lerp(KD_FACA, sm(k(0.7, 1.0))); lean = 0.2 * (1 - sm(k(0.7, 1.0)))
                 lh_t = hold_l + Vector((-0.08, 0.03, 0.03)) * (sm(k(0.35, 0.5)) - sm(k(0.7, 1.0)))   # braço esquerdo pra trás (equilíbrio)
                 if 0.38 < t < 0.62:
                     for i in range(6): trail.append(rh_t + Vector((0.12 - i * 0.045, 0, 0.005)))
             if anim == "sacar_faca":   # tira da bainha na cintura direita, gira a lâmina pra frente
                 sheath = ch + Vector((0.02, -0.14, -0.13)); u = sm(k(0.0, 0.6))
-                rh_t = sheath.lerp(hold_r, u); kd = Vector((0, 0, -1)).lerp(Vector((0.75, 0, 0.66)), sm(k(0.2, 0.7)))
+                rh_t = sheath.lerp(hold_r, u); kd = Vector((0, 0, -1)).lerp(KD_FACA, sm(k(0.2, 0.7)))
         if fixed and abs(lean) > 1e-4:   # o alvo está parado no mundo: leva pro tronco antes de inclinar
             Mlean = Matrix.Translation((0, 0, hipz)) @ Matrix.Rotation(lean, 4, "Y") @ Matrix.Translation((0, 0, -hipz))
             Mi = Mlean.inverted(); lh_t = Mi @ lh_t; rh_t = Mi @ rh_t
-        # braços
+        # braços: o corpo (cabeça já virada, com a máscara/rosto; tronco com o colete) é obstáculo pro braço e pra mão
+        hcF, frF = hc.copy(), Vector((1, 0, 0))
+        if head_turn:
+            neck = ch + Vector((0, 0, 0.13)); tilt, yaw = head_turn
+            Mh = Matrix.Translation(neck) @ Matrix.Rotation(yaw, 4, "Z") @ Matrix.Rotation(tilt, 4, "Y") @ Matrix.Translation(-neck)
+            hcF = Mh @ hc; frF = Mh.to_3x3() @ frF
+        cab = (hcF + frF * 0.02, Vector((0.185, 0.175, 0.165)), 2)
+        tor = (ch + Vector((0.0, 0, -0.005)), Vector((0.1, 0.13, 0.13)), 2)
+        cole = (ch + Vector((0.0, 0, 0.005)), Vector((0.108, 0.136, 0.098)), 4)
+        corpo = [cab, tor, cole]
+        if ct:   # máscara de gás: sai do rosto pra frente e pra baixo
+            corpo.append(((Mh @ (hc + Vector((0.09, 0, -0.015)))) if head_turn else hc + Vector((0.09, 0, -0.015)), Vector((0.105, 0.148, 0.13)), 2))
+        # mãos no fuzil (não nas costas, na faca, na granada, na bomba...): cotovelos fechados e alcance do guarda-mão
+        maos_fuzil = kind == "rifle" and not knife
         for sd, sg, tgt in (("L", 1, lh_t), ("R", -1, rh_t)):
             sh = ch + Vector((0, sg * 0.125, 0.07))
-            elb, hd = ik(sh, tgt, 0.19, 0.19, Vector((0, sg * 0.4, -1)))
+            pole = Vector((0, sg * 0.4, -1))
+            if maos_fuzil:   # fuzil: cotovelos pra baixo, perto do corpo (usuário: braço aberto demais)
+                pole = Vector((-0.3, -0.12, -1)) if sd == "R" else Vector((0.1, 0.22, -1))
+            if sd == "R" and knife: pole = Vector((-0.3, -0.8, -0.6))
+            if sd == "R" and anim == "sacar_costas": pole = Vector((-0.8, -0.6, -0.1))   # cotovelo pra trás e pra fora   # faca: cotovelo pra fora e pra trás (na estocada subia na cabeça)
+            if sd == "R" and scope_u > 0:   # cotovelo direito na luneta: pra baixo e um pouco pra fora, junto do corpo
+                # (antes levantado de lado, "asa de galinha": usuário achou o braço pra fora demais)
+                pole = pole.lerp(Vector((0.6, -0.45, -0.65)), sm(min(1.0, scope_u / 0.6)))
+            # braço esquerdo estica um pouco (desenho animado) pra alcançar o guarda-mão da AWP na luneta
+            lb = 0.19 + (0.075 * scope_u if sd == "L" and anim != "recarga" else 0.0)
+            if sd == "L" and maos_fuzil: lb += 0.05
+            if sd == "R" and maos_fuzil and scope_u <= 0: lb -= 0.015   # braço direito dobra menos: cotovelo não abre   # o guarda-mão do fuzil (do lado direito) fica longe da mão esquerda
+            if sd == "L" and abs(pitch) > math.radians(25):   # mira muito pra cima/baixo: o braço esquerdo estica pro guarda-mão
+                lb += 0.06 * min(1.0, (abs(pitch) - math.radians(25)) / math.radians(35))
+            # na luneta o braço direito encosta no peito (cotovelo pra frente e pra baixo): só a cabeça empurra o cotovelo;
+            # com o colete como obstáculo ele fugia pro lado, na altura do ombro
+            # (mistura contínua das duas soluções pelo scope_u: trocar de uma vez dava salto ao sair da luneta)
+            elb, hd = ik_desvia(sh, tgt, lb, lb, pole, corpo, corpo, chave=sd)
+            wl = sm(min(1.0, max(0.0, (scope_u - 0.2) / 0.6))) if sd == "R" else 0.0
+            if wl > 0:
+                elb2, _ = ik_desvia(sh, tgt, lb, lb, pole, corpo, [cab], chave="R_luneta")
+                u_ = (hd - sh).normalized(); dd = (hd - sh).length
+                a_ = dd / 2; r_ = math.sqrt(max(lb * lb - a_ * a_, 0)); c_ = sh + u_ * a_
+                e_ = elb.lerp(elb2, wl) - c_; e_ -= u_ * e_.dot(u_)   # volta pro círculo de cotovelos válidos
+                if e_.length > 1e-6: elb = c_ + e_.normalized() * r_
             mid = sh.lerp(elb, 0.6)
             if ct:
                 place_seg(P["braco" + sd], sh, elb, 0.044); place_seg(P["ante" + sd], elb, hd, 0.038)
             else:
-                place_seg(P["braco" + sd], sh, mid, 0.046); place_seg(P["ante" + sd], mid, hd, 0.036)
+                # manga até 60% do braço, pele até o cotovelo e antebraço do cotovelo à mão (antes uma peça só do meio do
+                # braço à mão cortava o cotovelo e entrava no colete)
+                place_seg(P["braco" + sd], sh, mid, 0.046); place_seg(P["ante" + sd], mid, elb, 0.037); place_seg(P["pulso" + sd], elb, hd, 0.036)
             place(P["mao" + sd], hd, (0.034, 0.032, 0.032))
             if knife and sd == "R":   # faca na mão direita: o centro do cabo fica no punho, lâmina ao longo de kd
                 kn = kd.normalized()
-                s.knife.location = hd - kn * 0.01; s.knife.rotation_mode = "QUATERNION"; s.knife.rotation_quaternion = kn.to_track_quat("X", "Z")
+                s.knife.location = hd - kn * 0.01; s.knife.rotation_mode = "QUATERNION"
+                # parado/correndo: lâmina deitada com a face pra cima (CS); nos golpes, o fio pra baixo
+                s.knife.rotation_quaternion = kn.to_track_quat("X", "Y" if anim in ("faca_parado", "faca_andar") else "Z")
         if knife:
             for i, p in enumerate(trail[:10]):   # rastro do golpe: faixa clara que afina
                 s_ = 0.024 * (1 - i * 0.08)
                 place(PR["rastro%d" % i], p, (s_, s_, s_ * 0.45))
         G.obj.location = gpos; G.obj.rotation_mode = "QUATERNION"; G.obj.rotation_quaternion = gq
+        # pistola no coldre fica menor (chibi: a de verdade é mais comprida que a coxa) e cresce saindo dele no sacar
+        e_ = 1.0
+        if kind == "pistol":
+            if anim == "sacar": e_ = 0.62 + 0.38 * sm(k(0.0, 0.3))
+            elif (gpos - back_pos).length < 1e-6: e_ = 0.62
+        G.obj.scale = (e_, e_, e_)
         gun_objs = [G.obj] + ([s.knife] if knife else [])
         if G.mag:
             # fora da arma (caindo, no chão, na mão) SMG e pistola mostram o pente inteiro
@@ -972,6 +1267,9 @@ class Agent:
             if mag_pos is not None:
                 o = G.magp if (out1 and G.magp) else G.mag
                 o.location = mag_pos; o.rotation_mode = "QUATERNION"; o.rotation_quaternion = mag_q
+                o.scale = (1, 1, 1)
+                if not out1 and e_ != 1.0:   # encaixado na pistola encolhida (coldre): encolhe junto em volta dela
+                    o.location = gpos + (mag_pos - gpos) * e_; o.scale = (e_, e_, e_)
                 if not out1: gun_objs.append(o)   # só o encaixado acompanha a arma; o que caiu fica parado no chão
             if mag2_pos is not None:
                 o = G.magp2 if (out2 and G.magp2) else G.mag2
@@ -983,8 +1281,8 @@ class Agent:
             for nm in HEAD_KEYS:
                 if nm in P: P[nm].matrix_basis = Mh @ P[nm].matrix_basis
         upper = [o for o in P.values() if o not in LOWER] + gun_objs + [o for o in PR.values() if o.location.z > -40 and o.name.find("bomba") < 0 and o.name.find("visor") < 0]
-        if abs(lean) > 1e-4:
-            M = Matrix.Translation((0, 0, hipz)) @ Matrix.Rotation(lean, 4, "Y") @ Matrix.Translation((0, 0, -hipz))
+        if abs(lean) > 1e-4 or abs(twist) > 1e-4:
+            M = Matrix.Translation((0, 0, hipz)) @ Matrix.Rotation(twist, 4, "Z") @ Matrix.Rotation(lean, 4, "Y") @ Matrix.Translation((0, 0, -hipz))
             for o in upper: o.matrix_basis = M @ o.matrix_basis
         if anim == "morrer":
             # cai de costas girando nos pés; a arma escapa da mão e cai na frente
@@ -997,7 +1295,33 @@ class Agent:
             if G.mag:   # o pente continua encaixado na arma que caiu
                 bpy.context.view_layer.update()
                 G.mag.location = G.obj.matrix_basis @ Vector(G.mag["piv"]); G.mag.rotation_quaternion = G.obj.rotation_quaternion
+        if anim == "morrer_frente":
+            # tomba de cara pra frente girando no bico do pé (tiro pelas costas); a arma escapa pra frente
+            a = 1.4 * sm(k(0.0, 0.7)); bounce = 0.02 * math.sin(math.pi * k(0.7, 0.85))
+            M = Matrix.Translation((0.08, 0, bounce)) @ Matrix.Rotation(a, 4, "Y") @ Matrix.Translation((-0.08, 0, 0))
+            for o in list(P.values()): o.matrix_basis = M @ o.matrix_basis
+            u = sm(k(0.05, 0.6))
+            G.obj.location = gpos.lerp(Vector((0.45, 0.1, 0.03)), u)
+            G.obj.rotation_quaternion = gq.slerp(Quaternion((1, 0, 0), math.radians(-90)) @ Quaternion((0, 0, 1), -0.5), u)
+            if G.mag:
+                bpy.context.view_layer.update()
+                G.mag.location = G.obj.matrix_basis @ Vector(G.mag["piv"]); G.mag.rotation_quaternion = G.obj.rotation_quaternion
+        s.chao()
+
+    def chao(s):
+        """Peça do corpo (elipsoide/caixa) abaixo de z=0 -> sobe tudo o que está no boneco."""
         bpy.context.view_layer.update()
+        menor = 9.0
+        for o in s.P.values():
+            M = o.matrix_world
+            if M.translation.length > 20: continue
+            caixa = "r" in o.keys()
+            ext = sum(abs(M[2][j]) for j in range(3)) if caixa else math.sqrt(sum(M[2][j] ** 2 for j in range(3)))
+            menor = min(menor, M.translation.z - ext)
+        if menor < -0.004:
+            for o in s.root.children:
+                if o.matrix_world.translation.length < 20: o.location.z -= menor
+            bpy.context.view_layer.update()
 
     def nade(s, kind, pos, spin=0.0):
         q = Quaternion((0, 1, 0), spin)

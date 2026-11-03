@@ -142,6 +142,30 @@ namespace CSM.Sim
             return CALLOUT.TryGetValue(a, out var c) ? c : a;
         }
 
+        /// <summary>
+        /// Zona por FUNÇÃO, como nos dados pro de Mirage (tactics.json: A / Mid / B / Spawn): o que cada lugar da Vila
+        /// faz no round — palácio/rampa/conector levam ao A, topo/meio/janelão/rato são o meio, curta/casarão/mercado/viela
+        /// levam ao B. É a régua pra comparar nossos rounds com os pro e pra descrever estratégia por zona.
+        /// </summary>
+        public static string Zona(V2 p)
+        {
+            var a = AreaAt(p.x, p.y);
+            return a != null && ZONA.TryGetValue(a, out var z) ? z : "Mid";
+        }
+        static readonly Dictionary<string, string> ZONA = new Dictionary<string, string>
+        {
+            ["TR"] = "Spawn", ["CT"] = "Spawn",
+            ["A"] = "A", ["Plataforma"] = "A", ["Esc_plataforma"] = "A", ["Rua_CT"] = "A", ["Descida_CT"] = "A",
+            ["Rampa_saida"] = "A", ["Rampa_baixo"] = "A", ["Rampa_dobra"] = "A", ["Rampa"] = "A",
+            ["Hall_palacio"] = "A", ["Esc_palacio"] = "A", ["Palacio"] = "A", ["Palacio_sala"] = "A", ["Palacio_corredor"] = "A", ["Sacada_A"] = "A",
+            ["Conector"] = "A", ["Conector_dobra"] = "A", ["Conector_fim"] = "A",
+            ["Topo_meio"] = "Mid", ["Topo_entrada"] = "Mid", ["Meio"] = "Mid", ["Praca"] = "Mid", ["Esc_janelao"] = "Mid", ["Janelao"] = "Mid",
+            ["Rato"] = "Mid", ["Esc_rato"] = "Mid", ["Rato_fundo"] = "Mid",
+            ["Curta"] = "B", ["Curta_sobe"] = "B", ["Curta_fim"] = "B", ["B"] = "B", ["Banca"] = "B", ["Esc_banca"] = "B", ["Carroca"] = "B", ["Carroca_degrau"] = "B",
+            ["Mercado"] = "B", ["Descida_mercado"] = "B", ["Passagem_viela"] = "B", ["Viela"] = "B", ["Esc_viela"] = "B",
+            ["Rua_B"] = "B", ["Beco_casarao"] = "B", ["Esc_casarao"] = "B", ["Casarao"] = "B", ["Casarao_corredor"] = "B", ["Casarao_dobra"] = "B", ["Casarao_saida"] = "B", ["Tapete"] = "B",
+        };
+
         /// <summary>Qual bomb fica mais perto (A/B) ou meio.</summary>
         public static char Side(V2 p)
         {

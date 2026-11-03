@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -15,6 +15,7 @@ namespace CSM.Sim
         public float meio = 1f;       // o quanto disputa o meio (0..1,3)
         public float agressao = 1f;   // jogadas agressivas cedo (0..1,3)
         public bool giroCauteloso;
+        public bool guardaSmoke;      // TR: perdendo o pós-plant, segura smoke pra cortar o retake
         public string motivo = "";
     }
 
@@ -115,6 +116,16 @@ namespace CSM.Sim
         }
 
         /// <summary>Acabou o round: deduz o que o TR deles fez só com o que a gente viu.</summary>
+        /// <summary>Resultado de uma escolha dentro do round (estilo de pós-plant, porta do retake): soma no histórico sem contar como plano.</summary>
+        public void Anota(string chave, bool ganhou)
+        {
+            meus.TryGetValue(chave, out var x); meus[chave] = (x.n + 1, x.w + (ganhou ? 1 : 0));
+            if (chave.StartsWith("pp:")) { posPlants++; if (!ganhou) posPlantsPerdidos++; }
+        }
+        public int posPlants, posPlantsPerdidos;
+        /// <summary>O quanto essa escolha vem dando certo: sem amostra fica neutra; 2 fracassos já pesam.</summary>
+        public float Peso(string chave) { if (!Adapta) return 1; meus.TryGetValue(chave, out var x); return (x.w + 1f) / (x.n + 2f) * 2f; }
+
         public void DeduzTR(Match m, Team eu)
         {
             var eles = eu == Team.T ? Team.CT : Team.T; trRounds++;
@@ -142,6 +153,9 @@ namespace CSM.Sim
         /// <summary>Taxa com "prior" (começa em meio a meio; leva uns rounds pra acreditar).</summary>
         public static float Taxa(int x, int n, float prior = 0.5f, float peso = 3) => (x + prior * peso) / (n + peso);
 
+        /// <summary>Planos do banco que a gente já usou nesta partida (não repetir a mesma jogada; o adversário anota).</summary>
+        public readonly List<int> bancoUsados = new List<int>();
+
         /// <summary>Quanto o plano vem dando certo pra nós (0..1, começa em 0,5).</summary>
         public float Sucesso(string plano) { meus.TryGetValue(plano, out var x); return Taxa(x.w, x.n); }
 
@@ -168,6 +182,8 @@ namespace CSM.Sim
                 if (sA > 0.35f) { i.lado -= 0.25f; mot.Add($"eles enchem o A ({ctStackA}/{ctRounds})"); }
                 if (ag > 0.45f) { i.ritmo -= 0.2f; mot.Add($"o CT deles sai cedo ({ctAgressivo}/{ctRounds}): jogo lento pra punir"); }
             }
+            i.guardaSmoke = posPlantsPerdidos >= 2 && posPlantsPerdidos * 2 >= posPlants;
+            if (i.guardaSmoke) mot.Add($"perdemos {posPlantsPerdidos} de {posPlants} depois de plantar: guardo smoke pro retake deles");
             char p = PerdeuDuasEm();
             if (p == 'A') { i.lado -= 0.3f; mot.Add("perdemos 2 seguidas no A"); } else if (p == 'B') { i.lado += 0.3f; mot.Add("perdemos 2 seguidas no B"); }
             i.lado = MathX.Clamp(i.lado, -0.7f, 0.7f); i.ritmo = MathX.Clamp(i.ritmo, 0.1f, 0.9f);
