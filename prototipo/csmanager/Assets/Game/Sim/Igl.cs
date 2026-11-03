@@ -90,7 +90,7 @@ namespace CSM.Sim
                     foreach (var kv in slotDe)
                     {
                         var a = m.agents[kv.Key]; if (a.role == Role.Entry || kv.Value == lurkSlot) continue;
-                        float pe = estr.PrimeiroEm(kv.Value, estr.site.ToString()); if (pe < 0) pe = 500 + estr.PrimeiroEm(kv.Value, ((char)estr.site).ToString() == "A" ? "A" : "B");
+                        float pe = estr.PrimeiroEm(kv.Value, estr.site.ToString());   // 1º instante no lado do bomb (zona)
                         if (pe >= 0 && pe < cedo) { cedo = pe; leva = a; }
                     }
                 if (leva == null) { var trsB = m.agents.Where(a => a.IsT).ToList(); leva = trsB[rng.Int(trsB.Count)]; }

@@ -38,8 +38,9 @@ Abra `Assets/Scenes/Partida3D.unity` (já é a primeira cena do Build Settings) 
 1 a 4 mudam a velocidade, N pula o round, P abre o painel, a rodinha do mouse dá zoom e clicar num card do HUD segue
 o jogador.
 
-Os bonecos 3D (`Logs/bonecos3d/boneco_ct|tr.json/.bin`, ~100 MB) não são versionados. Gere com o Blender 5.2 a partir
-da raiz deste protótipo:
+Os bonecos 3D (`Logs/bonecos3d/boneco_ct|tr.json/.bin`, ~100 MB) vão junto no repositório, então o Play funciona
+logo depois de clonar. Depois de mexer no `Tools/sprites/agentes.py`, gere de novo com o Blender 5.2 a partir da raiz
+deste protótipo:
 
 ```bash
 blender -b --factory-startup --python Tools/sprites/exportar3d.py -- Logs/bonecos3d ct
