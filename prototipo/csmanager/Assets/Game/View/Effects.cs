@@ -153,7 +153,7 @@ namespace CSM.View
         {
             foreach (var (a, b, ag) in tunnels)
             {
-                float r = 7f * MathF.Sqrt(Math.Max(0, 1 - ag / 1.4f));
+                float r = 3.5f * MathF.Sqrt(Math.Max(0, 1 - ag / 1.0f));
                 if (r < 0.5f) continue;
                 V3 ab = b - a; float u = Math.Clamp((q - a).Dot(ab) / Math.Max(ab.Dot(ab), 1e-6f), 0, 1);
                 if ((q - (a + ab * u)).Len < r) return true;
@@ -171,16 +171,17 @@ namespace CSM.View
             for (int i = tunnels.Count - 1; i >= 0; i--)
             {
                 var tn = tunnels[i]; tn.age += dt;
-                if (tn.age > 1.4f) tunnels.RemoveAt(i); else tunnels[i] = tn;
+                if (tn.age > 1.0f) tunnels.RemoveAt(i); else tunnels[i] = tn;
             }
         }
 
-        /// <summary>Tiro atravessando: abre um túnel de raio ~7 ao longo do segmento, que fecha em ~1,4 s.</summary>
+        /// <summary>Tiro atravessando: abre um túnel fino (raio ~3,5, uma cabeça) ao longo do segmento, que fecha em ~1 s.
+        /// Antes era 6,5 e 1,4 s — abria buraco demais (visão dos bots inclusive).</summary>
         public void Shot(V3 a, V3 b)
         {
             tunnels.Add((a, b, 0f));
             V3 d = b - a; float L = d.Len; if (L < 1e-3f) return;
-            for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 6.5f, 1f);
+            for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 3.5f, 0.7f);
         }
 
         public void Clear(V3 p, float r, float amount)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -28,7 +28,7 @@ namespace CSM.Sim
         public class Jogador
         {
             public string nome; public Role roleT, roleCT; public char siteCT = 'M'; public Skill skill = new Skill();
-            public int dinheiro; public string arma; public bool colete, capacete, kit; public List<string> nades = new List<string>();
+            public int dinheiro; public string arma, pistola; public bool colete, capacete, kit; public List<string> nades = new List<string>();
             public int k, d, hs, dano, fk, rounds, guardou;
             public Role Role(bool t) => t ? roleT : roleCT;
         }
@@ -102,11 +102,11 @@ namespace CSM.Sim
             return m;
         }
 
-        static void Limpa(Jogador j) { j.arma = null; j.colete = j.capacete = j.kit = false; j.nades.Clear(); }
+        static void Limpa(Jogador j) { j.arma = null; j.pistola = null; j.colete = j.capacete = j.kit = false; j.nades.Clear(); }
 
         static Match.Loadout Loadout(Jogador j, bool t) => new Match.Loadout
         {
-            name = j.nome, role = j.Role(t), site = t ? 'M' : j.siteCT, gun = j.arma ?? (t ? "glock" : "usp"),
+            name = j.nome, role = j.Role(t), site = t ? 'M' : j.siteCT, gun = j.arma ?? (t ? "glock" : "usp"), pistola = j.pistola,
             armor = j.colete, helmet = j.capacete, kit = !t && j.kit, nades = new List<string>(j.nades),
         };
 
@@ -127,12 +127,15 @@ namespace CSM.Sim
 
         string Rifle(Jogador j, bool t) => t ? "ak" : j.roleCT == Role.Ancora ? "m4" : "m4s";
         bool TemPrimaria(Jogador j) => j.arma != null && !WeaponStats.Pistola(j.arma);
+        /// <summary>Primária nova: a pistola comprada que ele tinha na mão (Deagle) vai pro coldre, não some.</summary>
+        static void DarPrimaria(Jogador j, string g) { if (j.arma != null && WeaponStats.Pistola(j.arma)) j.pistola = j.arma; j.arma = g; }
 
         int CustoCheio(Jogador j, bool t)
         {
             int c = TemPrimaria(j) ? 0 : Preco(j.Role(t) == Role.Awper ? "awp" : Rifle(j, t));
-            if (!j.colete) c += 650; if (!j.capacete) c += 350;
-            if (!t && !j.kit) c += 400;
+            bool velho = TeamBrain.EXP.Contains("compraCTVelha");
+            if (!j.colete) c += 650; if (!j.capacete && (t || velho)) c += 350;   // CT compra cheio sem capacete (AK mata de cabeça igual)
+            if (!t && !j.kit && velho) c += 400;                                   // kit é de quem sobra dinheiro, não condição pra comprar
             return c + 500;   // o mínimo de granada
         }
 
@@ -189,19 +192,51 @@ namespace CSM.Sim
                 }
                 if (!TemPrimaria(j))
                 {
-                    string quer = awp && tipo == "full" && j.dinheiro >= Preco("awp") + 1000 ? "awp" : Rifle(j, t);
-                    if (j.dinheiro >= Preco(quer) + 650) { j.dinheiro -= Preco(quer); j.arma = quer; }
+                    string quer = awp && tipo == "full" && j.dinheiro >= Preco("awp") + (TeamBrain.EXP.Contains("awpCompraVelha") ? 1000 : 650) ? "awp" : Rifle(j, t);
+                    if (j.dinheiro >= Preco(quer) + 650) { j.dinheiro -= Preco(quer); DarPrimaria(j, quer); }
                     else if (tipo == "force")
                     {
                         string smg = t ? "mac10" : "mp9";
-                        if (j.dinheiro >= Preco(smg) + 650) { j.dinheiro -= Preco(smg); j.arma = smg; }
+                        if (j.dinheiro >= Preco(smg) + 650) { j.dinheiro -= Preco(smg); DarPrimaria(j, smg); }
                         else if (j.arma != "deagle" && j.dinheiro >= Preco("deagle") + 650) { j.dinheiro -= Preco("deagle"); j.arma = "deagle"; }   // meia compra: colete + Deagle
                     }
                 }
-                Compra(j, "colete"); Compra(j, "capacete");
-                if (!t) Compra(j, "kit");
+                Compra(j, "colete");
+                bool velhoCT = TeamBrain.EXP.Contains("compraCTVelha");
+                // real (143 partidas pro): capacete TR 83%, CT 67%; kit 42% dos CTs. O CT põe a granada antes do capacete e do kit
+                if (t || velhoCT) Compra(j, "capacete");
+                if (!t && velhoCT) Compra(j, "kit");
                 Compra(j, "smoke"); Compra(j, "flash"); Compra(j, t ? "molotovT" : "molotovCT");
+                if (!t && !velhoCT)
+                {
+                    if (j.dinheiro >= 350 + 600) Compra(j, "capacete");
+                    int kits = js.Count(x => x.kit);
+                    bool perto = j.roleCT == Role.Ancora || j.Role(false) == Role.Suporte;   // quem joga no bomb desarma
+                    if (kits < 3 && j.dinheiro >= 400 + (perto ? 0 : 500)) Compra(j, "kit");
+                }
                 if (tipo == "full" && j.dinheiro >= 300 + 1000 && !TeamBrain.EXP.Contains("semHE")) Compra(j, "he");   // HE por último, só sobrando dinheiro
+                // pistola melhor no coldre: o AWPer quase sempre (a AWP sozinha não segura entrada de vários), os outros só
+                // sobrando bem — a Deagle é o que tem arte agora (P250/Tec-9/Five-SeveN quando tiver)
+                if (tipo == "full" && j.arma != null && !WeaponStats.Pistola(j.arma) && j.pistola == null && !TeamBrain.EXP.Contains("semPistola"))
+                {
+                    bool quer = j.arma == "awp" ? j.dinheiro >= 700 + 600 && rng.Rand() < 0.75f : j.dinheiro >= 700 + 2500 && rng.Rand() < 0.3f;
+                    if (quer) { j.dinheiro -= Preco("deagle"); j.pistola = "deagle"; }
+                }
+            }
+            // AWP no AWPer na compra cheia: se ele tem dinheiro, troca o rifle que sobreviveu pela AWP (o rifle vai pro colega
+            // sem primária); se não tem, quem está rico dropa a AWP pra ele — time pro joga com a AWP
+            if (tipo == "full" && !TeamBrain.EXP.Contains("awpCompraVelha") && awper.arma != "awp")
+            {
+                var rico = js.Where(j => j != awper).OrderByDescending(j => j.dinheiro).First();
+                Jogador paga = awper.dinheiro >= Preco("awp") ? awper : rico.dinheiro >= Preco("awp") + 300 ? rico : null;
+                if (paga != null)
+                {
+                    paga.dinheiro -= Preco("awp");
+                    string velho = awper.arma; DarPrimaria(awper, "awp"); if (velho != null && WeaponStats.Pistola(velho)) velho = null;
+                    var semArma = js.FirstOrDefault(j => j != awper && !TemPrimaria(j));
+                    if (velho != null && !WeaponStats.Pistola(velho) && semArma != null) DarPrimaria(semArma, velho);
+                    Log($"  {(paga == awper ? $"{awper.nome} comprou a AWP" : $"{paga.nome} dropou a AWP pro {awper.nome}")}");
+                }
             }
             // drop: quem sobrou com dinheiro compra rifle pro colega que não conseguiu
             if (tipo == "full" || tipo == "force")
@@ -209,7 +244,7 @@ namespace CSM.Sim
                 {
                     string rf = Rifle(pobre, t);
                     var rico = js.Where(j => j != pobre).OrderByDescending(j => j.dinheiro).First();
-                    if (rico.dinheiro >= Preco(rf)) { rico.dinheiro -= Preco(rf); pobre.arma = rf; Log($"  {rico.nome} dropou {WeaponStats.ALL[rf].name} pro {pobre.nome}"); }
+                    if (rico.dinheiro >= Preco(rf)) { rico.dinheiro -= Preco(rf); DarPrimaria(pobre, rf); Log($"  {rico.nome} dropou {WeaponStats.ALL[rf].name} pro {pobre.nome}"); }
                 }
             // granada pro colega: quem sobrou rico compra a smoke/flash que faltou pra quem não teve dinheiro e dropa
             if (tipo == "full" || tipo == "force")
@@ -242,6 +277,8 @@ namespace CSM.Sim
             // leitura: cada time anota o próprio plano (e se deu certo) e o que viu do adversário
             char siteTR = m.bombPlanted || m.igl[0].Executou ? m.planSite : ' ';
             tAtual.leitura.MeuPlano(m.igl[0].plan, tWin, siteTR); ctAtual.leitura.MeuPlano(m.igl[1].plan, !tWin);
+            if (m.igl[0].estiloPP != "") tAtual.leitura.Anota("pp:" + m.igl[0].estiloPP, tWin);
+            if (m.igl[1].portaRetakeNome != "") ctAtual.leitura.Anota(m.igl[1].portaRetakeNome, !tWin);
             ctAtual.leitura.DeduzTR(m, Team.CT); tAtual.leitura.DeduzCT(m);   // o que o outro planejou ninguém sabe: só o que viram
             int premio = m.reason == "bomb explodiu" || m.reason == "bomb desarmado" ? WIN_BOMB : WIN;
             perdeu.nivelPerda = Math.Min(perdeu.nivelPerda + 1, 4);
@@ -252,11 +289,11 @@ namespace CSM.Sim
             {
                 var a = m.agents[i]; var tm = i < 5 ? tAtual : ctAtual; var j = tm.js[i % 5];
                 if (tm == ganhou) j.dinheiro += premio;
-                else if (!(a.team == Team.T && m.reason == "tempo acabou" && a.alive))   // TR vivo no fim do tempo não ganha nada
+                else if (!(a.team == Team.T && m.reason == "tempo acabou" && (a.vivoNoFim || TeamBrain.EXP.Contains("semPosRound") && a.alive)))   // TR vivo quando o tempo acabou não ganha nada (morrer depois, no pós-round, não devolve)
                     j.dinheiro += bonus + (a.team == Team.T && m.bombPlanted ? PLANT_TIME : 0);
                 j.dinheiro = Math.Min(MAX, j.dinheiro + a.ganho);
-                if (a.guardando) { guardaram++; j.guardou++; if (a.alive) guardadasVivas++; }
-                if (a.alive) { j.arma = WeaponStats.Pistola(a.gunId) ? null : a.gunId; j.colete = a.armor > 0; j.capacete = a.helmet && a.armor > 0; j.kit = a.hasKit; j.nades = new List<string>(a.nades); }
+                if (a.guardando && !a.salvaPos) { guardaram++; j.guardou++; if (a.alive) guardadasVivas++; }
+                if (a.alive) { string pis = a.Pistola == "glock" || a.Pistola == "usp" ? null : a.Pistola; j.arma = a.Primaria ?? pis; j.pistola = a.Primaria != null ? pis : null; j.colete = a.armor > 0; j.capacete = a.helmet && a.armor > 0; j.kit = a.hasKit; j.nades = new List<string>(a.nades); }
                 else Limpa(j);
                 j.k += a.kills; j.d += a.deaths; j.hs += a.hs; j.dano += a.damage; j.fk += a.firstKills; j.rounds++;
             }
@@ -288,7 +325,11 @@ namespace CSM.Sim
                     try { m.Step(); }
                     catch (Exception e) { Log($"ERRO NA SIMULAÇÃO R{r + 1}: {e.Message} @ {e.StackTrace?.Split('\n').FirstOrDefault()?.Trim()}"); m.over = true; m.winner = "CT"; m.reason = "erro na simulação"; }
                 }
-                if (!m.over) { m.over = true; m.winner = "CT"; m.reason = "tempo acabou"; }
+                if (!m.over) { foreach (var x in m.agents) x.vivoNoFim = x.alive; m.over = true; m.winner = "CT"; m.reason = "tempo acabou"; }
+                // pós-round: quem perdeu tenta salvar a arma, quem ganhou pode caçar (morrer aqui = perder a arma)
+                if (!TeamBrain.EXP.Contains("semPosRound"))
+                    for (float pr = 0; pr < Match.POS_ROUND; pr += Match.DT)
+                        try { m.StepPosRound(); } catch (Exception e) { Log($"ERRO NO PÓS-ROUND R{r + 1}: {e.Message}"); break; }
                 Fechar(m);
                 cadaRound?.Invoke(m);
                 historico[historico.Count - 1].m = null;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using CSM.Map;
@@ -24,17 +24,22 @@ namespace CSM.Sim
         public readonly List<(V2 p, float z, float t)> flashes = new List<(V2, float, float)>();
         public readonly List<(V2 p, float z, float t)> hes = new List<(V2, float, float)>();   // explosões de HE (desenho/replay)
         /// <summary>HE: raio do dano, sino do dano (CS2 350 u ~ nosso 200: boneco 18 x 32) e o raio da bolha na smoke.</summary>
-        public const float HE_RAIO = 170f, HE_SIGMA = 52f, HE_FURO = 46f;
+        // furo da HE menor que a smoke (raio ~34): abre um buraco e a fumaça segue em volta (46 limpava a smoke inteira)
+        public const float HE_RAIO = 170f, HE_SIGMA = 52f;
+        public static float HE_FURO => TeamBrain.EXP.Contains("heFuroVelho") ? 46f : 24f;
         public class Nade
         {
             public Places.Lineup l; public Agent by; public V2 from; public float z0, t0, t1;   // t1 = quando deve estourar (estimativa pros bots)
             // física: posição e velocidade de verdade — quica na parede, quica e rola no chão, cai da borda
             public float x, y, z, vx, vy, vz; public bool noChao, tocouChao, noAr; public int quiques, paredes; public float paradoDesde = -1;
+            public Arremesso.Tipo tipo;   // jeito do arremesso (visual: animação)
             public V2 P => new V2(x, y);
         }
         // CS2: flash/HE estouram no tempo (no ar, se for o caso: pop flash), smoke quando para, molotov ao bater no chão
         // (ou estoura no ar sem fogo se o tempo acabar voando)
-        public const float GN = 400f, QUICA_PAREDE = 0.45f, QUICA_CHAO = 0.3f, ATRITO_QUIQUE = 0.5f, ROLAR = 350f;
+        public const float QUICA_PAREDE = 0.45f, QUICA_CHAO = 0.3f, ATRITO_QUIQUE = 0.5f, ROLAR = 350f;
+        /// <summary>Gravidade da granada: a do CS2 na escala do mapa (~110); a antiga (400) fazia arco curto e rápido.</summary>
+        public static float GN => Arremesso.Velha ? 400f : Arremesso.GRAV;
         public const float FUSE_FLASH = 1.55f, FUSE_HE = 1.6f, FUSE_MOLOTOV = 2.0f;
         public readonly List<Nade> flying = new List<Nade>();
         public class ShotFx { public V2 a, b; public float za, zb, t; public bool hit, hs; public Team team; }
@@ -88,8 +93,21 @@ namespace CSM.Sim
         public void Pegar(Agent a, Drop d)
         {
             if (!drops.Remove(d)) return;
-            drops.Add(new Drop { gun = a.gunId, pos = a.pos, z = a.z, estado = a.gun });
-            a.gunId = d.gun; a.gun = d.estado ?? new WeaponStats.Gun(WeaponStats.ALL[d.gun]); a.scoped = false; a.spray = 0;
+            // a velha sai pra frente, na direção da mira (o G do CS), e não no pé; parede no meio: cai no pé
+            V2 cai = Jogo(a, a.pos + V2.Ang(a.aim) * 20);
+            if (TeamBrain.EXP.Contains("dropNoPe") || !MapData.LosWalk(a.pos, a.z, cai, NavGrid.ZAt(cai), 8f)) cai = a.pos;
+            var nova = d.estado ?? new WeaponStats.Gun(WeaponStats.ALL[d.gun]);
+            bool pistola = WeaponStats.Pistola(d.gun);
+            // inventário: a nova entra no lugar da do mesmo tipo (primária troca primária, pistola troca pistola) e vem pra
+            // mão; sem primária, a pistola vai pras costas em vez de cair
+            if (!pistola && a.Primaria == null && !TeamBrain.EXP.Contains("semPistola")) { a.outraId = a.gunId; a.outraGun = a.gun; }
+            else
+            {
+                bool naMao = pistola == WeaponStats.Pistola(a.gunId) || a.outraId == null;
+                if (!naMao) { (a.gunId, a.outraId) = (a.outraId, a.gunId); (a.gun, a.outraGun) = (a.outraGun, a.gun); }
+                drops.Add(new Drop { gun = a.gunId, pos = cai, z = NavGrid.ZAt(cai), estado = a.gun });
+            }
+            a.gunId = d.gun; a.gun = nova; a.scoped = false; a.spray = 0;
             Log($"{a.name} pegou {WeaponStats.ALL[d.gun].name} do chão ({Places.Region(a.pos)})");
         }
         public readonly Dictionary<string, float> paradoPor = new Dictionary<string, float>();   // tempo parado por fase do Brain
@@ -102,7 +120,7 @@ namespace CSM.Sim
         public readonly Dictionary<string, int> ev = new Dictionary<string, int>();
         readonly HashSet<string> evUma = new HashSet<string>();
         public void Ev(string k, int n = 1) { ev.TryGetValue(k, out int v); ev[k] = v + n; }
-        public static bool Auditar; Auditoria aud;
+        public static bool Auditar, LogContatos; Auditoria aud;
         public void Aud(string grupo, string item) { if (Auditar) Ev($"AUD {grupo}|{item}"); }
         public void Ev1(string k) { if (evUma.Add(k)) Ev(k); }
         float nextIntel, nextFireDmg;
@@ -117,6 +135,7 @@ namespace CSM.Sim
         public class Loadout
         {
             public string name; public Role role; public char site = 'M'; public string gun;
+            public string pistola;   // a guardada atrás da primária (null: a padrão do lado; sem primária, a pistola é a gun)
             public bool armor = true, helmet = true, kit; public List<string> nades = new List<string>();
         }
 
@@ -146,7 +165,7 @@ namespace CSM.Sim
         public Match(int seed, Pesos pT = null, Pesos pCT = null, Loadout[] setup = null, string[] compra = null, float[] aperto = null, Leitura lT = null, Leitura lCT = null)
         {
             leitura[(int)Team.T] = lT; leitura[(int)Team.CT] = lCT;
-            rng = new Rng(seed); this.seed = seed;
+            rng = new Rng(seed); this.seed = seed; sus = new Suspeitas(this);
             Perigo.Build();
             pesos[(int)Team.T] = pT ?? Pesos.Padrao(); pesos[(int)Team.CT] = pCT ?? Pesos.Padrao();
             setup ??= CompraCheia();
@@ -157,6 +176,10 @@ namespace CSM.Sim
                 var l = setup[id]; var tm = id < 5 ? Team.T : Team.CT;
                 var a = new Agent(id, l.name, tm, l.role, l.gun, pesos[(int)tm]) { pos = (tm == Team.T ? MapData.SPAWN_T : MapData.SPAWN_CT)[id % 5] };
                 a.armor = l.armor ? 100 : 0; a.helmet = l.helmet && l.armor; a.hasKit = tm == Team.CT && l.kit; a.nades.AddRange(l.nades);
+                if (!WeaponStats.Pistola(l.gun) && !TeamBrain.EXP.Contains("semPistola"))
+                {   // todo mundo tem pistola: a padrão do lado (Glock/USP) ou a que comprou
+                    a.outraId = l.pistola ?? (tm == Team.T ? "glock" : "usp"); a.outraGun = new WeaponStats.Gun(WeaponStats.ALL[a.outraId]);
+                }
                 a.brain = new Brain(a, this, seed * 31 + id) { homeSite = l.site };
                 agents.Add(a);
             }
@@ -183,11 +206,57 @@ namespace CSM.Sim
         public void Step()
         {
             if (over) return;
+            Corpo(false);
+        }
+
+        /// <summary>
+        /// Depois do fim do round, até o próximo (como no CS): o jogo segue, só que o round já está decidido. Quem perdeu
+        /// tenta salvar a arma (esconde, foge); quem ganhou pode caçar o save pra tirar a arma dele (exit frag) — morrer
+        /// aqui é perder a arma pro próximo round. Ninguém pensa em bomb, retake ou placar.
+        /// </summary>
+        public void StepPosRound()
+        {
+            if (!over) { Step(); return; }
+            if (!posRound) IniciaPosRound();
+            Corpo(true);
+        }
+        public bool posRound; public float posRoundDesde;
+        public const float POS_ROUND = 7f;   // CS2 competitivo: mp_round_restart_delay 7
+        void IniciaPosRound()
+        {
+            posRound = true; posRoundDesde = t;
+            Team venceu = winner == "TR" ? Team.T : Team.CT;
+            foreach (var a in agents)
+            {
+                if (!a.alive) continue;
+                var it = intel[(int)a.team];
+                if (a.team != venceu)
+                {   // perdeu: salvar a arma (cara, a não ser que seja só pistola)
+                    if (WeaponStats.ALL[a.Primaria ?? a.gunId].price < 1000 && !TeamBrain.EXP.Contains("posSalvaTudo")) continue;
+                    a.guardando = true; a.salvaPos = true;
+                    a.brain.SetOrder(new Order { name = "guardando a arma", dest = igl[(int)a.team].SaveSpotNovo(a), quiet = false, why = "o round acabou: salvar a arma pro próximo" });
+                }
+                else
+                {   // ganhou: caçar quem está salvando (tirar a arma dele) — quem é agressivo vai mais; sem saber onde, fica
+                    // em 5 s só dá pra alcançar quem está perto e foi visto agora — o save que já correu escapa
+                    Agent alvo = null; float bd = 350;
+                    foreach (var c in it.contacts.Values)
+                        if (agents[c.id].alive && t - c.t < 5 && (c.pos - a.pos).Len < bd) { bd = (c.pos - a.pos).Len; alvo = agents[c.id]; }
+                    if (alvo != null && rng.Rand() < 0.25f + 0.4f * a.pesos.Agr(a.skill.aggression))
+                        a.brain.SetOrder(new Order { name = "caçando o save", dest = it.contacts[alvo.id].pos, push = true, why = $"tirar a arma do {alvo.name} (exit frag)" });
+                }
+            }
+            Log($"fim do round: {Alive(venceu == Team.T ? Team.CT : Team.T)} do time que perdeu tentam salvar a arma");
+        }
+
+        void Corpo(bool pos)
+        {
             t += DT;
             foreach (var s in smokes) s.Update(DT);
             smokes.RemoveAll(s => !s.Alive);
             foreach (var f in fires) f.Update(DT);
             fires.RemoveAll(f => !f.Alive);
+            if (((int)(t / DT)) % 8 == 0) SmokeApagaFogo();
             flashes.RemoveAll(f => t - f.t > 0.5f);
             if (tTRnoBomb < 0)
                 foreach (var a in agents)
@@ -207,7 +276,7 @@ namespace CSM.Sim
             // informação dos times (4x por segundo): calor escorre e o que cada um vê limpa
             if (t >= nextIntel) { nextIntel = t + 0.25f; UpdateIntel(); }
             long c1 = Marca(0, c0);
-            igl[0].Tick(); igl[1].Tick();
+            if (!pos) { igl[0].Tick(); igl[1].Tick(); }
             long c2 = Marca(4, c1);
             foreach (var a in agents) if (a.alive) { a.brain.Tick(DT); a.brain.TurnAim(DT); }
             long c3 = Marca(5, c2);
@@ -216,7 +285,7 @@ namespace CSM.Sim
             foreach (var a in agents) if (a.alive) { a.gun.Tick(DT); a.gun.Recupera(DT, a.crouch, a.spray); Activity(a); }
             if (bombDropped)   // TR passando em cima do bomb pega
                 foreach (var a in agents)
-                    if (a.alive && a.IsT && (a.pos - droppedBomb).Len < 12 && !(bombGuardado && a == guardouC4 && t - guardouC4T < 6)) { a.hasBomb = true; bombDropped = false; bombGuardado = false; a.brain.Think("peguei o bomb"); Log($"{a.name} pegou o bomb"); break; }
+                    if (a.alive && a.IsT && (a.pos - droppedBomb).Len < 12 && !(bombGuardado && a == guardouC4 && t - guardouC4T < 6)) { a.hasBomb = true; bombDropped = false; bombGuardado = false; Ev("C4 mudou de mão/round"); sus.MudouMaoC4(a); a.brain.Think("peguei o bomb"); Log($"{a.name} pegou o bomb"); break; }
             // granada dropada: quem ela é pra (ou qualquer um do time depois de 3 s) passando em cima pega, se cabe
             for (int i = itensChao.Count - 1; i >= 0; i--)
             {
@@ -232,64 +301,162 @@ namespace CSM.Sim
                 foreach (var a in agents)
                     if (a.alive && FireAt(a.pos)) { Hurt(a, null, 9, Combat.Part.Perna, "molotov"); if (!a.alive) { a.killedByFire = true; Ev("morreu na molotov/round"); } }
             }
+            if (pos) return;   // pós-round: sem detector, auditoria nem fim de round
             if (t >= proxSuspeita) { proxSuspeita = t + 1; Suspeitas(); }
             if (Auditar && ((int)(t / DT)) % 8 == 0) (aud ??= new Auditoria(this)).Passo();
             CheckEnd();
             if (Auditar && over) (aud ??= new Auditoria(this)).Fim();
         }
 
-        /// <summary>
-        /// Detector de comportamento estranho: o que um humano vendo o replay chamaria de bug. Cada tipo marca uma vez por
-        /// jogador por round, com o instante, pra ir direto ver (replay) e contar (relatório).
-        /// </summary>
-        public readonly List<(float t, int id, string tipo, string texto)> suspeitas = new List<(float, int, string, string)>();
-        readonly HashSet<string> suspeitaUma = new HashSet<string>(); readonly int[] miraRuim = new int[10];
-        float proxSuspeita, vantagemDesde = -1;
-        void Marca(Agent a, string tipo, string texto)
+        /// <summary>O segmento passa pela caixa? (teste barato antes de furar a smoke)</summary>
+        static bool SegCaixa(V3 a, V3 b, V3 mn, V3 mx)
         {
-            if (!suspeitaUma.Add(tipo + a.id)) return;
-            suspeitas.Add((t, a.id, tipo, texto)); Ev($"SUSPEITA {tipo}/round");
+            float t0 = 0, t1 = 1;
+            for (int k = 0; k < 3; k++)
+            {
+                float o = k == 0 ? a.x : k == 1 ? a.y : a.z, d = (k == 0 ? b.x : k == 1 ? b.y : b.z) - o;
+                float lo = k == 0 ? mn.x : k == 1 ? mn.y : mn.z, hi = k == 0 ? mx.x : k == 1 ? mx.y : mx.z;
+                if (MathF.Abs(d) < 1e-6f) { if (o < lo || o > hi) return false; continue; }
+                float u = (lo - o) / d, v = (hi - o) / d; if (u > v) (u, v) = (v, u);
+                t0 = MathF.Max(t0, u); t1 = MathF.Min(t1, v); if (t0 > t1) return false;
+            }
+            return true;
         }
+
+        /// <summary>Fogo apagado pela smoke (onde e quando) — o visual solta vapor ali.</summary>
+        public readonly List<(V2 p, float z, float t)> fogoApagado = new List<(V2, float, float)>();
+        /// <summary>
+        /// Smoke apaga molotov (CS2): o fogo que a smoke cobre se apaga. Mais da metade das chamas dentro da fumaça já
+        /// formada → apaga tudo; menos → deixa queimar (no CS a borda que sobra fora segue queimando; aqui é o fogo inteiro).
+        /// </summary>
+        void SmokeApagaFogo()
+        {
+            if (fires.Count == 0 || smokes.Count == 0 || TeamBrain.EXP.Contains("semApagar")) return;
+            for (int i = fires.Count - 1; i >= 0; i--)
+            {
+                var f = fires[i]; int dentro = 0, tot = 0;
+                foreach (var c in f.cells)
+                {
+                    if (c.order >= f.Visible) continue; tot++;
+                    var q = new V3(c.x * FireArea.C + 2, c.y * FireArea.C + 2, c.z + 6);
+                    foreach (var sm in smokes) if (sm.Sample(q, t) > 0.3f) { dentro++; break; }
+                }
+                if (tot > 0 && dentro * 2 > tot)
+                {
+                    fires.RemoveAt(i); fogoApagado.Add((new V2(f.origin.x, f.origin.y), f.origin.z, t));
+                    Log($"smoke apagou o fogo ({Places.Region(new V2(f.origin.x, f.origin.y))})"); Ev("smoke apagou molotov/round");
+                }
+            }
+        }
+
+        /// <summary>Detector do que parece errado no replay (Suspeitas.cs).</summary>
+        public readonly List<(float t, int id, string tipo, string texto)> suspeitas = new List<(float, int, string, string)>();
+        public Suspeitas sus;
+        float proxSuspeita;
+        public const float RAIO_BOMB = 265f;   // dentro disso a explosão mata quem está sem colete cheio
+        public int seedRound => seed;
+        static readonly Dictionary<string, List<string>> exemplos = new Dictionary<string, List<string>>();
+        /// <summary>Até 4 exemplos por tipo pro relatório: semente e instante, pra abrir o round.</summary>
+        public static void GuardaExemplo(string tipo, int seed, float t, string texto)
+        {
+            lock (exemplos)
+            {
+                if (!exemplos.TryGetValue(tipo, out var l)) exemplos[tipo] = l = new List<string>();
+                if (l.Count < 4) l.Add($"semente {seed} {t:0}s: {texto}");
+            }
+        }
+        public static List<(string tipo, List<string> ex)> Exemplos() { lock (exemplos) { var r = new List<(string, List<string>)>(); foreach (var k in exemplos) r.Add((k.Key, k.Value)); return r; } }
         void Suspeitas()
         {
             if (over) return;
-            bool vant = !bombPlanted && Alive(Team.T) - Alive(Team.CT) >= 2;
-            if (!vant) vantagemDesde = -1; else if (vantagemDesde < 0) vantagemDesde = t;
             foreach (var a in agents)
             {
                 if (!a.alive) continue;
-                var b = a.brain;
                 if (!a.hasBomb || bombPlanted) a.c4Desde = -1;
                 else if (a.c4Desde < 0 || (a.pos - a.c4Pos).Len > 100) { a.c4Pos = a.pos; a.c4Desde = t; }
                 if (a.hasBomb && !bombPlanted)
                 {
                     float c4Aqui = t - a.c4Desde;
                     Aud("segundos com o C4", c4Aqui > 10 ? "preso no mesmo lugar há 10 s+" : c4Aqui > 6 ? "preso há 6-10 s" : "se mexendo");
-                    if (c4Aqui > 10 && !b.order.plant) Marca(a, "C4 parado", $"{a.name} há {c4Aqui:0} s no mesmo lugar com o C4 ({b.fase}) em {Places.Region(a.pos)}");
                 }
-                if (a.IsT && vant && t - vantagemDesde > 20) Marca(a, "vantagem sem plantar", $"{Alive(Team.T)}x{Alive(Team.CT)} há {t - vantagemDesde:0} s sem plantar; {a.name}: {b.order.name} ({b.fase})");
-                if (a.paradoHa > 10 && b.order.hold == null && !b.order.malote && t >= b.order.notBefore) Marca(a, "parado sem posição", $"{a.name} parado há {a.paradoHa:0} s sem segurar nada: {b.order.name} ({b.fase})");
-                // inimigo conhecido perto e a mira colada na parede por 3 s seguidos
-                bool ruim = false;
-                if (b.target == null && b.action == null)
-                {
-                    bool perto = false;
-                    foreach (var c in intel[(int)a.team].contacts.Values) if (t - c.t < 2 && agents[c.id].alive && (c.pos - a.pos).Len < 350) perto = true;
-                    if (perto) ruim = !MapData.LosWalk(a.pos, a.z, a.pos + V2.Ang(a.aim) * 60, a.z, a.Eye);
-                }
-                miraRuim[a.id] = ruim ? miraRuim[a.id] + 1 : 0;
-                if (miraRuim[a.id] >= 3) Marca(a, "mira na parede com inimigo conhecido", $"{a.name} em {Places.Region(a.pos)} mirando a parede há 3 s com inimigo visto perto ({b.fase})");
             }
+            sus.Passo();
         }
 
         /// <summary>Gravidade (unidades/s²): o pulo de 18-20 unidades (~70% do boneco, como o do CS) leva ~0,3 s pra subir.</summary>
         public const float GRAV = 390f;
 
+        // movimento do CS2 (Source): sv_accelerate 5.5, sv_friction 5.2, sv_stopspeed 80 — na escala do mapa (250 do CS = RUN)
+        const float ACCEL = 5.5f, FRICTION = 5.2f;
+        static readonly float STOPSPEED = 80f * MapCheck.RUN / 250f;
+        /// <summary>
+        /// Chão: primeiro o atrito (perde max(v, stopspeed)·5,2 por segundo), depois acelera na direção desejada até
+        /// a velocidade desejada (ganha no máximo 5,5·velDesejada por segundo). Sai do parado pro máximo em ~0,3 s,
+        /// soltando para em ~0,4 s, e o counter-strafe (apertar o lado contrário) para em ~0,1 s. No duelo quem quer
+        /// parar pra atirar dá counter-strafe (é o que o pro faz); andando normal, só solta.
+        /// </summary>
+        void MoveCS2(Agent a, V2 want)
+        {
+            float sp = a.vel.Len;
+            if (sp > 0.01f)
+            {
+                float drop = MathF.Max(sp, STOPSPEED) * FRICTION * DT;
+                a.vel = a.vel * (MathF.Max(sp - drop, 0) / sp);
+                sp = a.vel.Len;
+            }
+            float ws = want.Len;
+            if (ws < 0.5f)
+            {   // quer parar: no duelo (ou mirando pra atirar) aperta o lado contrário — counter-strafe, sem passar do zero
+                if (sp > 0.5f && a.brain.target != null)
+                {
+                    float acs = ACCEL * a.MaxSpeed * DT;
+                    a.vel = sp <= acs ? V2.Zero : a.vel * ((sp - acs) / sp);
+                }
+                if (a.vel.Len < 0.3f) a.vel = V2.Zero;
+                return;
+            }
+            V2 dir = want / ws;
+            float atual = a.vel.Dot(dir), add = ws - atual;
+            if (add <= 0) return;
+            // no CS2 não existe "meia tecla": a aceleração é a de apertar W (no mínimo a de andar de shift), quem limita
+            // é a velocidade pedida — senão pedir devagar (chegando no ponto) perdia pro atrito e o boneco travava
+            float acc = MathF.Min(ACCEL * DT * MathF.Max(ws, 0.52f * a.MaxSpeed), add);
+            a.vel = a.vel + dir * acc;
+        }
+
+        public static float FOLGA => TeamBrain.EXP.Contains("folga45") ? 4.5f : 4f;   // meia largura do corpo (CS2: 16 = 4 aqui): o centro não chega mais perto que isso da parede
+        /// <summary>Parede (ou caixa mais alta que o pé) mais perto, até 6: distância e a direção pra sair dela.</summary>
+        public static V2 ParedePerto(V2 p, float z, out float dist)
+        {
+            int cx = (int)p.x, cy = (int)p.y; dist = 99; V2 fora = V2.Zero;
+            for (int u = cx - 6; u <= cx + 6; u++)
+                for (int v = cy - 6; v <= cy + 6; v++)
+                {
+                    bool bloq = u < 0 || v < 0 || u >= MapData.NX || v >= MapData.NY || !MapData.walk[u, v]
+                                || MapData.coverH[u, v] > 0 && z < MapData.floor[u, v] + MapData.coverH[u, v] - 2;
+                    if (!bloq) continue;
+                    V2 perto = new V2(MathX.Clamp(p.x, u, u + 1), MathX.Clamp(p.y, v, v + 1));
+                    V2 d = p - perto; float l = d.Len;
+                    if (l < dist) { dist = l; fora = l > 0.001f ? d / l : V2.Zero; }
+                }
+            return fora;
+        }
+
         void Integrate(Agent a)
         {
             V2 want = a.brain.wantVel;
-            V2 dv = want - a.vel; float l = dv.Len, acc = 900 * DT;
-            a.vel = l <= acc ? want : a.vel + dv / l * acc;
+            if (TeamBrain.EXP.Contains("moveVelho") || a.noAr)
+            {   // no ar (pulo de degrau/caixa) continua como antes: o pulo daqui é subir obstáculo, não bunny hop
+                V2 dv = want - a.vel; float l = dv.Len, acc = 900 * DT;
+                a.vel = l <= acc ? want : a.vel + dv / l * acc;
+            }
+            else MoveCS2(a, want);
+            if (want.Len > a.MaxSpeed * 0.8f && Auditar)
+            {   // correndo: quanto da velocidade pedida ele tem de fato (parede/quina/virada roubam)
+                float rz = a.vel.Len / want.Len, ang = MathF.Abs(MathX.AngDiff(a.vel.Atan2, want.Atan2));
+                Aud("correndo: velocidade real / pedida", rz > 0.9f ? "a 90%+" : rz > 0.7f ? "b 70-90%" : rz > 0.4f ? "c 40-70%" : "d <40%");
+                Aud("correndo: virada pedida", ang < 0.3f ? "<17°" : ang < 1f ? "17-57°" : "57°+");
+            }
             V2 np = a.pos + a.vel * DT, antes = a.pos;
             // altura: degrau pequeno anda; mais alto (caixa, carroça) é PULO — sobe primeiro, passa por cima quando os pés
             // chegam lá; pra baixo de uma quina, cai (gravidade). Dá pra pular com a arma na mão (a faca só corre mais)
@@ -306,10 +473,22 @@ namespace CSM.Sim
             {   // desliza na parede (no eixo que der mais)
                 V2 nx = new V2(np.x, a.pos.y), ny = new V2(a.pos.x, np.y);
                 bool okx = Pode(nx), oky = Pode(ny);
-                if (okx && oky) a.pos = MathF.Abs(np.x - a.pos.x) >= MathF.Abs(np.y - a.pos.y) ? nx : ny;
-                else if (okx) a.pos = nx; else if (oky) a.pos = ny;
-                // a velocidade é o que ele andou de verdade: batendo na parede ela cai (antes ficava "50" parado e ninguém via o bot travado)
-                a.vel = (a.pos - antes) / DT;
+                bool foiX = false, foiY = false;
+                if (okx && oky) { if (MathF.Abs(np.x - a.pos.x) >= MathF.Abs(np.y - a.pos.y)) { a.pos = nx; foiX = true; } else { a.pos = ny; foiY = true; } }
+                else if (okx) { a.pos = nx; foiX = true; } else if (oky) { a.pos = ny; foiY = true; }
+                // parede (como no CS2): corta só a parte da velocidade que entra nela e mantém a que corre ao longo dela —
+                // zerar pelo deslocamento fazia o boneco "rastejar" na quina com a aceleração do CS2 (e nunca destravar)
+                if (TeamBrain.EXP.Contains("moveVelho")) a.vel = (a.pos - antes) / DT;
+                else a.vel = foiX ? new V2(a.vel.x, 0) : foiY ? new V2(0, a.vel.y) : V2.Zero;
+                if (Auditar) Aud("bateu na parede (ticks)", a.brain.wantVel.Len > 1 ? "querendo andar" : "parado");
+            }
+            // a folga da navmesh é medida de 2 em 2 unidades, então numa quina o centro chegava a ~2 da parede e o corpo
+            // (meia largura ~4,5) entrava nela. Como o colisor redondo do CS2: perto demais da parede de verdade, o boneco
+            // é empurrado pra fora e desliza na quina em vez de cortar por dentro
+            if (!a.noAr && !escada && !TeamBrain.EXP.Contains("semFolga"))
+            {
+                V2 fora = ParedePerto(a.pos, a.z, out float dp);
+                if (dp < FOLGA) { V2 q = a.pos + fora * MathF.Min(FOLGA - dp, 1.2f); if (Pode(q)) a.pos = q; }
             }
             float zt = NavGrid.ZAt(a.pos);
             if (a.noAr)
@@ -459,6 +638,8 @@ namespace CSM.Sim
             Chamar(by, e);
         }
 
+        /// <summary>Quem cantou no rádio e quando começou a cantar (visual: gesto de apontar). Só leitura.</summary>
+        public readonly List<(float t, Agent by)> callsFeitas = new List<(float, Agent)>();
         void Chamar(Agent by, Agent e)
         {
             if (TeamBrain.EXP.Contains("semRadio")) { intel[(int)by.team].Seen(e, t, by.name); return; }
@@ -468,6 +649,7 @@ namespace CSM.Sim
                 float atraso = rng.Uniform(0.4f, 0.9f) + 0.3f * (1 - by.skill.composure);
                 r = (t, t + atraso, t);
                 calls.Add((t + atraso, by.team, e.id, e.pos, e.z, e.hasBomb, t, by));
+                callsFeitas.Add((t, by));
             }
             r.ultimo = t; radio[k] = r;
             if (t >= r.callAt) intel[(int)by.team].Seen(e, t, by.name);   // já cantado: o time acompanha
@@ -498,6 +680,12 @@ namespace CSM.Sim
             var (victim, part, end, endZ) = Combat.Fire(this, a, aimPt, aimZ, rng);
             a.spray++; a.lastShotT = t;
             shots.Add(new ShotFx { a = a.pos, za = a.z + a.Eye, b = end, zb = endZ, t = t, hit = victim != null, hs = part == Combat.Part.Cabeca, team = a.team });
+            // bala atravessando smoke abre um túnel que fecha sozinho (~1,4 s): quem está atrás pode ser visto pelo buraco
+            if (smokes.Count > 0 && !TeamBrain.EXP.Contains("semFuroBala"))
+            {
+                var sa = new V3(a.pos.x, a.pos.y, a.z + a.Eye); var sb = new V3(end.x, end.y, endZ);
+                foreach (var sm in smokes) { var (mn, mx) = sm.Bounds; if (SegCaixa(sa, sb, mn, mx)) sm.Shot(sa, sb); }
+            }
             Sound(a.pos, a.team, "tiro", 99999, 40);
             a.brain.Entregou();
             if (a.gunId == "awp") a.scoped = false;   // AWP sai da luneta depois do tiro (puxa o ferrolho)
@@ -514,32 +702,66 @@ namespace CSM.Sim
                     vitViuHa = viu ? t - victim.brain.alvoDesde : -1, matViuHa = a.brain.target == victim ? t - a.brain.alvoDesde : -1,
                     vitimaAtirou = t - victim.lastShotT < 1f, vitAndando = victim.Speed > victim.MaxSpeed * 0.3f });
             }
+            else if (victim != null && !TeamBrain.EXP.Contains("semFogoAmigo"))
+            {   // fogo amigo: a bala machuca o colega (reduzido, como no CS2 de torneio: ff_damage_reduction_bullets 0,33)
+                int dmg = Math.Max(1, (int)(Combat.Damage(a, victim, part) * FF_BALA));
+                Ev("acertou o aliado/round"); Log($"{a.name} acertou o aliado {victim.name} ({dmg})");
+                victim.brain.Think($"o {a.name} me acertou ({dmg})!"); a.brain.Think($"acertei o {victim.name} sem querer!");
+                Hurt(victim, a, dmg, part, "fogo amigo");
+            }
         }
+        public const float FF_BALA = 0.33f, FF_GRANADA = 0.85f;   // ff_damage_reduction_* do CS2 de torneio (game_rules.json)
 
         void Hurt(Agent v, Agent by, int dmg, Combat.Part part, string what)
         {
             if (!v.alive) return;
-            v.hp -= dmg; if (by != null) by.damage += Math.Min(dmg, v.hp + dmg);
+            v.hp -= dmg; if (by != null && by.team != v.team) by.damage += Math.Min(dmg, v.hp + dmg);
             if (part == Combat.Part.Tronco && v.armor > 0) v.armor = Math.Max(0, v.armor - dmg / 2);
+            if (by != null && what == by.gunId) { sus.Dano(v, by); v.apanhouEm = t; }
             if (by != null && what == by.gunId) Chamar(v, by);   // quem levou tiro sabe de onde veio e canta (HE não diz)
             v.brain.Entregou();
             if (v.hp > 0 && by != null && what == by.gunId) v.brain.Atingido(by);   // tiro (não fogo/explosão) e ainda vivo
             // call de dano: quem acertou sabe quanto tirou ("ele tá com 20")
             if (by != null && v.hp > 0 && intel[(int)by.team].contacts.TryGetValue(v.id, out var cv)) { cv.hp = v.hp; cv.hpT = t; if (v.hp < 45) by.brain.Think($"call: {v.name} tá com {v.hp}!"); }
             if (v.hp > 0) { v.brain.Think($"levei {dmg} {(part == Combat.Part.Cabeca ? "na cabeça" : part == Combat.Part.Perna ? "na perna" : "no corpo")}{(by != null ? " do " + by.name : "")}"); return; }
-            v.hp = 0; v.alive = false; v.diedAt = t; v.killedBy = by; v.deaths++;
-            drops.Add(new Drop { gun = v.gunId, pos = NavGrid.Snap(v.pos), z = v.z, estado = v.gun });   // a arma cai onde ele morreu
+            v.hp = 0; v.alive = false; v.diedAt = t; v.killedBy = by; v.deaths++; sus.Morte(v, by);
+            // a arma cai onde ele morreu: a melhor (mp_death_drop_gun 1 do CS2), mesmo se estava de pistola na mão
+            bool primGuardada = v.Primaria != null && v.Primaria != v.gunId;
+            drops.Add(new Drop { gun = primGuardada ? v.outraId : v.gunId, pos = NavGrid.Snap(v.pos), z = v.z, estado = primGuardada ? v.outraGun : v.gun });
             v.brain.Think($"morri{(by != null ? " pro " + by.name : " na " + what)}");
             if (by != null)
             {
-                by.kills++; if (part == Combat.Part.Cabeca) by.hs++;
-                if (by.team != v.team) by.ganho += KillReward(what == by.gunId ? by.gunId : what);
-                if (firstKill == null) { firstKill = by; firstDeath = v; firstKillT = t; by.firstKills++; v.firstDeaths++; }
+                if (by.team != v.team) { by.kills++; if (part == Combat.Part.Cabeca) by.hs++; by.ganho += KillReward(what == by.gunId ? by.gunId : what); }
+                else if (by != v) { by.kills--; by.ganho -= 300; Ev("matou o aliado/round"); Log($"{by.name} matou o aliado {v.name}!"); }   // teamkill: -1 abate e -$300, como no CS
+                if (firstKill == null && by.team != v.team) { firstKill = by; firstDeath = v; firstKillT = t; by.firstKills++; v.firstDeaths++; }
                 if (by.team != v.team) { leitura[(int)v.team]?.MorremosDali(by.pos, v.team); leitura[(int)v.team]?.MorremosAqui(v.pos, v.team); leitura[(int)by.team]?.MatamosDali(by.pos, by.team); }
                 // troca: matou alguém que tinha matado um aliado nos últimos 3 s
                 var traded = agents.FirstOrDefault(x => !x.alive && x.team == by.team && x.killedBy == v && t - x.diedAt < 3f);
                 if (traded != null) { by.tradeKills++; traded.traded++; }
                 if (agents.Any(x => !x.alive && x.team == by.team && x.killedBy == v && t - x.diedAt < 5f)) Ev("troca em 5 s (abates)/round");
+                if (by.team != v.team && by.brain.target == v && what == by.gunId && !WeaponStats.Pistola(by.gunId) && by.gunId != "awp")
+                {   // tempo pra matar (rifle/SMG): de quando ele viu o alvo até a morte
+                    float dd = t - by.brain.alvoDesde, dist = (by.pos - v.pos).Len;
+                    Ev($"TTK rifle: {(dd < 0.5f ? "a <0,5 s" : dd < 1 ? "b 0,5-1 s" : dd < 2 ? "c 1-2 s" : dd < 4 ? "d 2-4 s" : "e 4+ s")}");
+                    var bb = by.brain;
+                    if (bb.primeiroTiro >= 0)
+                    {
+                        float ate1 = bb.primeiroTiro - bb.alvoDesde, fogo = t - bb.primeiroTiro;
+                        Aud("TTK: reação (sorteada)", bb.reacao0 < 0.2f ? "<0,2" : bb.reacao0 < 0.3f ? "0,2-0,3" : bb.reacao0 < 0.45f ? "0,3-0,45" : "0,45+");
+                        Aud("TTK: viu → 1º tiro", ate1 < 0.25f ? "<0,25" : ate1 < 0.4f ? "0,25-0,4" : ate1 < 0.7f ? "0,4-0,7" : ate1 < 1.2f ? "0,7-1,2" : "1,2+");
+                        Aud("TTK: 1º tiro → morte", fogo < 0.2f ? "<0,2" : fogo < 0.5f ? "0,2-0,5" : fogo < 1f ? "0,5-1" : fogo < 2f ? "1-2" : "2+");
+                        Aud("TTK: tiros até matar", bb.tirosNoAlvo <= 1 ? "1" : bb.tirosNoAlvo <= 3 ? "2-3" : bb.tirosNoAlvo <= 6 ? "4-6" : bb.tirosNoAlvo <= 10 ? "7-10" : "11+");
+                    }
+                    Aud("TTK rifle por distância", (dist < 150 ? "perto " : dist < 350 ? "médio " : "longe ") + (dd < 0.5f ? "<0,5" : dd < 1 ? "0,5-1" : dd < 2 ? "1-2" : "2+"));
+                }
+                if (by.team != v.team && !bombPlanted)
+                {   // diagnóstico da troca: o colega mais perto de quem morreu (dá pra trocar? via o matador?)
+                    float dm = 9999; Agent cm = null;
+                    foreach (var x in agents) if (x != v && x.alive && x.team == v.team) { float dd = NavGrid.PathLen(x.pos, v.pos); if (dd > 0 && dd < dm) { dm = dd; cm = x; } }
+                    string tl = v.IsT ? (v.brain.order.push ? "TR entrando" : "TR mapa") : "CT";
+                    Ev($"morte {tl}: colega mais perto {(dm < 150 ? "<150" : dm < 300 ? "150-300" : dm < 500 ? "300-500" : "500+")}");
+                    if (cm != null && dm < 300) Ev($"morte {tl} com colega <300: {(MapData.LosWalk(cm.pos, cm.z, by.pos, by.z, 18f) ? "colega VÊ o matador" : "colega não vê")}");
+                }
                 feed.Add((t, $"{by.name} [{by.gunId.ToUpper()}] {v.name}{(part == Combat.Part.Cabeca ? " (HS)" : "")}"));
                 Log($"{by.name} matou {v.name} com {by.gunId}{(part == Combat.Part.Cabeca ? " na cabeça" : "")} ({Places.Region(v.pos)}){(traded != null ? " — TROCA do " + traded.name : "")}");
             }
@@ -554,7 +776,15 @@ namespace CSM.Sim
             intel[(int)(v.team == Team.T ? Team.CT : Team.T)].contacts.Remove(v.id);
             intel[(int)(v.team == Team.T ? Team.CT : Team.T)].Morreu(v.id);   // morto não está em lugar nenhum
             // o bomb cai no chão andável (em borda/caixa ficava inalcançável e o TR ficava parado até o tempo acabar)
-            if (v.hasBomb) { v.hasBomb = false; bombDropped = true; droppedBomb = NavGrid.Snap(v.pos); quedasC4++; Log($"bomb caiu ({Places.Region(v.pos)})"); }
+            if (v.hasBomb)
+            {
+                float meu = NavGrid.PathLen(v.pos, Places.Plant(planSite)); bool aFrente = false; int resto = 0;
+                foreach (var x in agents) if (x != v && x.alive && x.team == v.team) { resto++; if (NavGrid.PathLen(x.pos, Places.Plant(planSite)) < meu) aFrente = true; }
+                c4CaiuComCT = by != null && by.team != v.team;
+                Ev("C4 caiu com o portador/round"); if (resto >= 2 && !aFrente) Ev("C4 caiu NA FRENTE de 2+ colegas/round");
+                sus.CaiuC4(v, resto, aFrente);
+                v.hasBomb = false; bombDropped = true; droppedBomb = NavGrid.Snap(v.pos); quedasC4++; Log($"bomb caiu ({Places.Region(v.pos)})");
+            }
             if (v == defuser) { defuserActive = false; defuser = null; }
         }
 
@@ -568,6 +798,7 @@ namespace CSM.Sim
             float u = a.skill.utilitaria, dist = (l.to - a.pos).Len;
             float pErra = ERRO_GRANADA * (treinada ? 0.03f + 0.12f * (1 - u) : 0.06f + 0.2f * (1 - u)) * (a.MeioCego(t) || a.hp < 40 ? 2f : 1f);
             // todo arremesso sai da física: a mira que faz parar no pixel (ERRO_GRANADA devolve o erro humano)
+            if (!Arremesso.Velha) return ThrowCS2(a, l, treinada, u);
             V2 mira = l.to;
             if ((l.kind == "smoke" || l.kind == "molotov") && !TeamBrain.EXP.Contains("semRolagem")) mira = MiraCerta(a.pos, a.z, l.to, l.kind).mira;
             V2 alvo = mira + rng.Normal2(ERRO_GRANADA * (treinada ? 2f + 3f * (1 - u) : 5f + (0.02f + 0.03f * (1 - u)) * dist));
@@ -602,6 +833,35 @@ namespace CSM.Sim
             }
             else if (l.kind == "smoke") a.smokes++; else if (l.kind == "molotov") a.molotovs++; else if (l.kind == "he") a.hes++;
             return t1;
+        }
+
+        /// <summary>
+        /// Arremesso do CS2: o jogador conhece (lineup treinada que ele sabe) ou improvisa (só parado/andando, mira no olho).
+        /// Sabendo, alinha a mira no pixel e executa o jeito da lineup (até run jump throw) — erra pouco (mira 0,2-0,6°,
+        /// o tempo do pulo/corrida um pouco). Improvisando, o erro de mira é maior e quanto mais longe, pior.
+        /// </summary>
+        float ThrowCS2(Agent a, Places.Lineup l, bool treinada, float u)
+        {
+            bool sabe = treinada && a.brain.ConheceLineup(l);
+            var pl = Arremesso.Resolve(a.pos, a.z, l.to, l.kind, sabe ? Arremesso.Tipo.CorrePulo : Arremesso.Tipo.Correndo);   // no olho: até correndo (pulo é coisa de lineup)
+            float dist = (l.to - a.pos).Len, pressa = a.MeioCego(t) || a.hp < 40 ? 2f : 1f;
+            float sMira = (sabe ? 0.2f + 0.4f * (1 - u) : 0.8f + 1.6f * (1 - u) + dist / 400f) * pressa;   // graus
+            var real = pl; real.up += (float)rng.Normal(0, sMira); real.yaw += (float)rng.Normal(0, sMira) * MathF.PI / 180;
+            float rMov = 1 + (float)rng.Normal(0, sabe ? 0.03f : 0.08f), rPulo = 1 + (float)rng.Normal(0, sabe ? 0.04f : 0.1f);
+            var n = new Nade { l = l, by = a, from = a.pos, z0 = a.z + 20, t0 = t };
+            Arremesso.Lanca(n, a.pos, a.z, real, rMov, rPulo);
+            n.t1 = t + MathF.Max(0.5f, pl.tempo);
+            n.tipo = pl.tipo;
+            flying.Add(n);
+            Log($"{a.name} jogou {l.name} ({pl}{(sabe ? ", lineup que ele sabe" : ", no olho")})");
+            Ev(sabe ? "granada: lineup sabida/round" : "granada: no olho/round"); Ev($"granada: {Arremesso.Nome(pl.tipo)}/round");
+            if (l.kind == "flash")
+            {
+                a.flashes++;
+                foreach (var x in agents) if (x.alive && x.team == a.team && (x.pos - a.pos).Len < 700) { x.avisoFlashAte = n.t1 + 0.3f; if (x != a) { x.bangAmigaEm = n.t1; x.bangAmigaPos = l.to; x.bangAmigaDe = a; } }
+            }
+            else if (l.kind == "smoke") a.smokes++; else if (l.kind == "molotov") a.molotovs++; else if (l.kind == "he") a.hes++;
+            return n.t1;
         }
 
         static void Lanca(Nade n, V2 de, float zDe, V2 alvo, float zAlvo, float T)
@@ -658,6 +918,7 @@ namespace CSM.Sim
         /// </summary>
         public static (V2 mira, float erro) MiraCerta(V2 de, float zChao, V2 alvo, string kind)
         {
+            if (!Arremesso.Velha) return (alvo, Arremesso.Resolve(de, zChao, alvo, kind, Arremesso.Tipo.CorrePulo).erro);
             long k = ((long)Intel.Idx(de) << 28) | ((long)Math.Clamp((int)(alvo.x / 6), 0, 16383) << 14) | (long)Math.Clamp((int)(alvo.y / 6), 0, 8191) << 1 | (kind == "smoke" ? 1L : 0L);
             return tabelaNade.GetOrAdd(k, _ =>
             {
@@ -706,10 +967,12 @@ namespace CSM.Sim
 
         static float TopG(int x, int y) => (uint)x >= MapData.NX || (uint)y >= MapData.NY ? 9999 : MapData.Top(x, y);
 
+        public static void PassoNade(Nade n, float h) => Passo(n, h);
         static void Passo(Nade n, float h)
         {
             float nx = n.x + n.vx * h, ny = n.y + n.vy * h, nz = n.z + n.vz * h;
             if (!n.noChao) n.vz -= GN * h;
+            if (!Arremesso.Velha && nz > Arremesso.TETO && n.vz > 0) { nz = Arremesso.TETO; n.vz = -n.vz * QUICA_PAREDE; n.quiques++; }   // skybox
             int ix = (int)nx, iy = (int)ny;
             float top = TopG(ix, iy);
             if (nz < top)
@@ -799,6 +1062,8 @@ namespace CSM.Sim
             else if (n.l.kind == "molotov")
             {
                 if (n.noAr) Log($"molotov do {n.by.name} estourou no ar (sem fogo)");
+                else if (!TeamBrain.EXP.Contains("semApagar") && smokes.Exists(sm => sm.Sample(new V3(n.l.to.x, n.l.to.y, z + 6), t) > 0.3f))
+                { fogoApagado.Add((n.l.to, z, t)); Log($"molotov do {n.by.name} caiu na smoke e não pegou"); Ev("molotov caiu na smoke/round"); }
                 else fires.Add(new FireArea(new V3(n.l.to.x, n.l.to.y, z)));
             }
             else if (n.l.kind == "he")
@@ -818,7 +1083,7 @@ namespace CSM.Sim
                     if (!MapData.LosWalk(at, z + 10, a.pos, a.z + 14, 18f)) continue;
                     float raw = 98f * MathF.Exp(-d * d / (2 * HE_SIGMA * HE_SIGMA));
                     int dmg = (int)(a.armor > 0 ? raw * 0.5f : raw);
-                    if (a.team == n.by.team) dmg = (int)(dmg * 0.33f);   // dano em aliado reduzido
+                    if (a.team == n.by.team && a != n.by) dmg = (int)(dmg * (TeamBrain.EXP.Contains("ffVelho") ? 0.33f : FF_GRANADA));   // dano em aliado reduzido (CS2 de torneio: ff_damage_reduction_grenade 0,85)
                     if (dmg < 1) continue;
                     if (a.team != n.by.team) n.by.heDano += Math.Min(dmg, a.hp);
                     Log($"HE do {n.by.name} tirou {dmg} do {a.name}{(a.team == n.by.team ? " (aliado!)" : "")}");
@@ -857,7 +1122,8 @@ namespace CSM.Sim
             }
         }
 
-        public void PlantStart(Agent a) { Sound(a.pos, a.team, "plantando", 99999, 30); Log($"{a.name} começou a plantar no {planSite}"); }
+        public Agent plantando; public float plantandoDesde; public bool c4CaiuComCT;
+        public void PlantStart(Agent a) { plantando = a; plantandoDesde = t; sus.InicioPlant(a); Sound(a.pos, a.team, "plantando", 99999, 30); Log($"{a.name} começou a plantar no {planSite}"); }
         public void Plant(Agent a)
         {
             bombPlanted = true; bombPos = a.pos; bombZ = a.z; plantedAt = t; a.hasBomb = false; a.ganho += 300; planter = a;
@@ -873,6 +1139,8 @@ namespace CSM.Sim
         public bool DefuseVaiDar => defuserActive && defuseEnd < plantedAt + BOMB;
         /// <summary>Quantos segundos o defuse termina depois da explosão (positivo = não dá tempo pra ele).</summary>
         public float DefuseFolga => defuseEnd - (plantedAt + BOMB);
+        /// <summary>Tirou a mão do bomb (finta, inimigo à vista, fogo): o som do defuse para.</summary>
+        public void ParouDefuse(Agent a) { if (defuser == a) { defuserActive = false; defuser = null; } }
         public void DefuseStart(Agent a) { defuserActive = true; defuser = a; defuseEnd = t + DefuseTime(a); Sound(a.pos, a.team, "desarmando", 900, 20); Log($"{a.name} começou a desarmar ({BombLeft:0.0}s no bomb)"); }
         public void Defuse(Agent a) { if (!bombPlanted || exploded) return; defused = true; a.ganho += 300; Log($"BOMB DESARMADO por {a.name} ({BombLeft:0.0}s sobrando)"); }
 
@@ -942,6 +1210,6 @@ namespace CSM.Sim
             if (!bombPlanted && t >= ROUND) End(Team.CT, "tempo acabou");
         }
 
-        void End(Team w, string why) { over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; Log($"FIM: {winner} ganhou — {why}"); }
+        void End(Team w, string why) { foreach (var a in agents) a.vivoNoFim = a.alive; over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; sus.Fim(why); Ev("FIM " + why + (bombPlanted ? " (plantado)" : " (sem plant)")); if (bombPlanted) { Ev($"PLANT com {ctVivosNoPlant} CT"); if (w == Team.CT) Ev($"PLANT com {ctVivosNoPlant} CT e CT venceu"); } Log($"FIM: {winner} ganhou — {why}"); }
     }
 }

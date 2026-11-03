@@ -43,6 +43,20 @@ namespace CSM.Sim
         public int tiroCego, recuoCego, agachaCego, cantoIgnorado, prefireMemoria;   // validador
         // arma
         public string gunId; public WeaponStats.Gun gun; public bool scoped;
+        // inventário como no CS: a primária e a pistola (a que não está na mão fica guardada). Sem primária, outraId = null
+        public string outraId; public WeaponStats.Gun outraGun; public int trocouArma;
+        public bool TemOutra => outraId != null;
+        /// <summary>A primária (rifle/SMG/AWP), esteja na mão ou guardada; null se ele só tem pistola.</summary>
+        public string Primaria => !WeaponStats.Pistola(gunId) ? gunId : outraId != null && !WeaponStats.Pistola(outraId) ? outraId : null;
+        public string Pistola => WeaponStats.Pistola(gunId) ? gunId : outraId != null && WeaponStats.Pistola(outraId) ? outraId : null;
+        /// <summary>Troca pra arma guardada (Q do CS): sai da luneta, a recarga em andamento se perde e a nova leva o tempo de sacar.</summary>
+        public void TrocarArma(float t)
+        {
+            if (outraId == null) return;
+            gun.reloadLeft = 0;
+            (gunId, outraId) = (outraId, gunId); (gun, outraGun) = (outraGun, gun);
+            scoped = false; spray = 0; faca = false; sacaAte = t + TempoSacar; trocouArma++;
+        }
         public int spray;                      // bala do spray atual (zera quando para de atirar)
         public float aimErrV;                  // erro vertical atual da mira (graus), vem do Brain ao achar um alvo
         public float lastShotT = -9; public bool killedByFire;
@@ -51,7 +65,9 @@ namespace CSM.Sim
         // estatística do round/jogo
         public int kills, deaths, hs, shots, hits, damage, firstKills, firstDeaths, traded, tradeKills;
         public int ganho;                       // dinheiro ganho no round (abates, plant, defuse) — a Partida paga
+        public float apanhouEm = -99;           // último tiro que levou
         public bool guardando;                  // decidiu guardar a arma neste round (não procura duelo)
+        public bool vivoNoFim, salvaPos;         // vivo no instante em que o round acabou (dinheiro); salvando no pós-round (não é "guardou")
         public float avisoFlashAte = -9;        // ouviu "bang!" do aliado: vira a cara até esse tempo
         public float flashParcialAte = -9, flashI;   // meio cego (vê só de perto, reage devagar, mira treme) e quão forte foi
         public float bangAmigaEm = -9; public V2 bangAmigaPos; public Agent bangAmigaDe;   // aliado avisou "vou bangar"
@@ -124,6 +140,13 @@ namespace CSM.Sim
             return (head ? 21.5f : 15f) * k;
         }
 
+        static (Agent, Part, V2, float) Acertou(Match m, Agent a, Agent b, Part p, V2 fim, float z)
+        {
+            if (a.gunId == "awp") { m.Ev("AWP acertou/round"); if (a.brain.target != null) m.Aud("AWP: acerto por distância", Faixa((a.brain.target.pos - a.pos).Len) + " acertou"); }
+            return (b, p, fim, z);
+        }
+        static string Faixa(float d) => d < 150 ? "a perto <150" : d < 300 ? "b médio 150-300" : d < 500 ? "c longe 300-500" : "d muito longe 500+";
+
         /// <summary>Atira em direção ao ponto mirado; devolve onde a bala passou e quem (e onde) acertou.</summary>
         public static (Agent victim, Part part, V2 end, float endZ) Fire(Match m, Agent a, V2 aimPoint, float aimZ, Rng rng)
         {
@@ -138,6 +161,9 @@ namespace CSM.Sim
             if (vr > 0) inac += s.inMove * MathF.Pow(vr, 0.25f);
             else if (!a.ArmaLeve && !TeamBrain.EXP.Contains("semAssentar"))
                 inac += 0.35f * s.inMove * MathF.Max(0, 1 - (m.t - a.rapidoEm) / 0.2f);   // acabou de frear: rifle ainda não assentou
+            if (a.gunId == "awp" && a.brain.target != null) m.Aud("AWP: acerto por distância", Faixa((a.brain.target.pos - a.pos).Len) + " tiro");
+            if (a.gunId == "awp") m.Ev(!luneta ? "AWP tiro sem luneta/round" : vr > 0 ? "AWP tiro na luneta andando/round" : "AWP tiro na luneta parado/round");
+            if (luneta && vr <= 0 && !TeamBrain.EXP.Contains("awpVelha")) inac = (a.crouch ? s.inCrouchAlt : s.inStandAlt) / ESCALA_ARMA;   // parada na luneta é exata (cancela a escala abaixo): quem erra é a mão
             inac *= ESCALA_ARMA;   // o nosso mundo não é o do CS: proporções entre armas/situações do CS2, escala calibrada aqui
             float r1 = rng.Rand() * inac, t1 = rng.Uniform(0, 6.2832f), r2 = rng.Rand() * s.spread, t2 = rng.Uniform(0, 6.2832f);
             const float RAD = 57.29578f;
@@ -149,6 +175,14 @@ namespace CSM.Sim
             // AWP: um tiro só e sem spray pra corrigir — pré-mirado é mortal, mas flick de luneta erra bem mais (a AWP
             // que dá peek e precisa achar o alvo perde pra quem já estava mirando; a que segura o ângulo continua forte)
             if (a.gunId == "awp" && m.t - a.brain.alvoDesde < 0.9f) sig *= 1 + MathX.Clamp((a.brain.flickAlvo - 4f) / 12f, 0, 1.6f);   // 2º tiro, já em cima: normal
+            // AWP de longe: a arma é exata, a mão não — o boneco vira um risco na luneta e qualquer tremida passa do lado.
+            // Perto/médio quase não muda; de 250 em diante o erro cresce (de muito longe acertar é raro)
+            if (a.gunId == "awp" && luneta)
+            {
+                var mk = System.Text.RegularExpressions.Regex.Match(TeamBrain.EXP, @"awpLonge(\d+)");
+                float k = mk.Success ? int.Parse(mk.Groups[1].Value) / 100f : 0f;   // desligado: 0,35/0,7/1,4 deixam o TR em 55-59% (a AWP sustenta o CT — volta junto com ajuste do CT, ver backlog)
+                sig *= 1 + k * MathX.Clamp((dist - 250f) / 250f, 0, 2);
+            }
             float recoilV = 0, recoilL = 0;
             if (a.spray > 0 && a.gunId != "awp")
             {
@@ -179,9 +213,9 @@ namespace CSM.Sim
                     float lat = MathF.Abs(rel.x * -dir.y + rel.y * dir.x);
                     // hitbox interna: o desenho chibi tem a cabeça grande, mas a área que conta como cabeça no jogo fica
                     // dentro dela, na proporção do CS (~35% da largura do tronco) — senão o HS vai lá pra cima
-                    if (hz > 19.6f * k && hz < 23.4f * k && lat < 1.7f) return (b, Part.Cabeca, p, zz);
-                    if (hz > 9f * k && hz <= 19.3f * k && lat < 4.6f) return (b, Part.Tronco, p, zz);
-                    if (hz >= 0 && hz <= 9f * k && lat < 3.6f) return (b, Part.Perna, p, zz);
+                    if (hz > 19.6f * k && hz < 23.4f * k && lat < 1.7f) return Acertou(m, a, b, Part.Cabeca, p, zz);
+                    if (hz > 9f * k && hz <= 19.3f * k && lat < 4.6f) return Acertou(m, a, b, Part.Tronco, p, zz);
+                    if (hz >= 0 && hz <= 9f * k && lat < 3.6f) return Acertou(m, a, b, Part.Perna, p, zz);
                 }
             }
             return (null, Part.Nada, a.pos + dir * 1400, zAt(1400));
