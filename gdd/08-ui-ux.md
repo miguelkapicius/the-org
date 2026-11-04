@@ -17,13 +17,15 @@ _Telas, HUD e fluxo de navegação._
 | Tela | O que mostra e permite |
 |---|---|
 | Painel do clube | Cartões de ação (pré-partida, pular partida, contratar, Gaming House); titulares em cartões com atributos; últimas partidas; resultado da partida que acabou de acontecer |
-| Pré-partida | Tela cheia com os dois times frente a frente (brasão, força, os 5 jogadores com função) e a barra de ações: **Assistir partida** (destaque), **Pular partida**, voltar, elenco. Mapas e plano de jogo aparecem desligados, porque o que se configura aqui é pergunta aberta |
-| Elenco | Tabela com todos os jogadores e atributos; abas Todos / Titulares / Reservas; os 5 primeiros são os **titulares**; reordenar; vender |
+| Pré-partida | Tela cheia com os dois times frente a frente (brasão redondo, força, os 5 jogadores com função), os **bonecos 3D do jogo** (TR e CT) grandes nas laterais, cortados pela barra de ações: **Assistir partida** (destaque, lima), **Pular partida**, voltar, elenco. Mapas e plano de jogo aparecem desligados, porque o que se configura aqui é pergunta aberta |
+| Elenco | Tabela de linhas finas com todos os jogadores e atributos; abas Todos / Titulares / Reservas; os 5 primeiros são os **titulares**; reordenar e vender pelo menu "⋮" de cada linha |
 | Mercado | Jogadores livres, com abas por função; atributos, salário, preço e contratar |
 | Gaming House | Nível atual, custo do próximo, o que cada nível libera (treinos e scouts aparecem bloqueados; ainda sem efeito) |
 | Finanças | Saldo, salários, prêmios e extrato |
 
-**Direção visual da interface do manager** (referências dos autores: apps modernos de interface escura e a tela de pré-partida de um jogo de futebol): tema escuro, cartões bem arredondados com borda fina, barra lateral com contadores, abas em pílula, tabelas com avatar, e **uma** cor de destaque (lima) reservada à ação principal. Laranja é o nosso time e azul o adversário, como na partida. É uma interface **visual, de cartões**, não uma planilha densa. Ainda não há retratos nem brasões: o protótipo usa avatares com a inicial.
+**Direção visual da interface do manager** (referências dos autores: apps modernos de interface escura e a tela de pré-partida de um jogo de futebol): tema escuro, cartões bem arredondados com borda fina, barra lateral com contadores, abas em pílula, tabelas com avatar, e **uma** cor de destaque (lima) reservada à ação principal. Laranja é o nosso time e azul o adversário, como na partida. É uma interface **visual, de cartões**, não uma planilha densa. Ainda não há retratos nem brasões: o protótipo usa avatares e brasões com a inicial. O visual de referência está em `prototipo/mockup-ui/` (HTML/CSS, só para aprovar o desenho) e é implementado em USS na Unity (decisão 0011).
+
+**Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 13 px na resolução de referência (1600×900); texto secundário com contraste mínimo de ~4,5:1 sobre o cartão; camadas bem separadas (fundo < janela < menu < cartão < item ativo) com bordas visíveis; item ativo do menu e aba escolhida bem marcados (aba = pílula branca com texto preto); botões sempre com borda; conteúdo rola em vez de ser cortado.
 
 Os atributos mostrados no elenco e no mercado são uma leitura direta do que a IA dos bots já usa (mira, reflexo, spray, utilitária, sangue-frio), para que o que o manager vê seja o que muda na partida (pilar 3). Os titulares escolhidos entram na partida assistida com o nome e a habilidade deles.
 

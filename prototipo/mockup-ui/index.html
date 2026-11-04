@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>CS Manager — mockup da interface</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--
+  Mockup da interface do manager (HTML/CSS). NÃO é o jogo: serve para aprovar o visual antes de portar para UXML/USS na Unity.
+  Palco fixo de 1600x900 (mesma referência de escala do PanelSettings). Números provisórios, como no protótipo.
+  Estrutura copiada das referências: menu em cartão com ícones, atalhos pequenos, cartões com área de imagem, abas segmentadas,
+  tabela só com linhas finas e menu "⋮"; pré-partida com brasões redondos, bonecos grandes nas laterais e barra de botões grossos.
+-->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17.5" cy="9" r="2.5"/><path d="M17 14.2c2.7.2 4.5 2.1 4.5 4.8"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 8h15l-3.5-3.5M20 16H5l3.5 3.5"/></symbol>
+  <symbol id="i-dollar" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.6 9.2c-.4-1-1.4-1.6-2.6-1.6-1.5 0-2.6.8-2.6 2s1 1.7 2.6 2 2.6.8 2.6 2-1.1 2-2.6 2c-1.2 0-2.2-.6-2.6-1.6M12 6v1.6M12 16.4V18"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><rect x="4.5" y="3.5" width="15" height="17" rx="2"/><path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 20.5v-4h4v4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9.5a6 6 0 0 1 12 0c0 5.5 2 7 2 7H4s2-1.500 2-7zM10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.500 4.500v15l12-7.500z"/></symbol>
+  <symbol id="i-skip" viewBox="0 0 24 24"><path d="M5 5v14l9.500-7zM18 5v14"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3.500 12.500V4.500a1 1 0 0 1 1-1h8l8 8-9 9z"/><circle cx="8.500" cy="8.500" r="1.200"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 6.500h16M7 12h10M10 17.500h4"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m8 9.500 4-4 4 4M8 14.500l4 4 4-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.500"/><path d="M12 7.500V12l3 2"/></symbol>
+  <symbol id="i-kebab" viewBox="0 0 24 24"><circle cx="12" cy="5.500" r="1.400" fill="currentColor"/><circle cx="12" cy="12" r="1.400" fill="currentColor"/><circle cx="12" cy="18.500" r="1.400" fill="currentColor"/></symbol>
+  <!-- silhueta provisória; no jogo vem do render do Boneco3D -->
+  <symbol id="boneco" viewBox="0 0 200 420"><circle cx="100" cy="62" r="46"/><rect x="66" y="104" width="68" height="26" rx="12"/><path d="M48 140 Q100 118 152 140 L170 300 Q100 316 30 300 Z"/><rect x="62" y="296" width="32" height="112" rx="14"/><rect x="106" y="296" width="32" height="112" rx="14"/></symbol>
+</defs></svg>
+
+<div id="palco">
+  <div class="janela" id="app">
+
+    <!-- ============ MENU LATERAL: um cartão, como nas referências 2 e 3 ============ -->
+    <aside class="menu" id="menu">
+      <div class="clube">
+        <div class="brasao laranja">T</div>
+        <div class="clube-nome"><b>Tigres</b><small>Gaming House nv. 1</small></div>
+        <svg class="ic peq"><use href="#i-chev"/></svg>
+      </div>
+      <nav>
+        <a data-tela="painel" class="item ativo"><svg class="ic"><use href="#i-grid"/></svg>Painel</a>
+        <a data-tela="elenco" class="item"><svg class="ic"><use href="#i-users"/></svg>Elenco<span class="cont">6</span></a>
+        <a data-tela="mercado" class="item"><svg class="ic"><use href="#i-swap"/></svg>Mercado<span class="cont">8</span></a>
+        <hr>
+        <a data-tela="financas" class="item"><svg class="ic"><use href="#i-dollar"/></svg>Finanças</a>
+        <a data-tela="gh" class="item"><svg class="ic"><use href="#i-house"/></svg>Gaming House<span class="cont">1</span></a>
+      </nav>
+      <div class="proxima">
+        <small>PRÓXIMA PARTIDA</small>
+        <b>Tigres <i>vs</i> Lobos</b>
+        <button class="btn lima cheio" data-ir="prematch"><svg class="ic"><use href="#i-play"/></svg>Pré-partida</button>
+      </div>
+      <p class="rodape">Protótipo: salários, preços e prêmios são provisórios.</p>
+    </aside>
+
+    <!-- ============ PAINEL ============ -->
+    <main class="tela" id="painel">
+      <header class="topo">
+        <div class="titulo"><h1>Painel do clube</h1><p>Partida 1 da carreira</p></div>
+        <div class="busca"><svg class="ic"><use href="#i-search"/></svg>Buscar</div>
+        <div class="usuario"><div class="brasao laranja mini-b">T</div><div><b>$ 25.000</b><small>saldo</small></div></div>
+        <svg class="ic sino"><use href="#i-bell"/></svg>
+      </header>
+
+      <div class="corpo">
+        <div class="atalhos">
+          <button class="atalho destaque" data-ir="prematch"><svg class="ic"><use href="#i-play"/></svg><svg class="ic mais"><use href="#i-plus"/></svg><b>Pré-partida</b></button>
+          <button class="atalho"><svg class="ic"><use href="#i-skip"/></svg><svg class="ic mais"><use href="#i-plus"/></svg><b>Pular partida</b></button>
+          <button class="atalho" data-ir="mercado"><svg class="ic"><use href="#i-swap"/></svg><svg class="ic mais"><use href="#i-plus"/></svg><b>Contratar</b></button>
+          <button class="atalho" data-ir="gh"><svg class="ic"><use href="#i-house"/></svg><svg class="ic mais"><use href="#i-plus"/></svg><b>Subir Gaming House</b></button>
+        </div>
+
+        <h2>Elenco titular</h2>
+        <div class="abas"><button class="ativo">Todos</button><button>Titulares</button><button>Reservas</button></div>
+
+        <div class="grade5">
+          <article class="card-j">
+            <div class="midia laranja-t"><svg class="boneco-mini"><use href="#boneco"/></svg><span class="ovr verde">82</span></div>
+            <div class="info"><div><b>Kaiser</b><small>IGL · 24 anos</small></div><div class="stats"><i class="verde">78</i><i class="verde">84</i><i class="azul">71</i></div></div>
+          </article>
+          <article class="card-j">
+            <div class="midia laranja-t"><svg class="boneco-mini"><use href="#boneco"/></svg><span class="ovr verde">80</span></div>
+            <div class="info"><div><b>Vex</b><small>Entry · 21 anos</small></div><div class="stats"><i class="verde">85</i><i class="verde">88</i><i class="azul">66</i></div></div>
+          </article>
+          <article class="card-j">
+            <div class="midia laranja-t"><svg class="boneco-mini"><use href="#boneco"/></svg><span class="ovr azul">74</span></div>
+            <div class="info"><div><b>Mirage</b><small>AWPer · 23 anos</small></div><div class="stats"><i class="verde">90</i><i class="azul">62</i><i class="laranja">48</i></div></div>
+          </article>
+          <article class="card-j">
+            <div class="midia laranja-t"><svg class="boneco-mini"><use href="#boneco"/></svg><span class="ovr azul">68</span></div>
+            <div class="info"><div><b>Rook</b><small>Suporte · 26 anos</small></div><div class="stats"><i class="azul">64</i><i class="azul">66</i><i class="azul">70</i></div></div>
+          </article>
+          <article class="card-j">
+            <div class="midia laranja-t"><svg class="boneco-mini"><use href="#boneco"/></svg><span class="ovr azul">66</span></div>
+            <div class="info"><div><b>Ghost</b><small>Lurker · 22 anos</small></div><div class="stats"><i class="azul">69</i><i class="azul">61</i><i class="laranja">55</i></div></div>
+          </article>
+        </div>
+        <p class="legenda">Mira · Reflexo · Spray</p>
+
+        <h2>Últimas partidas</h2>
+        <div class="tabela-simples">
+          <div class="l"><span class="suave">Partida 0</span><em class="selo verde">VITÓRIA</em><b>13 — 9</b><span class="suave">contra Corvos</span><span class="suave dir">+ $ 3.000</span></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ ELENCO: tabela como a referência 2 ============ -->
+    <main class="tela" id="elenco" hidden>
+      <header class="topo">
+        <div class="titulo"><h1>Elenco</h1><p>Os 5 primeiros da lista são os titulares da próxima partida.</p></div>
+        <div class="usuario"><div class="brasao laranja mini-b">T</div><div><b>$ 25.000</b><small>saldo</small></div></div>
+        <svg class="ic sino"><use href="#i-bell"/></svg>
+      </header>
+      <div class="corpo">
+        <div class="filtros">
+          <div class="abas"><button class="ativo">Todos</button><button>Titulares</button><button>Reservas</button></div>
+          <div class="dir-grupo"><div class="busca"><svg class="ic"><use href="#i-search"/></svg>Buscar jogador</div><button class="btn"><svg class="ic"><use href="#i-filter"/></svg>Filtros</button></div>
+        </div>
+
+        <div class="tabela">
+          <div class="tr th"><span class="c-j">Jogador</span><span class="c-g">Geral</span><span class="c-a">Mira</span><span class="c-a">Reflexo</span><span class="c-a">Spray</span><span class="c-a">Util.</span><span class="c-a">Frio</span><span class="c-s">Salário</span><span class="c-st">Status</span><span class="c-k"></span></div>
+
+          <div class="tr"><span class="c-j"><div class="av a1">K</div><div><b>Kaiser</b><small>IGL · 24 anos</small></div></span><span class="c-g verde">82</span><span class="c-a"><b class="verde">78</b><i><u class="verde" style="width:78%"></u></i></span><span class="c-a"><b class="verde">84</b><i><u class="verde" style="width:84%"></u></i></span><span class="c-a"><b class="azul">71</b><i><u class="azul" style="width:71%"></u></i></span><span class="c-a"><b class="verde">80</b><i><u class="verde" style="width:80%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-s">$ 900</span><span class="c-st"><em class="selo laranja">TITULAR</em></span>
+            <span class="c-k"><button class="kebab on"><svg class="ic"><use href="#i-kebab"/></svg></button>
+              <div class="dropdown"><a><svg class="ic"><use href="#i-up"/></svg>Subir na lista</a><a><svg class="ic"><use href="#i-down"/></svg>Descer na lista</a><a class="perigo"><svg class="ic"><use href="#i-tag"/></svg>Vender por + $ 540</a></div></span></div>
+          <div class="tr"><span class="c-j"><div class="av a2">V</div><div><b>Vex</b><small>Entry · 21 anos</small></div></span><span class="c-g verde">80</span><span class="c-a"><b class="verde">85</b><i><u class="verde" style="width:85%"></u></i></span><span class="c-a"><b class="verde">88</b><i><u class="verde" style="width:88%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-a"><b class="laranja">52</b><i><u class="laranja" style="width:52%"></u></i></span><span class="c-a"><b class="azul">70</b><i><u class="azul" style="width:70%"></u></i></span><span class="c-s">$ 850</span><span class="c-st"><em class="selo laranja">TITULAR</em></span><span class="c-k"><button class="kebab"><svg class="ic"><use href="#i-kebab"/></svg></button></span></div>
+          <div class="tr"><span class="c-j"><div class="av a3">M</div><div><b>Mirage</b><small>AWPer · 23 anos</small></div></span><span class="c-g azul">74</span><span class="c-a"><b class="verde">90</b><i><u class="verde" style="width:90%"></u></i></span><span class="c-a"><b class="azul">62</b><i><u class="azul" style="width:62%"></u></i></span><span class="c-a"><b class="laranja">48</b><i><u class="laranja" style="width:48%"></u></i></span><span class="c-a"><b class="azul">60</b><i><u class="azul" style="width:60%"></u></i></span><span class="c-a"><b class="azul">75</b><i><u class="azul" style="width:75%"></u></i></span><span class="c-s">$ 800</span><span class="c-st"><em class="selo laranja">TITULAR</em></span><span class="c-k"><button class="kebab"><svg class="ic"><use href="#i-kebab"/></svg></button></span></div>
+          <div class="tr"><span class="c-j"><div class="av a4">R</div><div><b>Rook</b><small>Suporte · 26 anos</small></div></span><span class="c-g azul">68</span><span class="c-a"><b class="azul">64</b><i><u class="azul" style="width:64%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-a"><b class="azul">70</b><i><u class="azul" style="width:70%"></u></i></span><span class="c-a"><b class="verde">82</b><i><u class="verde" style="width:82%"></u></i></span><span class="c-a"><b class="azul">61</b><i><u class="azul" style="width:61%"></u></i></span><span class="c-s">$ 600</span><span class="c-st"><em class="selo cinza">RESERVA</em></span><span class="c-k"><button class="kebab"><svg class="ic"><use href="#i-kebab"/></svg></button></span></div>
+        </div>
+        <p class="legenda">Atributos = o que a IA do bot usa na partida. UTIL. = utilitária, FRIO = sangue-frio.</p>
+      </div>
+    </main>
+
+    <main class="tela" id="mercado" hidden><header class="topo"><div class="titulo"><h1>Mercado</h1><p>Mesma tabela do elenco, com PREÇO e botão Contratar (lima).</p></div></header></main>
+    <main class="tela" id="financas" hidden><header class="topo"><div class="titulo"><h1>Finanças</h1><p>Três atalhos-resumo e o extrato.</p></div></header></main>
+    <main class="tela" id="gh" hidden><header class="topo"><div class="titulo"><h1>Gaming House</h1><p>Níveis e o que cada um libera.</p></div></header></main>
+
+    <!-- ============ PRÉ-PARTIDA: referência 4 ============ -->
+    <section class="tela prematch" id="prematch" hidden>
+      <div class="pm-pixels"></div>
+      <div class="pm-relogio"><svg class="ic"><use href="#i-clock"/></svg>Partida 1</div>
+
+      <div class="pm-tag esq"><b>TIGRES</b><em class="mini-av laranja">T</em><small><svg class="ic peq"><use href="#i-house"/></svg>NÍVEL 1</small></div>
+      <div class="pm-tag dir"><b>LOBOS</b><em class="mini-av azul">L</em><small><svg class="ic peq"><use href="#i-house"/></svg>NÍVEL 2</small></div>
+
+      <!-- bonecos 3D reais entram aqui (RenderTexture); silhuetas provisórias -->
+      <div class="pm-boneco esq laranja-t"><svg><use href="#boneco"/></svg></div>
+      <div class="pm-boneco dir azul-t"><svg><use href="#boneco"/></svg></div>
+
+      <div class="pm-centro">
+        <div class="pm-time">
+          <div class="crest laranja"><span>T</span><em class="forca">74 <svg class="ic peq"><use href="#i-up"/></svg></em></div>
+          <h2>TIGRES</h2>
+          <ul><li><i>IGL</i>KAISER</li><li><i>ENT</i>VEX</li><li><i>AWP</i>MIRAGE</li><li><i>SUP</i>ROOK</li><li><i>LUR</i>GHOST</li></ul>
+        </div>
+        <div class="pm-bola"></div>
+        <div class="pm-time">
+          <div class="crest azul"><span>L</span><em class="forca baixo">69 <svg class="ic peq"><use href="#i-down"/></svg></em></div>
+          <h2>LOBOS</h2>
+          <ul><li><i>IGL</i>FENRIR</li><li><i>ENT</i>SKOLL</li><li><i>AWP</i>HATI</li><li><i>SUP</i>GARM</li><li><i>LUR</i>ULF</li></ul>
+        </div>
+      </div>
+
+      <div class="pm-barra">
+        <div class="seg"><button data-ir="painel">Voltar</button><button data-ir="elenco">Elenco</button></div>
+        <button class="comecar">ASSISTIR PARTIDA <span class="quad"><svg class="ic"><use href="#i-play"/></svg></span></button>
+        <div class="seg"><button>Pular partida</button><button disabled>Plano de jogo</button></div>
+      </div>
+      <div class="pm-dicas"><span><kbd>⏎</kbd> SELECIONAR</span><span><kbd>Esc</kbd> VOLTAR</span></div>
+    </section>
+
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

@@ -8,7 +8,7 @@ _Engine, arquitetura e restrições técnicas._
 
 ## Engine e ferramentas
 
-**Unity** (decisão 0006). Interface do manager em **UI Toolkit** (decisão 0011, proposta); o HUD da transmissão continua como está.
+**Unity** (decisão 0006). Interface do manager em **UI Toolkit** com estilo em **USS** (decisão 0011, proposta); o HUD da transmissão continua como está.
 
 ### IA dos bots (decisão 0009 — recomendação do agente, a validar)
 
