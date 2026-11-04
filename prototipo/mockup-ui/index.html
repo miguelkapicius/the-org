@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>CS Manager — mockup da interface</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!--
+  Mockup da interface do manager (HTML/CSS). NÃO é o jogo: serve para aprovar o visual antes de portar para UXML/USS na Unity.
+  Palco fixo de 1600x900 (mesma referência de escala do PanelSettings). Os números são provisórios, como no protótipo.
+-->
+<div id="palco">
+  <div class="janela" id="app">
+
+    <!-- ============ MENU LATERAL (todas as telas menos a pré-partida) ============ -->
+    <aside class="menu" id="menu">
+      <div class="clube">
+        <div class="brasao laranja">T</div>
+        <div><b>Tigres</b><small>Gaming House nv. 1</small></div>
+      </div>
+      <nav>
+        <a data-tela="painel" class="item ativo"><i>▦</i>Painel</a>
+        <a data-tela="elenco" class="item"><i>☰</i>Elenco<span class="cont">6/8</span></a>
+        <a data-tela="mercado" class="item"><i>⇄</i>Mercado<span class="cont">8</span></a>
+        <hr>
+        <a data-tela="financas" class="item"><i>$</i>Finanças</a>
+        <a data-tela="gh" class="item"><i>⌂</i>Gaming House<span class="cont">nv. 1</span></a>
+      </nav>
+      <p class="rodape">Protótipo. Salários, preços e prêmios são valores provisórios.</p>
+    </aside>
+
+    <!-- ============ PAINEL ============ -->
+    <main class="tela" id="painel">
+      <header class="topo">
+        <div><h1>Painel do clube</h1><p>Partida 1 da carreira</p></div>
+        <div class="saldo-grupo">
+          <div class="mini"><small>Salários por partida</small><b>$ 4.200</b></div>
+          <div class="saldo"><small>Saldo do clube</small><b>$ 25.000</b></div>
+        </div>
+      </header>
+      <div class="corpo">
+        <div class="acoes">
+          <button class="acao destaque" data-ir="prematch"><span class="ic">▶</span><b>Pré-partida</b><small>Partida 1 · contra Lobos</small></button>
+          <button class="acao"><span class="ic">⏭</span><b>Pular partida</b><small>Só o resultado, por probabilidade</small></button>
+          <button class="acao" data-ir="mercado"><span class="ic">+</span><b>Contratar</b><small>8 jogadores livres</small></button>
+          <button class="acao" data-ir="gh"><span class="ic">▲</span><b>Gaming House</b><small>Subir por $ 8.000</small></button>
+        </div>
+
+        <div class="secao"><h2>Elenco titular</h2><button class="btn" data-ir="elenco">Ver elenco</button></div>
+        <div class="cartoes5">
+          <div class="jogador-card"><div class="topo-j"><div class="av a1">K</div><div><b>Kaiser</b><small>IGL · 24 anos</small></div><span class="ovr verde">82</span></div>
+            <div class="attr"><span>Mira</span><i><u style="width:78%" class="verde"></u></i><b class="verde">78</b></div>
+            <div class="attr"><span>Reflexo</span><i><u style="width:84%" class="verde"></u></i><b class="verde">84</b></div>
+            <div class="attr"><span>Spray</span><i><u style="width:71%" class="azul"></u></i><b class="azul">71</b></div></div>
+          <div class="jogador-card"><div class="topo-j"><div class="av a2">V</div><div><b>Vex</b><small>Entry · 21 anos</small></div><span class="ovr verde">80</span></div>
+            <div class="attr"><span>Mira</span><i><u style="width:85%" class="verde"></u></i><b class="verde">85</b></div>
+            <div class="attr"><span>Reflexo</span><i><u style="width:88%" class="verde"></u></i><b class="verde">88</b></div>
+            <div class="attr"><span>Spray</span><i><u style="width:66%" class="azul"></u></i><b class="azul">66</b></div></div>
+          <div class="jogador-card"><div class="topo-j"><div class="av a3">M</div><div><b>Mirage</b><small>AWPer · 23 anos</small></div><span class="ovr azul">74</span></div>
+            <div class="attr"><span>Mira</span><i><u style="width:90%" class="verde"></u></i><b class="verde">90</b></div>
+            <div class="attr"><span>Reflexo</span><i><u style="width:62%" class="azul"></u></i><b class="azul">62</b></div>
+            <div class="attr"><span>Spray</span><i><u style="width:48%" class="laranja"></u></i><b class="laranja">48</b></div></div>
+        </div>
+
+        <div class="secao"><h2>Últimas partidas</h2></div>
+        <div class="cartao lista">
+          <div class="linha"><span class="suave">Partida 0</span><em class="selo verde">VITÓRIA</em><b>13 — 9</b><span class="suave">contra Corvos</span></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ============ ELENCO ============ -->
+    <main class="tela" id="elenco" hidden>
+      <header class="topo">
+        <div><h1>Elenco</h1><p>Os 5 primeiros da lista são os titulares da próxima partida.</p></div>
+        <div class="saldo-grupo"><div class="saldo"><small>Saldo do clube</small><b>$ 25.000</b></div></div>
+      </header>
+      <div class="corpo">
+        <div class="barra-filtros">
+          <div class="chips"><button class="chip ativo">Todos (6)</button><button class="chip">Titulares (5)</button><button class="chip">Reservas (1)</button></div>
+          <div class="busca"><span>⌕</span>Buscar jogador</div>
+        </div>
+        <div class="cartao tabela">
+          <div class="tr th"><span class="c-j">JOGADOR</span><span class="c-g">GERAL</span><span class="c-a">MIRA</span><span class="c-a">REFLEXO</span><span class="c-a">SPRAY</span><span class="c-a">UTIL.</span><span class="c-a">FRIO</span><span class="c-s">SALÁRIO</span><span class="c-st">STATUS</span><span class="c-ac"></span></div>
+          <div class="tr"><span class="c-j"><div class="av a1">K</div><div><b>Kaiser</b><small>IGL · 24 anos</small></div></span><span class="c-g verde">82</span><span class="c-a"><b class="verde">78</b><i><u class="verde" style="width:78%"></u></i></span><span class="c-a"><b class="verde">84</b><i><u class="verde" style="width:84%"></u></i></span><span class="c-a"><b class="azul">71</b><i><u class="azul" style="width:71%"></u></i></span><span class="c-a"><b class="verde">80</b><i><u class="verde" style="width:80%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-s">$ 900</span><span class="c-st"><em class="selo laranja">TITULAR</em></span><span class="c-ac"><button class="btn peq">↑</button><button class="btn peq">↓</button><button class="btn peq">Vender</button></span></div>
+          <div class="tr"><span class="c-j"><div class="av a2">V</div><div><b>Vex</b><small>Entry · 21 anos</small></div></span><span class="c-g verde">80</span><span class="c-a"><b class="verde">85</b><i><u class="verde" style="width:85%"></u></i></span><span class="c-a"><b class="verde">88</b><i><u class="verde" style="width:88%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-a"><b class="laranja">52</b><i><u class="laranja" style="width:52%"></u></i></span><span class="c-a"><b class="azul">70</b><i><u class="azul" style="width:70%"></u></i></span><span class="c-s">$ 850</span><span class="c-st"><em class="selo laranja">TITULAR</em></span><span class="c-ac"><button class="btn peq">↑</button><button class="btn peq">↓</button><button class="btn peq">Vender</button></span></div>
+          <div class="tr"><span class="c-j"><div class="av a3">M</div><div><b>Mirage</b><small>AWPer · 23 anos</small></div></span><span class="c-g azul">74</span><span class="c-a"><b class="verde">90</b><i><u class="verde" style="width:90%"></u></i></span><span class="c-a"><b class="azul">62</b><i><u class="azul" style="width:62%"></u></i></span><span class="c-a"><b class="laranja">48</b><i><u class="laranja" style="width:48%"></u></i></span><span class="c-a"><b class="azul">60</b><i><u class="azul" style="width:60%"></u></i></span><span class="c-a"><b class="azul">75</b><i><u class="azul" style="width:75%"></u></i></span><span class="c-s">$ 800</span><span class="c-st"><em class="selo laranja">TITULAR</em></span><span class="c-ac"><button class="btn peq">↑</button><button class="btn peq">↓</button><button class="btn peq">Vender</button></span></div>
+          <div class="tr"><span class="c-j"><div class="av a4">R</div><div><b>Rook</b><small>Suporte · 26 anos</small></div></span><span class="c-g azul">68</span><span class="c-a"><b class="azul">64</b><i><u class="azul" style="width:64%"></u></i></span><span class="c-a"><b class="azul">66</b><i><u class="azul" style="width:66%"></u></i></span><span class="c-a"><b class="azul">70</b><i><u class="azul" style="width:70%"></u></i></span><span class="c-a"><b class="verde">82</b><i><u class="verde" style="width:82%"></u></i></span><span class="c-a"><b class="azul">61</b><i><u class="azul" style="width:61%"></u></i></span><span class="c-s">$ 600</span><span class="c-st"><em class="selo cinza">RESERVA</em></span><span class="c-ac"><button class="btn peq">↑</button><button class="btn peq">↓</button><button class="btn peq">Vender</button></span></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- telas ainda não desenhadas no mockup -->
+    <main class="tela" id="mercado" hidden><header class="topo"><div><h1>Mercado</h1><p>Igual ao elenco, com PREÇO e botão Contratar (lima).</p></div></header></main>
+    <main class="tela" id="financas" hidden><header class="topo"><div><h1>Finanças</h1><p>Três cartões de resumo e o extrato.</p></div></header></main>
+    <main class="tela" id="gh" hidden><header class="topo"><div><h1>Gaming House</h1><p>Níveis e o que cada um libera.</p></div></header></main>
+
+    <!-- ============ PRÉ-PARTIDA ============ -->
+    <section class="tela prematch" id="prematch" hidden>
+      <div class="pm-fundo"></div>
+      <div class="pm-topo"><span class="selo cinza">PRÉ-PARTIDA</span><span class="suave">Partida 1 da carreira</span></div>
+
+      <div class="pm-palco">
+        <!-- TIME DA CASA: no jogo, o boneco 3D (TR) renderizado numa RenderTexture entra aqui -->
+        <div class="boneco esq"><div class="slot3d laranja"><svg viewBox="0 0 200 420"><use href="#boneco"/></svg><small>boneco 3D (TR)</small></div></div>
+
+        <div class="pm-centro">
+          <div class="time">
+            <div class="brasao grande laranja">T</div><em class="forca">FORÇA 74</em>
+            <h2>TIGRES</h2>
+            <ul class="elenco-pm">
+              <li><i>IGL</i>Kaiser</li><li><i>ENT</i>Vex</li><li><i>AWP</i>Mirage</li><li><i>SUP</i>Rook</li><li><i>LUR</i>Ghost</li>
+            </ul>
+          </div>
+          <div class="vs">VS</div>
+          <div class="time">
+            <div class="brasao grande azul">L</div><em class="forca">FORÇA 69</em>
+            <h2>LOBOS</h2>
+            <ul class="elenco-pm">
+              <li><i>IGL</i>Fenrir</li><li><i>ENT</i>Skoll</li><li><i>AWP</i>Hati</li><li><i>SUP</i>Garm</li><li><i>LUR</i>Ulf</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="boneco dir"><div class="slot3d azul"><svg viewBox="0 0 200 420"><use href="#boneco"/></svg><small>boneco 3D (CT)</small></div></div>
+      </div>
+
+      <div class="pm-barra">
+        <div class="seg"><button data-ir="painel">Voltar</button><button data-ir="elenco">Elenco</button></div>
+        <button class="comecar">ASSISTIR PARTIDA <span>▶</span></button>
+        <div class="seg"><button>Pular partida</button><button disabled>Plano de jogo</button></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- silhueta provisória; no jogo vem do render do Boneco3D -->
+<svg width="0" height="0" style="position:absolute"><defs>
+  <g id="boneco" fill="currentColor">
+    <circle cx="100" cy="62" r="46"/><rect x="66" y="104" width="68" height="26" rx="12"/>
+    <path d="M48 140 Q100 118 152 140 L170 300 Q100 316 30 300 Z"/>
+    <rect x="62" y="296" width="32" height="112" rx="14"/><rect x="106" y="296" width="32" height="112" rx="14"/>
+  </g>
+</defs></svg>
+
+<script src="app.js"></script>
+</body>
+</html>
