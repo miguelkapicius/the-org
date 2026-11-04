@@ -23,5 +23,10 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Titular | Jogador do elenco que joga a próxima partida (5 por vez). | — | 03-progressao |
 | Reserva | Jogador do elenco que não joga a próxima partida. | banco | 03-progressao |
 | Mercado | Lista de jogadores livres que o manager pode contratar. | — | 03-progressao |
+| Escalação | Os 5 titulares que o manager escolhe e as funções deles. Trocar a escalação muda a força do time. | lineup, line-up, formação | 08-ui-ux |
+| Força | Número que resume o time: a média do geral dos 5 titulares. Entra no cálculo da chance de vitória. | overall do time, rating | 08-ui-ux |
+| Chance de vitória | Probabilidade de vencer a próxima partida, calculada a partir da força dos dois times. É a mesma usada ao pular a partida. | odds | 08-ui-ux |
+| Pré-partida | Tela antes da partida: os dois times frente a frente e a escolha entre assistir e pular. | lobby, prematch | 08-ui-ux |
+| Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |

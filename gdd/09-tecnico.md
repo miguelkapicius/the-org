@@ -31,7 +31,7 @@ _A definir._
 
 ## Salvamento
 
-_A definir._
+**[Sugestão]** O protótipo salva a carreira sozinho, em JSON na pasta de dados do jogo (`Application.persistentDataPath/carreira.json`), a cada ação do manager e ao fim de cada partida. O estado do clube é salvo por inteiro (elenco, mercado, extrato, histórico com o desempenho de cada partida, adversário). A sequência do sorteio não é salva, então recarregar não repete sorteios. O arquivo é escrito num temporário e trocado, para uma queda no meio não corromper o salvamento. Só uma carreira por vez. Formato, vários slots e compatibilidade entre versões continuam em aberto.
 
 ## Restrições
 

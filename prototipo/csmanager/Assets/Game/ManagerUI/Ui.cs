@@ -25,7 +25,7 @@ namespace CSM.ManagerUI
 
         public static Label L(string texto, params string[] classes)
         {
-            var l = new Label(texto);
+            var l = new Label(texto); l.selection.isSelectable = false;
             l.AddToClassList("t");
             foreach (var c in classes) l.AddToClassList(c);
             l.pickingMode = PickingMode.Ignore;
@@ -74,13 +74,32 @@ namespace CSM.ManagerUI
         }
 
         // ------------------------------------------------------------------ identidade
-        /// <summary>Avatar redondo com a inicial (ainda não há retrato de jogador); a cor vem do nome.</summary>
+        static int IndiceCor(string nome) { int h = 0; foreach (char ch in nome) h = h * 31 + ch; return (h & 0x7fffffff) % 6; }
+
+        /// <summary>Avatar redondo com a inicial; a cor vem do nome.</summary>
         public static VisualElement Avatar(string nome, bool grande = false)
         {
-            int h = 0; foreach (char ch in nome) h = h * 31 + ch;
-            var a = E("av", "av" + ((h & 0x7fffffff) % 6)); if (grande) a.AddToClassList("grande");
+            var a = E("av", "av" + IndiceCor(nome)); if (grande) a.AddToClassList("grande");
             a.Add(L(nome.Substring(0, 1)));
             return a;
+        }
+
+        /// <summary>Gancho para as dicas ao passar o mouse; a tela (GerenteUI) liga isto ao elemento de dica dela.</summary>
+        public static Action<VisualElement, string> Dica;
+        public static void ComDica(VisualElement e, string texto) => Dica?.Invoke(e, texto);
+
+        /// <summary>Render 3D do boneco (um só, por enquanto: todos os jogadores usam o mesmo modelo); null se não houver.</summary>
+        public static Texture RetratoBoneco;
+
+        /// <summary>Retrato do jogador: o boneco 3D sobre um fundo da cor dele (sem o render, cai para a inicial).
+        /// <paramref name="tamanho"/>: "retrato-p" (caixa pequena) ou "retrato-fill" (preenche o pai).</summary>
+        public static VisualElement Retrato(string nome, string tamanho)
+        {
+            var e = E("retrato", tamanho, "rt" + IndiceCor(nome));
+            if (RetratoBoneco is RenderTexture rt) e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
+            else e.Add(L(nome.Substring(0, 1)));
+            e.pickingMode = PickingMode.Ignore;
+            return e;
         }
 
         /// <summary>Brasão provisório do clube: quadrado arredondado com a inicial. cor = "laranja" ou "azul".</summary>

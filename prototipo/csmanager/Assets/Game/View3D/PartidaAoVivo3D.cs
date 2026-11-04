@@ -1090,7 +1090,15 @@ namespace CSM.View3D
                 GUI.Label(new Rect(r.x + 12, r.y + 10, r.width - 24, 50), $"<b>{(venceu ? "Vitória" : "Derrota")}</b>  {pt.A.nome} {pt.A.placar} x {pt.B.placar} {pt.B.nome}", sTxt);
                 if (GUI.Button(new Rect(r.x + 12, r.y + 66, r.width - 24, 40), "Voltar ao manager", sBotao))
                 {
-                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true);
+                    // números reais de cada jogador, vindos da simulação (viram a tela de pós-partida)
+                    var desempenho = new List<CSM.Manager.Desempenho>();
+                    for (int jj = 0; jj < pt.A.js.Length; jj++)
+                    {
+                        var pj = pt.A.js[jj];
+                        desempenho.Add(new CSM.Manager.Desempenho { nome = pj.nome, funcao = pj.roleT, k = pj.k, d = pj.d, hs = pj.hs, dano = pj.dano, fk = pj.fk, rounds = Mathf.Max(1, pj.rounds) });
+                    }
+                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true, desempenho);
+                    CSM.ManagerUI.Salvamento.Salvar(carreira);
                     UnityEngine.SceneManagement.SceneManager.LoadScene("Manager");
                     return;
                 }
