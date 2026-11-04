@@ -15,7 +15,9 @@ Até agora o protótipo só tinha a partida (simulação + transmissão 3D). Fal
 3. **IMGUI (`OnGUI`)** — zero configuração e já usado no protótipo, mas não serve para uma interface de jogo: sem layout, difícil de estilizar, ruim para escalar.
 
 ## Decisão
-A interface do manager (telas fora da partida) usa **UI Toolkit**. No protótipo ela é montada **em código** (sem UXML/USS) para não depender de assets que só a Unity gera; migrar para UXML/USS quando o visual estabilizar. O HUD da transmissão (partida) **não** muda por esta decisão.
+A interface do manager (telas fora da partida) usa **UI Toolkit**. A estrutura (elementos e listas) é montada **em código** e o visual (cores, tamanhos, bordas, espaçamento, hover) vem de uma folha de estilos **USS** (`Assets/Resources/ManagerUI/Manager.uss`). O HUD da transmissão (partida) **não** muda por esta decisão.
+
+**Atualização (2026-11-04):** o visual estabilizou, então o estilo saiu do código e foi para o USS. O desenho das telas é aprovado antes, como mockup **HTML/CSS** (`prototipo/mockup-ui/`, fora do jogo), e depois portado para USS com os mesmos nomes de classe. HTML/CSS de verdade dentro do jogo (webview) foi descartado: não é nativo da Unity, exige plugin de terceiros e é frágil.
 
 ## Por quê
 Pilar "Gestão que aparece na partida": a interface de gestão vai crescer (contratos, treinos, scouts, calendário) e precisa de um sistema de layout que aguente tabelas e telas densas. UI Toolkit é o que a Unity 6 recomenda para isso.
@@ -23,4 +25,6 @@ Pilar "Gestão que aparece na partida": a interface de gestão vai crescer (cont
 ## Consequências
 - Código da interface em `prototipo/csmanager/Assets/Game/ManagerUI/`; regras de gestão separadas, em `Assets/Game/Manager/` (sem dependência de UI nem da Unity, roda no Headless).
 - Duas cenas: `Manager` (interface) e `Partida3D` (transmissão). O estado da carreira passa entre elas em memória; **salvamento em disco ainda não existe** (`gdd/09-tecnico.md`).
-- Se a decisão for rejeitada, só a pasta `ManagerUI/` precisa ser reescrita.
+- Fluxo de mudança visual: ajustar o mockup (`prototipo/mockup-ui/`), aprovar, e levar para o `Manager.uss`. Para conferir sem abrir a janela: menu CS Manager > Manager (ou `CenaManager.CapturarBatch` com a variável `CSM_CAPTURA=<pasta>`) salva um PNG de cada tela.
+- Ícones são desenhados em código (`Icone.cs`, Painter2D), sem imagens.
+- Se a decisão for rejeitada, só a pasta `ManagerUI/` e o `Manager.uss` precisam ser reescritos.

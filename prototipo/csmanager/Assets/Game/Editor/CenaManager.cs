@@ -44,6 +44,17 @@ namespace CSM.EditorTools
             AssetDatabase.SaveAssets();
         }
 
+        /// <summary>Batch: roda o manager, salva um PNG de cada tela na pasta da variável CSM_CAPTURA e fecha o Editor
+        /// (Unity -batchmode -executeMethod CSM.EditorTools.CenaManager.CapturarBatch). Serve para conferir o visual.</summary>
+        public static void CapturarBatch()
+        {
+            if (string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("CSM_CAPTURA"))) { Debug.LogError("Defina CSM_CAPTURA=<pasta>."); EditorApplication.Exit(1); return; }
+            if (!File.Exists(ARQ) || !File.Exists(ARQ_PARTIDA)) Criar();
+            CSM.Manager.Carreira.Atual = null;
+            EditorSceneManager.OpenScene(ARQ);
+            EditorApplication.isPlaying = true;
+        }
+
         /// <summary>Batch: cria a cena e sai (Unity -batchmode -executeMethod CSM.EditorTools.CenaManager.CriarBatch).</summary>
         public static void CriarBatch()
         {
