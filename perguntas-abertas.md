@@ -15,7 +15,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 2. Lado manager
 
-- [ ] **Elenco:** como funcionam contratações, vendas, salários e contratos? → `gdd/03-progressao.md`
+- [ ] **Elenco:** como funcionam contratações, vendas, salários e contratos? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
+- [ ] **Pré-partida:** o que o manager configura antes de assistir (veto de mapas, estratégia, compras padrão)? → `gdd/08-ui-ux.md`
 - [ ] Times e jogadores fictícios gerados pelo jogo ou criados à mão? → `gdd/05-conteudo.md`
 - [ ] **Carreira:** formato dos campeonatos (MD1/MD3, grupos, mata-mata) e calendário → `gdd/01-core-loop.md`
 - [ ] **Falência:** o jogador recebe avisos antes? Existe empréstimo ou outra saída antes do game over? → `gdd/03-progressao.md`
@@ -43,6 +44,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] Quais estilos o manager pode escolher no timeout além de agressivo e defensivo? → `gdd/01-core-loop.md`
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
+- [ ] A interface do manager é densa em tabelas (estilo Football Manager) ou mais visual? → `gdd/08-ui-ux.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 

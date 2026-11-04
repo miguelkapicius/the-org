@@ -375,7 +375,8 @@ namespace CSM.View3D
 
         static Mesh Malha(PrimitiveType t) { var g = GameObject.CreatePrimitive(t); var me = g.GetComponent<MeshFilter>().sharedMesh; Apagar(g); return me; }
 
-        void NovaPartida() { pt = new Sim.Partida(seed, null, null); acabou = false; NovoRound(); }
+        // Vindo do manager (CSM.Manager), a partida já vem montada com o elenco dele; sozinha, a cena usa o time padrão.
+        void NovaPartida() { pt = CSM.Manager.Carreira.TomarPendente() ?? new Sim.Partida(seed, null, null); acabou = false; NovoRound(); }
 
         void NovoRound()
         {
@@ -1079,6 +1080,21 @@ namespace CSM.View3D
             x = 14; y += 26;
             if (B("Próximo round", 96)) PulaRound();
             if (B(painel ? "Sem pensamento" : "Pensamento (P)", 110)) painel = !painel;
+            // partida vinda do manager: no fim, fecha a partida da carreira (prêmio, salários) e volta ao painel do clube
+            var carreira = CSM.Manager.Carreira.Atual;
+            if (acabou && carreira != null && carreira.emPartida)
+            {
+                bool venceu = pt.vencedor == pt.A;
+                var r = new Rect(W / 2 - 190, H / 2 - 60, 380, 120);
+                GUI.Box(r, GUIContent.none, sCaixa);
+                GUI.Label(new Rect(r.x + 12, r.y + 10, r.width - 24, 50), $"<b>{(venceu ? "Vitória" : "Derrota")}</b>  {pt.A.nome} {pt.A.placar} x {pt.B.placar} {pt.B.nome}", sTxt);
+                if (GUI.Button(new Rect(r.x + 12, r.y + 66, r.width - 24, 40), "Voltar ao manager", sBotao))
+                {
+                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true);
+                    UnityEngine.SceneManagement.SceneManager.LoadScene("Manager");
+                    return;
+                }
+            }
             // o que o jogador seguido está pensando (explicação dos bots)
             if (!painel || seguir < 0) return;
             var s = m.agents[seguir];
