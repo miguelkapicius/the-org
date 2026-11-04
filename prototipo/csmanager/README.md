@@ -10,6 +10,8 @@ Protótipo em Unity 6000.6.7f1 do jogo 2D isométrico: mapa original "Vila" e bo
 | `Assets/Game/Map` | Mapa, navmesh e validadores |
 | `Assets/Game/View` | Gráficos; a simulação não depende deles, só de constantes de fumaça |
 | `Assets/Game/View3D` | Visual 3D de maquete (estilo Link's Awakening): mapa, bonecos, efeitos, HUD de transmissão |
+| `Assets/Game/Manager` | Regras de gestão do clube (elenco, mercado, finanças, Gaming House). Sem Unity nem UI; valores provisórios em `Provisorio` |
+| `Assets/Game/ManagerUI` | Interface do manager em UI Toolkit, montada em código (decisão 0011) |
 | `Assets/Game/Editor` | Ferramentas de linha de comando (replay, rotas, estatísticas) |
 | `Headless` | Roda os mesmos `.cs` da simulação sem o Unity, cerca de 4 rounds/s |
 | `Tools` | Scripts da planta do mapa e dos sprites |
@@ -31,6 +33,19 @@ O relatório sai em `Logs/bots/teste.txt`. Para partidas inteiras:
 ```bash
 dotnet Headless/bin/Release/net9.0/Headless.dll -partidas 100 -seed 100 -modoB semAdaptar -saida adapta
 ```
+
+## Interface do manager
+
+Menu **CS Manager ▸ Manager ▸ Rodar o manager** (cria a cena `Assets/Scenes/Manager.unity` se não existir, deixa ela e a
+`Partida3D` no Build Settings e entra no Play). Dá para contratar e vender, reordenar os titulares, subir a Gaming House e
+conferir as finanças. **Assistir partida** abre a transmissão 3D com o seu elenco (nome e habilidade de cada titular entram
+na simulação); no fim, **Voltar ao manager** paga o prêmio e os salários. **Pular partida** calcula o resultado por
+probabilidade. A carreira vive em memória: ainda não há salvamento.
+
+Sem Unity: `Assets/Game/Manager/Carreira.cs` só depende de `Sim`, então roda no Headless.
+
+Todos os números (salários, preços, prêmios, custo da Gaming House) são provisórios: o GDD ainda não decidiu esse lado
+(`perguntas-abertas.md`, seção 2).
 
 ## Ver uma partida em 3D no Unity
 

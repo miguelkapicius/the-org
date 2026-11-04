@@ -19,4 +19,9 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Bombsite | Local do mapa onde a bomba pode ser plantada. | site | 02-mecanicas |
 | Pular partida | Ver só o resultado, calculado por probabilidade, sem assistir. | simular (ambíguo) | 01-core-loop |
 | Falência | Fim do jogo quando o dinheiro do clube acaba. | game over (usar só como descrição) | 03-progressao |
+| Elenco | Todos os jogadores contratados pelo clube (titulares e reservas). | squad, plantel | 03-progressao |
+| Titular | Jogador do elenco que joga a próxima partida (5 por vez). | — | 03-progressao |
+| Reserva | Jogador do elenco que não joga a próxima partida. | banco | 03-progressao |
+| Mercado | Lista de jogadores livres que o manager pode contratar. | — | 03-progressao |
+| Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
