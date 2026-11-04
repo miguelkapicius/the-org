@@ -38,7 +38,7 @@ dotnet Headless/bin/Release/net9.0/Headless.dll -partidas 100 -seed 100 -modoB s
 
 Menu **CS Manager ▸ Manager ▸ Rodar o manager** (cria a cena `Assets/Scenes/Manager.unity` se não existir, deixa ela e a
 `Partida3D` no Build Settings e entra no Play). Dá para contratar e vender, reordenar os titulares, subir a Gaming House e
-conferir as finanças. **Assistir partida** abre a transmissão 3D com o seu elenco (nome e habilidade de cada titular entram
+conferir as finanças. A **Pré-partida** (tela com os dois times) leva a **Assistir partida**, que abre a transmissão 3D com o seu elenco (nome e habilidade de cada titular entram
 na simulação); no fim, **Voltar ao manager** paga o prêmio e os salários. **Pular partida** calcula o resultado por
 probabilidade. A carreira vive em memória: ainda não há salvamento.
 

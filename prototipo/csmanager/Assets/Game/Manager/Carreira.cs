@@ -39,6 +39,13 @@ namespace CSM.Manager
             return (v < 0 ? "-$ " : "$ ") + s;
         }
 
+        /// <summary>Sigla de 3 letras (etiquetas da pré-partida).</summary>
+        public static string FuncaoCurta(Role r) => r switch
+        {
+            Role.Entry => "ENT", Role.Suporte => "SUP", Role.Lurker => "LUR", Role.Awper => "AWP",
+            Role.Igl => "IGL", Role.Ancora => "ANC", Role.Rotacao => "ROT", _ => "---",
+        };
+
         public static string Funcao(Role r) => r switch
         {
             Role.Entry => "Entry", Role.Suporte => "Suporte", Role.Lurker => "Lurker", Role.Awper => "AWPer",
@@ -80,7 +87,7 @@ namespace CSM.Manager
         public string Placar => meus + " x " + deles;
     }
 
-    public class Adversario { public string nome; public int forca; }
+    public class Adversario { public string nome; public int forca; public List<(string nome, Role funcao)> jogadores = new List<(string nome, Role funcao)>(); }
 
     /// <summary>
     /// O estado da carreira. Fica estático entre cenas (Manager ↔ Partida3D) mas NÃO é salvo em disco ainda
@@ -125,6 +132,7 @@ namespace CSM.Manager
             // duas reservas, um pouco abaixo
             for (int i = 0; i < 2; i++) c.elenco.Add(c.Gerar(0.35f, 0.65f));
             c.proximo = new Adversario { nome = "ROCHA", forca = new Jogador { skill = new Skill() }.Overall };
+            foreach (var (nome, role, _, _) in Match.CT_TEAM) c.proximo.jogadores.Add((nome, role));
             c.GerarMercado();
             return c;
         }
