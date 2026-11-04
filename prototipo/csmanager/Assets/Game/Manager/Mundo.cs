@@ -181,7 +181,15 @@ namespace CSM.Manager
                 }
         }
 
-        void Adicionar(Campeonato c) { c.ChanceMapa = ChanceMapaIA; campeonatos.Add(c); }
+        public void Adicionar(Campeonato c) { c.ChanceMapa = ChanceMapaIA; campeonatos.Add(c); }
+
+        /// <summary>Mundo em branco para o salvamento preencher (times, campeonatos e estado vêm do arquivo).</summary>
+        public static Mundo ParaRestaurar(int seed, int temporada)
+        {
+            return new Mundo { seed = seed, rng = new Random(seed * 13 + 5 + temporada * 977) };
+        }
+        public int ProxId { get => proxId; set => proxId = value; }
+        public int Seed => seed;
 
         /// <summary>Campeonatos (iniciados ou não) em que o clube joga nesta temporada.</summary>
         public IEnumerable<Campeonato> DoClube => campeonatos.Where(c => c.times.Contains(0));

@@ -280,7 +280,19 @@ namespace CSM.Manager
         public void RegistrarClube(Confronto c, int vitA, int vitB)
         {
             c.vitA = vitA; c.vitB = vitB; c.feito = true;
+            resultadosClube.Add((vitA, vitB));
             Progredir();
+        }
+
+        /// <summary>Os resultados das séries do clube, na ordem: com eles e a semente dá para reconstruir o campeonato inteiro (salvamento).</summary>
+        public readonly List<(int vitA, int vitB)> resultadosClube = new List<(int, int)>();
+
+        /// <summary>Refaz o campeonato a partir da semente e dos resultados do clube (o resto é determinístico).</summary>
+        public void Reproduzir(int clubeId, IEnumerable<(int vitA, int vitB)> resultados)
+        {
+            resultadosClube.Clear();
+            Iniciar(clubeId);
+            foreach (var r in resultados) { var p = PendenteDoClube; if (p == null) break; RegistrarClube(p, r.vitA, r.vitB); }
         }
 
         /// <summary>Resolve por probabilidade tudo que não é do clube e avança as rodadas.</summary>
