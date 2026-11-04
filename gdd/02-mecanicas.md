@@ -47,6 +47,10 @@ _A definir._
 
 _A definir (de partida e de carreira)._
 
+## Treino, cansaço, afinidade de mapa e estratégia (decisões 0013 e 0014)
+
+O que o manager configura vira **habilidade na partida**: o **preparo** do treino soma, o **cansaço** subtrai, a **afinidade** com o mapa jogado soma ou subtrai, e a **estratégia** escolhida ajusta os pesos da IA do time (agressividade, hora de executar, quanto segurar). Assim tudo aparece no que os bots fazem (pilar 3). Números provisórios.
+
 ## Perguntas em aberto
 
 - Quais atributos um jogador tem e como cada um afeta a IA?

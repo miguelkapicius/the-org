@@ -1,6 +1,6 @@
 # Core loop
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014
 
 _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 
@@ -35,6 +35,14 @@ Carreira com **ligas, campeonatos e temporadas inspirados no circuito profission
 
 **[Sugestão]** Subir de divisão, ganhar prestígio, atrair patrocinadores e jogadores melhores, evoluir a Gaming House.
 
+### Calendário e campeonatos (decisão 0012)
+
+O tempo corre em **semanas** (52 por temporada). Há campeonatos de **todos os formatos** (liga, grupos + mata-mata, grupos de dupla eliminação, suíço, mata-mata simples), com séries **MD1** (rodadas iniciais), **MD3** (decisivas) e **MD5** (final), numa **frequência parecida com a do CS2**: um time de elite joga um campeonato a cada 2 a 3 semanas, com pausas em que só treina, e há **2 Majors por temporada**. Os campeonatos são agrupados em **circuitos** (Amador, Pro, Elite) e um **ranking** de 48 times decide em qual o clube joga; sobe e desce no fim da temporada. Os adversários são fictícios e gerados pelo jogo. Nas semanas sem jogo o manager cuida do treino (decisão 0013).
+
+### Antes de cada partida de uma série (decisão 0014)
+
+O manager pode fazer o **veto de mapas** (ou deixar o jogo vetar, ou pular a série) e escolher a **estratégia**. Com informação sobre o adversário (scouts, decisão 0016), vê como ele joga e escolhe o contra.
+
 ## Fantasia do jogador
 
 Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissional** na tela, como numa transmissão de campeonato.
@@ -44,4 +52,4 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 - Balanceamento: quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar?
 - Quais estilos o manager pode escolher além de agressivo e defensivo?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)
-- Carreira: formato dos campeonatos (MD1/MD3, grupos, mata-mata) e calendário.
+- Balancear o calendário: quantos campeonatos por temporada em cada circuito, premiações e pontos do ranking (valores provisórios da decisão 0012).

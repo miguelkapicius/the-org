@@ -24,4 +24,3 @@ _A definir._
 
 - Quantos mapas no MVP?
 - Lista de armas e utilitárias do MVP.
-- Times e jogadores fictícios gerados ou criados à mão?

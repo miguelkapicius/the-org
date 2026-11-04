@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016
 
 _Telas, HUD e fluxo de navegação._
 
@@ -55,4 +55,4 @@ _A definir._
 ## Perguntas em aberto
 
 - O HUD de transmissão é fixo ou o jogador pode configurar?
-- Pré-partida: o que o manager configura antes de assistir (veto de mapas, estratégia, compras padrão)?
+- Pré-partida: o manager também configura as **compras padrão** do time? (veto de mapas e estratégia já estão decididos, decisão 0014)
