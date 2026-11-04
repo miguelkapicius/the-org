@@ -114,9 +114,8 @@
 .banner.erro { background-color: rgba(239, 107, 99, 0.16); border-left-color: var(--vermelho); }
 
 /* ---------- atalhos ---------- */
-.atalhos { flex-direction: row; }
+.atalhos { flex-direction: row; margin-right: -14px; }
 .atalho { flex-grow: 1; flex-basis: 0; height: 120px; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 16px; margin-right: 14px; justify-content: space-between; }
-.atalho:last-child { margin-right: 0; }
 .atalho:hover { background-color: #1c1c1f; }
 .atalho.destaque { border-color: var(--lima); }
 .atalho.destaque > .ic { color: var(--lima); }
@@ -127,9 +126,8 @@
 .atalho-rot { font-size: 18px; -unity-font-style: bold; }
 
 /* ---------- cartões de jogador ---------- */
-.fila-cards { flex-direction: row; margin-bottom: 14px; }
+.fila-cards { flex-direction: row; margin-bottom: 14px; margin-right: -14px; }
 .card-j { flex-grow: 1; flex-basis: 0; background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 12px; padding: 10px; margin-right: 14px; }
-.card-j:last-child { margin-right: 0; }
 .card-j.vazio { background-color: rgba(0, 0, 0, 0); border-color: rgba(0, 0, 0, 0); }
 .midia { height: 130px; background-color: var(--midia); border-radius: 8px; align-items: center; justify-content: center; }
 .ovr { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 20px; background-color: #121214; border-width: 1px; border-color: var(--linha2); align-items: center; justify-content: center; }
@@ -154,9 +152,10 @@
 .tr:hover { background-color: rgba(255, 255, 255, 0.035); }
 .tr.th { height: 44px; }
 .tr.th:hover { background-color: rgba(0, 0, 0, 0); }
-.tr.th > .c > .t { font-size: 14px; color: var(--apagado); -unity-font-style: normal; }
+.tr.th .t { font-size: 14px; color: var(--apagado); -unity-font-style: normal; }
 .c { flex-direction: row; align-items: center; flex-shrink: 0; }
-.c-j { width: 250px; } .c-g { width: 80px; } .c-a { width: 104px; padding-right: 20px; } .c-s { width: 110px; } .c-st { width: 120px; }
+.c-j { width: 220px; } .c-g { width: 80px; } .c-a { width: 96px; padding-right: 16px; } .c-s { width: 110px; } .c-st { width: 110px; }
+.slot.vazio.oculto { border-color: rgba(0, 0, 0, 0); }
 .c-k { flex-grow: 1; justify-content: flex-end; }
 .c-a-col { flex-direction: column; align-items: stretch; justify-content: center; }
 .c-a-col > .barra { flex-grow: 0; margin-top: 5px; }
@@ -177,9 +176,8 @@
 .dd-item.off:hover { background-color: rgba(0, 0, 0, 0); }
 
 /* ---------- finanças e gaming house ---------- */
-.resumos { flex-direction: row; margin-bottom: 8px; }
+.resumos { flex-direction: row; margin-bottom: 8px; margin-right: -14px; }
 .resumo { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 18px; margin-right: 14px; }
-.resumo:last-child { margin-right: 0; }
 .resumo-valor { font-size: 30px; -unity-font-style: bold; margin-top: 8px; }
 .cartao { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 16px; padding: 22px; margin-bottom: 18px; }
 .cartao-tit { font-size: 14px; -unity-font-style: bold; color: var(--suave); margin-bottom: 16px; letter-spacing: 1px; }
@@ -245,3 +243,133 @@
 .quad { width: 30px; height: 30px; border-width: 3px; border-color: #0c0e04; border-radius: 8px; align-items: center; justify-content: center; }
 .quad > .ic { color: #0c0e04; }
 .comecar.desligado { background-color: #26260f; }
+
+/* ======================================================================================================
+   Experiência do manager: avisos, escalação, comparação, prévia, pós-partida, avisos temporários, dicas
+   ====================================================================================================== */
+
+/* transições curtas (hover e troca de tela) */
+.item, .btn, .atalho, .aba, .kebab, .seg-b, .comecar, .tr, .dd-item, .slot, .aviso-btn, .toast-acao, .cab-ordem {
+    transition-property: background-color, border-color, color;
+    transition-duration: 120ms;
+}
+.entra { opacity: 0; transition-property: opacity; transition-duration: 180ms; }
+.entra.visivel { opacity: 1; }
+
+/* aviso temporário (no lugar da faixa fixa) */
+.toast { position: absolute; right: 36px; bottom: 36px; flex-direction: row; align-items: center; background-color: #101011; border-width: 1px; border-color: var(--linha2); border-left-width: 5px; border-radius: 12px; padding: 14px 18px; max-width: 620px; }
+.toast.ok { border-left-color: var(--verde); }
+.toast.erro { border-left-color: var(--vermelho); }
+.toast > .t { font-size: 16px; -unity-font-style: bold; white-space: normal; }
+.toast-acao { margin-left: 18px; padding: 6px 14px; border-radius: 8px; background-color: var(--item); }
+.toast-acao:hover { background-color: #44444a; }
+.toast-acao > .t { font-size: 14px; -unity-font-style: bold; }
+
+/* dica ao passar o mouse */
+.dica { position: absolute; background-color: #101011; border-width: 1px; border-color: var(--linha2); border-radius: 8px; padding: 8px 12px; max-width: 340px; }
+.dica > .t { font-size: 14px; white-space: normal; }
+
+/* avisos do painel */
+.avisos { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 4px 18px; margin-bottom: 22px; }
+.aviso { flex-direction: row; align-items: center; height: 50px; border-top-width: 1px; border-top-color: var(--linha); }
+.aviso.primeiro { border-top-width: 0; }
+.aviso-ponto { width: 10px; height: 10px; border-radius: 5px; margin-right: 14px; background-color: var(--azul); }
+.aviso-ponto.atencao { background-color: var(--laranja); }
+.aviso-ponto.critico { background-color: var(--vermelho); }
+.aviso-txt { flex-grow: 1; font-size: 16px; }
+.aviso-btn { padding: 6px 14px; border-radius: 8px; border-width: 1px; border-color: var(--linha2); background-color: var(--cartao); }
+.aviso-btn:hover { background-color: #222225; }
+.aviso-btn > .t { font-size: 14px; -unity-font-style: bold; }
+.tudo-ok { flex-direction: row; align-items: center; height: 50px; }
+
+/* escalação visual */
+.escala { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 16px; padding: 18px; margin-bottom: 24px; }
+.escala-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.escala-res { flex-direction: row; align-items: center; }
+.escala-res > .t { margin-right: 22px; }
+.chips-func { flex-direction: row; }
+.chip-f { padding: 4px 10px; border-radius: 7px; margin-left: 6px; background-color: #2a2a2d; }
+.chip-f > .t { font-size: 12px; -unity-font-style: bold; color: var(--suave); }
+.chip-f.ok { background-color: rgba(76, 195, 138, 0.16); }
+.chip-f.ok > .t { color: var(--verde); }
+.chip-f.falta { background-color: rgba(239, 107, 99, 0.18); }
+.chip-f.falta > .t { color: var(--vermelho); }
+.fila-slots { flex-direction: row; margin-right: -12px; }
+.slot { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 12px; margin-right: 12px; align-items: center; }
+.slot:hover { background-color: #1d1d20; }
+.slot.sel { border-color: var(--lima); background-color: #1d2010; }
+.slot.vazio { background-color: rgba(0, 0, 0, 0); border-color: var(--linha); }
+.slot.vazio:hover { background-color: rgba(0, 0, 0, 0); }
+.slot-topo { flex-direction: row; justify-content: space-between; align-self: stretch; align-items: center; margin-bottom: 8px; }
+.slot-fn { border-width: 1px; border-color: #55555c; border-radius: 4px; padding: 1px 7px; }
+.slot-fn > .t { font-size: 12px; -unity-font-style: bold; color: #cfcfd6; }
+.slot-ovr { font-size: 22px; -unity-font-style: bold; }
+.slot-nome { font-size: 18px; -unity-font-style: bold; margin-top: 8px; }
+.banco-tit { margin: 18px 0 10px 0; }
+.dica-troca { font-size: 15px; color: var(--suave); margin-top: 16px; white-space: normal; }
+
+/* retratos (render 3D do boneco sobre um fundo colorido) */
+.retrato { border-radius: 10px; -unity-background-scale-mode: scale-to-fit; align-items: center; justify-content: center; }
+.retrato-p { width: 92px; height: 92px; }
+.retrato-fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 8px; }
+.retrato > .t { font-size: 36px; -unity-font-style: bold; color: #14141a; -unity-text-align: middle-center; }
+.rt0 { background-color: rgba(224, 122, 95, 0.30); } .rt1 { background-color: rgba(61, 133, 198, 0.30); } .rt2 { background-color: rgba(129, 178, 154, 0.30); }
+.rt3 { background-color: rgba(155, 114, 207, 0.30); } .rt4 { background-color: rgba(242, 204, 143, 0.30); } .rt5 { background-color: rgba(95, 168, 163, 0.30); }
+
+/* comparação de dois jogadores */
+.compara { background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 16px; padding: 18px 22px; margin-bottom: 22px; }
+.compara-topo { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.cmp-cab { flex-direction: row; align-items: center; margin-bottom: 6px; }
+.cmp-lado { flex-grow: 1; flex-basis: 0; flex-direction: row; align-items: center; }
+.cmp-lado.dir { justify-content: flex-end; }
+.cmp-lado > .t { margin: 0 12px; }
+.cmp-meio { width: 130px; }
+.cmp-linha { flex-direction: row; align-items: center; height: 34px; border-top-width: 1px; border-top-color: var(--linha); }
+.cmp-v { flex-grow: 1; flex-basis: 0; font-size: 18px; -unity-font-style: bold; }
+.cmp-v.a { -unity-text-align: middle-right; padding-right: 20px; }
+.cmp-v.b { -unity-text-align: middle-left; padding-left: 20px; }
+.cmp-rot { width: 130px; font-size: 14px; color: var(--suave); -unity-text-align: middle-center; }
+
+/* prévia do efeito no time (mercado) */
+.previa { flex-direction: row; align-items: center; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; min-height: 64px; }
+.previa > .t { white-space: normal; font-size: 16px; flex-grow: 1; flex-shrink: 1; }
+.previa.bom { border-color: rgba(76, 195, 138, 0.55); }
+
+/* cabeçalhos de coluna clicáveis (ordenar) */
+.cab-ordem { flex-direction: row; align-items: center; border-radius: 6px; padding: 2px 4px; margin-left: -4px; }
+.cab-ordem:hover { background-color: rgba(255, 255, 255, 0.06); }
+.cab-ordem > .ic { margin-left: 3px; color: var(--lima); }
+.cab-ordem.ativo > .t { color: var(--texto); }
+
+/* botão só com ícone */
+.btn-ic { width: 40px; padding: 10px 0; margin-right: 8px; }
+.btn-ic > .ic { margin-right: 0; }
+.btn-ic.on { background-color: var(--item); border-color: var(--lima); }
+
+/* pós-partida */
+.hero { flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 16px; padding: 26px 32px; margin-bottom: 18px; }
+.hero.venceu { border-color: rgba(76, 195, 138, 0.6); }
+.hero.perdeu { border-color: rgba(239, 107, 99, 0.6); }
+.hero-res { font-size: 14px; -unity-font-style: bold; letter-spacing: 1.5px; }
+.hero-placar { font-size: 58px; -unity-font-style: bold; }
+.hero-meio { align-items: center; }
+.c-j.largo { width: 320px; }
+.hero-res { margin-bottom: 4px; }
+.c-n { width: 104px; }
+.c-n > .t { font-size: 17px; }
+.c-n.cab > .t { font-size: 14px; color: var(--apagado); }
+.nota-estimada { color: var(--laranja); font-size: 15px; margin-bottom: 14px; white-space: normal; }
+
+/* chance de vitória e dicas de teclado na pré-partida */
+.pm-chance { position: absolute; left: 50%; margin-left: -260px; width: 520px; top: 545px; align-items: center; }
+.pm-chance-tit { font-size: 13px; -unity-font-style: bold; color: var(--suave); letter-spacing: 2px; }
+.pm-chance-num { font-size: 44px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.pm-chance-barra { flex-direction: row; height: 10px; align-self: stretch; border-radius: 5px; overflow: hidden; margin: 8px 0 10px 0; background-color: #26262a; }
+.pm-chance-a { background-color: var(--laranja); }
+.pm-chance-b { background-color: var(--azul); }
+.pm-chance-sub { font-size: 14px; color: var(--suave); -unity-text-align: middle-center; white-space: normal; }
+.pm-dicas { position: absolute; left: 40px; bottom: 20px; flex-direction: row; }
+.pm-dicas-item { flex-direction: row; align-items: center; margin-right: 26px; }
+.pm-dicas-item > .t { font-size: 14px; color: #5d5d66; letter-spacing: 1px; }
+.tecla { border-width: 1px; border-color: #3a3a40; border-radius: 6px; padding: 0 6px; margin-right: 8px; }
+.tecla > .t { font-size: 12px; color: #7d7d86; }

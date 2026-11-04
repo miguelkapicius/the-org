@@ -80,11 +80,34 @@ namespace CSM.Manager
 
     public class Lancamento { public int numPartida; public string descricao; public int valor; }
 
+    /// <summary>O que um jogador fez numa partida. Na partida assistida vem da simulação; na pulada é uma ESTIMATIVA (ver Resultado.estimado).</summary>
+    public class Desempenho
+    {
+        public string nome; public Role funcao; public int k, d, hs, dano, fk, rounds;
+        public float KD => d == 0 ? k : k / (float)d;
+        public int HsPct => k == 0 ? 0 : (int)Math.Round(100f * hs / k);
+        public int DanoPorRound => rounds == 0 ? 0 : dano / rounds;
+        /// <summary>Nota simples (1,0 = jogo normal) só para destacar o melhor da partida; não é regra do jogo.</summary>
+        public float Nota => rounds == 0 ? 0 : 0.5f + (k - 0.6f * d) / rounds * 0.8f + dano / (rounds * 100f) * 0.5f;
+    }
+
     public class Resultado
     {
         public int numPartida; public string adversario; public bool venceu, assistida; public int meus, deles;
         public int premio, salarios;
+        public int saldoAntes, forcaMinha, forcaDeles;
+        /// <summary>true = os números por jogador foram estimados (partida pulada), não simulados.</summary>
+        public bool estimado;
+        public List<Desempenho> desempenho = new List<Desempenho>();
         public string Placar => meus + " x " + deles;
+        public Desempenho Melhor => desempenho.Count == 0 ? null : desempenho.OrderByDescending(x => x.Nota).First();
+    }
+
+    /// <summary>Um aviso do painel: o que merece atenção agora e para onde ir resolver.</summary>
+    public class Aviso
+    {
+        public enum Nivel { Dica, Atencao, Critico }
+        public Nivel nivel; public string texto, acao; public string destino;   // destino: "elenco", "mercado", "gh", "financas"
     }
 
     public class Adversario { public string nome; public int forca; public List<(string nome, Role funcao)> jogadores = new List<(string nome, Role funcao)>(); }
@@ -105,6 +128,8 @@ namespace CSM.Manager
         public readonly List<Resultado> historico = new List<Resultado>();
         public Adversario proximo;
         public bool Falido => dinheiro < 0;
+        /// <summary>A última venda, para o "desfazer" (some assim que qualquer outra coisa muda no clube).</summary>
+        public Jogador ultimaVenda; int ultimaVendaIndice; Lancamento ultimaVendaLancamento;
 
         /// <summary>A partida montada e à espera da cena 3D buscar (ver PartidaAoVivo3D). null = nada pendente.</summary>
         public CSM.Sim.Partida pendente;
@@ -138,6 +163,17 @@ namespace CSM.Manager
         }
 
         Carreira(int seed) { this.seed = seed; rng = new Random(seed); }
+
+        public int Seed => seed;
+
+        /// <summary>Carreira em branco para o salvamento preencher (elenco, mercado, extrato, histórico e adversário vêm do arquivo).
+        /// O sorteio recomeça de uma semente derivada da partida atual: a sequência exata não é salva, só o estado do clube.</summary>
+        public static Carreira ParaRestaurar(int seed, int numPartida)
+        {
+            var c = new Carreira(seed);
+            c.rng = new Random(seed * 31 + numPartida * 7919);
+            return c;
+        }
 
         /// <summary>Jogador novo com qualidade entre qMin e qMax (0..1); os atributos variam um pouco em volta.</summary>
         Jogador Gerar(float qMin, float qMax)
@@ -176,6 +212,55 @@ namespace CSM.Manager
         public int Forca => elenco.Count == 0 ? 0 : (int)Math.Round(Titulares.Average(j => j.Overall));
         public int CustoProximoNivelGH => nivelGH >= Provisorio.NIVEL_GH_MAX ? 0 : Provisorio.CUSTO_GH[nivelGH];
 
+        /// <summary>Força (média do geral) de uma escalação hipotética: serve para mostrar o efeito de uma troca ANTES de fazê-la.</summary>
+        public static int ForcaDe(IEnumerable<Jogador> titulares) { var l = titulares.ToList(); return l.Count == 0 ? 0 : (int)Math.Round(l.Average(j => j.Overall)); }
+
+        /// <summary>A escalação se o jogador <paramref name="entra"/> ficasse no lugar de <paramref name="sai"/> (sai pode ser null = só acrescenta).</summary>
+        public int ForcaCom(Jogador entra, Jogador sai)
+        {
+            var t = Titulares.ToList();
+            if (sai != null) { int i = t.IndexOf(sai); if (i >= 0) t[i] = entra; }
+            return ForcaDe(t);
+        }
+
+        /// <summary>O titular mais fraco que o jogador <paramref name="j"/> superaria (o melhor lugar para ele entrar), ou null.</summary>
+        public Jogador QuemSaiPara(Jogador j)
+        {
+            var pior = Titulares.Where(t => t != j).OrderBy(t => t.Overall).FirstOrDefault();
+            return pior != null && j.Overall > pior.Overall ? pior : null;
+        }
+
+        /// <summary>Chance de vencer a próxima partida (a mesma fórmula provisória usada ao pular). Aceita uma força hipotética.</summary>
+        public double ChanceVitoria(int minhaForca) => 1.0 / (1.0 + Math.Exp(-(minhaForca - proximo.forca) / 6.0));
+        public double ChanceVitoria() => ChanceVitoria(Forca);
+
+        static readonly Role[] FUNCOES_DO_TIME = { Role.Entry, Role.Suporte, Role.Lurker, Role.Awper, Role.Igl };
+        /// <summary>Funções que a escalação titular não cobre (um time equilibrado tem as cinco).</summary>
+        public List<Role> FuncoesFaltando() => FUNCOES_DO_TIME.Where(f => !Titulares.Any(j => j.funcao == f)).ToList();
+
+        /// <summary>Quantas partidas o dinheiro paga só de salários (sem contar prêmios).</summary>
+        public double PartidasDeFolego => SalariosPorPartida == 0 ? 99 : Math.Max(0, dinheiro) / (double)SalariosPorPartida;
+
+        /// <summary>O que merece atenção agora, do mais grave para o menos.</summary>
+        public List<Aviso> Avisos()
+        {
+            var l = new List<Aviso>();
+            if (Falido) { l.Add(new Aviso { nivel = Aviso.Nivel.Critico, texto = "O clube está falido.", acao = "Ver finanças", destino = "financas" }); return l; }
+            if (PartidasDeFolego < 1) l.Add(new Aviso { nivel = Aviso.Nivel.Critico, texto = "O saldo não paga nem os salários da próxima partida.", acao = "Ver finanças", destino = "financas" });
+            else if (PartidasDeFolego < 3) l.Add(new Aviso { nivel = Aviso.Nivel.Atencao, texto = "O saldo paga só " + (int)PartidasDeFolego + " partida(s) de salários (sem prêmios).", acao = "Ver finanças", destino = "financas" });
+            foreach (var f in FuncoesFaltando())
+                l.Add(new Aviso { nivel = Aviso.Nivel.Atencao, texto = "Nenhum titular na função " + Fmt.Funcao(f) + ".", acao = "Ver mercado", destino = "mercado" });
+            foreach (var r in elenco.Skip(Provisorio.TITULARES))
+            {
+                var fraco = QuemSaiPara(r);
+                if (fraco != null) { l.Add(new Aviso { nivel = Aviso.Nivel.Dica, texto = r.nome + " (reserva, " + r.Overall + ") é melhor que o titular " + fraco.nome + " (" + fraco.Overall + ").", acao = "Ajustar escalação", destino = "elenco" }); break; }
+            }
+            if (elenco.Count <= Provisorio.TITULARES) l.Add(new Aviso { nivel = Aviso.Nivel.Dica, texto = "Sem reservas: se alguém sair, o time fica incompleto.", acao = "Ver mercado", destino = "mercado" });
+            if (nivelGH < Provisorio.NIVEL_GH_MAX && dinheiro >= CustoProximoNivelGH + SalariosPorPartida * 3)
+                l.Add(new Aviso { nivel = Aviso.Nivel.Dica, texto = "Dá para subir a Gaming House sem apertar o caixa.", acao = "Ver Gaming House", destino = "gh" });
+            return l.OrderByDescending(a => (int)a.nivel).ToList();
+        }
+
         // ------------------------------------------------------------------------------------------ ações (devolvem a mensagem de erro, ou null se deu certo)
         void Lanca(string descricao, int valor) { dinheiro += valor; extrato.Insert(0, new Lancamento { numPartida = numPartida, descricao = descricao, valor = valor }); }
 
@@ -184,6 +269,7 @@ namespace CSM.Manager
             if (!mercado.Contains(j)) return "Esse jogador não está mais no mercado.";
             if (elenco.Count >= Provisorio.ELENCO_MAX) return "Elenco cheio (" + Provisorio.ELENCO_MAX + "). Venda alguém antes.";
             if (dinheiro < j.Valor) return "Dinheiro insuficiente.";
+            ultimaVenda = null;
             Lanca("Contratação de " + j.nome, -j.Valor);
             mercado.Remove(j); elenco.Add(j);
             return null;
@@ -193,8 +279,23 @@ namespace CSM.Manager
         {
             if (!elenco.Contains(j)) return "Esse jogador não está no elenco.";
             if (elenco.Count <= Provisorio.TITULARES) return "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.";
+            ultimaVendaIndice = elenco.IndexOf(j);
             Lanca("Venda de " + j.nome, j.Venda);
+            ultimaVendaLancamento = extrato[0]; ultimaVenda = j;
             elenco.Remove(j);
+            return null;
+        }
+
+        /// <summary>Desfaz a última venda: o jogador volta para a mesma posição e o dinheiro e o extrato voltam ao que eram.</summary>
+        public string DesfazerVenda()
+        {
+            if (ultimaVenda == null) return "Não há venda para desfazer.";
+            if (elenco.Count >= Provisorio.ELENCO_MAX) return "Elenco cheio: não há vaga para o jogador voltar.";
+            if (dinheiro - ultimaVenda.Venda < 0) return "Dinheiro insuficiente para desfazer.";
+            dinheiro -= ultimaVenda.Venda;
+            extrato.Remove(ultimaVendaLancamento);
+            elenco.Insert(Math.Min(ultimaVendaIndice, elenco.Count), ultimaVenda);
+            ultimaVenda = null;
             return null;
         }
 
@@ -203,7 +304,31 @@ namespace CSM.Manager
         {
             int i = elenco.IndexOf(j), k = i + delta;
             if (i < 0 || k < 0 || k >= elenco.Count) return;
-            elenco[i] = elenco[k]; elenco[k] = j;
+            elenco[i] = elenco[k]; elenco[k] = j; ultimaVenda = null;
+        }
+
+        /// <summary>Troca de lugar dois jogadores do elenco (titular com reserva, ou titular com titular).</summary>
+        public void Trocar(Jogador a, Jogador b)
+        {
+            int i = elenco.IndexOf(a), k = elenco.IndexOf(b);
+            if (i < 0 || k < 0 || i == k) return;
+            elenco[i] = b; elenco[k] = a; ultimaVenda = null;
+        }
+
+        /// <summary>Escala o reserva no lugar do titular mais fraco.</summary>
+        public void TornarTitular(Jogador j)
+        {
+            if (Titular(j)) return;
+            var sai = Titulares.OrderBy(t => t.Overall).First();
+            Trocar(j, sai);
+        }
+
+        /// <summary>Manda o titular para o banco, no lugar do melhor reserva.</summary>
+        public void MandarParaReserva(Jogador j)
+        {
+            if (!Titular(j)) return;
+            var entra = elenco.Skip(Provisorio.TITULARES).OrderByDescending(r => r.Overall).FirstOrDefault();
+            if (entra != null) Trocar(j, entra);
         }
 
         public string SubirGamingHouse()
@@ -211,6 +336,7 @@ namespace CSM.Manager
             if (nivelGH >= Provisorio.NIVEL_GH_MAX) return "A Gaming House já está no nível máximo.";
             int custo = CustoProximoNivelGH;
             if (dinheiro < custo) return "Dinheiro insuficiente.";
+            ultimaVenda = null;
             Lanca("Gaming House: nível " + (nivelGH + 1), -custo);
             nivelGH++;
             return null;
@@ -252,19 +378,38 @@ namespace CSM.Manager
         /// rodando muitas partidas da IA real (gdd/09-tecnico.md).</summary>
         public Resultado Pular()
         {
-            double p = 1.0 / (1.0 + Math.Exp(-(Forca - proximo.forca) / 6.0));
-            bool venceu = rng.NextDouble() < p;
+            bool venceu = rng.NextDouble() < ChanceVitoria();
             int perdedor = rng.Next(3, 12);
             return Registrar(venceu, venceu ? 13 : perdedor, venceu ? perdedor : 13, false);
         }
 
-        /// <summary>Fecha a partida da carreira: paga o prêmio e os salários, guarda o resultado, renova o mercado.</summary>
-        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida)
+        /// <summary>Números por jogador de uma partida pulada: ESTIMADOS a partir do geral de cada titular e do placar (não há simulação).</summary>
+        List<Desempenho> Estimar(bool venceu, int rounds)
         {
+            var l = new List<Desempenho>();
+            foreach (var j in Titulares)
+            {
+                float forma = 0.55f + (j.Overall - 65) / 100f, lado = venceu ? 1.12f : 0.88f;
+                float ruido() => 0.8f + (float)rng.NextDouble() * 0.4f;
+                int k = Math.Max(0, (int)Math.Round(rounds * forma * lado * ruido()));
+                int d = Math.Max(1, (int)Math.Round(rounds * 0.72f * (venceu ? 0.9f : 1.1f) * ruido()));
+                l.Add(new Desempenho { nome = j.nome, funcao = j.funcao, k = k, d = Math.Min(d, rounds), hs = (int)Math.Round(k * (0.3f + 0.3f * (float)rng.NextDouble())),
+                    dano = (int)Math.Round(k * 82 + rounds * 14 * ruido()), fk = rng.Next(0, Math.Max(1, k / 4 + 1)), rounds = rounds });
+            }
+            return l;
+        }
+
+        /// <summary>Fecha a partida da carreira: paga o prêmio e os salários, guarda o resultado, renova o mercado.
+        /// <paramref name="desempenho"/>: os números reais da simulação (partida assistida); null = estimar.</summary>
+        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida, List<Desempenho> desempenho = null)
+        {
+            ultimaVenda = null;
             var r = new Resultado
             {
                 numPartida = numPartida, adversario = proximo.nome, venceu = venceu, assistida = assistida, meus = meus, deles = deles,
                 premio = venceu ? Provisorio.PREMIO_VITORIA : Provisorio.PREMIO_DERROTA, salarios = SalariosPorPartida,
+                saldoAntes = dinheiro, forcaMinha = Forca, forcaDeles = proximo.forca,
+                estimado = desempenho == null, desempenho = desempenho ?? Estimar(venceu, meus + deles),
             };
             Lanca((venceu ? "Prêmio: vitória contra " : "Prêmio: derrota para ") + proximo.nome, r.premio);
             Lanca("Salários", -r.salarios);
