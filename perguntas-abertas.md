@@ -44,7 +44,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] Quais estilos o manager pode escolher no timeout além de agressivo e defensivo? → `gdd/01-core-loop.md`
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
-- [ ] A interface do manager é densa em tabelas (estilo Football Manager) ou mais visual? → `gdd/08-ui-ux.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 
