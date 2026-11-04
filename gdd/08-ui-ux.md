@@ -25,6 +25,8 @@ _Telas, HUD e fluxo de navegação._
 
 **Direção visual da interface do manager** (referências dos autores: apps modernos de interface escura e a tela de pré-partida de um jogo de futebol): tema escuro, cartões bem arredondados com borda fina, barra lateral com contadores, abas em pílula, tabelas com avatar, e **uma** cor de destaque (lima) reservada à ação principal. Laranja é o nosso time e azul o adversário, como na partida. É uma interface **visual, de cartões**, não uma planilha densa. Ainda não há retratos nem brasões: o protótipo usa avatares com a inicial.
 
+**Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 13 px na resolução de referência (1600×900); texto secundário com contraste mínimo de ~4,5:1 sobre o cartão; camadas bem separadas (fundo < janela < menu < cartão < item ativo) com bordas visíveis; item ativo do menu e aba escolhida bem marcados (aba = pílula branca com texto preto); botões sempre com borda; conteúdo rola em vez de ser cortado.
+
 Os atributos mostrados no elenco e no mercado são uma leitura direta do que a IA dos bots já usa (mira, reflexo, spray, utilitária, sangue-frio), para que o que o manager vê seja o que muda na partida (pilar 3). Os titulares escolhidos entram na partida assistida com o nome e a habilidade deles.
 
 Todos os números da interface (salários, preços, prêmios, custo da Gaming House, tamanho do elenco) são **provisórios**: servem para o protótipo andar e não são decisão de design.

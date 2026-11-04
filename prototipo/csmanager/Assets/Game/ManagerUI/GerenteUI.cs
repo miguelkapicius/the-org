@@ -42,7 +42,9 @@ namespace CSM.ManagerUI
 
             var ps = ScriptableObject.CreateInstance<PanelSettings>();
             ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
-            ps.referenceResolution = new Vector2Int(1920, 1080);
+            // 1600x900 (e não 1920x1080): numa tela/janela menor tudo escalava para ~66% e o texto virava borrão;
+            // com esta referência o texto fica ~20% maior em qualquer resolução
+            ps.referenceResolution = new Vector2Int(1600, 900);
             ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
             ps.match = 0.5f;
 #if UNITY_EDITOR
@@ -57,12 +59,12 @@ namespace CSM.ManagerUI
             doc.panelSettings = ps;
             yield return null;   // o UIDocument cria a raiz no quadro seguinte
 
-            var tela = Box(FlexDirection.Column, Fundo, 28);   // fundo escuro com a "janela" arredondada por cima
+            var tela = Box(FlexDirection.Column, Fundo, 20);   // fundo escuro com a "janela" arredondada por cima
             tela.style.position = Position.Absolute;
             tela.style.left = 0; tela.style.top = 0; tela.style.right = 0; tela.style.bottom = 0;
             doc.rootVisualElement.Add(tela);
 
-            janela = Box(FlexDirection.Row, Janela, 0, 24);
+            janela = Box(FlexDirection.Row, Janela, 0, 22);
             Borda(janela, Linha);
             janela.style.flexGrow = 1; janela.style.overflow = Overflow.Hidden;
             tela.Add(janela);
@@ -91,8 +93,12 @@ namespace CSM.ManagerUI
             }
             principal.Add(Cabecalho(titulo, sub));
 
-            conteudo = Box(FlexDirection.Column); conteudo.style.flexGrow = 1; Pad(conteudo, 32, 26);
-            principal.Add(conteudo);
+            // o conteúdo rola se não couber (antes era cortado em janelas baixas)
+            var rolagem = new ScrollView(ScrollViewMode.Vertical); rolagem.style.flexGrow = 1;
+            rolagem.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            principal.Add(rolagem);
+            conteudo = Box(FlexDirection.Column); Pad(conteudo, 28, 24);
+            rolagem.Add(conteudo);
             if (aviso != null)
             {
                 conteudo.Add(Banner(aviso, avisoErro ? Vermelho : Verde));
@@ -110,22 +116,22 @@ namespace CSM.ManagerUI
 
         VisualElement Banner(string texto, Color cor)
         {
-            var b = Box(FlexDirection.Row, new Color(cor.r, cor.g, cor.b, 0.12f), 0, 12); Pad(b, 20, 13);
-            b.style.borderLeftWidth = 4; b.style.borderLeftColor = cor; b.style.marginBottom = 20;
-            b.Add(Txt(texto, 16, cor, true));
+            var b = Box(FlexDirection.Row, new Color(cor.r, cor.g, cor.b, 0.16f), 0, 12); Pad(b, 20, 14);
+            b.style.borderLeftWidth = 5; b.style.borderLeftColor = cor; b.style.marginBottom = 20;
+            var t = Txt(texto, 17, Texto, true); t.style.whiteSpace = WhiteSpace.Normal; b.Add(t);
             return b;
         }
 
         VisualElement MontarMenu()
         {
-            var m = Box(FlexDirection.Column, Lateral); m.style.width = 280; m.style.flexShrink = 0; Pad(m, 18, 22);
+            var m = Box(FlexDirection.Column, Lateral); m.style.width = 260; m.style.flexShrink = 0; Pad(m, 16, 22);
             m.style.borderRightWidth = 1; m.style.borderRightColor = Linha;
 
-            var h = Linha_(); h.style.marginBottom = 26; h.style.paddingLeft = 6;
-            h.Add(Brasao(c.clube, 44, Laranja));
+            var h = Linha_(); h.style.marginBottom = 28; h.style.paddingLeft = 6;
+            h.Add(Brasao(c.clube, 48, Laranja));
             var t = Box(); t.style.marginLeft = 14;
-            t.Add(Txt(c.clube, 18, Texto, true));
-            t.Add(Txt("Gaming House nv. " + c.nivelGH, 13, Suave));
+            t.Add(Txt(c.clube, 20, Texto, true));
+            t.Add(Txt("Gaming House nv. " + c.nivelGH, 14, Suave));
             h.Add(t);
             m.Add(h);
 
@@ -137,18 +143,19 @@ namespace CSM.ManagerUI
             Item(m, "Gaming House", Aba.GamingHouse, "nv. " + c.nivelGH);
 
             var folga = Box(); folga.style.flexGrow = 1; m.Add(folga);
-            m.Add(Paragrafo("Protótipo. Salários, preços, prêmios e custos da Gaming House são valores provisórios: o GDD ainda não decidiu como funcionam.", 12, Apagado));
+            m.Add(Paragrafo("Protótipo. Salários, preços, prêmios e custos da Gaming House são valores provisórios: o GDD ainda não decidiu como funcionam.", 13, Apagado));
             return m;
         }
 
         void Item(VisualElement menu, string texto, Aba a, string contagem)
         {
             bool atual = aba == a;
-            var it = Linha_(); it.style.height = 46; Pad(it, 14, 0); Raio(it, 10); it.style.marginBottom = 4; it.style.justifyContent = Justify.SpaceBetween;
+            var it = Linha_(); it.style.height = 50; Pad(it, 16, 0); Raio(it, 12); it.style.marginBottom = 4; it.style.justifyContent = Justify.SpaceBetween;
             it.style.backgroundColor = atual ? Painel2 : Transparente;
-            it.Add(Txt(texto, 17, atual ? Texto : Suave, atual));
+            if (atual) Borda(it, Linha);
+            it.Add(Txt(texto, 18, atual ? Texto : Suave, true));
             if (contagem != null) it.Add(Contagem(contagem));
-            it.RegisterCallback<PointerEnterEvent>(_ => { if (aba != a) it.style.backgroundColor = new Color(1, 1, 1, 0.04f); });
+            it.RegisterCallback<PointerEnterEvent>(_ => { if (aba != a) it.style.backgroundColor = new Color(1, 1, 1, 0.06f); });
             it.RegisterCallback<PointerLeaveEvent>(_ => { if (aba != a) it.style.backgroundColor = Transparente; });
             it.RegisterCallback<ClickEvent>(_ => { aba = a; Mostrar(); });
             menu.Add(it);
@@ -156,21 +163,21 @@ namespace CSM.ManagerUI
 
         VisualElement Cabecalho(string titulo, string sub)
         {
-            var h = Linha_(); h.style.height = 92; h.style.flexShrink = 0; Pad(h, 32, 0); h.style.justifyContent = Justify.SpaceBetween;
+            var h = Linha_(); h.style.height = 96; h.style.flexShrink = 0; Pad(h, 28, 0); h.style.justifyContent = Justify.SpaceBetween;
             h.style.borderBottomWidth = 1; h.style.borderBottomColor = Linha;
-            var esq = Box();
-            esq.Add(Txt(titulo, 30, Texto, true));
-            esq.Add(Txt(sub, 14, Suave));
+            var esq = Box(); esq.style.flexShrink = 1;
+            esq.Add(Txt(titulo, 32, Texto, true));
+            esq.Add(Txt(sub, 15, Suave));
             h.Add(esq);
 
-            var dir = Linha_();
-            var sal = Box(); sal.style.alignItems = Align.FlexEnd; sal.style.marginRight = 18;
-            sal.Add(Txt("Salários por partida", 12, Suave));
-            sal.Add(Txt(Fmt.Dinheiro(c.SalariosPorPartida), 15, Texto, true));
+            var dir = Linha_(); dir.style.flexShrink = 0;
+            var sal = Box(); sal.style.alignItems = Align.FlexEnd; sal.style.marginRight = 20;
+            sal.Add(Txt("Salários por partida", 13, Suave));
+            sal.Add(Txt(Fmt.Dinheiro(c.SalariosPorPartida), 17, Texto, true));
             dir.Add(sal);
-            var saldo = Box(FlexDirection.Column, Painel, 0, 14); Pad(saldo, 18, 8); Borda(saldo, Linha);
-            saldo.Add(Txt("Saldo do clube", 12, Suave));
-            saldo.Add(Txt(Fmt.Dinheiro(c.dinheiro), 21, c.dinheiro < 0 ? Vermelho : Texto, true));
+            var saldo = Box(FlexDirection.Column, Painel, 0, 14); Pad(saldo, 20, 9); Borda(saldo, Linha);
+            saldo.Add(Txt("Saldo do clube", 13, Suave));
+            saldo.Add(Txt(Fmt.Dinheiro(c.dinheiro), 24, c.dinheiro < 0 ? Vermelho : Texto, true));
             dir.Add(saldo);
             h.Add(dir);
             return h;
@@ -204,7 +211,7 @@ namespace CSM.ManagerUI
             }
 
             // cartões de ação
-            var tiles = Box(FlexDirection.Row); tiles.style.marginBottom = 30;
+            var tiles = Box(FlexDirection.Row); tiles.style.marginBottom = 32;
             tiles.Add(Tile(">", "Pré-partida", "Partida " + c.numPartida + " · contra " + c.proximo.nome, () => Ir(Aba.PreMatch), true));
             tiles.Add(Tile(">>", "Pular partida", "Só o resultado, por probabilidade", PularPartida));
             tiles.Add(Tile("+", "Contratar", c.mercado.Count + " jogadores livres", () => Ir(Aba.Mercado)));
@@ -213,7 +220,7 @@ namespace CSM.ManagerUI
 
             // titulares
             var th = Linha_(); th.style.justifyContent = Justify.SpaceBetween; th.style.marginBottom = 14;
-            th.Add(Txt("Elenco titular", 20, Texto, true));
+            th.Add(Txt("Elenco titular", 22, Texto, true));
             th.Add(Botao("Ver elenco", () => Ir(Aba.Elenco)));
             conteudo.Add(th);
             var cards = Box(FlexDirection.Row); cards.style.marginBottom = 30;
@@ -222,18 +229,18 @@ namespace CSM.ManagerUI
             conteudo.Add(cards);
 
             // histórico
-            conteudo.Add(Txt("Últimas partidas", 20, Texto, true));
+            conteudo.Add(Txt("Últimas partidas", 22, Texto, true));
             conteudo.Children().Last().style.marginBottom = 14;
             Cartao(null, out var ch, 8);
             var cartaoHist = ch.parent;
             if (c.historico.Count == 0) { var v = Paragrafo("Nenhuma partida jogada ainda.", 15); Pad(v, 14); ch.Add(v); }
             foreach (var r in c.historico.Take(4))
             {
-                var l = Linha_(); l.style.height = 40; Pad(l, 14, 0);
-                var rod = Txt("Partida " + r.numPartida, 14, Suave); rod.style.width = 120; l.Add(rod);
-                l.Add(Selo(r.venceu ? "VITÓRIA" : "DERROTA", r.venceu ? Verde : Vermelho));
-                var pl = Txt(r.Placar, 16, Texto, true); pl.style.width = 100; pl.style.marginLeft = 18; l.Add(pl);
-                l.Add(Txt("contra " + r.adversario + (r.assistida ? "" : " · pulada"), 15, Suave));
+                var l = Linha_(); l.style.height = 46; Pad(l, 14, 0);
+                var rod = Txt("Partida " + r.numPartida, 15, Suave); rod.style.width = 130; l.Add(rod);
+                var selo = Selo(r.venceu ? "VITÓRIA" : "DERROTA", r.venceu ? Verde : Vermelho); selo.style.width = 96; selo.style.justifyContent = Justify.Center; l.Add(selo);
+                var pl = Txt(r.Placar, 18, Texto, true); pl.style.width = 100; pl.style.marginLeft = 18; l.Add(pl);
+                l.Add(Txt("contra " + r.adversario + (r.assistida ? "" : " · pulada"), 16, Suave));
                 ch.Add(l);
             }
             conteudo.Add(cartaoHist);
@@ -246,10 +253,10 @@ namespace CSM.ManagerUI
             var topo = Linha_(); topo.style.marginBottom = 14;
             topo.Add(Avatar(j.nome, 46));
             var nomes = Box(); nomes.style.marginLeft = 12; nomes.style.flexGrow = 1;
-            nomes.Add(Txt(j.nome, 18, Texto, true));
-            nomes.Add(Txt(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", 13, Suave));
+            nomes.Add(Txt(j.nome, 20, Texto, true));
+            nomes.Add(Txt(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", 14, Suave));
             topo.Add(nomes);
-            topo.Add(Txt(j.Overall.ToString(), 26, CorNota(j.Overall), true));
+            topo.Add(Txt(j.Overall.ToString(), 30, CorNota(j.Overall), true));
             cj.Add(topo);
             cj.Add(AtributoLinha("Mira", j.Mira));
             cj.Add(AtributoLinha("Reflexo", j.Reflexo));
@@ -285,21 +292,21 @@ namespace CSM.ManagerUI
 
             var topo = Linha_(); topo.style.justifyContent = Justify.SpaceBetween; topo.style.alignSelf = Align.Stretch;
             topo.Add(Selo("PRÉ-PARTIDA", Suave));
-            topo.Add(Txt("Partida " + c.numPartida + " da carreira", 14, Suave));
+            topo.Add(Txt("Partida " + c.numPartida + " da carreira", 16, Suave));
             raiz.Add(topo);
             if (aviso != null) { var b = Banner(aviso, avisoErro ? Vermelho : Verde); b.style.marginTop = 14; raiz.Add(b); aviso = null; }
 
             var meio = Linha_(); meio.style.flexGrow = 1; meio.style.justifyContent = Justify.Center;
             meio.Add(LadoPreMatch(c.clube, c.Forca, Laranja, c.Titulares.Select(j => (j.nome, j.funcao)).ToList()));
-            var vs = Txt("VS", 28, Apagado, true); vs.style.width = 160; vs.style.unityTextAlign = TextAnchor.MiddleCenter; meio.Add(vs);
+            var vs = Txt("VS", 32, Suave, true); vs.style.width = 120; vs.style.unityTextAlign = TextAnchor.MiddleCenter; meio.Add(vs);
             meio.Add(LadoPreMatch(c.proximo.nome, c.proximo.forca, Azul, c.proximo.jogadores));
             raiz.Add(meio);
 
             var barra = Linha_(); barra.style.backgroundColor = Lateral; Raio(barra, 18); Borda(barra, Linha); Pad(barra, 10);
-            barra.style.width = 1180;
+            barra.style.width = 1240;
             var voltar = Botao("Voltar", () => Ir(Aba.Painel)); voltar.style.flexGrow = 1; voltar.style.marginRight = 8;
             var elenco = Botao("Elenco", () => Ir(Aba.Elenco)); elenco.style.flexGrow = 1; elenco.style.marginRight = 8;
-            var assistir = Botao("ASSISTIR PARTIDA", Assistir, !c.Falido, Lima); assistir.style.width = 340; assistir.style.marginRight = 8; assistir.style.height = 54;
+            var assistir = Botao("ASSISTIR PARTIDA", Assistir, !c.Falido, Lima); assistir.style.width = 360; assistir.style.marginRight = 8; assistir.style.height = 58;
             var pular = Botao("Pular partida", PularPartida, !c.Falido); pular.style.flexGrow = 1; pular.style.marginRight = 8;
             var plano = Botao("Plano de jogo (em breve)", () => { }, false); plano.style.flexGrow = 1;
             barra.Add(voltar); barra.Add(elenco); barra.Add(assistir); barra.Add(pular); barra.Add(plano);
@@ -308,20 +315,20 @@ namespace CSM.ManagerUI
 
         static VisualElement LadoPreMatch(string nome, int forca, Color cor, List<(string nome, Role funcao)> jogadores)
         {
-            var l = Box(); l.style.width = 420; l.style.alignItems = Align.Center;
-            l.Add(Brasao(nome, 132, cor));
-            var f = Box(FlexDirection.Row, Lima, 0, 8); Pad(f, 12, 3); f.style.marginTop = -14; f.style.marginBottom = 14;
-            f.Add(Txt("FORÇA " + forca, 14, Hex("12140a"), true));
+            var l = Box(); l.style.width = 440; l.style.alignItems = Align.Center;
+            l.Add(Brasao(nome, 150, cor));
+            var f = Box(FlexDirection.Row, Lima, 0, 8); Pad(f, 14, 4); f.style.marginTop = -16; f.style.marginBottom = 16;
+            f.Add(Txt("FORÇA " + forca, 17, Hex("0c0e04"), true));
             l.Add(f);
-            var n = Txt(nome, 42, Texto, true); n.style.unityTextAlign = TextAnchor.MiddleCenter; n.style.marginBottom = 18;
+            var n = Txt(nome.ToUpperInvariant(), 44, Texto, true); n.style.unityTextAlign = TextAnchor.MiddleCenter; n.style.marginBottom = 20;
             l.Add(n);
             foreach (var (jn, jf) in jogadores)
             {
-                var r = Linha_(); r.style.height = 34; r.style.justifyContent = Justify.Center;
-                var tag = Box(FlexDirection.Row, Painel2, 0, 6); Pad(tag, 7, 2); tag.style.width = 46; tag.style.justifyContent = Justify.Center; tag.style.marginRight = 12;
-                tag.Add(Txt(Fmt.FuncaoCurta(jf), 11, Suave, true));
+                var r = Linha_(); r.style.height = 40; r.style.justifyContent = Justify.Center;
+                var tag = Box(FlexDirection.Row, Painel2, 0, 7); Pad(tag, 8, 3); tag.style.width = 58; tag.style.justifyContent = Justify.Center; tag.style.marginRight = 14;
+                tag.Add(Txt(Fmt.FuncaoCurta(jf), 13, Suave, true));
                 r.Add(tag);
-                var t = Txt(jn, 18, Texto); t.style.width = 150; r.Add(t);
+                var t = Txt(jn, 21, Texto, true); t.style.width = 170; r.Add(t);
                 l.Add(r);
             }
             return l;
@@ -334,35 +341,36 @@ namespace CSM.ManagerUI
             Cartao(null, out var corpo, 6);
             var cartao = corpo.parent;
             var h = LinhaTabela(true);
-            h.Add(Celula(Txt("JOGADOR", 12, Suave, true), 250));
-            h.Add(Celula(Txt("GERAL", 12, Suave, true), 70));
-            foreach (var n in new[] { "MIRA", "REFLEXO", "SPRAY", "UTILITÁRIA", "SANGUE-FRIO" }) h.Add(Celula(Txt(n, 12, Suave, true), 104));
-            h.Add(Celula(Txt("SALÁRIO", 12, Suave, true), 104));
-            h.Add(Celula(Txt(tituloExtra, 12, Suave, true), 124));
-            h.Add(Celula(Txt(tituloAcoes, 12, Suave, true), 0));
+            // larguras pensadas para a referência de 1600 px; os rótulos longos de atributo viram abreviações para caber em 13 px
+            h.Add(Celula(Txt("JOGADOR", 13, Suave, true), 220));
+            h.Add(Celula(Txt("GERAL", 13, Suave, true), 64));
+            foreach (var n in new[] { "MIRA", "REFLEXO", "SPRAY", "UTIL.", "FRIO" }) h.Add(Celula(Txt(n, 13, Suave, true), 82));
+            h.Add(Celula(Txt("SALÁRIO", 13, Suave, true), 100));
+            h.Add(Celula(Txt(tituloExtra, 13, Suave, true), 104));
+            h.Add(Celula(Txt(tituloAcoes, 13, Suave, true), 0));
             corpo.Add(h);
             int linhas = 0;
             foreach (var j in jogadores)
             {
                 linhas++;
-                var r = LinhaTabela(); r.style.height = 62;
+                var r = LinhaTabela(); r.style.height = 68;
                 var pessoa = Linha_();
-                pessoa.Add(Avatar(j.nome, 40));
+                pessoa.Add(Avatar(j.nome, 42));
                 var nomes = Box(); nomes.style.marginLeft = 12;
-                nomes.Add(Txt(j.nome, 17, Texto, true));
-                nomes.Add(Txt(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", 12, Suave));
+                nomes.Add(Txt(j.nome, 18, Texto, true));
+                nomes.Add(Txt(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", 13, Suave));
                 pessoa.Add(nomes);
-                r.Add(Celula(pessoa, 250));
-                r.Add(Celula(Txt(j.Overall.ToString(), 21, CorNota(j.Overall), true), 70));
-                r.Add(Celula(Atributo(j.Mira), 104));
-                r.Add(Celula(Atributo(j.Reflexo), 104));
-                r.Add(Celula(Atributo(j.Spray), 104));
-                r.Add(Celula(Atributo(j.Utilitaria), 104));
-                r.Add(Celula(Atributo(j.SangueFrio), 104));
-                r.Add(Celula(Txt(Fmt.Dinheiro(j.Salario), 15, Suave), 104));
-                r.Add(Celula(extra(j), 124));
+                r.Add(Celula(pessoa, 220));
+                r.Add(Celula(Txt(j.Overall.ToString(), 24, CorNota(j.Overall), true), 64));
+                r.Add(Celula(Atributo(j.Mira), 82));
+                r.Add(Celula(Atributo(j.Reflexo), 82));
+                r.Add(Celula(Atributo(j.Spray), 82));
+                r.Add(Celula(Atributo(j.Utilitaria), 82));
+                r.Add(Celula(Atributo(j.SangueFrio), 82));
+                r.Add(Celula(Txt(Fmt.Dinheiro(j.Salario), 16, Texto), 100));
+                r.Add(Celula(extra(j), 104));
                 r.Add(Celula(acoes(j), 0));
-                r.RegisterCallback<PointerEnterEvent>(_ => r.style.backgroundColor = new Color(1, 1, 1, 0.03f));
+                r.RegisterCallback<PointerEnterEvent>(_ => r.style.backgroundColor = new Color(1, 1, 1, 0.05f));
                 r.RegisterCallback<PointerLeaveEvent>(_ => r.style.backgroundColor = Transparente);
                 corpo.Add(r);
             }
@@ -384,13 +392,13 @@ namespace CSM.ManagerUI
                 j =>
                 {
                     var a = Linha_();
-                    var sobe = Botao("Subir", () => { c.Mover(j, -1); Mostrar(); }, c.elenco.IndexOf(j) > 0, null, 76); sobe.style.marginRight = 6;
-                    var desce = Botao("Descer", () => { c.Mover(j, 1); Mostrar(); }, c.elenco.IndexOf(j) < c.elenco.Count - 1, null, 88); desce.style.marginRight = 10;
+                    var sobe = Botao("Subir", () => { c.Mover(j, -1); Mostrar(); }, c.elenco.IndexOf(j) > 0, null, 74); sobe.style.marginRight = 6;
+                    var desce = Botao("Descer", () => { c.Mover(j, 1); Mostrar(); }, c.elenco.IndexOf(j) < c.elenco.Count - 1, null, 86); desce.style.marginRight = 8;
                     a.Add(sobe); a.Add(desce);
                     a.Add(Botao("Vender  +" + Fmt.Dinheiro(j.Venda), () => Resposta(c.Vender(j), j.nome + " foi vendido."), c.elenco.Count > Provisorio.TITULARES));
                     return a;
                 }, "AÇÕES"));
-            conteudo.Add(Paragrafo("Os atributos são a leitura do que a IA do bot usa na partida: mira, reflexo, spray, utilitária e sangue-frio.", 13, Apagado));
+            conteudo.Add(Paragrafo("Os atributos são a leitura do que a IA do bot usa na partida: mira, reflexo, spray, utilitária (UTIL.) e sangue-frio (FRIO).", 14, Apagado));
         }
 
         void TelaMercado()
@@ -405,7 +413,7 @@ namespace CSM.ManagerUI
                 j => Txt(Fmt.Dinheiro(j.Valor), 15, c.dinheiro >= j.Valor ? Texto : Vermelho, true),
                 j => Botao("Contratar", () => Resposta(c.Contratar(j), j.nome + " entrou no elenco (reserva)."), !cheio && c.dinheiro >= j.Valor, Lima),
                 "CONTRATAÇÃO"));
-            if (cheio) conteudo.Add(Paragrafo("Elenco cheio: venda alguém para contratar.", 14, Laranja));
+            if (cheio) conteudo.Add(Paragrafo("Elenco cheio: venda alguém para contratar.", 15, Laranja));
         }
 
         // ================================================================================================ gaming house
@@ -443,7 +451,7 @@ namespace CSM.ManagerUI
                 l.Add(aberto ? Selo("LIBERADO", Verde) : Selo("BLOQUEADO · nível " + nivel, Apagado));
                 lib.Add(l);
             }
-            lib.Add(Paragrafo("Treinos e scouts ainda não existem no protótipo: aqui só mostramos o bloqueio. Quantos níveis são, o que cada um libera e o custo ainda são perguntas abertas.", 13, Apagado));
+            lib.Add(Paragrafo("Treinos e scouts ainda não existem no protótipo: aqui só mostramos o bloqueio. Quantos níveis são, o que cada um libera e o custo ainda são perguntas abertas.", 14, Apagado));
             conteudo.Add(libCartao);
         }
 
