@@ -182,6 +182,41 @@ class TesteCarreira
             Ok(cl.Temporada == t0 + 1 && cl.mundo.equipes.GroupBy(e => e.circuito).All(x => x.Count() == 16), "a carreira carregada vira de temporada sem problemas");
         }
 
+        // ---------- o que o manager configurou chega à simulação (a partida completa é lenta: só roda com CSM_TESTE_SIM=1)
+        {
+            Carreira Prepara(int seed, int advForca, Action<Carreira> ajusta)
+            {
+                var cm = Carreira.Nova(seed); int g = 0; while (!cm.TemJogoAgora && g++ < 60) Avanca(cm);
+                cm.PrepararSerie(); cm.VetoAutomatico(); cm.Adversario.forca = advForca; ajusta?.Invoke(cm);
+                return cm;
+            }
+            double MediaA(CSM.Sim.Partida p) => p.A.js.Average(j => new Jogador { skill = j.skill }.Overall);
+            double MediaB(CSM.Sim.Partida p) => p.B.js.Average(j => new Jogador { skill = j.skill }.Overall);
+
+            var base_ = Prepara(41, 77, null).MontarPartida(1);
+            var descansado = Prepara(41, 77, cm => { foreach (var j in cm.elenco) { j.cansaco = 0; j.preparo = 100; } }).MontarPartida(1);
+            var exausto = Prepara(41, 77, cm => { foreach (var j in cm.elenco) { j.cansaco = 100; j.preparo = 0; } }).MontarPartida(1);
+            Console.WriteLine("  habilidade média que a simulação recebe: descansado " + MediaA(descansado).ToString("0.0") + " · normal " + MediaA(base_).ToString("0.0") + " · exausto " + MediaA(exausto).ToString("0.0"));
+            Ok(MediaA(descansado) > MediaA(base_) && MediaA(base_) > MediaA(exausto), "descansado > normal > exausto na habilidade que vai para a simulação");
+            var fraco = Prepara(41, 60, null).MontarPartida(1); var forte = Prepara(41, 92, null).MontarPartida(1);
+            Console.WriteLine("  habilidade do adversário: força 60 → " + MediaB(fraco).ToString("0.0") + " · força 92 → " + MediaB(forte).ToString("0.0"));
+            Ok(MediaB(forte) > MediaB(fraco) + 15, "a força do adversário vira habilidade dos bots dele");
+            Ok(fraco.B.nome == Prepara(41, 60, null).Adversario.nome && fraco.B.js.All(j => !string.IsNullOrEmpty(j.nome)), "os bots do adversário têm os nomes do time dele");
+
+            var agr = Prepara(41, 77, cm => cm.estilo = Estilo.Agressiva).MontarPartida(1); var def = Prepara(41, 77, cm => cm.estilo = Estilo.Defensiva).MontarPartida(1);
+            Ok(agr.A.pesos.estilo > def.A.pesos.estilo && agr.A.pesos.tExec < def.A.pesos.tExec, "a estratégia escolhida muda os pesos da IA do time (agressiva decide antes que defensiva)");
+            var cmp = Prepara(41, 77, null); var advx = cmp.Adversario; advx.estilo = Estilo.Agressiva; cmp.estilo = Estilo.Defensiva;
+            Ok(cmp.MontarPartida(1).B.pesos.estilo > 0.5f, "o estilo do adversário vira os pesos do time dele");
+
+            if (Environment.GetEnvironmentVariable("CSM_TESTE_SIM") == "1")
+            {
+                var cron = System.Diagnostics.Stopwatch.StartNew();
+                var ps = Prepara(41, 77, null).MontarPartida(77); ps.Jogar();
+                Console.WriteLine("  uma partida completa da simulação: " + cron.ElapsedMilliseconds + " ms, placar " + ps.A.placar + " x " + ps.B.placar);
+                Ok(ps.acabou && ps.A.js.Sum(j => j.k) > 0 && ps.A.js.All(j => j.rounds > 0), "a partida montada pela carreira roda até o fim e devolve abates, dano e rounds");
+            }
+        }
+
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");
         Environment.Exit(falhas == 0 ? 0 : 1);
     }

@@ -77,7 +77,7 @@
 .corpo { flex-grow: 1; padding: 24px 20px; }
 .h2 { font-size: 24px; -unity-font-style: bold; margin: 30px 0 14px 0; }
 .h2.topo-h2 { margin-top: 0; }
-.legenda { color: var(--apagado); font-size: 14px; margin-top: 12px; }
+.legenda { color: var(--apagado); font-size: 14px; margin-top: 12px; white-space: normal; }
 .secao-linha { flex-direction: row; justify-content: space-between; align-items: center; }
 
 /* ---------- botões, abas, selos ---------- */
@@ -373,3 +373,191 @@
 .pm-dicas-item > .t { font-size: 14px; color: #5d5d66; letter-spacing: 1px; }
 .tecla { border-width: 1px; border-color: #3a3a40; border-radius: 6px; padding: 0 6px; margin-right: 8px; }
 .tecla > .t { font-size: 12px; color: #7d7d86; }
+
+/* ======================================================================================================
+   Calendário, campeonatos, treino, scouts, preparação da série, Gaming House e finanças (decisões 0012 a 0016)
+   ====================================================================================================== */
+
+/* colunas das tabelas com cansaço e potencial */
+.c-j { width: 210px; } .c-g { width: 70px; } .c-a { width: 84px; padding-right: 12px; } .c-s { width: 100px; } .c-st { width: 100px; }
+.c-f { width: 100px; padding-right: 14px; flex-direction: column; align-items: stretch; justify-content: center; }
+.c-f > .barra { flex-grow: 0; margin-top: 5px; }
+.c-p { width: 70px; }
+.c-foco { width: 150px; }
+.c-sess { width: 150px; }
+.c-bar { width: 150px; padding-right: 20px; flex-direction: column; align-items: stretch; justify-content: center; }
+.c-bar > .barra { flex-grow: 0; margin-top: 5px; }
+.c-proj { flex-grow: 1; }
+
+.fill.verde-c { background-color: var(--verde); } .fill.laranja-c { background-color: var(--laranja); } .fill.vermelho-c { background-color: var(--vermelho); }
+
+/* cabeçalho: semana e ação principal */
+.chip-semana { flex-direction: row; align-items: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 8px 16px; margin-right: 14px; }
+.chip-semana > .t { font-size: 16px; -unity-font-style: bold; }
+.chip-semana > .ic { margin-right: 8px; color: var(--suave); }
+.topo-acao { margin-right: 14px; }
+
+/* compromisso (painel) */
+.compromisso { flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 16px; padding: 20px 26px; margin-bottom: 22px; }
+.compromisso.agora { border-color: var(--lima); }
+.compromisso-tit { font-size: 13px; -unity-font-style: bold; letter-spacing: 1.5px; color: var(--apagado); margin-bottom: 4px; }
+.compromisso-nome { font-size: 24px; -unity-font-style: bold; }
+.compromisso-sub { font-size: 15px; color: var(--suave); margin-top: 3px; }
+.compromisso-acoes { flex-direction: row; }
+.compromisso-acoes > .btn { margin-left: 10px; }
+
+/* diário */
+.diario { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha); border-radius: 12px; padding: 6px 18px; }
+.diario-linha { flex-direction: row; align-items: center; height: 36px; }
+.diario-linha > .t { font-size: 15px; }
+
+/* faixa das 52 semanas */
+.faixa-semanas { flex-direction: row; margin-right: -3px; margin-bottom: 8px; }
+.sem-cel { flex-grow: 1; flex-basis: 0; height: 26px; margin-right: 3px; border-radius: 5px; background-color: #1d1d20; border-width: 1px; border-color: rgba(0, 0, 0, 0); }
+.sem-cel.evento { background-color: #35353a; }
+.sem-cel.meu { background-color: rgba(240, 170, 70, 0.55); }
+.sem-cel.passada { opacity: 0.45; }
+.sem-cel.atual { border-color: var(--lima); }
+.legenda-faixa { flex-direction: row; margin-bottom: 20px; }
+.legenda-faixa > .t { font-size: 13px; color: var(--apagado); margin-right: 22px; }
+
+/* lista de campeonatos */
+.cal-linha { flex-direction: row; align-items: center; height: 66px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 10px; }
+.cal-linha:hover { background-color: rgba(255, 255, 255, 0.035); }
+.cal-linha.agora { background-color: rgba(198, 244, 50, 0.06); }
+.cal-sem { width: 120px; }
+.cal-nome { width: 330px; }
+.cal-fmt { width: 190px; }
+.cal-st { flex-grow: 1; }
+.cal-pos { width: 140px; }
+
+/* detalhe de campeonato */
+.rodada-tit { font-size: 15px; -unity-font-style: bold; color: var(--suave); margin: 18px 0 8px 0; }
+.cf-linha { flex-direction: row; align-items: center; height: 42px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 12px; }
+.cf-linha.meu { background-color: rgba(240, 170, 70, 0.10); }
+.cf-a { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-right; }
+.cf-b { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-left; }
+.cf-placar { width: 90px; -unity-text-align: middle-center; -unity-font-style: bold; font-size: 17px; }
+.rk-linha { flex-direction: row; align-items: center; height: 38px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 12px; }
+.rk-linha.meu { background-color: rgba(240, 170, 70, 0.10); }
+.rk-pos { width: 50px; color: var(--suave); }
+.rk-nome { flex-grow: 1; }
+.rk-pts { width: 100px; -unity-text-align: middle-right; }
+.duas-colunas { flex-direction: row; }
+.coluna { flex-grow: 1; flex-basis: 0; margin-right: 22px; }
+.coluna.ultima { margin-right: 0; }
+
+/* controles pequenos */
+.btn-mini { flex-direction: row; align-items: center; justify-content: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 8px; padding: 5px 12px; }
+.btn-mini > .t { font-size: 14px; -unity-font-style: bold; }
+.btn-mini:hover { background-color: #222225; }
+.btn-mini.on { border-color: var(--lima); background-color: #20240f; }
+.btn-mini.desligado > .t { color: #5d5d66; }
+.btn-mini.desligado:hover { background-color: var(--cartao); }
+.stepper { flex-direction: row; align-items: center; }
+.stepper > .t { width: 34px; font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.stepper > .btn-ic { margin-right: 0; width: 34px; padding: 6px 0; }
+
+/* treino */
+.treino-topo { flex-direction: row; margin-bottom: 20px; margin-right: -14px; }
+.treino-card { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 16px 18px; margin-right: 14px; }
+.treino-card.bloq { opacity: 0.55; }
+.treino-card-tit { font-size: 13px; -unity-font-style: bold; letter-spacing: 1.2px; color: var(--apagado); margin-bottom: 8px; }
+.efeito-time { flex-direction: row; align-items: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 14px 18px; margin-top: 16px; }
+.efeito-time > .t { white-space: normal; font-size: 16px; }
+.presets { flex-direction: row; margin-bottom: 14px; }
+.presets > .btn-mini { margin-right: 8px; }
+
+/* scouts */
+.scout-card { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.scout-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.tarefas { flex-direction: row; flex-wrap: wrap; }
+.tarefas > .btn-mini { margin-right: 8px; margin-bottom: 8px; }
+.intel-card { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 14px; padding: 18px 20px; margin-bottom: 14px; }
+.intel-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.intel-nivel { flex-direction: row; }
+.intel-nivel > .pip { width: 22px; height: 8px; border-radius: 4px; background-color: #2a2a2e; margin-left: 4px; }
+.intel-nivel > .pip.on { background-color: var(--lima); }
+.mb-linha { flex-direction: row; align-items: center; height: 28px; }
+.mb-nome { width: 110px; font-size: 14px; color: var(--suave); }
+.mb-num { width: 36px; font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.oculto-txt { color: var(--apagado); font-size: 15px; }
+
+/* preparação da série: veto de mapas e estratégia */
+.pool { flex-direction: row; margin-right: -12px; margin-bottom: 18px; }
+.mapa-card { flex-grow: 1; flex-basis: 0; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 12px; margin-right: 12px; min-height: 170px; }
+.mapa-card.livre:hover { background-color: #222225; }
+.mapa-card.clicavel { border-color: var(--suave); }
+.mapa-card.banido { opacity: 0.4; }
+.mapa-card.escolha-nos { border-color: var(--laranja); background-color: rgba(240, 170, 70, 0.08); }
+.mapa-card.escolha-eles { border-color: var(--azul); background-color: rgba(110, 180, 255, 0.08); }
+.mapa-card.decisivo { border-color: var(--lima); }
+.mapa-nome { font-size: 18px; -unity-font-style: bold; margin-bottom: 2px; }
+.mapa-tag { font-size: 12px; color: var(--apagado); margin-bottom: 10px; }
+.mapa-af { flex-direction: row; align-items: center; height: 22px; }
+.mapa-af > .t { font-size: 13px; color: var(--suave); width: 38px; }
+.mapa-af > .barra { height: 6px; }
+.mapa-af > .num { width: 30px; font-size: 13px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.mapa-estado { margin-top: 10px; }
+.ordem-mapas { flex-direction: row; margin-bottom: 18px; }
+.ordem-mapas > .selo { margin-right: 8px; }
+.estilos { margin-bottom: 14px; }
+.estilo-card { background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 12px; padding: 12px 16px; margin-bottom: 8px; }
+.estilo-card:hover { background-color: #202023; }
+.estilo-card.sel { border-color: var(--lima); background-color: #1d2010; }
+.estilo-topo { flex-direction: row; align-items: center; justify-content: space-between; }
+.estilo-nome { font-size: 17px; -unity-font-style: bold; }
+.estilo-desc { font-size: 14px; color: var(--suave); white-space: normal; margin-top: 3px; }
+.resumo-serie { flex-direction: row; margin-right: -14px; margin-bottom: 18px; }
+.resumo-serie > .resumo { margin-right: 14px; }
+
+/* Gaming House */
+.gh-nivel { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 16px; padding: 18px 22px; margin-bottom: 14px; }
+.gh-nivel.atual { border-color: var(--lima); }
+.gh-nivel.feito { opacity: 0.75; }
+.gh-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.gh-num { width: 40px; height: 40px; border-radius: 20px; background-color: var(--item); align-items: center; justify-content: center; margin-right: 14px; }
+.gh-num > .t { font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.gh-nivel.atual .gh-num { background-color: var(--lima); }
+.gh-nivel.atual .gh-num > .t { color: #0c0e04; }
+.gh-vant { flex-direction: row; align-items: center; height: 28px; }
+.gh-vant > .t { font-size: 15px; }
+.gh-ponto { width: 6px; height: 6px; border-radius: 3px; background-color: var(--suave); margin-right: 12px; }
+.gh-nivel.atual .gh-ponto { background-color: var(--lima); }
+.gh-rodape { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 10px; }
+
+/* empréstimo */
+.emp-linha { flex-direction: row; align-items: center; height: 54px; border-bottom-width: 1px; border-bottom-color: var(--linha); }
+.emp-linha > .t { margin-right: 24px; }
+.valores-emp { flex-direction: row; margin-top: 10px; }
+.valores-emp > .btn-mini { margin-right: 8px; }
+.fluxo { flex-direction: row; align-items: center; height: 36px; }
+.fluxo > .t { font-size: 16px; }
+.fluxo-rot { width: 260px; }
+.fluxo-val { width: 130px; margin-right: 22px; -unity-text-align: middle-right; -unity-font-style: bold; }
+.resumo-valor.menor { font-size: 21px; white-space: normal; margin-top: 12px; }
+
+
+/* ======================================================================================================
+   Hub (cartões brancos grandes) e abas lima: referências do jogo de futebol (menus Contracts e Dream Team)
+   ====================================================================================================== */
+.hub { flex-direction: row; margin-right: -16px; margin-bottom: 26px; }
+.hub-card { flex-grow: 1; flex-basis: 0; height: 330px; background-color: #f0f0f1; border-radius: 18px; margin-right: 16px; overflow: hidden; transition-property: background-color; transition-duration: 120ms; }
+.hub-card:hover { background-color: #ffffff; }
+.hub-card.lima { background-color: var(--lima); }
+.hub-card.lima:hover { background-color: #d6ff4a; }
+.hub-arte { height: 180px; align-items: center; justify-content: center; -unity-background-scale-mode: scale-to-fit; }
+.hub-card .ic { color: #1b1b1f; }
+.hub-selo { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 30px; border-radius: 8px; background-color: #141416; align-items: center; justify-content: center; padding: 0 9px; }
+.hub-selo > .t { color: #ffffff; font-size: 16px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.hub-corpo { flex-grow: 1; justify-content: flex-end; padding: 0 20px 18px 20px; }
+.hub-tit { color: #0c0c0e; font-size: 27px; -unity-font-style: bold; white-space: normal; letter-spacing: 0.5px; }
+.hub-sub { color: #55555c; font-size: 14px; white-space: normal; margin-top: 4px; }
+.hub-card.lima .hub-sub { color: #3a4310; }
+.hub-btn { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 14px; background-color: #0c0e04; border-radius: 10px; padding: 11px 16px; }
+.hub-btn > .t { color: var(--lima); font-size: 17px; -unity-font-style: bold; letter-spacing: 1px; }
+.hub-btn > .ic { color: var(--lima); }
+.hub-card.lima .hub-btn:hover { background-color: #1a2008; }
+
+.aba.ativo { background-color: var(--lima); border-color: var(--lima); }
+.aba.ativo > .t { color: #0c0e04; }

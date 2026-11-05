@@ -69,8 +69,9 @@ namespace CSM.EditorTools
             EditorApplication.isPlaying = true;
         }
 
-        /// <summary>Batch: confere as regras novas da carreira e o ciclo salvar/carregar; sai com 0 se tudo bate, 1 se não
-        /// (Unity -batchmode -nographics -executeMethod CSM.EditorTools.CenaManager.TestarCarreiraBatch).</summary>
+        /// <summary>Batch: confere o ciclo salvar/carregar com o JsonUtility da Unity depois de algumas semanas de carreira; sai com 0 se
+        /// tudo bate (as regras em si são testadas em ManagerTest, fora da Unity). Unity -batchmode -nographics -executeMethod
+        /// CSM.EditorTools.CenaManager.TestarCarreiraBatch.</summary>
         public static void TestarCarreiraBatch()
         {
             int falhas = 0;
@@ -78,44 +79,23 @@ namespace CSM.EditorTools
             try
             {
                 var c = CSM.Manager.Carreira.Nova(5);
-                Ok(c.elenco.Count == 7 && c.Forca > 0, "carreira nova com 7 jogadores");
-
-                // troca de lugar e desfazer
-                var a = c.elenco[0]; var b = c.elenco[5];
-                c.Trocar(a, b);
-                Ok(c.elenco[0] == b && c.elenco[5] == a, "Trocar inverte os lugares");
-
-                // vender e desfazer: dinheiro, posição e extrato voltam ao que eram
-                int din = c.dinheiro, ext = c.extrato.Count, pos = c.elenco.IndexOf(a);
-                Ok(c.Vender(a) == null && c.elenco.Count == 6 && c.dinheiro == din + a.Venda, "Vender paga o valor de venda");
-                Ok(c.DesfazerVenda() == null && c.dinheiro == din && c.extrato.Count == ext && c.elenco.IndexOf(a) == pos, "DesfazerVenda restaura dinheiro, extrato e posição");
-                Ok(c.DesfazerVenda() != null, "DesfazerVenda sem venda recente devolve erro");
-
-                // prévia de força e chance
-                var cand = c.mercado.OrderByDescending(j => j.Overall).First();
-                var sai = c.QuemSaiPara(cand);
-                if (sai != null) Ok(c.ForcaCom(cand, sai) > c.Forca, "ForcaCom: entrar no lugar do mais fraco aumenta a força");
-                Ok(c.ChanceVitoria(c.Forca + 10) > c.ChanceVitoria(c.Forca), "mais força = mais chance de vitória");
-
-                // avisos
-                c.dinheiro = 1000;
-                Ok(c.Avisos().Any(x => x.nivel == CSM.Manager.Aviso.Nivel.Critico), "saldo que não paga salários gera aviso crítico");
-
-                // desempenho estimado ao pular + salvar/carregar
-                c.dinheiro = 400000;
-                var r = c.Pular();
-                Ok(r.estimado && r.desempenho.Count == 5 && r.Melhor != null, "partida pulada gera desempenho estimado de 5 jogadores");
-                var salvo = CSM.ManagerUI.Salvamento.Caminho;
+                for (int i = 0; i < 30; i++)
+                {
+                    int g = 0; while (c.TemJogoAgora && g++ < 20) c.PularSerie();
+                    c.AvancarSemana();
+                }
+                Ok(c.Semana > 25 && c.historico.Count > 0, "30 semanas de carreira (semana " + c.Semana + ", " + c.historico.Count + " mapas jogados)");
                 CSM.ManagerUI.Salvamento.Salvar(c);
                 var d = CSM.ManagerUI.Salvamento.Carregar();
-                Ok(d != null, "Carregar devolve a carreira salva");
+                Ok(d != null, "o JsonUtility salva e carrega a carreira");
                 if (d != null)
                 {
-                    Ok(d.dinheiro == c.dinheiro && d.numPartida == c.numPartida && d.nivelGH == c.nivelGH && d.clube == c.clube, "valores simples iguais");
-                    Ok(d.elenco.Select(j => j.nome + j.funcao + j.Overall).SequenceEqual(c.elenco.Select(j => j.nome + j.funcao + j.Overall)), "elenco igual (nome, função, geral)");
-                    Ok(d.mercado.Count == c.mercado.Count && d.extrato.Count == c.extrato.Count && d.historico.Count == c.historico.Count, "mercado, extrato e histórico com o mesmo tamanho");
-                    Ok(d.proximo.nome == c.proximo.nome && d.proximo.jogadores.Count == c.proximo.jogadores.Count, "adversário igual");
-                    Ok(d.historico[0].desempenho.Count == 5 && d.historico[0].estimado, "desempenho do histórico preservado");
+                    Ok(d.dinheiro == c.dinheiro && d.Semana == c.Semana && d.nivelGH == c.nivelGH && d.clube == c.clube, "valores simples iguais");
+                    Ok(d.elenco.Select(j => j.nome + j.Overall + j.potencial).SequenceEqual(c.elenco.Select(j => j.nome + j.Overall + j.potencial)), "elenco igual");
+                    Ok(d.mundo.Ranking().Select(e => e.id).SequenceEqual(c.mundo.Ranking().Select(e => e.id)), "ranking dos 48 times igual");
+                    Ok(d.historico.Count == c.historico.Count && d.extrato.Count == c.extrato.Count, "histórico e extrato do mesmo tamanho");
+                    var pa = c.Proximo(); var pb = d.Proximo();
+                    Ok(pa.camp?.id == pb.camp?.id && pa.semana == pb.semana, "o próximo compromisso é o mesmo");
                 }
                 CSM.ManagerUI.Salvamento.Apagar();
                 Ok(CSM.ManagerUI.Salvamento.Carregar() == null, "sem arquivo, Carregar devolve null");

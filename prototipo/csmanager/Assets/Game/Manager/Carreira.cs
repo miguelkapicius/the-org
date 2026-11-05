@@ -60,6 +60,10 @@ namespace CSM.Manager
         };
 
         public static string Serie(int md) => "MD" + md;
+
+        /// <summary>O rótulo de um confronto sem repetir o nome do campeonato que ele já traz no começo.</summary>
+        public static string Rotulo(string campeonato, string rotulo) =>
+            !string.IsNullOrEmpty(rotulo) && !string.IsNullOrEmpty(campeonato) && rotulo.StartsWith(campeonato) ? rotulo.Substring(campeonato.Length).TrimStart(' ', '·') : rotulo;
         public static string Ordinal(int k) => k + "º";
     }
 
