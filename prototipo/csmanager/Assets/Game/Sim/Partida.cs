@@ -100,6 +100,12 @@ namespace CSM.Sim
                     Diag[t, 5] += tm.js.Count(j => j.kit);
                 }
             var setup = tAtual.js.Select(j => Loadout(j, true)).Concat(ctAtual.js.Select(j => Loadout(j, false))).ToArray();
+            for (int i = 0; i < 10; i++)
+            {   // validador: arma do outro lado no começo do round (CT com Galil/Tec-9/AK/MAC-10, TR com FAMAS/Five-SeveN/M4/MP9)
+                string g = setup[i].gun; bool tr = i < 5;
+                bool doOutro = tr ? g == "famas" || g == "fiveseven" || g == "m4" || g == "m4s" || g == "mp9" || g == "usp" : g == "galil" || g == "tec9" || g == "ak" || g == "mac10" || g == "glock";
+                if (doOutro) { ev.Add($"ARMA DO OUTRO LADO no começo: {(tr ? "TR" : "CT")} com {g} (round {r + 1})"); Log($"  ARMA DO OUTRO LADO: {setup[i].name} ({(tr ? "TR" : "CT")}) começa com {g}"); }
+            }
             if (!TeamBrain.EXP.Contains("dropTeleporte")) EntregasEmCampo(setup);
             var aperto = new float[2]; aperto[(int)Team.T] = Aperto(tAtual, ctAtual); aperto[(int)Team.CT] = Aperto(ctAtual, tAtual);
             var m = new Match(seed * 1000 + r, tAtual.pesos?.Clone(), ctAtual.pesos?.Clone(), setup, new[] { compraTAtual, compraCTAtual }, aperto, SemLeitura ? null : tAtual.leitura, SemLeitura ? null : ctAtual.leitura);
@@ -267,6 +273,9 @@ namespace CSM.Sim
                     // ou P250 + utilitária — o time mistura (quem entra quer colete, quem fica atrás quer a pistola)
                     float pr = PISTOLAS_EXTRAS ? rng.Rand() : 1f;
                     string pf = t ? "tec9" : "fiveseven";
+                    // CT no bomb: kit + flash no lugar do colete (o retake do pistol sem kit quase não sai — pro sempre tem um)
+                    if (!t && !TeamBrain.EXP.Contains("pistolKitVelho") && j.roleCT == Role.Ancora && rng.Rand() < 0.65f)
+                    { Compra(j, "kit"); Compra(j, "flash"); continue; }
                     if (pr < 0.22f && j.dinheiro >= Preco(pf)) { j.dinheiro -= Preco(pf); j.arma = pf; Compra(j, "flash"); }
                     else if (pr < 0.35f && j.dinheiro >= Preco("p250")) { j.dinheiro -= Preco("p250"); j.arma = "p250"; Compra(j, "flash"); Compra(j, "smoke"); }
                     else Compra(j, "colete");

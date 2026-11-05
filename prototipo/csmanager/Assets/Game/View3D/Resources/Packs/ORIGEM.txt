@@ -1,5 +1,0 @@
-Props CC0 do poly.pizza (Public Domain), baixados em 2026-11-04:
-barril.fbx = Barrel, Quaternius (poly.pizza/m/zjCQP1TAci)
-sacos.fbx = Bags, Quaternius (poly.pizza/m/gzvyAQ797z)
-caixote_cebola/batata/tomate/alface/cenoura.fbx = Crate of Onions/Potatoes/Tomatoes/Lettuce/Carrots, Kay Lousberg (5RcPjoh8Ha, L0Qt7KT6AD, YrCZgQcpMN, INP7sbCv4J, Z3cyOIofjy)
-Convertidos do GLB com a cor de cada face no vértice por pack_cor.py.txt.

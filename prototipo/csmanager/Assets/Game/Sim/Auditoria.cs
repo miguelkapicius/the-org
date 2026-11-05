@@ -50,6 +50,19 @@ namespace CSM.Sim
             foreach (var tm in new[] { Team.CT, Team.T }) Time(tm);
             foreach (var a in m.agents) { if (a.alive) Jogador(a); }
             foreach (var a in m.agents) if (a.alive) Passagem(a);
+            if (m.t < 20)
+                foreach (var a in m.agents)
+                {   /* exposição na linha longa cedo: algum inimigo com visão de mim a mais de 300 (medição: posição real) */
+                    if (!a.alive) continue; bool exposto = false;
+                    foreach (var e in m.agents) if (e.alive && e.team != a.team && (e.pos - a.pos).Len > 300 && MapData.LosWalk(a.pos, a.z + a.Eye, e.pos, e.z + e.Eye, 0f) && !m.SmokeBlocks(a.pos, a.z + a.Eye, e.pos, e.z + e.Eye)) { exposto = true; break; }
+                    if (!exposto) continue;
+                    var b = a.brain; string est = b.Segurando ? (a.Speed < a.MaxSpeed * 0.2f ? "segurando parado" : "segurando se mexendo") : a.Speed < a.MaxSpeed * 0.2f ? "parado sem posição" : "andando (rota)";
+                    var (cx, cy) = NavGrid.CellOf(a.pos); bool cover = NavGrid.folga[cx, cy] < 10f;
+                    m.Aud("exposto na linha longa cedo (0,25 s)", $"{(a.IsT ? "TR" : "CT")} {Places.Region(a.pos)} · {est}{(cover ? " · colado em cover" : " · aberto")}");
+                    if (!b.Segurando && a.Speed < a.MaxSpeed * 0.2f) { string on = b.order.name; int sp = on.IndexOf(':'); if (sp > 0) on = on.Substring(0, sp); if (on.Length > 30) on = on.Substring(0, 30); m.Aud("exposto parado sem posição cedo: fase · ordem", $"{(a.IsT ? "TR" : "CT")} {b.fase} · {on}"); }
+                }
+            foreach (var a in m.agents)
+                if (a.alive && !a.noAr) { var (cx, cy) = NavGrid.CellOf(a.pos); if (NavGrid.onTop[cx, cy]) m.Aud("em cima de caixa (0,25 s)", (a.z - MapData.GZ >= 26 ? "alta (28) · " : "baixa (16) · ") + Places.Region(a.pos)); }
             foreach (var a in m.agents) if (!a.alive && fogoDesde[a.id] >= 0) { if (a.killedByFire) m.Aud("morreu no fogo: vida ao entrar", fogoHp[a.id] <= 30 ? "até 30" : fogoHp[a.id] <= 60 ? "31-60" : "61+"); fogoDesde[a.id] = -1; fogoSaiu[a.id] = m.t; }
         }
 

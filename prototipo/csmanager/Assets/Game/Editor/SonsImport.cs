@@ -1,4 +1,4 @@
-using UnityEditor;
+﻿using UnityEditor;
 using UnityEngine;
 
 namespace CSM.EditorTools
@@ -19,7 +19,7 @@ namespace CSM.EditorTools
             bool longo = assetPath.Contains("/ambiente/") || assetPath.Contains("_loop");
             s.loadType = longo ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
             // bip curto (C4, HUD) sem compressão: Vorbis em clipe de 30-110 ms é o 1º suspeito da C4 muda (2026-11-04)
-            bool curto = assetPath.Contains("/c4/bip") || assetPath.Contains("/c4/final") || assetPath.Contains("/c4/desarme") || assetPath.Contains("/hud/");
+            bool curto = assetPath.Contains("/c4/bip") || assetPath.Contains("/c4/final") || assetPath.Contains("/c4/desarme") || assetPath.Contains("/hud/") || assetPath.Contains("/ui/");
             s.compressionFormat = curto ? AudioCompressionFormat.PCM : AudioCompressionFormat.Vorbis;
             s.quality = 0.8f;
             s.preloadAudioData = true;

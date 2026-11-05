@@ -105,11 +105,12 @@ def comparacao(add):
     """v12: bip novo da C4 (sequência completa e só os bips) e caixa registradora na compra: escolha no ouvido."""
     nomes_c4 = ['CS2: tom firme 4,2 kHz', 'CS2: dois tons', 'mais grave 3,2 kHz', 'piezo seco', 'suave e limpo', 'agudo digital']
     out = []
-    for chave, rot, pref in (
+    nomes_ui = ['estalo seco', 'vidro', 'tecla de plástico', 'digital suave', 'madeira', 'metal leve']
+    for chave, rot, pref in (('ui', 'INTERFACE (botões): passa o mouse 3x, clica, passa e clica — o clique é o mesmo material do estalinho', 'ui_'),
                              ('mpsimples', 'MATCH POINT do zero: mesma voz e tratamento dos anúncios aprovados — 1-2 padrão, 3-4 empolgado', 'mpsimples_'),):
         bts = []
         for f in sorted(glob.glob(os.path.join(S, '_opcoes', pref + '[0-9]*.wav')), key=lambda f: int(f.rsplit('_', 1)[1][:-4])):
-            k = int(f.rsplit('_', 1)[1][:-4]); lab = f'{k + 1}' + (f' {nomes_c4[k]}' if chave.startswith('c4') else '')
+            k = int(f.rsplit('_', 1)[1][:-4]); lab = f'{k + 1}' + (f' {nomes_c4[k]}' if chave.startswith('c4') else f' {nomes_ui[k]}' if chave == 'ui' else '')
             add(f'cmp_{chave}_{k}', sf.read(f)[0], f'{rot} {lab}'); bts.append(dict(chave=f'cmp_{chave}_{k}', rotulo=lab))
         if bts: out.append(dict(chave=f'cmp_{chave}', rotulo=rot + ' (escolha)', versoes=bts))
     return out

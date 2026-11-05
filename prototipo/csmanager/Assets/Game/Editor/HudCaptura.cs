@@ -130,11 +130,60 @@ namespace CSM.EditorTools
             Debug.Log($"[HUD] vídeo pronto: {n} quadros ({t:0.0} s) do round {r0}, replay visto {viuReplay}");
         }
 
+        /// <summary>
+        /// Prints do menu inicial (vitrine rodando atrás), do placar no meio da partida (Tab) e do placar de fim de partida
+        /// (com REINICIAR/MENU). Saída Logs/hud/menu.png, placar_tab.png, placar_fim.png.
+        /// Batch: -executeMethod CSM.EditorTools.HudCaptura.MenuBatch [-hud_seed 15] [-hud_round 7]
+        /// </summary>
+        public static void MenuBatch()
+        {
+            try { Menu(); EditorApplication.Exit(0); }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        static void Menu()
+        {
+            M("Setup")?.Invoke(null, null);
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+            var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+            p.seed = (int)Arg("-hud_seed", 15);
+            p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+            var menu = new CSM.View3D.Menu3D(p);   // fora do Play o jogo não abre o menu sozinho
+            qExtra = new[] { menu.Tela };
+            const string DIR = "Logs/hud"; Directory.CreateDirectory(DIR);
+            const float dt = 1 / 30f;
+            var rtMan = new RenderTexture(320, 180, 24); int manut = 0;
+            void Andar(float seg, bool sim)
+            {
+                for (float t = 0; t < seg; t += dt)
+                {
+                    if (sim) p.Simular(dt, dt);
+                    menu.Atualizar(dt);
+                    if (++manut % 10 == 0) { p.Cenario.cam.targetTexture = rtMan; p.Cenario.cam.Render(); p.Cenario.cam.targetTexture = null; }
+                }
+            }
+            // menu: a vitrine já no round andando (fim do freeze, bonecos saindo da base)
+            Andar(9, true);
+            Quadro(p.Cenario.cam, p.Hud, $"{DIR}/menu.png", 1920, 1080); Debug.Log("[HUD] foto menu");
+            // placar no meio da partida (Tab)
+            p.ComecarPartida(); p.PularAte((int)Arg("-hud_round", 7)); Andar(25, true);
+            menu.forcarPlacar = true; Andar(0.5f, false);
+            Quadro(p.Cenario.cam, p.Hud, $"{DIR}/placar_tab.png", 1920, 1080); Debug.Log("[HUD] foto placar tab");
+            menu.forcarPlacar = false;
+            // fim de partida
+            p.PularAte(99); Andar(5, false);
+            Quadro(p.Cenario.cam, p.Hud, $"{DIR}/placar_fim.png", 1920, 1080);
+            Debug.Log($"[HUD] foto placar fim: {p.PartidaAtual.A.nome} {p.PartidaAtual.A.placar} x {p.PartidaAtual.B.placar} {p.PartidaAtual.B.nome}, acabou {p.Acabou}");
+            LiberarQuadro(); rtMan.Release(); qExtra = null;
+        }
+
         // quadro do vídeo: mesma composição do Visual3D.Salvar (cena com MSAA + HUD renderizado em fundo preto e branco pra
         // tirar a cobertura exata de cada pixel), mas com as texturas criadas UMA vez. O Salvar cria/destrói RenderTexture e
         // Texture2D a cada chamada e, em batch, o d3d12 só solta a memória quando o quadro do editor avança: num vídeo de
         // milhares de quadros a placa estourava (8007000e no quadro ~330).
         static RenderTexture qRt, qRh; static Texture2D qCena, qHud, qSai; static Color[] qPreto, qBranco, qPx;
+        static Canvas[] qExtra;   // outros canvas por cima da HUD (menu/placar)
         static void Quadro(Camera c, CSM.View3D.Hud3D hud, string arq, int w, int h)
         {
             if (qRt == null)
@@ -150,6 +199,7 @@ namespace CSM.EditorTools
             RenderTexture.active = qRt; qCena.ReadPixels(new Rect(0, 0, w, h), 0, 0);
             qPx = qCena.GetPixels();
             hud.canvas.renderMode = RenderMode.ScreenSpaceCamera; hud.canvas.worldCamera = hud.cam;
+            if (qExtra != null) foreach (var cv in qExtra) { cv.renderMode = RenderMode.ScreenSpaceCamera; cv.worldCamera = hud.cam; cv.planeDistance = 4; }
             var fundo0 = hud.cam.backgroundColor;
             Color[] Hud(Color fundo)
             {
@@ -160,6 +210,7 @@ namespace CSM.EditorTools
             qPreto = Hud(Color.black); qBranco = Hud(Color.white);
             RenderTexture.active = old;
             hud.cam.backgroundColor = fundo0; hud.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            if (qExtra != null) foreach (var cv in qExtra) cv.renderMode = RenderMode.ScreenSpaceOverlay;
             for (int i = 0; i < qPx.Length; i++)
             {
                 Color p = qPreto[i], q = qBranco[i];

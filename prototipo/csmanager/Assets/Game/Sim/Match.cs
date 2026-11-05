@@ -62,6 +62,12 @@ namespace CSM.Sim
             public bool hs, flashAssist, cegoQuemMatou, semLuneta, atravesSmoke, noAr, parede, aliado, suicidio;
         }
         public readonly List<Abate> abates = new List<Abate>();
+        static bool CabecaSoPezinho => TeamBrain.EXP.Contains("apCabecaSoPezinho");   /* teste: a cabeça só é chão de quem está dando pezinho */
+        readonly List<(Agent a, V2 p, float t)> audMatador = new List<(Agent, V2, float)>();
+        /* auditoria do pezinho por ponto: quem subiu, onde, e o que deu (round e abates dali pra frente) */
+        readonly List<(Agent a, string ponto, float t)> audBoost = new List<(Agent, string, float)>();
+        public static string PontoBoost(V2 p) => $"{MapData.Callout(p)} ({MathF.Round(p.x / 10) * 10:0},{MathF.Round(p.y / 10) * 10:0})";
+        public void AudBoostSubiu(Agent a, V2 topo) { if (Auditar) { string pt = PontoBoost(topo); audBoost.Add((a, pt, t)); Aud("pezinho por ponto: subiu", pt + " · " + (a.IsT ? "TR" : "CT")); } }
         void RegistraAbate(Agent v, Agent by, string what, Combat.Part part)
         {
             if (what == "fogo amigo" && by != null) what = by.gunId;   // o tiro no aliado: a arma de verdade (aliado = true marca o teamkill)
@@ -133,11 +139,11 @@ namespace CSM.Sim
             for (int s = 0; s < 2 && vel.Len >= 3; s++)
             {
                 V2 np = p + vel * h;
-                if (NavGrid.Movable(np) && NavGrid.ZAt(np) <= NavGrid.ZAt(p) + 2) p = np;
+                if (NavGrid.MovableFisica(np) && NavGrid.ZAt(np) <= NavGrid.ZAt(p) + 2) p = np;
                 else
                 {
                     V2 nx = new V2(np.x, p.y), ny = new V2(p.x, np.y);
-                    bool okx = NavGrid.Movable(nx) && NavGrid.ZAt(nx) <= NavGrid.ZAt(p) + 2, oky = NavGrid.Movable(ny) && NavGrid.ZAt(ny) <= NavGrid.ZAt(p) + 2;
+                    bool okx = NavGrid.MovableFisica(nx) && NavGrid.ZAt(nx) <= NavGrid.ZAt(p) + 2, oky = NavGrid.MovableFisica(ny) && NavGrid.ZAt(ny) <= NavGrid.ZAt(p) + 2;
                     vel = new V2(okx ? vel.x : -vel.x * quique, oky ? vel.y : -vel.y * quique);
                 }
                 vel = vel * MathF.Max(0, 1 - atrito * h);   // atrito do chão
@@ -262,6 +268,12 @@ namespace CSM.Sim
             foreach (var (n, r, g, s) in CT_TEAM) l.Add(new Loadout { name = n, role = r, gun = ArmaCT != null && g != "awp" ? ArmaCT : g, site = s, kit = true, nades = { "smoke", "flash", "molotov" } });
             foreach (int i in new[] { 0, 2, 4, 5, 7, 9 }) l[i].nades.Add("he");
             if (TeamBrain.EXP.Contains("semHE")) foreach (var x in l) x.nades.Remove("he");
+            if (TeamBrain.EXP.Contains("rodadaPistol"))
+            {   // teste de pistol round: $800 — pistola padrão + colete, sem capacete, sem kit, sem granada
+                foreach (var x in l) { x.gun = x.name != null && System.Array.Exists(T_TEAM, q => q.name == x.name) ? "glock" : "usp"; x.helmet = false; x.kit = false; x.nades.Clear(); x.armor = true; }
+                if (!TeamBrain.EXP.Contains("pistolKitVelho")) foreach (var x in l) if (x.role == Role.Ancora && !System.Array.Exists(T_TEAM, q => q.name == x.name)) { x.kit = true; x.armor = false; x.nades.Add("flash"); }   /* âncoras: kit + flash */
+                return l.ToArray();
+            }
             if (!TeamBrain.EXP.Contains("compraIdeal"))   /* padrão desde 04/11: compra realista; compraIdeal = todo mundo com kit e capacete (o baseline antigo) */
             {   // compra cheia como a partida faz (e como os pros: kit em ~42% dos CTs, capacete CT ~67%): kit só pros que
                 // jogam no bomb (âncoras e suporte), sem capacete o rotação e o AWP do CT
@@ -516,6 +528,14 @@ namespace CSM.Sim
                     if (a.alive && a.team == Team.CT && a.Speed < 10 && (a.pos - MapData.SPAWN_CT[2]).Len < 260 && (a.brain.order.hold == null || (a.pos - a.brain.order.hold.pos).Len > 70))   // fora do ponto que a ordem manda segurar (janelão e rua do CT ficam perto da base)
                     { Ev("CT parado na base CT (s)/round"); Aud("CT parado na base CT (s)", $"{a.brain.order.name} | {a.brain.fase}"); }
             bool imaVelho = TeamBrain.EXP.Contains("imaVelho"); float raioPega = RAIO_PEGA;
+            if (Auditar)
+                for (int i = audMatador.Count - 1; i >= 0; i--)
+                    if (t - audMatador[i].t >= 2f)
+                    {
+                        var (am, ap, _) = audMatador[i]; audMatador.RemoveAt(i);
+                        if (!am.alive) { Aud("troca: matador 2 s depois do abate", "morreu antes"); continue; }
+                        float dm = (am.pos - ap).Len; Aud("troca: matador 2 s depois do abate", (dm < 15 ? "a ficou (<15)" : dm < 40 ? "b ajeitou (15-40)" : dm < 80 ? "c saiu (40-80)" : "d foi longe (80+)") + " · " + am.brain.fase);
+                    }
             if (bombDropped && Auditar)
             {   // auditoria do ímã: passos com a C4 no chão e passos com TR perto (até 12) que não pegou
                 Ev("C4 no chão (passos)/round"); bool perto = false, pegaria = false;
@@ -727,7 +747,7 @@ namespace CSM.Sim
                 float lado = r.Dot(perp); if (MathF.Abs(lado) >= CorpoMin + 1.5f) continue;
                 if (b.vel.Dot(wd) > ws * 0.75f) continue;   // ele vai na frente no mesmo ritmo: segue atrás
                 float s = lado > 0 ? -1 : 1;   // passa pelo lado de onde ele não está
-                if (!NavGrid.Movable(a.pos + perp * s * 9) && NavGrid.Movable(a.pos - perp * s * 9)) s = -s;
+                if (!NavGrid.MovableFisica(a.pos + perp * s * 9) && NavGrid.MovableFisica(a.pos - perp * s * 9)) s = -s;
                 lateral = lateral + perp * s * (1 - frente / 28f);
             }
             if (lateral.Len < 0.01f) return want;
@@ -741,8 +761,9 @@ namespace CSM.Sim
             float min = CorpoMin;
             foreach (var b in agents)
             {
-                if (b == a || !b.alive || MathF.Abs(b.z - a.z) >= CORPO_ALTURA) continue;
-                if (a.subindoPezinho && b.dandoPezinho || a.dandoPezinho && b.subindoPezinho) continue;   /* pezinho: um sobe por cima do outro */
+                if (a.subindoPezinho && b.dandoPezinho || a.dandoPezinho && b.subindoPezinho || a.emCimaDe == b && b.dandoPezinho) continue;   /* pezinho: um sobe por cima do outro */
+                bool caindoEmCima = !TeamBrain.EXP.Contains("apCabecaVelho") && b.alive && a.noAr && a.vz < 0 && a.z > b.z + 6 && a.z < b.z + b.AlturaCorpo + 40;   /* caindo por cima dele (até de uma sacada): desvia no ar, antes de chegar na cabeça */
+                if (b == a || !b.alive || MathF.Abs(b.z - a.z) >= CORPO_ALTURA && !caindoEmCima) continue;
                 V2 d = np - b.pos; float l = d.Len; if (l >= min) continue;
                 float antes = (a.pos - b.pos).Len;
                 V2 n = l > 0.01f ? d / l : antes > 0.01f ? (a.pos - b.pos) / antes : V2.Ang(a.id * 1.3f);
@@ -759,8 +780,8 @@ namespace CSM.Sim
                     {
                         V2 w = a.brain.wantVel / a.brain.wantVel.Len, p = new V2(-w.y, w.x);
                         float s = (b.pos - a.pos).Dot(p) >= 0 ? 1 : -1;
-                        if (!NavGrid.Movable(b.pos + p * s * 12)) s = -s;
-                        if (NavGrid.Movable(b.pos + p * s * 12)) { b.daPassagemDir = p * s; b.daPassagemAte = t + 0.5f; Ev("body block: deu passagem pro colega/round"); b.brain.Think($"dei passagem pro {a.name}"); }
+                        if (!NavGrid.MovableFisica(b.pos + p * s * 12)) s = -s;
+                        if (NavGrid.MovableFisica(b.pos + p * s * 12)) { b.daPassagemDir = p * s; b.daPassagemAte = t + 0.5f; Ev("body block: deu passagem pro colega/round"); b.brain.Think($"dei passagem pro {a.name}"); }
                     }
                 }
             }
@@ -777,8 +798,14 @@ namespace CSM.Sim
             }
             a.pedidoAcum += want.Len * DT;
             // pulo de deslocamento pedido pelo cérebro (strafe jump / bunny hop): só do chão e já correndo
-            if (a.querPular && !a.noAr && a.Speed > a.MaxSpeed * 0.75f && !NavGrid.Escada(a.pos) && !agents.Exists(c => c != a && c.alive && c.emCimaDe == a))
+            if (a.querPular && !a.noAr && (a.Speed > a.MaxSpeed * 0.75f || t < a.saltandoAte) && !NavGrid.Escada(a.pos) && !agents.Exists(c => c != a && c.alive && c.emCimaDe == a))
             {
+                if (t < a.saltandoAte)
+                {   /* salto por cima do vão: embalo pra cair no outro lado (distância / tempo de voo, até 1,3x a máxima) */
+                    float dzS = a.saltoZ - a.z, tq = (PULO + MathF.Sqrt(MathF.Max(0, PULO * PULO - 2 * GRAV * dzS))) / GRAV;
+                    V2 dS = a.saltoAlvo - a.pos; float lS = dS.Len;
+                    if (lS > 0.5f) a.vel = dS / lS * MathF.Min(a.MaxSpeed * 1.3f, lS / MathF.Max(0.15f, tq) * 1.05f);
+                }
                 a.pulosSeguidos = t - a.pousouEm < 0.25f ? a.pulosSeguidos + 1 : 1;
                 a.noAr = true; a.puloLivre = true; a.vz = PULO; a.quedaDe = a.z; a.pulos++;
             }
@@ -813,9 +840,10 @@ namespace CSM.Sim
             float degrau = escada ? 8.5f : 4f;
             // pezinho: quem está subindo, ou em cima da pilha (e caindo dela), pisa na faixa de folga em volta da pilha
             if (NavGrid.BOOST && !a.noAr && NavGrid.SobrePilha(a.pos)) a.naPilhaAte = t + 1.5f;
-            bool livre = a.subindoPezinho || t < a.naPilhaAte;
-            bool Pode(V2 q) => (NavGrid.Movable(q) || livre && NavGrid.Andavel(q)) && (NavGrid.ZAt(q) <= a.z + degrau || a.noAr && NavGrid.ZAt(q) <= a.z + 1);
-            float zAlvo = NavGrid.Movable(np) || livre && NavGrid.Andavel(np) ? NavGrid.ZAt(np) : a.z;
+            bool livre = a.subindoPezinho || t < a.naPilhaAte || NavGrid.BORDA && t < a.subindoDegrauAte;
+            bool voandoSalto = NavGrid.SALTO && a.noAr && t < a.saltandoAte;   /* no salto, por cima do vão: passa sobre o que está mais baixo que ele */
+            bool Pode(V2 q) => (NavGrid.MovableFisica(q) || livre && NavGrid.Andavel(q) || voandoSalto && MapData.Top((int)Math.Clamp(q.x, 0, MapData.NX - 1), (int)Math.Clamp(q.y, 0, MapData.NY - 1)) <= a.z) && (NavGrid.ZAt(q) <= a.z + degrau || a.noAr && NavGrid.ZAt(q) <= a.z + 1);
+            float zAlvo = NavGrid.MovableFisica(np) || livre && NavGrid.Andavel(np) ? NavGrid.ZAt(np) : a.z;
             if (!a.noAr && !escada && a.pularPara > a.z + 4) zAlvo = a.pularPara;   // pulo pedido (degrau logo à frente)
             float limPulo = NavGrid.JUMP_MAX + 0.6f;
             bool carregando = false; foreach (var c in agents) if (c != a && c.alive && c.emCimaDe == a) carregando = true;   /* com alguém em cima não pula */
@@ -833,13 +861,20 @@ namespace CSM.Sim
                         }
                         a.puloAgachado = alvoZ - a.z > NavGrid.JUMP + 0.6f; Ev("pezinho: pulou na cabeça do colega/round"); break;
                     }
-            if (!a.noAr && !escada && !carregando && (NavGrid.Movable(np) || livre && NavGrid.Andavel(np) || a.pularPara > 0) && zAlvo > a.z + 4 && zAlvo - a.z <= limPulo)
+            if (!a.noAr && !escada && !carregando && (NavGrid.MovableFisica(np) || livre && NavGrid.Andavel(np) || a.pularPara > 0) && zAlvo > a.z + 4 && zAlvo - a.z <= limPulo)
             {
-                a.noAr = true; a.vz = MathF.Sqrt(2 * GRAV * (zAlvo - a.z + 3)); a.quedaDe = a.z;
+                a.noAr = true; a.vz = MathF.Sqrt(2 * GRAV * (zAlvo - a.z + (a.emCimaDe != null ? 6 : 3))); a.quedaDe = a.z;   /* de cima da cabeça: folga pra passar da borda */
+                if (a.emCimaDe != null && a.subindoPezinho)
+                {   /* pulo de cima da cabeça pro alto do pezinho: horizontal pra cair no ponto (parado na cabeça não tinha embalo) */
+                    float tVoo = (a.vz + MathF.Sqrt(MathF.Max(0, a.vz * a.vz - 2 * GRAV * (zAlvo - a.z)))) / GRAV;
+                    V2 alvoH = a.brain.boostTopo - a.pos; float lh = alvoH.Len;
+                    if (lh > 0.5f) a.vel = alvoH / lh * MathF.Max(45f, MathF.Min(lh, 14f) / MathF.Max(0.1f, tVoo));   /* entra uns passos na borda */
+                }
                 a.puloAgachado = zAlvo - a.z > NavGrid.JUMP + 0.6f && zAlvo - a.z <= NavGrid.JUMP_MAX + 0.6f;   /* acima do pulo normal só agachando no ar (o visual dobra as pernas) */
                 if (a.puloAgachado) Ev("pulo agachado (degrau 18-23)/round");
                 if (a.emCimaDe != null) { Ev("pezinho: pulou de cima do colega pra borda/round"); Log($"{a.name} pulou de cima do {a.emCimaDe.name} pra borda"); }
             }
+            a.pularPara = 0;
             a.pularPara = 0;
             if (Pode(np)) a.pos = np;
             else
@@ -852,13 +887,14 @@ namespace CSM.Sim
                 // parede (como no CS2): corta só a parte da velocidade que entra nela e mantém a que corre ao longo dela —
                 // zerar pelo deslocamento fazia o boneco "rastejar" na quina com a aceleração do CS2 (e nunca destravar)
                 if (TeamBrain.EXP.Contains("moveVelho")) a.vel = (a.pos - antes) / DT;
+                else if (a.noAr && a.subindoPezinho) { }   /* pulando pra borda do pezinho: ainda abaixo dela, segue o embalo e passa por cima quando subir */
                 else a.vel = foiX ? new V2(a.vel.x, 0) : foiY ? new V2(0, a.vel.y) : V2.Zero;
                 if (Auditar) { Aud("bateu na parede (ticks)", a.brain.wantVel.Len > 1 ? "querendo andar" : "parado"); Aud("bateu na parede: onde", Places.Region(a.pos) + (a.noAr ? " (no ar)" : "")); }
             }
             // a folga da navmesh é medida de 2 em 2 unidades, então numa quina o centro chegava a ~2 da parede e o corpo
             // (meia largura ~4,5) entrava nela. Como o colisor redondo do CS2: perto demais da parede de verdade, o boneco
             // é empurrado pra fora e desliza na quina em vez de cortar por dentro
-            if (!a.noAr && !escada && !a.subindoPezinho && !TeamBrain.EXP.Contains("semFolga"))   /* subindo no pezinho: encosta na pilha */
+            if (!a.noAr && !escada && !a.subindoPezinho && !TeamBrain.EXP.Contains("semFolga") && !(NavGrid.BORDA && t < a.subindoDegrauAte))   /* borda da caixa: subindo o degrau, encosta */   /* subindo no pezinho: encosta na pilha */
             {
                 V2 fora = ParedePerto(a.pos, a.z, out float dp);
                 if (dp < FOLGA) { V2 q = a.pos + fora * MathF.Min(FOLGA - dp, 1.2f); if (Pode(q)) a.pos = q; }
@@ -868,8 +904,13 @@ namespace CSM.Sim
             {   /* pezinho: a cabeça de quem está embaixo é chão (sobe e desce junto com o duck dele) */
                 Agent sob = null;
                 foreach (var b in agents)
-                    if (b != a && b.alive && b.dandoPezinho && b.team == a.team && (a.subindoPezinho || a.emCimaDe == b) && (b.pos - a.pos).Len < 6f) { float topo = b.z + b.AlturaCorpo; if (a.z >= topo - 8f && topo > zt) { zt = topo; sob = b; } }   /* só no pezinho: fora dele o corpo empurra (não se fica em cima de ninguém por acidente) */
-                if (a.emCimaDe != sob) { if (sob != null) { Ev("pezinho: em pé na cabeça do colega/round"); Log($"{a.name} em pé na cabeça do {sob.name}"); } a.emCimaDe = sob; }
+                    if (b != a && b.alive && (a.noAr || a.emCimaDe == b) && (b.dandoPezinho || !CabecaSoPezinho) && (b.pos - a.pos).Len < 6f && !NavGrid.Escada(a.pos) && !NavGrid.Escada(b.pos)) {   /* só se pousa numa cabeça vindo do ar (andando, nunca: escada/rampa colada não vira "em cima") */ float topo = b.z + b.AlturaCorpo; if (a.z >= topo - (a.emCimaDe == b ? 8f : 3f) && topo > zt) { zt = topo; sob = b; } }   /* pousar: perto do topo da cabeça (3); já em cima: acompanha ele levantar (8); escada não */   /* como no CS: a cabeça é chão (cair em cima é raro: Corpos empurra quem cai por cima, e quem pousa sai logo) */
+                if (a.emCimaDe != sob) { if (sob != null) { bool pz = sob.dandoPezinho && a.subindoPezinho; Ev(pz ? "pezinho: em pé na cabeça do colega/round" : "caiu na cabeça de alguém (fora do pezinho)/round"); Log($"{a.name} em pé na cabeça do {sob.name}{(pz ? "" : $" (sem querer: {a.brain.fase}, livre {a.puloLivre}, caiu de {a.quedaDe - sob.z:0}; ele {sob.brain.fase})")}"); } a.emCimaDe = sob; }
+                if (a.emCimaDe != null && !(a.emCimaDe.dandoPezinho && (a.subindoPezinho || a.brain.boostEstado == 2)) && !a.noAr)
+                {   /* em cima de alguém sem ser pezinho: desce pro lado (~0,3 s) */
+                    V2 fora = a.pos - a.emCimaDe.pos; float lf = fora.Len; fora = lf > 0.3f ? fora / lf : V2.Ang(a.id * 1.7f);
+                    V2 q = a.pos + fora * 1.2f; if (NavGrid.MovableFisica(q)) a.pos = q;
+                }
             }
             if (a.noAr)
             {
@@ -1128,6 +1169,7 @@ namespace CSM.Sim
             if (v.hp > 0) { v.brain.Think($"levei {dmg} {(part == Combat.Part.Cabeca ? "na cabeça" : part == Combat.Part.Perna ? "na perna" : "no corpo")}{(by != null ? " do " + by.name : "")}"); return; }
             v.hp = 0; v.alive = false; v.diedAt = t; v.killedBy = by; v.deaths++; sus.Morte(v, by);
             RegistraAbate(v, by ?? donoAbate, what, part);
+            if (Auditar && by != null && by.team != v.team) audMatador.Add((by, by.pos, t));   /* troca: quanto o matador se mexe nos 2 s seguintes */
             if (Auditar && by != null && by.team != v.team && !TeamBrain.EXP.Contains("semAudTroca"))
             {   // troca: quem estava perto de quem morreu, e se o matador caiu em até 5 s (régua da troca)
                 if (aTrocar.TryGetValue(v.id, out var pend) && t - pend.t <= 5) { Aud("troca: colega mais perto quando caiu", pend.faixa + " · trocado"); aTrocar.Remove(v.id); }
@@ -1461,7 +1503,7 @@ namespace CSM.Sim
             for (float s = L - 8; s > 8; s -= 8)
             {
                 V2 q = de + d * (s / L);
-                if (NavGrid.Movable(q) && ArcoLivre(de, zDe, q)) return q;
+                if (NavGrid.MovableFisica(q) && ArcoLivre(de, zDe, q)) return q;
             }
             return NavGrid.Snap(de);
         }
@@ -1630,6 +1672,26 @@ namespace CSM.Sim
         {
             if (smokes.Count == 0) return false;
             float L = (b - a).Len; int n = (int)(L / 6) + 1;
+            if (!TeamBrain.EXP.Contains("smokeSomaVelha"))
+            {   // CS2: a fumaça SOMA ao longo da linha (opacidade), das duas pontas inclusive — quem está dentro não vê fora e
+                // quem está fora não vê dentro; fumaça rala atravessada por um trecho longo também tapa. Só a bolha da HE (e o
+                // que já dissipou) deixa ver. ~10 unidades de fumaça cheia tapam
+                float passo = L / n, tau = 0;
+                foreach (var s in smokes)
+                {
+                    var (mn, mx) = s.Bounds;
+                    for (int i = 0; i <= n; i++)
+                    {
+                        float u = i / (float)n; V2 p = a + (b - a) * u; float z = za + (zb - za) * u;
+                        if (p.x < mn.x || p.y < mn.y || p.x > mx.x || p.y > mx.y) continue;
+                        float d = s.Sample(new V3(p.x, p.y, z), t);
+                        if (d > 0.6f) return true;
+                        tau += MathF.Max(0, d - 0.05f) * passo;
+                        if (tau > 10f) return true;
+                    }
+                }
+                return false;
+            }
             foreach (var s in smokes)
             {
                 var (mn, mx) = s.Bounds;
@@ -1725,6 +1787,6 @@ namespace CSM.Sim
         }
 
         readonly Dictionary<int, (float t, string faixa)> aTrocar = new Dictionary<int, (float, string)>();
-        void End(Team w, string why) { if (Auditar) { foreach (var kv in aTrocar) Aud("troca: colega mais perto quando caiu", kv.Value.faixa + " · não"); aTrocar.Clear(); } foreach (var a in agents) a.vivoNoFim = a.alive; over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; sus.Fim(why); Ev("FIM " + why + (bombPlanted ? " (plantado)" : " (sem plant)")); if (bombPlanted) { Ev($"PLANT com {ctVivosNoPlant} CT"); if (w == Team.CT) Ev($"PLANT com {ctVivosNoPlant} CT e CT venceu"); } Log($"FIM: {winner} ganhou — {why}"); }
+        void End(Team w, string why) { if (Auditar) { foreach (var (ba, bp, bt) in audBoost) { string lado = ba.IsT ? "TR" : "CT"; int k = 0; foreach (var ab in abates) if (ab.by == ba && ab.t >= bt && !ab.aliado && ab.v.team != ba.team) k++; Aud("pezinho por ponto: round", bp + " · " + lado + " · " + (ba.team == w ? "ganhou" : "perdeu")); Aud("pezinho por ponto: abates depois de subir", bp + " · " + lado + " · " + (k >= 2 ? "2+" : k.ToString()) + (ba.alive ? "" : " · morreu")); } audBoost.Clear(); foreach (var kv in aTrocar) Aud("troca: colega mais perto quando caiu", kv.Value.faixa + " · não"); aTrocar.Clear(); } foreach (var a in agents) a.vivoNoFim = a.alive; over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; sus.Fim(why); Ev("FIM " + why + (bombPlanted ? " (plantado)" : " (sem plant)")); if (bombPlanted) { Ev($"PLANT com {ctVivosNoPlant} CT"); if (w == Team.CT) Ev($"PLANT com {ctVivosNoPlant} CT e CT venceu"); } Log($"FIM: {winner} ganhou — {why}"); }
     }
 }

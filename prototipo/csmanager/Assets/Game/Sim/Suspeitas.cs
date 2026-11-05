@@ -67,6 +67,12 @@ namespace CSM.Sim
             m.suspeitas.Add((m.t, id, tipo, $"[{grau}] {(pro ? "(o pro também faz) " : "")}{texto}")); m.Ev($"SUSPEITA {tipo}/round");
             int v = grau == GRAVE ? 3 : 1;
             pontos += v; if (pro) pontosProTambem += v; else pontosErro += v;
+            if (!pro && Match.Auditar)
+            {   /* de onde vem a nota de erros: tipo e se quem errou está no pezinho (subiu, subindo ou dando) */
+                Agent q = null; foreach (var x in m.agents) if (x.id == id) q = x;
+                bool pz = q != null && (q.brain.boostEstado != 0 || q.dandoPezinho || q.subindoPezinho || NavGrid.SobrePilha(q.pos));
+                for (int k = 0; k < v; k++) { m.Aud("nota de erros: tipo (peso)", tipo); m.Aud("nota de erros: de quem (peso)", pz ? "no pezinho" : "outro"); }
+            }
             Match.GuardaExemplo(tipo, m.seedRound, m.t, texto);
         }
 

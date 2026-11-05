@@ -12,7 +12,7 @@ namespace CSM.EditorTools
     /// </summary>
     public class NaturezaImport : AssetPostprocessor
     {
-        public const string FONTE = "Assets/Game/Art/Natureza", DESTINO = "Assets/Game/View3D/Resources/Natureza";
+        public const string FONTE = "Assets/Game/Art/Natureza", DESTINO = "Assets/Game/Visual/Resources/Natureza";
         // material do modelo -> textura (nome do material no FBX = o do glTF do pack)
         static readonly Dictionary<string, string> TEX = new Dictionary<string, string>
         {

@@ -1,4 +1,4 @@
-# Ícones do HUD em PNG a partir dos vetores (armas: Assets/Game/View3D/Icones/armas_svg.json; interface: abaixo).
+# Ícones do HUD em PNG a partir dos vetores (armas: Assets/Game/Interface/Hud/Icones/armas_svg.json; interface: abaixo).
 # Branco sobre transparente, altura fixa em px; o HUD pinta na cor que quiser.
 #   blender -b --factory-startup --python icones_svg.py -- <armas_svg.json> <pasta de saída> [altura px]
 import bpy, json, sys, os

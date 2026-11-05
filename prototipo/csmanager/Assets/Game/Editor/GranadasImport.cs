@@ -11,7 +11,7 @@ namespace CSM.EditorTools
     /// </summary>
     public class GranadasImport : AssetPostprocessor
     {
-        public const string FONTE = "Assets/Game/Art/Granadas", DESTINO = "Assets/Game/View3D/Resources/Granadas";
+        public const string FONTE = "Assets/Game/Art/Granadas", DESTINO = "Assets/Game/Visual/Resources/Granadas";
 
         void OnPreprocessModel()
         {

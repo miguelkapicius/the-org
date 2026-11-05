@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -274,7 +274,8 @@ namespace CSM.Sim
             {
                 int tot = g.Sum(a => a.n);
                 sb.AppendLine($"    {g.Key} ({tot})");
-                foreach (var a in g.OrderByDescending(a => a.n).Take(9)) sb.AppendLine($"       {a.i,-46} {Pct(a.n, tot),5:0.0}%");
+                bool porPonto = g.Key.StartsWith("pezinho por ponto") || g.Key == "destravou: lugar" || g.Key.StartsWith("sem caminho") || g.Key.StartsWith("nota de erros:");   /* por ponto: lista tudo, com a contagem (pra somar fora) */
+                foreach (var a in g.OrderByDescending(a => a.n).Take(porPonto ? 80 : 9)) sb.AppendLine($"       {a.i,-46} {Pct(a.n, tot),5:0.0}%" + (porPonto ? $"  n={a.n}" : ""));
             }
             var abs = acertos.Where(a => a.matou).ToList();
             void Tabela(string nome, Func<Match.Acerto, string> matador, Func<Match.Acerto, string> vitima, int minimo)

@@ -172,6 +172,34 @@ namespace CSM.Map
         static void Cov(int x0, int x1, int y0, int y1, int h, string kind)
         {
             var r = SR(x0, x1, y0, y1);
+            if (kind == "crate" && h > 18 && Velho("apCaixaBordaLigado"))
+            {   /* CAIXA GRANDE COMO NA TELA (opt-in): o Caixas3D desenha a caixa alta como caixa de 16 + caixa menor em cima
+                   (borda de 2-3 px). Aqui também: base 16 andável (pulo) e o topo recuado igual ao desenho (sobe da borda) */
+                AddCover(r, 16, "crate");
+                int bd = Velho("apCaixaBorda4") ? 4 : 0;   /* teste: borda de 4 px (2 células, como a pilha do bomb) — a de 2-3 px trava quem passa */
+                var t = bd > 0 ? new Rect(r.x0 + bd, r.x1 - bd, r.y0 + bd, r.y1 - bd) : new Rect(r.x0 + 2, r.x1 - 3, r.y0 + 3, r.y1 - 2);
+                if (!Velho("apBordaNaParede"))
+                {   /* lado colado na parede (ou em outra cobertura): ali não tem degrau — o topo vai até a beira. Uma borda de 2-3 px
+                       entre a caixa e a parede não cabe ninguém (o corpo tem 4 de cada lado) e travava quem passava rente */
+                    bool Fechado(int x, int y) => x < 0 || y < 0 || x >= NX || y >= NY || !walk[x, y] || coverH[x, y] > 0;
+                    bool LadoFechado(int ax, int ay, int bx, int by, int dx, int dy)
+                    {   // faixa de 4 px do lado de fora do lado (ax,ay)-(bx,by), na direção (dx,dy): metade fechada = colado
+                        int n = 0, f = 0;
+                        for (int x = ax; x <= bx; x++) for (int y = ay; y <= by; y++) for (int k = 1; k <= 4; k++) { n++; if (Fechado(x + dx * k, y + dy * k)) f++; }
+                        return f * 2 >= n;
+                    }
+                    if (LadoFechado(r.x0, r.y0, r.x0, r.y1 - 1, -1, 0)) t.x0 = r.x0;
+                    if (LadoFechado(r.x1 - 1, r.y0, r.x1 - 1, r.y1 - 1, 1, 0)) t.x1 = r.x1;
+                    if (LadoFechado(r.x0, r.y0, r.x1 - 1, r.y0, 0, -1)) t.y0 = r.y0;
+                    if (LadoFechado(r.x0, r.y1 - 1, r.x1 - 1, r.y1 - 1, 0, 1)) t.y1 = r.y1;
+                }
+                if (t.x1 - t.x0 >= 4 && t.y1 - t.y0 >= 4) AddCover(t, h, "crate_top");
+                return;
+            }
+            AddCover(r, h, kind);
+        }
+        static void AddCover(Rect r, int h, string kind)
+        {
             covers.Add(new Cover { r = r, h = h, kind = kind });
             for (int x = r.x0; x < r.x1; x++) for (int y = r.y0; y < r.y1; y++) coverH[x, y] = Math.Max(coverH[x, y], h);
         }

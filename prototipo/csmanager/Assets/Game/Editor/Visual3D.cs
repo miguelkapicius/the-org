@@ -14,7 +14,7 @@ namespace CSM.EditorTools
     /// </summary>
     public static class Visual3D
     {
-        public const string DIR = "Assets/Game/View3D/Render";
+        public const string DIR = "Assets/Game/Visual/Render";
         public const string PIPE = DIR + "/Maquete_URP.asset", REND = DIR + "/Maquete_Renderer.asset";
 
         [MenuItem("CS Manager/Visual 3D/Configurar URP")]
@@ -502,6 +502,14 @@ namespace CSM.EditorTools
                 };
                 int pg = (int)Arg("-v3d_pagina", -1);
                 if (pg >= 0) itens = todas.Skip(pg * 12).Take(12).ToArray();
+                // -v3d_armasnovas: as 6 do Meshy (2026-11-04) pintadas, na mira, dos dois times
+                if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-v3d_armasnovas") >= 0)
+                    itens = new (string, string, string, string)[]
+                    {
+                        ("ct", "mira_Deagle", null, "Deagle"), ("tr", "mira_Tec9", null, "Tec-9"), ("ct", "mira_FiveSeven", null, "Five-SeveN"),
+                        ("tr", "mira_P250", null, "P250"), ("ct", "mira_Famas", null, "FAMAS"), ("tr", "mira_Galil", null, "Galil"),
+                        ("tr", "tiro_Galil", "rajada", "tiro Galil"), ("ct", "recarga_Famas", null, "recarga FAMAS"),
+                    };
                 // -v3d_itens 0,1,2,3: só esses (mais perto); -v3d_zoom: enquadramento
                 var argv = System.Environment.GetCommandLineArgs(); int ai = System.Array.IndexOf(argv, "-v3d_itens");
                 if (ai >= 0 && ai + 1 < argv.Length) itens = argv[ai + 1].Split(',').Select(x => itens[int.Parse(x)]).ToArray();
@@ -601,6 +609,32 @@ namespace CSM.EditorTools
         /// fecham); HE dentro (bolha que volta a encher); molotov do lado apagada por uma smoke jogada em cima; armas no chão e C4
         /// explodindo do lado (itens voam). Mesmo desenho do jogo, sem depender de um round acontecer.
         /// </summary>
+        /// <summary>LED da C4 piscando (Logs/visual3d/c4/q_NNNN.png): C4 plantada no meio do A, 1,5 s faltando 9 s.</summary>
+        public static void CapturarC4Batch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                foreach (var b in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b.gameObject.SetActive(false);
+                var A = CSM.Map.MapData.SITES["A"].Center; var pc = new CSM.Sim.V2(A.x, A.y);
+                p.LabCamera(pc, Arg("-v3d_zoom", 1.2f));
+                string dir = "Logs/visual3d/c4";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                for (int f = 0; f < 45; f++)
+                {
+                    p.LabPasso(1 / 30f); p.LabBomba(pc, 9f - f / 30f);
+                    Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720);
+                }
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
         public static void CapturarLabBatch()
         {
             try
@@ -882,6 +916,8 @@ namespace CSM.EditorTools
                 Setup();
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
                 new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                CSM.View3D.Cenario3D.SigmaTeste = Arg("-v3d_sigma", -1);
+                CSM.View3D.Cenario3D.QuinaViva = Arg("-v3d_quina", 1);
                 var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
                 p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
                 foreach (var b in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b.gameObject.SetActive(false);
@@ -894,12 +930,39 @@ namespace CSM.EditorTools
                     int k = CSM.Map.MapData.covers.FindIndex(c => c.kind == ar[ci + 1]);
                     if (k >= 0) { var cv = CSM.Map.MapData.covers[k]; alvo = new CSM.Sim.V2((cv.r.x0 + cv.r.x1) / 2f, (cv.r.y0 + cv.r.y1) / 2f); }
                 }
-                p.LabCamera(alvo, Arg("-v3d_zoom", 2.0f));
-                for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
                 int ni = System.Array.IndexOf(ar, "-v3d_nome");
                 string nome = ni >= 0 && ni + 1 < ar.Length ? ar[ni + 1] : "ponto";
                 Directory.CreateDirectory("Logs/visual3d");
-                Salvar(p.Cenario.cam, $"Logs/visual3d/ponto_{nome}.png", 1920, 1080);
+                // -v3d_pontos "nome:x:y:zoom;nome:x:y:zoom": vários prints numa rodada só (a montagem do mapa é a parte cara)
+                // -v3d_ab_quina: cada print sai duas vezes, quina viva desligada (_q0) e ligada (_q1) — só a global do shader
+                int pi = System.Array.IndexOf(ar, "-v3d_pontos");
+                var lista = new System.Collections.Generic.List<(string n, CSM.Sim.V2 a, float z)>();
+                if (pi >= 0 && pi + 1 < ar.Length)
+                    foreach (var s in ar[pi + 1].Split(';'))
+                    {
+                        var q = s.Split(':'); var ci2 = System.Globalization.CultureInfo.InvariantCulture;
+                        // "nome:cover:TIPO:zoom" = centro da 1ª cobertura desse tipo
+                        if (q[1] == "cover")
+                        {
+                            int k = CSM.Map.MapData.covers.FindIndex(c => c.kind == q[2]); if (k < 0) continue;
+                            var cv = CSM.Map.MapData.covers[k];
+                            lista.Add((q[0], new CSM.Sim.V2((cv.r.x0 + cv.r.x1) / 2f, (cv.r.y0 + cv.r.y1) / 2f), float.Parse(q[3], ci2)));
+                        }
+                        else lista.Add((q[0], new CSM.Sim.V2(float.Parse(q[1], ci2), float.Parse(q[2], ci2)), float.Parse(q[3], ci2)));
+                    }
+                else lista.Add((nome, alvo, Arg("-v3d_zoom", 2.0f)));
+                bool ab = System.Array.IndexOf(ar, "-v3d_ab_quina") >= 0;
+                foreach (var (n, a, z) in lista)
+                {
+                    p.LabCamera(a, z);
+                    for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
+                    if (!ab) { Salvar(p.Cenario.cam, $"Logs/visual3d/ponto_{n}.png", 1920, 1080); continue; }
+                    for (int q = 0; q < 2; q++)
+                    {
+                        Shader.SetGlobalFloat("_QuinaViva", q);
+                        Salvar(p.Cenario.cam, $"Logs/visual3d/ponto_{n}_q{q}.png", 1920, 1080);
+                    }
+                }
                 EditorApplication.Exit(0);
             }
             catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
@@ -1171,7 +1234,7 @@ namespace CSM.EditorTools
 
         /// <summary>Radar do mapa (estilo CS): piso onde anda claro (mais claro quanto mais alto), escada um tom no meio,
         /// prédio/parede escuro, contorno escuro entre piso e parede, zona dos bombs em vermelho. Sai
-        /// Assets/Game/View3D/Resources/Icones/radar.png (o HUD usa) — 1 pixel = 2 unidades do mapa.</summary>
+        /// Assets/Game/Interface/Resources/Icones/radar.png (o HUD usa) — 1 pixel = 2 unidades do mapa.</summary>
         public static void RadarBatch()
         {
             try
@@ -1211,8 +1274,8 @@ namespace CSM.EditorTools
                         px[(H - 1 - py) * W + px_] = c;   // y do jogo cresce pro sul: linha de cima da imagem = norte
                     }
                 tex.SetPixels32(px); tex.Apply();
-                System.IO.Directory.CreateDirectory("Assets/Game/View3D/Resources/Icones");
-                System.IO.File.WriteAllBytes("Assets/Game/View3D/Resources/Icones/radar.png", tex.EncodeToPNG());
+                System.IO.Directory.CreateDirectory("Assets/Game/Interface/Resources/Icones");
+                System.IO.File.WriteAllBytes("Assets/Game/Interface/Resources/Icones/radar.png", tex.EncodeToPNG());
                 Debug.Log($"[Visual3D] radar {W}x{H}; A {CSM.Map.MapData.SITES["A"].x0},{CSM.Map.MapData.SITES["A"].y0} B {CSM.Map.MapData.SITES["B"].x0},{CSM.Map.MapData.SITES["B"].y0}");
                 EditorApplication.Exit(0);
             }

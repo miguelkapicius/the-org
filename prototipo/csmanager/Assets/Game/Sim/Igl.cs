@@ -448,13 +448,15 @@ namespace CSM.Sim
                 if (!cobre) continue;
                 float vigia = MathX.Clamp(Intel.Esperados(de, 160), 0, 1);
                 if (Intel.contacts.Values.Any(c => t - c.t < 10 && m.agents[c.id].alive && (c.pos - de).Len < 120)) vigia = 1;
+                bool cedo2 = EXP.Contains("apLinhaCedo2Ligado") && t < 25;   /* começo do round: o pro assume a posição forte ocupada (janelão) */
+                if (cedo2) vigia = MathF.Max(vigia, 0.5f);
                 if (vigia < 0.25f) return;
                 bool pedida = smokePedida.TryGetValue(L, out float tp) && t - tp < 15;
                 Agent quem = pedida ? null : m.agents.Where(x => x.alive && x.team == team && x.nades.Contains("smoke") && x.brain.target == null && !x.hasBomb)
                     .OrderBy(x => NavGrid.PathLen(x.pos, L.from)).FirstOrDefault();
                 if (quem != null && NavGrid.PathLen(quem.pos, L.from) / MapCheck.RUN > 10) quem = null;
                 float agr = P.Agr(a.skill.aggression);
-                float wSmoke = pedida || quem != null ? 1.5f * vigia : 0, wSegura = 0.7f * vigia * (1.3f - agr), wVai = 0.3f + 0.6f * agr;
+                float wSmoke = pedida || quem != null ? 1.5f * vigia : 0, wSegura = 0.7f * vigia * (1.3f - agr), wVai = (0.3f + 0.6f * agr) * (cedo2 ? 0.5f : 1f);
                 int esc = rng.Weighted(new[] { wSmoke, wSegura, wVai });
                 string onde = Region(o.hold.pos);
                 if (esc == 0)
@@ -913,9 +915,24 @@ namespace CSM.Sim
                     {
                         float medo = MathX.Clamp(1 - folga / 2.5f, 0, 1) * (1.25f - a.skill.composure);
                         float p = folga < 0 ? 0.5f + 0.4f * a.skill.aggression : medo;
+                        bool novo = !EXP.Contains("defuseRespVelho");
+                        bool veBomb = MapData.LosWalk(a.pos, a.z, m.bombPos, m.bombZ, 18f);
+                        // o defuse vai sair: segurar sem ver o bomb é perder o round — vai quase sempre (quem já vê o bomb segura)
+                        if (novo && folga < 0) p = veBomb ? 0.25f : 0.95f;
                         if (rng.Rand() < p)
-                            a.brain.SetOrder(new Order { name = "pegar o defuse", dest = m.bombPos, push = true,
+                        {
+                            // o destino é o 1º ponto de onde eu VEJO o bomb (dali atiro em quem desarma), não o bomb em si: ir até
+                            // o C4 com molotov no caminho virava uma volta enorme e ele caía no outro CT
+                            V2 alvoD = m.bombPos;
+                            if (novo)
+                            {
+                                var cam = NavGrid.Path(a.pos, m.bombPos);
+                                if (cam != null) foreach (var w in cam) if (MapData.LosWalk(w.p, w.z, m.bombPos, m.bombZ, 18f)) { alvoD = w.p; break; }
+                                m.Ev("pós-plant: foi parar o defuse/round");
+                            }
+                            a.brain.SetOrder(new Order { name = "pegar o defuse", dest = alvoD, push = true,
                                 why = folga < 0 ? "o defuse dele dá tempo" : $"não devia dar tempo ({folga:0.0}s), mas não vou arriscar" });
+                        }
                         else a.brain.Think(folga < 0 ? "ouvi o defuse — segurando o ângulo do bomb" : $"defuse não dá tempo pra ele ({folga:0.0}s) — deixo ele perder tempo");
                     }
                 }
@@ -1194,6 +1211,14 @@ namespace CSM.Sim
                 }
                 a.brain.SetOrder(o);
             }
+            /* smokes da execução (apSmokeExecLigado): o plano do banco veio só com a rota — o pro fecha as linhas do CT ao
+               entrar (A: descida do CT e plataforma; B: viela e mercado). Cada uma vai pra quem tem smoke e está perto de
+               onde se joga; a que já foi jogada (linha forte, por ex.) não repete */
+            if (!EXP.Contains("apSmokeExecVelho"))   /* padrão desde 05/11 (usuário pediu): smokes 2,2→2,6, TR +1,7 */
+            {   /* o entry abre, não joga smoke — só se ninguém mais tiver */
+                var jogam = mine.Where(x => x != entry && x.nades.Contains("smoke")).ToList();
+                DarGranadas(jogam.Count > 0 ? jogam : mine, site == 'A' ? new[] { SmokeRuaCT, SmokePlataforma } : new[] { SmokeViela, SmokeMercado }, "smoke");
+            }
             Call($"execução no {site}: entry na frente, suporte troca, bomb atrás");
         }
 
@@ -1318,7 +1343,7 @@ namespace CSM.Sim
                 mine = mine.Where(a => !a.guardando).ToList();
                 if (mine.Count == 0) return;
                 // quanto tempo o melhor defuser precisa (andar + 5 s com kit / 10 s sem)
-                float Precisa(Agent a) => Match.DefuseTime(a) + (a.pos - m.bombPos).Len / (!EXP.Contains("facaDefuse") || EXP.Contains("facaDefuseVelho") ? 55f : MapCheck.RUN);   /* de faca chega mais rápido (250 x 215) */
+                float Precisa(Agent a) => Match.DefuseTime(a) + (a.pos - m.bombPos).Len / (EXP.Contains("facaDefuse") && !EXP.Contains("facaDefuseVelho") || m.Alive(Other) == 0 && !EXP.Contains("facaSemTRVelho") ? MapCheck.RUN : 55f);   /* sem TR vivo ele vai de faca (FacaOuArma): conta com 250 */   /* de faca chega mais rápido (250 x 215) */
                 float need = mine.Min(Precisa);
                 if (!retakeSet)
                 {
@@ -2037,7 +2062,7 @@ namespace CSM.Sim
                 }
                 else if (team == Team.CT && m.bombPlanted)
                 {
-                    bool alguemDa = mine.Any(x => Match.DefuseTime(x) + (x.pos - m.bombPos).Len / (!EXP.Contains("facaDefuse") || EXP.Contains("facaDefuseVelho") ? 55f : MapCheck.RUN) < m.BombLeft - 0.5f);   /* conta com a faca */
+                    bool alguemDa = mine.Any(x => Match.DefuseTime(x) + (x.pos - m.bombPos).Len / (EXP.Contains("facaDefuse") && !EXP.Contains("facaDefuseVelho") || m.Alive(Other) == 0 && !EXP.Contains("facaSemTRVelho") ? MapCheck.RUN : 55f) < m.BombLeft - 0.5f);   /* sem TR vivo: de faca */   /* conta com a faca */
                     if (!alguemDa) ruim = $"não dá tempo de desarmar ({m.BombLeft:0}s)";
                     else if (nos == 1 && eles >= 3) ruim = $"1 contra {eles} no retake";
                     else if (eles - nos >= 2 && m.BombLeft < 18) ruim = $"{nos} contra {eles} com {m.BombLeft:0}s";

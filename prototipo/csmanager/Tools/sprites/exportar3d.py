@@ -1,7 +1,7 @@
 # Bonecos 3D pro visual de maquete (Unity): os MESMOS agentes do agentes.py (peças, armas autorais, poses
 # procedurais), mas em vez de renderizar sprite grava a malha de cada peça (cor por vértice) e, por animação, a matriz
 # de cada peça em cada quadro (30 qps, duração real do CS2 x 0,9). O Unity monta o boneco com uma peça por Transform e
-# toca as matrizes interpolando (Assets/Game/View3D/Boneco3D.cs).
+# toca as matrizes interpolando (Assets/Game/Visual/Boneco3D.cs).
 #   blender -b --factory-startup --python exportar3d.py -- <saida> <ct|tr>
 # Saída: <saida>/boneco_<time>.json (cabeçalho) + boneco_<time>.bin (float32: malhas e quadros).
 # Coordenadas gravadas como no Blender (X frente, Y esquerda, Z cima); a troca pro Unity é no C#.

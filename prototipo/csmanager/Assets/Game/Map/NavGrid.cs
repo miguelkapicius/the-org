@@ -29,8 +29,21 @@ namespace CSM.Map
            pezinho do colega (nenhum degrau sobe 28; descer é queda normal). Essas células são soBoost: o chão não tem caminho
            até elas (A* e PathLen respondem "não chega" na hora, sem varrer o mapa) e o NearestMovable não manda ninguém pra lá.
            -exp apBoostVelho: a pilha de 28 volta a ser só obstáculo */
+        /* SALTO (opt-in, -exp apSaltoLigado): pulo correndo por cima de um vão (sacada → chão do outro lado, meio → caminho de
+           rato). Só entra no caminho quando compensa (custo = distância + 10). Lido da linha de comando: o NavGrid monta antes do TeamBrain */
+        public static readonly bool SALTO = MapData.Velho("apSaltoLigado");
         public static readonly bool BOOST = MapData.Velho("apBoostLigado") && !MapData.Velho("apBoostVelho");   /* opt-in até o A/B sem o AWPer (a sessão dos bots quer como padrão se passar) */
         public static readonly bool[,] soBoost = new bool[NGX, NGY];
+        /* PEZINHO COMO ESTADO (padrão do pezinho; -exp apBoostMalha volta ao antigo): o topo da pilha NÃO entra na malha —
+           pra todo o planejamento (caminhos, campos, spots, cover) a pilha de 28 segue obstáculo, como sem pezinho. O topo é só
+           "aberto" pra física de quem sobe/está em cima, e as Ilhas (onde dá pra subir) saem direto da grade. Com o topo na
+           malha a nota de erros subia +0,2 mesmo sem ninguém subir */
+        public static readonly bool ESTADO = BOOST && !MapData.Velho("apBoostMalha");
+        /* folga POR NÍVEL (com a caixa como na tela, apCaixaBordaLigado): a borda de 16 da caixa não conta como espaço livre pro
+           chão do lado (senão o caminho raspa na caixa e o corpo bate no degrau: destravou 5,6 -> 12/round). Em cima de caixa vale meio raio */
+        public static readonly bool BORDA = MapData.Velho("apCaixaBordaLigado");
+        public static readonly bool NIVEIS2 = MapData.Velho("apNiveisCaixaLigado");   /* testado com a borda: destravou 24/round — desligado */
+        public static readonly bool NIVEIS = MapData.Velho("apNiveisLigado");   /* testado com a borda: destravou 49/round — desligado */
         /// <summary>Célula onde o corpo cabe fisicamente (piso livre ou topo de caixa), sem contar a folga da parede.</summary>
         public static readonly bool[,] aberto = new bool[NGX, NGY];
         /// <summary>Distância da célula até a parede/caixa mais perto (unidades): passagem estreita (porta, beco) é folga baixa.</summary>
@@ -75,7 +88,7 @@ namespace CSM.Map
         public static readonly float[,] z = new float[NGX, NGY];
         public static readonly bool[,] ladder = new bool[NGX, NGY];
 
-        public enum Link : byte { Walk, Drop, Jump, Ladder }
+        public enum Link : byte { Walk, Drop, Jump, Ladder, Salto }   /* Salto: pulo correndo por cima de um vão (apSaltoLigado) */
         static readonly List<(int from, float cost, Link link)>[] incoming;
         static readonly List<(int to, float cost, Link link)>[] outgoing;
         static readonly int[] idx = new int[NGX * NGY];
@@ -144,7 +157,7 @@ namespace CSM.Map
             if (BOOST)
                 foreach (var c in covers)
                     if (c.kind == "crate" && c.h > JUMP_MAX && !covers.Exists(o => o.kind == "crate_top" && o.r.x0 > c.r.x0 && o.r.x1 < c.r.x1 && o.r.y0 > c.r.y0 && o.r.y1 < c.r.y1))
-                        for (int u = c.r.x0; u < c.r.x1; u++) for (int v = c.r.y0; v < c.r.y1; v++) if (InMap(u, v)) { stand[u, v] = true; boostPix[u, v] = true; }
+                        for (int u = c.r.x0; u < c.r.x1; u++) for (int v = c.r.y0; v < c.r.y1; v++) if (InMap(u, v)) { if (!ESTADO) stand[u, v] = true; boostPix[u, v] = true; }
             for (int x = 0; x < NGX; x++)
                 for (int y = 0; y < NGY; y++)
                 {
@@ -176,19 +189,23 @@ namespace CSM.Map
                         {
                             int a = xx + dx, b = yy + dy;
                             float c = (dx != 0 && dy != 0) ? 1.414f : 1f;
-                            float v = (a < 0 || b < 0 || a >= NGX || b >= NGY) ? 0 : clear[a, b];
+                            float v = (a < 0 || b < 0 || a >= NGX || b >= NGY) ? 0 : NIVEIS && MathF.Abs(z[a, b] - z[xx, yy]) > STEP || NIVEIS2 && onTop[a, b] && z[a, b] - z[xx, yy] > STEP ? 0 : clear[a, b];   /* BORDA: caixa mais alta que eu é parede (a física empurra a 4 dela) */   /* por nível: degrau alto (caixa) é parede pros dois lados */
                             best = MathF.Min(best, v + c);
                         }
                         clear[xx, yy] = best;
                     }
             for (int x = 0; x < NGX; x++)
                 for (int y = 0; y < NGY; y++)
-                    move[x, y] = open[x, y] && clear[x, y] * CELL >= (ladder[x, y] ? RADIUS * 0.5f : RADIUS);
+                    move[x, y] = open[x, y] && clear[x, y] * CELL >= (ladder[x, y] || (NIVEIS || NIVEIS2) && onTop[x, y] ? RADIUS * 0.5f : RADIUS);
             for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) folga[x, y] = clear[x, y] * CELL;
             // topo de pilha (pezinho): folga própria, só dentro do topo (meio raio: em cima da caixa o boneco fica no meio)
             {
                 var cb = new float[NGX, NGY];
-                for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) cb[x, y] = soBoost[x, y] && open[x, y] ? float.MaxValue : 0;
+                var cheio = new bool[NGX, NGY];   // ESTADO: célula inteira em cima da pilha
+                if (ESTADO)
+                    for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++)
+                    { bool c = true; for (int a = 0; a < CELL && c; a++) for (int b = 0; b < CELL && c; b++) c = boostPix[x * CELL + a, y * CELL + b]; cheio[x, y] = c; if (c) soBoost[x, y] = true; }
+                for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) cb[x, y] = (ESTADO ? cheio[x, y] : soBoost[x, y] && open[x, y]) ? float.MaxValue : 0;
                 for (int pass = 0; pass < 2; pass++)
                     for (int x = 0; x < NGX; x++)
                         for (int y = 0; y < NGY; y++)
@@ -205,7 +222,30 @@ namespace CSM.Map
                             }
                             cb[xx, yy] = best;
                         }
-                for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) if (soBoost[x, y]) move[x, y] = cb[x, y] * CELL >= RADIUS * 0.5f;
+                if (!ESTADO) { for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) if (soBoost[x, y]) move[x, y] = cb[x, y] * CELL >= RADIUS * 0.5f; }
+                else
+                {   // fora da malha: o topo é aberto (a física deixa quem está em cima andar) com a altura certa; as ilhas saem daqui
+                    var cabe = new bool[NGX, NGY];
+                    for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++)
+                        if (cheio[x, y] && cb[x, y] * CELL >= RADIUS * 0.5f)
+                        {
+                            cabe[x, y] = true; aberto[x, y] = true; move[x, y] = false;
+                            float f = 0; for (int a = 0; a < CELL; a++) for (int b = 0; b < CELL; b++) { int u = x * CELL + a, v = y * CELL + b; f = MathF.Max(f, floor[u, v] + coverH[u, v]); }
+                            z[x, y] = f;
+                        }
+                    var vis = new bool[NGX, NGY]; int nI = 0;
+                    for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++)
+                    {
+                        if (!cabe[x, y] || vis[x, y]) continue;
+                        nI++; var pts = new List<V2>(); V2 soma = V2.Zero; float zt = 0; var fila = new Queue<(int, int)>(); fila.Enqueue((x, y)); vis[x, y] = true;
+                        while (fila.Count > 0)
+                        {
+                            var (ux, uy) = fila.Dequeue(); var q = Center(ux, uy); pts.Add(q); soma += q; zt = MathF.Max(zt, z[ux, uy]);
+                            foreach (var (dx, dy) in NB8) { int nx = ux + dx, ny = uy + dy; if (nx >= 0 && ny >= 0 && nx < NGX && ny < NGY && cabe[nx, ny] && !vis[nx, ny]) { vis[nx, ny] = true; fila.Enqueue((nx, ny)); } }
+                        }
+                        Ilhas.Add((1000 + nI, soma / pts.Count, zt, pts));
+                    }
+                }
             }
             for (int i = 0; i < idx.Length; i++) idx[i] = -1;
             for (int x = 0; x < NGX; x++) for (int y = 0; y < NGY; y++) if (move[x, y]) { idx[x * NGY + y] = cells.Count; cells.Add((x, y)); }
@@ -238,7 +278,13 @@ namespace CSM.Map
                             int nx = x + dx, ny = y + dy;
                             if (nx < 0 || ny < 0 || nx >= NGX || ny >= NGY || !move[nx, ny] || soBoost[nx, ny]) continue;
                             float dh = z[nx, ny] - z[x, y];
-                            if (dh > JUMP_MAX && dh <= 25f + JUMP_MAX - 2f) BordasPezinho.Add((Center(x, y), Center(nx, ny), dh));
+                            if (dh > JUMP_MAX && dh <= 25f + JUMP_MAX - 2f)
+                            {   /* o alto tem que ser lugar de ficar: área na mesma altura em volta (não o topo fino de um muro/beiral) */
+                                int mesma = 0;
+                                for (int ox = -4; ox <= 4; ox++) for (int oy = -4; oy <= 4; oy++)
+                                { int qx = nx + ox, qy = ny + oy; if (qx >= 0 && qy >= 0 && qx < NGX && qy < NGY && move[qx, qy] && MathF.Abs(z[qx, qy] - z[nx, ny]) < 1.5f) mesma++; }
+                                if (mesma >= 25) BordasPezinho.Add((Center(x, y), Center(nx, ny), dh));
+                            }
                         }
                     }
             for (int k = 1; k <= nIlha; k++)
@@ -279,6 +325,25 @@ namespace CSM.Map
                     outgoing[i].Add((j, cost, link));
                 }
             }
+            if (NIVEIS || NIVEIS2)
+            {   /* com folga por nível, o chão e a caixa ficam com 1 célula de vão (a folga dos dois): pulo/queda por cima dele */
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    var (cx, cy) = cells[i];
+                    foreach (var (dx, dy) in NB8)
+                    {
+                        int mx = cx + dx, my = cy + dy, nx = cx + 2 * dx, ny = cy + 2 * dy;
+                        if (nx < 0 || ny < 0 || nx >= NGX || ny >= NGY || !move[nx, ny] || move[mx, my] || !open[mx, my] || soBoost[nx, ny] || soBoost[cx, cy]) continue;
+                        float dh = z[nx, ny] - z[cx, cy]; Link link; float extra;
+                        if (dh > STEP && dh <= JUMP) { link = Link.Jump; extra = 8; }
+                        else if (dh > STEP && dh <= JUMP_MAX) { link = Link.Jump; extra = 14; }
+                        else if (dh < -STEP && -dh <= DROP) { link = Link.Drop; extra = 4; }
+                        else continue;
+                        float cost = MathF.Sqrt(dx * dx + dy * dy) * 2 * CELL + extra; int j = idx[nx * NGY + ny];
+                        incoming[j].Add((i, cost, link)); outgoing[i].Add((j, cost, link));
+                    }
+                }
+            }
             // queda do topo da pilha (pezinho) pro chão: a beirada do topo e o chão andável mais perto ficam a ~2 raios
             // (a folga dos dois lados); liga direto, como a queda normal (a física deixa quem está na pilha pisar na folga)
             for (int i = 0; i < cells.Count; i++)
@@ -297,6 +362,30 @@ namespace CSM.Map
                 if (alvo < 0) continue;
                 float cst = MathF.Sqrt(da) * CELL + 4;
                 incoming[alvo].Add((i, cst, Link.Drop)); outgoing[i].Add((alvo, cst, Link.Drop));
+            }
+            if (SALTO)
+            {   // saltos com vão que o pulo correndo cobre (mesma régua do headless -saltos)
+                const float V = 56f, VZ = 301.99f / 2.9f, G = 390f;
+                var dirs = new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) };
+                for (int i = 0; i < cells.Count; i++)
+                {
+                    var (x, y) = cells[i]; if (soBoost[x, y]) continue; float za = z[x, y];
+                    foreach (var (dx, dy) in dirs)
+                        for (int k = 3; k <= 13; k++)
+                        {
+                            int bx = x + dx * k, by = y + dy * k; if (bx < 0 || by < 0 || bx >= NGX || by >= NGY || !move[bx, by] || soBoost[bx, by]) continue;
+                            float zb = z[bx, by], dz = zb - za; if (dz > VZ * VZ / (2 * G) - 2 || dz < -30) continue;
+                            bool vao = false, bate = false;
+                            for (int j = 1; j < k; j++) { int ix = x + dx * j, iy = y + dy * j; if (!aberto[ix, iy]) { if (Top(ix * CELL, iy * CELL) > MathF.Max(za, zb) + 6) bate = true; vao = true; } else if (!move[ix, iy] || z[ix, iy] < MathF.Min(za, zb) - 3) vao = true; }
+                            if (!vao || bate) continue;
+                            float d = MathF.Sqrt(dx * dx + dy * dy) * k * CELL;
+                            float tq = (VZ + MathF.Sqrt(MathF.Max(0, VZ * VZ - 2 * G * dz))) / G; if (d > V * tq * 0.85f) continue;
+                            int jb = idx[bx * NGY + by]; if (jb < 0) continue;
+                            if (AndandoAte(i, jb, d * 1.8f + 20) <= d * 1.8f + 20) continue;   /* andando chega perto disso: não é atalho */
+                            outgoing[i].Add((jb, d + 10, Link.Salto)); incoming[jb].Add((i, d + 10, Link.Salto));
+                            break;
+                        }
+                }
             }
             FazMarcos();
         }
@@ -402,6 +491,27 @@ namespace CSM.Map
             return sb.ToString();
         }
 
+        /// <summary>Distância andando de s até g pelas ligações normais (sem salto), parando no limite (busca curta, só na carga).</summary>
+        static float AndandoAte(int s, int g, float lim)
+        {
+            var d = new Dictionary<int, float> { [s] = 0 }; var fila = new SortedSet<(float, int)> { (0, s) };
+            while (fila.Count > 0)
+            {
+                var (du, u) = fila.Min; fila.Remove(fila.Min);
+                if (u == g) return du;
+                if (du > lim) break;
+                foreach (var (v, c, l) in outgoing[u])
+                {
+                    if (l == Link.Salto) continue;
+                    float nd = du + c; if (nd > lim) continue;
+                    if (d.TryGetValue(v, out float old) && old <= nd) continue;
+                    if (d.ContainsKey(v)) fila.Remove((old, v));
+                    d[v] = nd; fila.Add((nd, v));
+                }
+            }
+            return float.PositiveInfinity;
+        }
+
         public static int CellCount => cells.Count;
         /// <summary>O ponto está numa escada de mão (sobe degrau a degrau, sem pular).</summary>
         public static bool Escada(V2 p) { int x = (int)(p.x / CELL), y = (int)(p.y / CELL); return x >= 0 && y >= 0 && x < NGX && y < NGY && ladder[x, y]; }
@@ -412,14 +522,18 @@ namespace CSM.Map
         public static (int x, int y) CellOf(V2 p) =>
             (Math.Clamp((int)MathF.Floor(p.x / CELL), 0, NGX - 1), Math.Clamp((int)MathF.Floor(p.y / CELL), 0, NGY - 1));
 
-        public static bool Movable(V2 p) { var (x, y) = CellOf(p); return move[x, y]; }
+        /// <summary>Dá pra planejar ir/ficar aqui (cérebro, IGL, spots): o topo de pilha (só de pezinho) fica de fora — senão cover,
+        /// peek e spots caíam em cima da pilha (com o pezinho ligado: nota de erros +0,2 mesmo sem ninguém subir).</summary>
+        public static bool Movable(V2 p) { var (x, y) = CellOf(p); return move[x, y] && !soBoost[x, y]; }
+        /// <summary>A física: o corpo pode estar aqui (inclui o topo de pilha, onde quem subiu anda).</summary>
+        public static bool MovableFisica(V2 p) { var (x, y) = CellOf(p); return move[x, y]; }
         public static float ZAt(V2 p) { var (x, y) = CellOf(p); return z[x, y]; }
         public static V2 Center(int x, int y) => new V2((x + 0.5f) * CELL, (y + 0.5f) * CELL);
 
         public static (int x, int y) NearestMovable(V2 p)
         {
             var (cx, cy) = CellOf(p);
-            if (move[cx, cy]) return (cx, cy);
+            if (move[cx, cy]) return (cx, cy);   /* (testado pular o topo de pilha aqui: com o pezinho, TR +4 e retake −7 — quem está em cima perde o caminho) */
             for (int r = 1; r < 16; r++)
             {
                 int best = int.MaxValue, bx = 0, by = 0;
@@ -609,8 +723,31 @@ namespace CSM.Map
         /// menor caminho, o custo de cada ligação nunca é menor que a distância octil) — calcular o campo do mapa inteiro
         /// (~10 ms) pra ler UMA distância era o pico de CPU quando o bot mede vários lugares de uma vez.
         /// </summary>
+        /// <summary>Destino no topo de uma pilha (só de pezinho) e quem anda está no chão: o alvo vira o chão mais perto —
+        /// senão toda ordem com ponto colado na pilha (bomb A/B) fica sem caminho (5 s/round com o pezinho ligado).</summary>
+        public static V2 AlvoAlcancavel(V2 a, V2 b)
+        {
+            if (!BOOST) return b;
+            var (bx, by) = CellOf(b); if (bx < 0 || by < 0 || bx >= NGX || by >= NGY || !soBoost[bx, by]) return b;
+            var (ax, ay) = NearestMovable(a); if (soBoost[ax, ay]) return b;   // já está lá em cima: o topo vale
+            for (int r = 1; r < 24; r++)
+            {
+                int best = int.MaxValue, cx = 0, cy = 0;
+                for (int x = bx - r; x <= bx + r; x++)
+                    for (int y = by - r; y <= by + r; y++)
+                    {
+                        if (x < 0 || y < 0 || x >= NGX || y >= NGY || !move[x, y] || soBoost[x, y]) continue;
+                        int d = (x - bx) * (x - bx) + (y - by) * (y - by);
+                        if (d < best) { best = d; cx = x; cy = y; }
+                    }
+                if (best != int.MaxValue) return Center(cx, cy);
+            }
+            return b;
+        }
+
         public static float PathLen(V2 a, V2 b)
         {
+            b = AlvoAlcancavel(a, b);
             var (x, y) = NearestMovable(a);
             if (PathLenSoCampo) return Em(DistField(b), x, y);
             var f = CampoNoCache(b, 0, out long chave);
@@ -640,6 +777,7 @@ namespace CSM.Map
         /// </summary>
         public static float PathLenAte(V2 a, V2 b, float limite)
         {
+            b = AlvoAlcancavel(a, b);
             if (!OrcamentoA || PathLenSoCampo) return PathLen(a, b);
             var (x, y) = NearestMovable(a);
             var f = CampoNoCache(b, 0, out _);
@@ -970,6 +1108,7 @@ namespace CSM.Map
         /// </summary>
         public static List<Waypoint> Path(V2 a, V2 b, int layer = 0, bool soSeCouber = false)
         {
+            b = AlvoAlcancavel(a, b);
             var res = new List<Waypoint>();
             var (sx, sy) = NearestMovable(a);
             int cur = idx[sx * NGY + sy];
@@ -1063,6 +1202,7 @@ namespace CSM.Map
                 int lx = (int)(fx + px), ly = (int)(fy + py), rx = (int)(fx - px), ry = (int)(fy - py);
                 if (largura && (lx < 0 || ly < 0 || lx >= NGX || ly >= NGY || !move[lx, ly] || rx < 0 || ry < 0 || rx >= NGX || ry >= NGY || !move[rx, ry])) return false;
                 if (MathF.Abs(z[x, y] - pz) > STEP) return false;
+                if (largura && BORDA && (MathF.Abs(z[lx, ly] - z[x, y]) > STEP || MathF.Abs(z[rx, ry] - z[x, y]) > STEP)) return false;   /* o corpo de lado num degrau (borda da caixa) também trava */
                 pz = z[x, y];
             }
             return true;

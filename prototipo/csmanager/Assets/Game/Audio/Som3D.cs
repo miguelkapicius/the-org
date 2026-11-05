@@ -25,6 +25,8 @@ namespace CSM.Audio
         public static bool mudo, oclusaoLigada = true;
         /// <summary>Cria o Som3D e o ouvido já no início (opcional: a 1ª chamada de som também cria).</summary>
         public static void Iniciar() => Eu();
+        /// <summary>Cria o ouvido mesmo com mudo (o som de interface do menu precisa de AudioListener).</summary>
+        internal static void GarantirOuvido() { if (!eu) { var go = new GameObject("Som3D"); eu = go.AddComponent<Som3D>(); eu.Montar(); } }
 
         static Som3D eu;
         Transform ouvido; Camera camUsada;
@@ -80,8 +82,16 @@ namespace CSM.Audio
             string dono = "tiro" + quem;
             s.ApagarDono(dono, 0.1f);   // fadetime_volume_mapping_curve do CS2: o anterior some em 0,1 s
             s.Tocar(arma + "/tiro", boca, cp, vp, dono, 3);
-            s.Tocar(arma + "/distante", boca, cd, vd, "dist" + quem, 2);
+            var vd2 = s.Tocar(arma + "/distante", boca, cd, vd, "dist" + quem, 2);
+            // validação (Player.log): resumo a cada 40 tiros — "distante na tela" tem que ser sempre 0
+            bool tela = s.NaTela(boca); if (tela) { s.tirosTela++; if (vd2 != null) s.distTela++; } else s.tirosFora++;
+            if (s.tirosTela + s.tirosFora >= 40)
+            {
+                Debug.Log($"[Som3D] tiros: {s.tirosTela} na tela (distante tocou em {s.distTela}), {s.tirosFora} fora da tela");
+                s.tirosTela = s.tirosFora = s.distTela = 0;
+            }
         }
+        int tirosTela, tirosFora, distTela;
 
         /// <summary>Recarga: as peças (pente sai/entra, ferrolho) agendadas na duração da recarga.</summary>
         public static void Recarga(Vector3 pos, string arma, float duracao, int quem = -1)
@@ -162,7 +172,7 @@ namespace CSM.Audio
         {
             var s = Eu(); if (s == null) return false;
             if (!plantada || restante <= 0) { s.proxBip = -1; s.finalTocou = s.alerta10 = false; return false; }
-            if (s.proxBip < 0 || s.proxBip > restante + 2f) { s.proxBip = restante - 1f; s.finalTocou = false; s.c4Logs = 0; Debug.Log($"[Som3D] C4 armada: faltam {restante:0.0}s de {total:0}s"); }   // 1º bip 1 s depois de plantar (ou C4 nova)
+            if (s.proxBip < 0 || Mathf.Abs(restante - s.proxBip) > 2f) { s.proxBip = restante - 1f; s.finalTocou = false; s.c4Logs = 0; Debug.Log($"[Som3D] C4 armada: faltam {restante:0.0}s de {total:0}s"); }   // 1º bip 1 s depois de plantar (ou C4 nova)
             // último segundo: os bips param e entra o chiado de "timer acabou" (pedido do usuário, como no CS2)
             if (restante <= FINAL_C4) { if (s.finalTocou) return false; s.finalTocou = true; s.Tocar("c4/final", p, C_C4_EXPLODE, 1f, "c4", 4); return true; }
             if (restante > s.proxBip) return false;
@@ -432,7 +442,22 @@ namespace CSM.Audio
             return notaPior < prioridade * 2 + g ? pior : null;
         }
 
-        float Distancia(Vector3 p) => ouvido ? Vector3.Distance(new Vector3(p.x, 0, p.z), new Vector3(ouvido.position.x, 0, ouvido.position.z)) * CS_POR_UNITY * ESPECTADOR : 0;
+        float Distancia(Vector3 p)
+        {
+            if (!ouvido) return 0;
+            float d = Vector3.Distance(new Vector3(p.x, 0, p.z), new Vector3(ouvido.position.x, 0, ouvido.position.z)) * CS_POR_UNITY * ESPECTADOR;
+            return NaTela(p) ? Mathf.Min(d, NA_TELA) : d;
+        }
+        /// <summary>O que aparece na tela soa PERTO, sempre (usuário, 2026-11-05: "vejo a troca na minha cara e ela tem eco").
+        /// 450 do CS fica antes de a camada distante começar (800) em qualquer curva de tiro; ângulo baixo do replay, zoom
+        /// aberto ou andar de cima do palácio não jogam mais o lance da tela pro "longe".</summary>
+        public static float NA_TELA = 450f;
+        bool NaTela(Vector3 p)
+        {
+            if (!camUsada) return false;
+            var v = camUsada.WorldToViewportPoint(p);
+            return v.z > 0 && v.x > -0.03f && v.x < 1.03f && v.y > -0.03f && v.y < 1.03f;
+        }
         /// <summary>Encolhe a distância pro espectador (câmera de cima): 0,4 = a borda da tela (~8 u = 580 do CS) soa a ~230,
         /// ainda "perto" nas curvas do CS2; o outro bomb (~30 u) soa a ~870, onde começa a camada distante.</summary>
         public static float ESPECTADOR = 0.4f;
@@ -440,7 +465,7 @@ namespace CSM.Audio
         /// <summary>0 = livre, 1 = parede no meio (linha de visão do mapa, do ouvido à fonte).</summary>
         float Oclusao(Vector3 p)
         {
-            if (!ouvido || !oclusaoLigada) return 0;
+            if (!ouvido || !oclusaoLigada || NaTela(p)) return 0;   // visto de cima, o que está na tela não tem parede no meio
             var a = new V2(ouvido.position.x / MalhaMapaEsc, -ouvido.position.z / MalhaMapaEsc);
             var b = new V2(p.x / MalhaMapaEsc, -p.z / MalhaMapaEsc);
             if ((a - b).Len < 40) return 0;
@@ -468,6 +493,14 @@ namespace CSM.Audio
         void LateUpdate()
         {
             float dt = Time.unscaledDeltaTime; relogio += Time.deltaTime;
+            // mudo (menu inicial com round rodando atrás): cala o que já estava tocando e o ambiente — Eu() devolve null
+            // com mudo, então Ambiente(0) não alcançava as fontes já criadas (voltar de uma partida pro menu ficava com som)
+            if (mudo)
+            {
+                foreach (var v in vozes) if (!v.Livre) v.src.Stop();
+                foreach (var a in ambientes.Values) a.volume = 0;
+                agenda.Clear(); return;
+            }
             PosicionarOuvido();
             for (int i = agenda.Count - 1; i >= 0; i--)
                 if (agenda[i].t <= Agora) { var a = agenda[i]; agenda.RemoveAt(i); Tocar(a.nome, a.pos, a.curva, a.vol, a.dono, 1); }
@@ -482,7 +515,7 @@ namespace CSM.Audio
         /// <summary>Ouvido = onde o centro da câmera bate no chão (plano da altura média do mapa), virado como a câmera.</summary>
         void PosicionarOuvido()
         {
-            if (!camUsada) camUsada = Camera.main;
+            if (!camUsada || !camUsada.isActiveAndEnabled) camUsada = Camera.main;   // replay/diretor podem trocar de câmera
             if (!camUsada || !ouvido) return;
             var t = camUsada.transform; var f = t.forward;
             float y0 = 0.4f;

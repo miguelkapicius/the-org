@@ -1,4 +1,4 @@
-"""Exporta os ícones SVG (Tools/icones) pra PNG recortado em Assets/Game/View3D/Resources/Icones.
+"""Exporta os ícones SVG (Tools/icones) pra PNG recortado em Assets/Game/Interface/Resources/Icones.
 
 Renderiza cada SVG no Edge headless com fundo transparente, recorta pela caixa do que não é transparente (com uma
 folguinha) e grava RGBA. Sem dependências (PNG lido/escrito na mão com zlib). Uso: python exportar.py [nome ...]
@@ -6,7 +6,7 @@ folguinha) e grava RGBA. Sem dependências (PNG lido/escrito na mão com zlib). 
 import os, struct, subprocess, sys, zlib, tempfile
 
 AQUI = os.path.dirname(os.path.abspath(__file__))
-DESTINO = os.path.normpath(os.path.join(AQUI, "..", "..", "Assets", "Game", "View3D", "Resources", "Icones"))
+DESTINO = os.path.normpath(os.path.join(AQUI, "..", "..", "Assets", "Game", "Interface", "Resources", "Icones"))
 EDGE = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
 ALTURA = 256          # altura da página de render (viewBox inteiro); o recorte fica menor
 FOLGA = 3

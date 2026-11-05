@@ -58,11 +58,12 @@ namespace CSM.Sim
         public bool noAr, puloAgachado; public float vz, quedaDe;
         /* pezinho (boost): dandoPezinho = agachado encostado na pilha servindo de degrau; subindoPezinho = quem vai subir
            (a física deixa o pulo chegar no topo da pilha só com o colega agachado colado). O visual lê os dois */
-        public bool dandoPezinho, subindoPezinho; public float naPilhaAte = -9;
+        public bool dandoPezinho, subindoPezinho; public float naPilhaAte = -9, saltandoAte = -9; public V2 saltoAlvo; public float saltoZ;   /* saltandoAte: pulo de salto por cima de vão (a física deixa passar sobre o mais baixo) */
         /* pezinho como no CS: o boneco é chão pra quem está em cima dele. emCimaDe = em quem estou em pé (o z já é o do topo
            dele); AlturaCorpo = onde fica a cabeça (em pé 25; agachado ~18,75: 54/72 do CS) */
         public Agent emCimaDe;
         public float AlturaCorpo => 25f - 6.25f * duck;   // pulando/caindo: velocidade vertical e de que altura saiu
+        public float subindoDegrauAte = -9;            // pediu pulo pro degrau há pouco: a folga da parede não empurra (borda estreita da caixa)
         public float pularPara;                       // o cérebro pediu pulo pra essa altura (degrau logo à frente)
         public float aim, aimPitch;            // pra onde olha (rad) e altura da mira (unidades, relativo ao olho)
         public float aimV;                     /* ângulo vertical da mira (rad; + pra cima): na altura da cabeça de quem estaria onde ele olha */
@@ -315,6 +316,14 @@ namespace CSM.Sim
         {
             var w = W[shooter.gunId];
             float d = w.dmg * (part == Part.Cabeca ? shooter.gun.s.hsMult : part == Part.Perna ? 0.75f : 1f);   // M4A1-S: 3,475 na cabeça
+            if (!TeamBrain.EXP.Contains("quedaDanoVelha"))
+            {   // CS2 weapons.vdata m_flRangeModifier: o dano cai rm^(distância/500) — pesa em pistola e SMG (Glock 0,85, Tec-9
+                // 0,79, MAC-10 0,80), quase nada em rifle (AK 0,98). Distância em unidades do CS (a nossa horizontal x4)
+                bool rifleQ = TeamBrain.EXP.Contains("quedaDanoRifle");   /* rifle/AWP: opt-in — com a calibração atual o TR subia +5 (M4 cai mais que a AK) */
+                float rm = shooter.gunId switch { "ak" => rifleQ ? 0.98f : 1f, "m4" => rifleQ ? 0.97f : 1f, "m4s" => rifleQ ? 0.94f : 1f, "awp" => rifleQ ? 0.99f : 1f, "galil" => rifleQ ? 0.98f : 1f, "famas" => rifleQ ? 0.96f : 1f, "mp9" => 0.87f, "mac10" => 0.80f, "glock" => 0.85f, "usp" => 0.91f, "deagle" => 0.85f, "p250" => 0.90f, "tec9" => 0.79f, "fiveseven" => 0.81f, _ => 1f };
+                float distCs = (victim.pos - shooter.pos).Len * 4f;
+                d *= MathF.Pow(rm, distCs / 500f);
+            }
             bool armored = part == Part.Tronco ? victim.armor > 0 : part == Part.Cabeca && victim.helmet;
             if (armored) d *= w.pen;
             return (int)MathF.Round(d);

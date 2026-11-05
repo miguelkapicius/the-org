@@ -148,6 +148,47 @@ namespace CSM.Headless
             new Match(seed0); Spots.All();
             if (Array.IndexOf(a, "-aquecer") >= 0) Console.WriteLine(Match.Aquecer());
             Console.WriteLine($"mapa pronto em {ini.Elapsed.TotalSeconds:0.0} s (marcos do A* {NavGrid.msMarcos:0} ms)");
+            if (Array.IndexOf(a, "-zmapa") >= 0)
+            {   /* navmesh numa caixa do mapa: altura acima do chão (dígito = /4), '#' não anda; e as ligações de pulo que saem */
+                int i0 = Array.IndexOf(a, "-zmapa"); float x0 = float.Parse(a[i0 + 1]), y0 = float.Parse(a[i0 + 2]), x1 = float.Parse(a[i0 + 3]), y1 = float.Parse(a[i0 + 4]);
+                var (gx0, gy0) = NavGrid.CellOf(new V2(x0, y0)); var (gx1, gy1) = NavGrid.CellOf(new V2(x1, y1));
+                for (int y = gy0; y <= gy1; y++)
+                {
+                    var sb = new System.Text.StringBuilder();
+                    for (int x = gx0; x <= gx1; x++) { float dz = NavGrid.z[x, y] - MapData.GZ; sb.Append(!NavGrid.move[x, y] ? (NavGrid.aberto[x, y] ? '+' : '#') : dz < 0.5f ? '.' : (char)('0' + Math.Min(9, (int)MathF.Round(dz / 4)))); }
+                    Console.WriteLine(sb);
+                }
+                int pulos = 0; for (int x = gx0; x <= gx1; x++) for (int y = gy0; y <= gy1; y++) { int i = NavGrid.IndexOf(x, y); if (i < 0) continue; foreach (var o in NavGrid.Out(i)) if (o.link == NavGrid.Link.Jump) pulos++; }
+                Console.WriteLine($"ligações de pulo saindo daqui: {pulos}");
+                return 0;
+            }
+            if (Array.IndexOf(a, "-saltos") >= 0)
+            {   /* saltos com vão que o pulo correndo cobre e que andando são bem mais longos (atalho de verdade) */
+                const float V = 56f, VZ = Match.PULO, G = Match.GRAV; var porArea = new Dictionary<string, int>(); int nSaltos = 0;
+                var dirs = new[] { (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (1, -1), (-1, 1), (-1, -1) };
+                for (int x = 0; x < NavGrid.NGX; x += 2)
+                    for (int y = 0; y < NavGrid.NGY; y += 2)
+                    {
+                        if (!NavGrid.move[x, y] || NavGrid.soBoost[x, y]) continue; float za = NavGrid.z[x, y];
+                        foreach (var (dx, dy) in dirs)
+                            for (int k = 3; k <= 13; k++)
+                            {
+                                int bx = x + dx * k, by = y + dy * k; if (bx < 0 || by < 0 || bx >= NavGrid.NGX || by >= NavGrid.NGY || !NavGrid.move[bx, by] || NavGrid.soBoost[bx, by]) continue;
+                                float zb = NavGrid.z[bx, by], dz = zb - za; if (dz > VZ * VZ / (2 * G) - 2 || dz < -30) continue;
+                                bool vao = false, bate = false;
+                                for (int j = 1; j < k; j++) { int ix = x + dx * j, iy = y + dy * j; if (!NavGrid.aberto[ix, iy]) { if (MapData.Top(ix * NavGrid.CELL, iy * NavGrid.CELL) > MathF.Max(za, zb) + 6) bate = true; vao = true; } else if (!NavGrid.move[ix, iy] || NavGrid.z[ix, iy] < MathF.Min(za, zb) - 3) vao = true; }
+                                if (!vao || bate) continue;
+                                float d = MathF.Sqrt(dx * dx + dy * dy) * k * NavGrid.CELL;
+                                float tq = (VZ + MathF.Sqrt(MathF.Max(0, VZ * VZ - 2 * G * dz))) / G; if (d > V * tq * 0.85f) continue;
+                                float andando = NavGrid.PathLen(NavGrid.Center(x, y), NavGrid.Center(bx, by)); if (andando < d * 1.8f + 20) continue;
+                                nSaltos++; string k2 = (MapData.AreaAt(x * NavGrid.CELL + 1, y * NavGrid.CELL + 1) ?? "?") + " > " + (MapData.AreaAt(bx * NavGrid.CELL + 1, by * NavGrid.CELL + 1) ?? "?") + $" ({(dz >= 0 ? "+" : "")}{dz:0})";
+                                porArea.TryGetValue(k2, out int c0); porArea[k2] = c0 + 1; break;
+                            }
+                    }
+                Console.WriteLine($"saltos: {nSaltos}");
+                foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(porArea, q => q.Value), 25)) Console.WriteLine($"  {kv.Value,4}  {kv.Key}");
+                return 0;
+            }
             if (Array.IndexOf(a, "-degraus") >= 0)
             {   /* degraus entre células vizinhas andáveis: quantos o pulo normal (18) não sobe e o pulo agachado do CS (~22,9) subiria */
                 var faixa = new SortedDictionary<int, int>(); var onde = new Dictionary<string, int>(); var bordas = new Dictionary<string, int>();
