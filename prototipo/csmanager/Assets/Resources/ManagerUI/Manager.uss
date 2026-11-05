@@ -561,3 +561,43 @@
 
 .aba.ativo { background-color: var(--lima); border-color: var(--lima); }
 .aba.ativo > .t { color: #0c0e04; }
+
+
+/* ======================================================================================================
+   Calendário mensal (grade de mês com datas reais)
+   ====================================================================================================== */
+.cal-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-nav { flex-direction: row; align-items: center; }
+.cal-nav > .btn-ic { margin-right: 0; }
+.cal-mes { font-size: 28px; -unity-font-style: bold; min-width: 250px; -unity-text-align: middle-center; }
+.gira-esq > .ic, .gira-dir > .ic { rotate: -90deg; }   /* a seta para cima vira esquerda; a para baixo vira direita */
+.cal-grade { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 16px; overflow: hidden; }
+.cal-dias-sem { flex-direction: row; height: 38px; border-bottom-width: 1px; border-bottom-color: var(--linha); background-color: var(--cartao2); }
+.cal-dias-sem > .t { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; color: var(--apagado); font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; }
+.cal-semana { flex-direction: row; height: 96px; border-bottom-width: 1px; border-bottom-color: var(--linha); border-left-width: 3px; border-left-color: rgba(0, 0, 0, 0); }
+.cal-semana.atual { border-left-color: var(--lima); }
+.cal-semana.atual .cal-dia { background-color: #202316; }
+.cal-semana.atual .cal-dia.camp { background-color: #2a2a15; }
+.cal-dia { flex-grow: 1; flex-basis: 0; padding: 6px 7px; border-right-width: 1px; border-right-color: var(--linha); overflow: hidden; }
+.cal-dia.fora { opacity: 0.32; }
+.cal-dia.passada { opacity: 0.62; }
+.cal-dia.camp { background-color: #231f19; }
+.cal-num { font-size: 14px; -unity-font-style: bold; color: var(--suave); margin-right: 6px; }
+.cal-tag { font-size: 11px; color: var(--laranja); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+.cal-chip { flex-direction: row; align-items: center; border-radius: 6px; padding: 2px 7px; margin-top: 4px; border-width: 1px; border-color: rgba(0, 0, 0, 0); }
+.cal-chip > .t { font-size: 12px; -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; }
+.cal-chip.pend { background-color: rgba(240, 170, 70, 0.20); border-color: var(--laranja); }
+.cal-chip.pend > .t { color: var(--laranja); }
+.cal-chip.venceu { background-color: rgba(76, 195, 138, 0.20); }
+.cal-chip.venceu > .t { color: var(--verde); }
+.cal-chip.perdeu { background-color: rgba(239, 107, 99, 0.20); }
+.cal-chip.perdeu > .t { color: var(--vermelho); }
+.cal-chip.camp-leg { background-color: #231f19; border-color: #3a3326; }
+.cal-chip.camp-leg > .t { color: var(--suave); }
+.legenda-cal { flex-direction: row; align-items: center; flex-wrap: wrap; margin-top: 12px; }
+.legenda-cal > .cal-chip { margin-top: 0; margin-right: 10px; }
+.legenda-cal > .t { font-size: 13px; color: var(--apagado); }
+.cal-lateral { width: 310px; flex-shrink: 0; margin-left: 20px; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 14px; padding: 16px 16px 10px 16px; }
+.prox-item { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+.prox-item:hover { background-color: #222225; }
+.prox-resumo { margin-top: 6px; padding-top: 10px; border-top-width: 1px; border-top-color: var(--linha); }

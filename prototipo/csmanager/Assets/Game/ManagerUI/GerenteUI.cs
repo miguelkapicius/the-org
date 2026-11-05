@@ -369,6 +369,7 @@ namespace CSM.ManagerUI
         void Ir(Aba a)
         {
             if (a != Aba.Calendario) campAberto = null;
+            if (a == Aba.Calendario && aba != Aba.Calendario) { mesCal = -1; calAba = 0; }   // abre sempre no mês atual
             aba = a; menuDe = null; selecionado = null; colOrdem = -1; confirmandoNova = false;
             if (a != Aba.PosPartida) resumoAberto = null;
             Mostrar();
@@ -1043,6 +1044,9 @@ namespace CSM.ManagerUI
                 ("financas", () => aba = Aba.Financas, null),
                 ("gaminghouse", () => aba = Aba.GamingHouse, null),
                 ("pospartida", () => { c.PularMapa(); aba = Aba.Painel; }, null),
+                ("calendario-depois", () => { c.naoVisto = null; int g2 = 0; while (g2++ < 12) { if (c.TemJogoAgora) c.PularSerie(); c.AvancarSemana(); } c.naoVisto = null; campAberto = null; mesCal = -1; calAba = 0; aba = Aba.Calendario; }, null),
+                ("calendario-campeonatos", () => { campAberto = null; calAba = 1; aba = Aba.Calendario; }, null),
+                ("calendario-ranking", () => { campAberto = null; calAba = 2; aba = Aba.Calendario; }, null),
                 ("painel-depois", () => { c.naoVisto = null; aba = Aba.Painel; }, () => Toast(c.elenco[5].nome + " foi vendido por + " + Fmt.Dinheiro(c.elenco[5].Venda) + ".", false, "Desfazer", () => { })),
             };
             foreach (var (nome, preparar, depois) in passos)

@@ -217,6 +217,18 @@ class TesteCarreira
             }
         }
 
+        // ---------- datas do calendário
+        {
+            var ini = Mundo.InicioTemporada(1);
+            Ok(ini.DayOfWeek == DayOfWeek.Monday && ini.Year == 2027, "a temporada começa numa segunda-feira de 2027 (" + ini.ToString("dd/MM/yyyy") + ")");
+            Ok(Mundo.DataDe(1, 52, 6) < Mundo.InicioTemporada(2), "as 52 semanas da temporada 1 acabam antes da temporada 2");
+            Ok(Mundo.DataDe(1, 2, 0) == ini.AddDays(7), "a semana 2 começa 7 dias depois");
+            bool ida = true; for (int w = 1; w <= 52; w++) for (int d = 0; d < 7; d++) { var dt = Mundo.DataDe(2, w, d); if (!Mundo.SemanaDeData(2, dt, out int sw, out int sd) || sw != w || sd != d) ida = false; }
+            Ok(ida, "data → (semana, dia) e (semana, dia) → data são inversas nas 364 datas da temporada");
+            Ok(!Mundo.SemanaDeData(1, ini.AddDays(-1), out _, out _) && !Mundo.SemanaDeData(1, ini.AddDays(364), out _, out _), "datas fora da temporada são recusadas");
+            Ok(Mundo.DiaDaSemanaDaSerie(Formato.Liga, 0) == 2 && Mundo.DiaDaSemanaDaSerie(Formato.MataMata, 0) == 3 && Mundo.DiaDaSemanaDaSerie(Formato.MataMata, 2) == 5, "ligas na quarta; campeonatos de quinta a sábado");
+        }
+
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");
         Environment.Exit(falhas == 0 ? 0 : 1);
     }
