@@ -26,6 +26,19 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Escalação | Os 5 titulares que o manager escolhe e as funções deles. Trocar a escalação muda a força do time. | lineup, line-up, formação | 08-ui-ux |
 | Força | Número que resume o time: a média do geral dos 5 titulares. Entra no cálculo da chance de vitória. | overall do time, rating | 08-ui-ux |
 | Chance de vitória | Probabilidade de vencer a próxima partida, calculada a partir da força dos dois times. É a mesma usada ao pular a partida. | odds | 08-ui-ux |
+| Campeonato | Competição com times, formato (liga, grupos, suíço, mata-mata...) e premiação. | torneio, evento (usar só como sinônimo informal) | 01-core-loop |
+| Série | Confronto entre dois times decidido em um número de mapas: MD1, MD3 (melhor de 3) ou MD5 (melhor de 5). Cada mapa é uma partida. | md, bo3 | 01-core-loop |
+| Temporada | Um ano do jogo, com 52 semanas e o calendário de campeonatos. | ano, season | 01-core-loop |
+| Circuito | Grupo de campeonatos de um mesmo nível: Amador, Pro ou Elite. | tier, divisão | 01-core-loop |
+| Ranking | Lista dos 48 times por pontos de colocação em campeonatos; decide o circuito do clube. | classificação | 01-core-loop |
+| Veto | Fase antes da série em que os times banem e escolhem mapas. | pick/ban | 08-ui-ux |
+| Afinidade | O quanto um time domina um mapa (0 a 100); entra na habilidade na partida. | domínio | 02-mecanicas |
+| Estratégia | Conjunto de ajustes de estilo da IA do time (agressiva, defensiva, execuções rápidas...) escolhido na pré-partida. | tática, plano de jogo | 02-mecanicas |
+| Treino | Plano semanal que o manager define para cada jogador (foco e frequência). Evolui atributos e gera preparo e cansaço. | prática | 02-mecanicas |
+| Preparo | Bônus temporário de habilidade nas partidas que vem do treino recente. | buff | 02-mecanicas |
+| Cansaço | Desgaste dos jogadores por treino e partidas; acima de um limite reduz a habilidade. | fadiga, stamina | 02-mecanicas |
+| Potencial | Teto de evolução de um atributo de um jogador; só se vê com scout. | talento | 03-progressao |
+| Empréstimo | Dinheiro que o banco adianta ao clube, pago em parcelas semanais com juros. | dívida (usar só para o saldo negativo) | 03-progressao |
 | Pré-partida | Tela antes da partida: os dois times frente a frente e a escolha entre assistir e pular. | lobby, prematch | 08-ui-ux |
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |

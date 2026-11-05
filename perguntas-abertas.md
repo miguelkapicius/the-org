@@ -15,13 +15,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 2. Lado manager
 
-- [ ] **Elenco:** como funcionam contratações, vendas, salários e contratos? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
-- [ ] **Pré-partida:** o que o manager configura antes de assistir (veto de mapas, estratégia, compras padrão)? → `gdd/08-ui-ux.md`
-- [ ] Times e jogadores fictícios gerados pelo jogo ou criados à mão? → `gdd/05-conteudo.md`
-- [ ] **Carreira:** formato dos campeonatos (MD1/MD3, grupos, mata-mata) e calendário → `gdd/01-core-loop.md`
-- [ ] **Falência:** o jogador recebe avisos antes? Existe empréstimo ou outra saída antes do game over? → `gdd/03-progressao.md`
-- [ ] **Evolução:** existe idade de pico e declínio? → `gdd/03-progressao.md`
-- [ ] A Gaming House tem custo de manutenção mensal? → `gdd/03-progressao.md`
+- [ ] **Elenco:** os jogadores têm contrato (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
+- [ ] **Pré-partida:** o manager também configura as compras padrão do time? (veto de mapas e estratégia já decididos, 0014) → `gdd/08-ui-ux.md`
 
 ## 3. Escopo e produto
 
@@ -36,9 +31,10 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 ## 4. Balanceamento (pode ficar para depois)
 
 - [ ] Quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar? → `gdd/01-core-loop.md`
-- [ ] Quantos níveis a Gaming House tem e o que cada nível libera? → `gdd/03-progressao.md`
 - [ ] Curva de custo por nível da Gaming House → `gdd/03-progressao.md`
 - [ ] Quanto pesa cada fator (treino, experiência, idade) na evolução dos jogadores? → `gdd/03-progressao.md`
+- [ ] Calendário: quantos campeonatos por temporada em cada circuito, premiações e pontos do ranking → `gdd/01-core-loop.md`
+- [ ] Salários, juros, limite de empréstimo, prazo de falência e manutenção da Gaming House → `gdd/03-progressao.md`
 
 ## 5. Para depois
 
@@ -48,5 +44,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 
 ## 6. Validar sugestões do agente
+
+- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência) e **0016** (níveis da Gaming House e scouts): confirmar os detalhes marcados como proposta do agente.
 
 - [ ] Revisar os trechos marcados **[Sugestão]** no GDD (principalmente `00-visao.md` e `02-mecanicas.md`): confirmar (tirar a marca) ou apagar.

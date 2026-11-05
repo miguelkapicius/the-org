@@ -160,6 +160,34 @@ namespace CSM.ManagerUI
             }
         }
 
+        /// <summary>Barra de cansaço (0..100): ao contrário das notas, mais alto é pior (verde, laranja, vermelho).</summary>
+        public static VisualElement BarraCansaco(float v)
+        {
+            var f = E("barra", "fina");
+            var d = E("fill", v < 35 ? "verde-c" : v < 60 ? "laranja-c" : "vermelho-c"); d.style.width = Length.Percent(Mathf.Clamp(v, 0, 100));
+            f.Add(d); f.pickingMode = PickingMode.Ignore;
+            return f;
+        }
+
+        /// <summary>Botão pequeno (opções, passos, filtros). <paramref name="on"/> = a opção escolhida.</summary>
+        public static VisualElement BotaoMini(string texto, Action acao, bool on = false, bool ativo = true, string icone = null)
+        {
+            var b = E("btn-mini"); if (on) b.AddToClassList("on"); if (!ativo) b.AddToClassList("desligado");
+            if (icone != null) { var ic = new Icone(icone, 16); ic.style.marginRight = 6; b.Add(ic); }
+            b.Add(L(texto));
+            if (ativo) Clicavel(b, acao);
+            return b;
+        }
+
+        /// <summary>Botão só com ícone (passo de contador).</summary>
+        public static VisualElement BotaoIcone(string icone, Action acao, bool ativo = true)
+        {
+            var b = E("btn", "btn-ic"); if (!ativo) b.AddToClassList("desligado");
+            b.Add(new Icone(icone, 16));
+            if (ativo) Clicavel(b, acao);
+            return b;
+        }
+
         /// <summary>Célula de atributo: número e barrinha fina embaixo.</summary>
         public static VisualElement CelulaAtributo(int v)
         {

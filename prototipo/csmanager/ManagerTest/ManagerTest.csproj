@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Testes das regras do manager (campeonatos, treino, finanças, veto, salvamento) fora da Unity: usa os MESMOS arquivos de
+       Assets/Game (nada copiado). Rodar da pasta ManagerTest: dotnet run. Sai com código 0 se tudo passa. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <NoWarn>CS0162;CS0168;CS0219;CS0414;CS0649</NoWarn>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\Assets\Game\Sim\*.cs" LinkBase="Sim" />
+    <Compile Include="..\Assets\Game\Map\*.cs" LinkBase="Map" />
+    <Compile Include="..\Assets\Game\View\Effects.cs" LinkBase="View" />
+    <Compile Include="..\Assets\Game\View\Iso.cs" LinkBase="View" />
+    <Compile Include="..\Assets\Game\Manager\*.cs" LinkBase="Manager" />
+    <Compile Include="TesteCampeonatos.cs" />
+    <Compile Include="TesteCarreira.cs" />
+  </ItemGroup>
+</Project>

@@ -85,6 +85,19 @@ namespace CSM.ManagerUI
                     Linha(3.5f, 12.5f, 3.5f, 4.5f, 4.5f, 3.5f, 12.5f, 3.5f, 20.5f, 11.5f, 11.5f, 20.5f, 3.5f, 12.5f); Circulo(8.5f, 8.5f, 1.2f); break;
                 case "chev": Linha(8, 9.5f, 12, 5.5f, 16, 9.5f); Linha(8, 14.5f, 12, 18.5f, 16, 14.5f); break;
                 case "clock": Circulo(12, 12, 8.5f); Linha(12, 7.5f, 12, 12, 15, 14); break;
+                case "calendar":
+                    Retang(3.5f, 5, 17, 15.5f, 2.2f); Linha(3.5f, 10, 20.5f, 10); Linha(8, 3, 8, 7); Linha(16, 3, 16, 7); break;
+                case "bolt":
+                    Linha(13, 2.5f, 5.5f, 13.5f, 11.5f, 13.5f, 10.5f, 21.5f, 18.5f, 10, 12.5f, 10, 13, 2.5f); break;
+                case "eye":
+                    p.BeginPath(); p.MoveTo(V(2, 12)); p.BezierCurveTo(V(5, 6), V(9, 5), V(12, 5)); p.BezierCurveTo(V(15, 5), V(19, 6), V(22, 12)); p.BezierCurveTo(V(19, 18), V(15, 19), V(12, 19)); p.BezierCurveTo(V(9, 19), V(5, 18), V(2, 12)); p.Stroke();
+                    Circulo(12, 12, 3f); break;
+                case "lock":
+                    Retang(5, 11, 14, 9.5f, 2); p.BeginPath(); p.MoveTo(V(8, 11)); p.LineTo(V(8, 8)); p.Arc(V(12, 8), 4 * s, Angle.Degrees(180), Angle.Degrees(360), ArcDirection.Clockwise); p.LineTo(V(16, 11)); p.Stroke(); break;
+                case "check": Linha(5, 12.5f, 10, 17.5f, 19, 7); break;
+                case "minus": Linha(5, 12, 19, 12); break;
+                case "trophy":
+                    Linha(7, 4, 17, 4, 17, 10, 12, 14, 7, 10, 7, 4); Linha(12, 14, 12, 18); Linha(8, 20, 16, 20); Linha(7, 6, 4, 6, 4, 8.5f, 7, 10); Linha(17, 6, 20, 6, 20, 8.5f, 17, 10); break;
                 case "kebab": Circulo(12, 5.5f, 1.5f, true); Circulo(12, 12, 1.5f, true); Circulo(12, 18.5f, 1.5f, true); break;
             }
         }
