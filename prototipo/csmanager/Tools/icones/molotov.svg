@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 152">
+  <!-- molotov: garrafa com pano saindo do gargalo, rótulo e nível do líquido -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="84" height="152">
+      <rect width="84" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M24 88 L60 88" stroke-width="2"/>                    <!-- nível -->
+        <rect x="27" y="100" width="30" height="26" rx="2" stroke-width="2.2"/>  <!-- rótulo -->
+        <path d="M37 50 L47 50" stroke-width="2"/>                    <!-- boca -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M22 84 Q22 64 36 60 L36 44 L48 44 L48 60 Q62 64 62 84 L62 140 Q62 146 56 146 L28 146 Q22 146 22 140 Z"/>
+    <!-- pano dobrado saindo do gargalo -->
+    <path d="M36 46 Q28 30 36 18 Q42 8 54 12 Q46 20 50 30 Q56 22 66 22 Q58 32 48 46 Z"/>
+  </g>
+</svg>

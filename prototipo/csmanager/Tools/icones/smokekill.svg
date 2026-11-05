@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 152">
+  <!-- através da smoke: nuvem em lóbulos com a base reta -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="170" height="152">
+      <rect width="170" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-width="3.2" stroke-linecap="round">
+        <path d="M58 72 Q66 60 80 62"/><path d="M104 66 Q114 58 124 66"/>
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <circle cx="52" cy="92" r="30"/><circle cx="86" cy="70" r="36"/><circle cx="122" cy="90" r="30"/><circle cx="148" cy="108" r="18"/><circle cx="26" cy="110" r="18"/>
+    <rect x="26" y="96" width="122" height="30" rx="14"/>
+  </g>
+</svg>

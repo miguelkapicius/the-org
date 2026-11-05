@@ -1,0 +1,55 @@
+# GLB de pack CC0 (poly.pizza: Quaternius, KayKit) -> FBX com a cor de cada face gravada no vértice (cor do material x
+# textura no centro de UV da face), transformações aplicadas, pé no chão e centro em XY. O jogo usa a cor de vértice.
+#   blender -b --python pack_cor.py -- <entrada.glb> <saida.fbx>
+import bpy, sys
+a = sys.argv[sys.argv.index("--") + 1:]; ENT, SAI = a[0], a[1]
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=ENT)
+pix = {}
+def amostra(img, u, v):
+    if img.name not in pix: pix[img.name] = (img.size[0], img.size[1], list(img.pixels))
+    W, H, px = pix[img.name]
+    if W == 0: return (1, 1, 1)
+    x = min(W - 1, max(0, int((u % 1) * W))); y = min(H - 1, max(0, int((v % 1) * H))); k = (y * W + x) * 4
+    return px[k], px[k + 1], px[k + 2]
+def base_do(mat):
+    if mat is None or not mat.use_nodes: return (0.8, 0.8, 0.8), None
+    bsdf = next((n for n in mat.node_tree.nodes if n.type == "BSDF_PRINCIPLED"), None)
+    if bsdf is None: return (0.8, 0.8, 0.8), None
+    inp = bsdf.inputs["Base Color"]; c = tuple(inp.default_value[:3]); img = None
+    if inp.is_linked:
+        n = inp.links[0].from_node
+        if n.type == "TEX_IMAGE": img = n.image
+    return c, img
+obs = [o for o in bpy.data.objects if o.type == "MESH"]
+for o in obs:
+    bpy.context.view_layer.objects.active = o; o.select_set(True)
+bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
+nf = 0
+for o in obs:
+    me = o.data; uv = me.uv_layers.active.data if me.uv_layers else None
+    ca = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    for p in me.polygons:
+        mat = o.material_slots[p.material_index].material if o.material_slots else None
+        c, img = base_do(mat)
+        if img is not None and uv is not None:
+            us = [uv[l].uv for l in p.loop_indices]; u = sum(q.x for q in us) / len(us); v = sum(q.y for q in us) / len(us)
+            t = amostra(img, u, v)
+            # a textura vem linear do Blender; a cor do material também: grava linear -> o exportador converte pra sRGB
+            c = (c[0] * t[0], c[1] * t[1], c[2] * t[2])
+        for l in p.loop_indices: ca.data[l].color = (c[0], c[1], c[2], 1)
+        nf += 1
+# junta, pé no chão (z = 0) e centro em x/y
+for o in bpy.context.selected_objects: o.select_set(False)
+for o in obs: o.select_set(True)
+bpy.context.view_layer.objects.active = obs[0]
+if len(obs) > 1: bpy.ops.object.join()
+ob = bpy.context.view_layer.objects.active
+vs = [v.co for v in ob.data.vertices]
+lo = [min(v[i] for v in vs) for i in range(3)]; hi = [max(v[i] for v in vs) for i in range(3)]
+d = ((lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, lo[2])
+for v in ob.data.vertices: v.co.x -= d[0]; v.co.y -= d[1]; v.co.z -= d[2]
+ob.data.materials.clear()
+print("faces", nf, "tamanho", tuple(round(hi[i] - lo[i], 3) for i in range(3)))
+bpy.ops.export_scene.fbx(filepath=SAI, use_selection=False, object_types={"MESH"}, colors_type="SRGB", apply_unit_scale=True, bake_space_transform=False)
+print("ok", SAI)

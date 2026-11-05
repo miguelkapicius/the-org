@@ -1,0 +1,26 @@
+# GLB do Kenney (peça toda de pedra) -> FBX com cor por vértice = brilho do atlas (o jogo multiplica pela cor da paleta:
+# guarda o sombreado das faixas/frisos do modelo). blender -b --python kenney_pedra.py -- <entrada.glb> <saida.fbx>
+import bpy, sys
+a = sys.argv[sys.argv.index("--") + 1:]; ent, sai = a[0], a[1]
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=ent)
+img = next((i for i in bpy.data.images if i.size[0] > 0), None)
+W, H = img.size; px = list(img.pixels)
+def cor(u, v):
+    x = min(W - 1, max(0, int((u % 1) * W))); y = min(H - 1, max(0, int((v % 1) * H))); k = (y * W + x) * 4
+    return px[k], px[k + 1], px[k + 2]
+lums = []
+for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+    me = o.data; uv = me.uv_layers.active.data
+    ca = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    for p in me.polygons:
+        us = [uv[l].uv for l in p.loop_indices]; u = sum(q.x for q in us) / len(us); v = sum(q.y for q in us) / len(us)
+        r, g, b = cor(u, v); lums.append(0.3 * r + 0.59 * g + 0.11 * b)
+    mx = max(lums) or 1
+    i = 0
+    for p in me.polygons:
+        l = lums[i] / mx; i += 1
+        for li in p.loop_indices: ca.data[li].color = (l, l, l, 1)
+print("faces", len(lums), "brilho min/max", min(lums), max(lums))
+bpy.ops.export_scene.fbx(filepath=sai, use_selection=False, object_types={"MESH", "EMPTY"}, colors_type="SRGB", apply_unit_scale=True, bake_space_transform=False)
+print("ok", sai)

@@ -14,7 +14,7 @@ namespace CSM.EditorTools
     /// </summary>
     public static class Visual3D
     {
-        public const string DIR = "Assets/Game/View3D/Render";
+        public const string DIR = "Assets/Game/Visual/Render";
         public const string PIPE = DIR + "/Maquete_URP.asset", REND = DIR + "/Maquete_Renderer.asset";
 
         [MenuItem("CS Manager/Visual 3D/Configurar URP")]
@@ -53,7 +53,21 @@ namespace CSM.EditorTools
                     rs.ApplyModifiedPropertiesWithoutUndo();
                 }
             }
+            // SSAO de maquete: só o contato curto e liso (o ruído azul granulava e o raio grande sujava o pé da parede de "fuligem")
+            var aoF = rend.rendererFeatures.Find(f => f is ScreenSpaceAmbientOcclusion);
+            if (aoF != null)
+            {
+                var so = new SerializedObject(aoF);
+                void F2(string p, float v) { var q = so.FindProperty("m_Settings." + p); if (q != null) q.floatValue = v; }
+                var met = so.FindProperty("m_Settings.AOMethod"); if (met != null) met.intValue = 1;   // gradiente intercalado
+                F2("Intensity", 1.25f); F2("Radius", 0.42f); F2("DirectLightingStrength", 0.2f);
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(rend);
+            }
             Silhuetas(rend);
+            IncluirShaders();
+            NaturezaImport.Montar();   // prefabs das plantas do pack (Resources/Natureza)
+            GranadasImport.Montar();   // prefabs das granadas do kit (Resources/Granadas)
             var pipe = AssetDatabase.LoadAssetAtPath<UniversalRenderPipelineAsset>(PIPE);
             if (pipe == null)
             {
@@ -62,9 +76,13 @@ namespace CSM.EditorTools
             }
             // sombra macia de maquete: cascata única cobrindo o enquadramento, resolução alta
             if (PlayerSettings.colorSpace != ColorSpace.Linear) PlayerSettings.colorSpace = ColorSpace.Linear;
-            pipe.shadowDistance = 90f;
+            // a câmera de jogo fica a ~21 (prints a ~40): 1ª cascata até 30 cobre o jogo, a 2ª (30-75) os prints;
+            // com 90 a 2ª cascata era larga demais e a borda da sombra saía em degrau (com 55 o fim do print já esmaecia)
+            pipe.shadowDistance = 75f;
             pipe.shadowCascadeCount = 2;
-            pipe.mainLightShadowmapResolution = 4096;
+            pipe.cascade2Split = 0.4f;
+            pipe.cascadeBorder = 0.08f;
+            pipe.mainLightShadowmapResolution = 8192;   // arma e vara de carroça têm ~2 cm: com 4096 mal davam 2 texels
             pipe.supportsHDR = true;
             pipe.supportsCameraDepthTexture = true;   // a smoke volumétrica para na parede/chão pela profundidade
             pipe.msaaSampleCount = 4;
@@ -72,8 +90,8 @@ namespace CSM.EditorTools
             var ps = new SerializedObject(pipe);
             var soft = ps.FindProperty("m_SoftShadowsSupported"); if (soft != null) soft.boolValue = true;
             var sq = ps.FindProperty("m_SoftShadowQuality"); if (sq != null) sq.intValue = 3;
-            var sd = ps.FindProperty("m_ShadowDepthBias"); if (sd != null) sd.floatValue = 1.2f;
-            var sn = ps.FindProperty("m_ShadowNormalBias"); if (sn != null) sn.floatValue = 0.8f;
+            var sd = ps.FindProperty("m_ShadowDepthBias"); if (sd != null) sd.floatValue = 0.5f;   // bias baixo: arma, vara da carroça e raio de roda são finos (com 1,2 / 0,8 a sombra deles sumia picotada)
+            var sn = ps.FindProperty("m_ShadowNormalBias"); if (sn != null) sn.floatValue = 0.3f;
             ps.ApplyModifiedPropertiesWithoutUndo();
             EditorUtility.SetDirty(pipe);
 
@@ -98,23 +116,28 @@ namespace CSM.EditorTools
             if (L < 0) { Debug.LogWarning("[Visual3D] sem camada livre pros bonecos"); return; }
             rend.opaqueLayerMask &= ~(1 << L);
             rend.transparentLayerMask &= ~(1 << L);
-            const string S = "Silhueta dos bonecos", B = "Bonecos";
-            if (rend.rendererFeatures.Find(f => f != null && f.name == S) == null)
+            // 3) silhueta por cima da smoke (depois dos transparentes, na medida da smoke na frente: Silhueta.shader passe 1)
+            const string S = "Silhueta dos bonecos", B = "Bonecos", F = "Silhueta na smoke";
+            var faltam = new System.Collections.Generic.List<(string nome, int passe)>();
+            if (rend.rendererFeatures.Find(f => f != null && f.name == S) == null) { faltam.Add((S, 0)); faltam.Add((B, -1)); }
+            if (rend.rendererFeatures.Find(f => f != null && f.name == F) == null) faltam.Add((F, 1));
+            if (faltam.Count > 0)
             {
                 var mat = AssetDatabase.LoadAssetAtPath<Material>(DIR + "/Silhueta.mat");
                 if (mat == null) { mat = new Material(Shader.Find("CSM/Silhueta")); AssetDatabase.CreateAsset(mat, DIR + "/Silhueta.mat"); }
-                foreach (var (nome, sil) in new[] { (S, true), (B, false) })
+                foreach (var (nome, passe) in faltam)
                 {
                     var ro = ScriptableObject.CreateInstance<RenderObjects>();
                     ro.name = nome;
-                    ro.settings.Event = RenderPassEvent.AfterRenderingOpaques;
+                    ro.settings.Event = passe == 1 ? RenderPassEvent.AfterRenderingTransparents : RenderPassEvent.AfterRenderingOpaques;
                     ro.settings.filterSettings.RenderQueueType = RenderQueueType.Opaque;
                     ro.settings.filterSettings.LayerMask = 1 << L;
-                    if (sil)
+                    if (passe >= 0)
                     {
                         ro.settings.overrideMode = RenderObjects.RenderObjectsSettings.OverrideMaterialMode.Material;
-                        ro.settings.overrideMaterial = mat;
-                        ro.settings.overrideDepthState = true; ro.settings.depthCompareFunction = UnityEngine.Rendering.CompareFunction.Greater; ro.settings.enableWrite = false;
+                        ro.settings.overrideMaterial = mat; ro.settings.overrideMaterialPassIndex = passe;
+                        ro.settings.overrideDepthState = true; ro.settings.enableWrite = false;
+                        ro.settings.depthCompareFunction = passe == 1 ? UnityEngine.Rendering.CompareFunction.LessEqual : UnityEngine.Rendering.CompareFunction.Greater;
                     }
                     else ro.settings.overrideMode = RenderObjects.RenderObjectsSettings.OverrideMaterialMode.None;
                     AssetDatabase.AddObjectToAsset(ro, rend);
@@ -133,7 +156,29 @@ namespace CSM.EditorTools
                     rs.ApplyModifiedPropertiesWithoutUndo();
                 }
             }
+            // a silhueta na smoke mede a smoke na frente do boneco (Fumaca.hlsl): só a parte visível dele (antes era Always + stencil)
+            if (rend.rendererFeatures.Find(f => f != null && f.name == F) is RenderObjects rf)
+                rf.settings.depthCompareFunction = UnityEngine.Rendering.CompareFunction.LessEqual;
             EditorUtility.SetDirty(rend);
+        }
+
+        /// <summary>Shaders que o jogo acha pelo nome (Shader.Find) entram sempre na build: sem isso a build abria sem mapa,
+        /// sem bonecos e sem smoke (nada referencia esses shaders num asset da cena).</summary>
+        static void IncluirShaders()
+        {
+            var gs = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
+            var lista = gs.FindProperty("m_AlwaysIncludedShaders");
+            bool mudou = false;
+            foreach (var nome in new[] { "CSM/Maquete", "CSM/Nuvem", "CSM/Brilho", "CSM/Disco", "CSM/FumacaVolume", "CSM/Silhueta", "CSM/Mancha", "TextMeshPro/Distance Field" })
+            {
+                var sh = Shader.Find(nome);
+                if (sh == null) { Debug.LogWarning("[Visual3D] shader não achado: " + nome); continue; }
+                bool tem = false;
+                for (int i = 0; i < lista.arraySize; i++) if (lista.GetArrayElementAtIndex(i).objectReferenceValue == sh) { tem = true; break; }
+                if (tem) continue;
+                lista.InsertArrayElementAtIndex(lista.arraySize); lista.GetArrayElementAtIndex(lista.arraySize - 1).objectReferenceValue = sh; mudou = true;
+            }
+            if (mudou) { gs.ApplyModifiedPropertiesWithoutUndo(); AssetDatabase.SaveAssets(); }
         }
 
         /// <summary>Índice da camada com esse nome (cria na primeira livre a partir da 8).</summary>
@@ -168,6 +213,8 @@ namespace CSM.EditorTools
             cen.abertura = Arg("-v3d_abertura", cen.abertura);
             cen.focal = Arg("-v3d_focal", cen.focal);
             cen.Montar();
+            // -v3d_semtopo 1: chão só com a cor de vértice (comparar com a textura de cima)
+            if (Arg("-v3d_semtopo", 0) > 0) CSM.View3D.Cenario3D.matMapa.SetFloat("_UsarTopo", 0);
             Debug.Log($"[Visual3D] malha do mapa: {CSM.View3D.Cenario3D.msMalha:F0} ms, " +
                       $"{Tris(cen.mapa)} triângulos");
             Directory.CreateDirectory("Logs/visual3d");
@@ -239,11 +286,122 @@ namespace CSM.EditorTools
             Debug.Log("[Visual3D] partida capturada");
         }
 
+        /// <summary>Laboratório do apoio no chão (PartidaAoVivo3D.LabApoio): granadas, kit e armas caem, assentam e cada um
+        /// loga a folga do ponto mais baixo pro chão ("[Visual3D] APOIO"); print em Logs/visual3d/apoio.png.</summary>
+        public static void CapturarApoioBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22, A.y + 18);
+                p.LabCamera(c, Arg("-v3d_zoom", 1.7f));
+                p.LabApoio(c);
+                for (int f = 0; f < 150; f++) p.LabPasso(1 / 30f);
+                p.LabApoioMedir();
+                Directory.CreateDirectory("Logs/visual3d");
+                Salvar(p.Cenario.cam, "Logs/visual3d/apoio.png", 1920, 1080);
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>Laboratório de tiros (PartidaAoVivo3D.LabTiros): 5 CTs levando um tiro cada — capacete, cabeça sem capacete,
+        /// corpo, morte por HS, morte no corpo — em quadros (Logs/visual3d/tiros). -v3d_giro, -v3d_zoom, -v3d_quadros.</summary>
+        public static void CapturarTirosBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22 + Arg("-v3d_dx", 0), A.y + 18 + Arg("-v3d_dy", 0));
+                p.LabCamera(c, Arg("-v3d_zoom", 2.4f));
+                var ar = System.Environment.GetCommandLineArgs(); int qi = System.Array.IndexOf(ar, "-v3d_casos");
+                p.LabTiros(c, Arg("-v3d_giro", 120), 0.3f, qi >= 0 && qi + 1 < ar.Length ? ar[qi + 1] : "0,1,2,3,4");
+                string dir = "Logs/visual3d/tiros";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                int N = (int)Arg("-v3d_quadros", 75);
+                for (int f = 0; f < N; f++) { p.LabPasso(1 / 30f); Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720); }
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
         /// <summary>
         /// Vídeo da partida 3D: simula a 30 qps e grava os quadros em Logs/visual3d/video (depois o frames_to_mp4.py do
         /// EsportsPoc junta). Args: -v3d_seed 15 -v3d_de 18 (s do round) -v3d_dur 20 (s) -v3d_zoom 7.5
         /// </summary>
-        public static void CapturarVideoBatch()
+        public static void CapturarVideoBatch() => CapturarVideo();
+
+        /// <summary>
+        /// Laboratório de lance real, com gatilho na mesma execução (a Sim não repete a partida igual entre execuções):
+        /// roda a partida a partir de -v3d_round e, quando acontece o lance, para a câmera em cima e grava -v3d_dur s em
+        /// Logs/visual3d/video. -v3d_lance item (granada/kit caindo de quem morreu; grava o rolo e quem passa pegando) ou
+        /// jump (bot armando um jump throw). -v3d_rounds N: quantos rounds procura. Log "[Visual3D] LANCE ...".
+        /// </summary>
+        public static void CapturarLanceBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.seed = (int)Arg("-v3d_seed", 15); p.zoom = Arg("-v3d_zoom", 1.8f);
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                int r0 = (int)Arg("-v3d_round", 2), rounds = (int)Arg("-v3d_rounds", 6);
+                p.PularAte(r0);
+                var ar = System.Environment.GetCommandLineArgs(); int li = System.Array.IndexOf(ar, "-v3d_lance");
+                string lance = li >= 0 && li + 1 < ar.Length ? ar[li + 1] : "item";
+                float dur = Arg("-v3d_dur", 6); const float DT = 1 / 30f;
+                CSM.View3D.Hud3D.SemEconomia = true;
+                string dir = "Logs/visual3d/video";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                bool achou = false; int guarda = 0;
+                // a venda é no tempo de compra: pula round a round sem desenhar até um que tenha venda (no loop desenhado, a
+                // fumaça sobe textura pra GPU a cada passo sem fechar quadro e o d3d12 cai depois de uns milhares de passos)
+                if (lance == "venda")
+                    while (p.Partida != null && p.Partida.vendas.Count == 0 && p.Round < r0 + rounds) p.PularAte(p.Round + 1);
+                while (!achou && p.Round < r0 + rounds && guarda++ < 30 * 60 * 25)
+                {
+                    p.Simular(DT, DT);
+                    var m = p.Partida; if (m == null || m.over) continue;
+                    if (lance == "item")
+                    {
+                        var it = m.itensChao.Find(x => x.morto != null && m.t - x.t < 0.1f);
+                        if (it != null) { achou = true; p.camFixa = it.origem; Debug.Log($"[Visual3D] LANCE item round {p.Round} t={m.t:0.0}: {it.nade} de {it.morto.name} em ({it.origem.x:0},{it.origem.y:0})"); }
+                    }
+                    else if (lance == "venda")
+                    {
+                        // 0,7 s antes de vender: segurando a SMG -> some, "$" sobe, saca a pistola
+                        var vd = m.vendas.Find(x => m.t >= x.t - 0.7f && m.t < x.t);
+                        if (vd.quem != null) { achou = true; p.camFixa = vd.quem.pos; p.seguir = vd.quem.id; Debug.Log($"[Visual3D] LANCE venda round {p.Round} t={m.t:0.0}: {vd.quem.name} vende {vd.item} em t={vd.t:0.0} ({vd.quem.pos.x:0},{vd.quem.pos.y:0})"); }
+                    }
+                    else
+                    {
+                        var a = m.agents.Find(x => x.alive && x.brain.action == "granada" && x.brain.PlanoGranada.HasValue
+                                                   && (x.brain.PlanoGranada.Value.tipo == CSM.Sim.Arremesso.Tipo.Pulo || x.brain.PlanoGranada.Value.tipo == CSM.Sim.Arremesso.Tipo.CorrePulo));
+                        if (a != null) { achou = true; p.camFixa = a.pos; Debug.Log($"[Visual3D] LANCE jump round {p.Round} t={m.t:0.0}: {a.name} {a.brain.PlanoGranada.Value.tipo} em ({a.pos.x:0},{a.pos.y:0})"); }
+                    }
+                }
+                if (!achou) { Debug.Log($"[Visual3D] LANCE {lance}: nenhum em {rounds} rounds"); EditorApplication.Exit(0); return; }
+                int n = Mathf.RoundToInt(dur * 30), W = (int)Arg("-v3d_w", 1280), H = (int)Arg("-v3d_h", 720);
+                for (int i = 0; i < n; i++) { p.Simular(DT, DT); Salvar(p.Cenario.cam, $"{dir}/q_{i:0000}.png", W, H, p.Hud); }
+                Debug.Log($"[Visual3D] LANCE gravado: {n} quadros");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        static void CapturarVideo()
         {
             try
             {
@@ -253,14 +411,18 @@ namespace CSM.EditorTools
                 var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
                 p.seed = (int)Arg("-v3d_seed", 15);
                 p.zoom = Arg("-v3d_zoom", p.zoom);
+                // -v3d_cam_x/-v3d_cam_y: câmera parada nesse ponto do mapa (laboratório de lances reais)
+                if (Arg("-v3d_cam_x", -1) >= 0) p.camFixa = new CSM.Sim.V2(Arg("-v3d_cam_x", 0), Arg("-v3d_cam_y", 0));
                 p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
                 p.PularAte((int)Arg("-v3d_round", 1));
                 // -v3d_seguir NOME: a câmera segue esse jogador (ex.: quem sobe a escada)
                 var ar = System.Environment.GetCommandLineArgs();
                 int si = System.Array.IndexOf(ar, "-v3d_seguir");
-                string seguirNome = si >= 0 && si + 1 < ar.Length ? ar[si + 1] : null;
+                string seguirNome = si >= 0 && si + 1 < ar.Length ? ar[si + 1] : null; float seguirAte = Arg("-v3d_seguir_ate", 9999), seguirDe = Arg("-v3d_seguir_de", 0);
                 float de = Arg("-v3d_de", 18), dur = Arg("-v3d_dur", 20);
                 const float DT = 1 / 30f;
+                int W = (int)Arg("-v3d_w", 1280), H = (int)Arg("-v3d_h", 720);   // -v3d_w 1920 -v3d_h 1080: quadro em Full HD
+                CSM.View3D.Hud3D.SemEconomia = Arg("-v3d_semeco", 0) > 0;
                 p.Simular(de, DT);
                 string dir = "Logs/visual3d/video";
                 if (Directory.Exists(dir)) Directory.Delete(dir, true);
@@ -272,9 +434,10 @@ namespace CSM.EditorTools
                 {
                     // segue pelo fim do round, o replay e o começo do round seguinte (painel de economia)
                     if (p.Round > r0 && p.Partida.t > 8f) break;
-                    if (seguirNome != null) { int id = p.Partida.agents.FindIndex(a => a.name == seguirNome); p.seguir = id >= 0 && p.Partida.agents[id].alive ? id : -1; }
+                    if (seguirNome != null && i * DT >= seguirDe && i * DT < seguirAte) { int id = p.Partida.agents.FindIndex(a => a.name == seguirNome); p.seguir = id >= 0 && p.Partida.agents[id].alive ? id : -1; }
+                    else if (seguirNome != null) p.seguir = -1;   // fora de -v3d_seguir_de..-v3d_seguir_ate: diretor automático
                     p.Simular(DT, DT);
-                    Salvar(p.Cenario.cam, $"{dir}/q_{i:0000}.png", 1280, 720, p.Hud);
+                    Salvar(p.Cenario.cam, $"{dir}/q_{i:0000}.png", W, H, p.Hud);
                 }
                 Debug.Log($"[Visual3D] vídeo: {n} quadros em {sw.Elapsed.TotalSeconds:F0} s");
                 EditorApplication.Exit(0);
@@ -339,6 +502,14 @@ namespace CSM.EditorTools
                 };
                 int pg = (int)Arg("-v3d_pagina", -1);
                 if (pg >= 0) itens = todas.Skip(pg * 12).Take(12).ToArray();
+                // -v3d_armasnovas: as 6 do Meshy (2026-11-04) pintadas, na mira, dos dois times
+                if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-v3d_armasnovas") >= 0)
+                    itens = new (string, string, string, string)[]
+                    {
+                        ("ct", "mira_Deagle", null, "Deagle"), ("tr", "mira_Tec9", null, "Tec-9"), ("ct", "mira_FiveSeven", null, "Five-SeveN"),
+                        ("tr", "mira_P250", null, "P250"), ("ct", "mira_Famas", null, "FAMAS"), ("tr", "mira_Galil", null, "Galil"),
+                        ("tr", "tiro_Galil", "rajada", "tiro Galil"), ("ct", "recarga_Famas", null, "recarga FAMAS"),
+                    };
                 // -v3d_itens 0,1,2,3: só esses (mais perto); -v3d_zoom: enquadramento
                 var argv = System.Environment.GetCommandLineArgs(); int ai = System.Array.IndexOf(argv, "-v3d_itens");
                 if (ai >= 0 && ai + 1 < argv.Length) itens = argv[ai + 1].Split(',').Select(x => itens[int.Parse(x)]).ToArray();
@@ -435,9 +606,35 @@ namespace CSM.EditorTools
 
         /// <summary>
         /// Laboratório de smoke e física (Logs/visual3d/lab): smoke estoura no bomb A; rajada atravessando (furos que
-        /// fecham); HE dentro (bolha que volta a encher); molotov do lado que é apagada (vapor); armas no chão e C4
+        /// fecham); HE dentro (bolha que volta a encher); molotov do lado apagada por uma smoke jogada em cima; armas no chão e C4
         /// explodindo do lado (itens voam). Mesmo desenho do jogo, sem depender de um round acontecer.
         /// </summary>
+        /// <summary>LED da C4 piscando (Logs/visual3d/c4/q_NNNN.png): C4 plantada no meio do A, 1,5 s faltando 9 s.</summary>
+        public static void CapturarC4Batch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                foreach (var b in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b.gameObject.SetActive(false);
+                var A = CSM.Map.MapData.SITES["A"].Center; var pc = new CSM.Sim.V2(A.x, A.y);
+                p.LabCamera(pc, Arg("-v3d_zoom", 1.2f));
+                string dir = "Logs/visual3d/c4";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                for (int f = 0; f < 45; f++)
+                {
+                    p.LabPasso(1 / 30f); p.LabBomba(pc, 9f - f / 30f);
+                    Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720);
+                }
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
         public static void CapturarLabBatch()
         {
             try
@@ -468,13 +665,325 @@ namespace CSM.EditorTools
                         p.LabTiro(new CSM.View.V3(o.x - 110, yy, h), new CSM.View.V3(o.x + 110, yy + 8, h - 2)); tiros++;
                     }
                     if (!feito2 && t >= 7.0f) { feito2 = true; p.LabHE(new CSM.View.V3(o.x + 4, o.y - 4, z + 8)); }
-                    if (!feito3 && t >= 10.5f) { feito3 = true; fogo = p.LabFogo(new CSM.View.V3(o.x - 40, o.y - 45, z)); }
-                    if (!feito4 && t >= 12.6f) { feito4 = true; p.LabApagaFogo(fogo); }
+                    // molotov queimando do lado e, 1 s depois, uma smoke jogada em cima: apaga inteira quando a smoke encosta
+                    if (!feito3 && t >= 10.0f) { feito3 = true; fogo = p.LabFogo(new CSM.View.V3(o.x - 40, o.y - 45, z)); }
+                    if (!feito4 && t >= 11.2f) { feito4 = true; p.LabSmoke(new CSM.View.V3(o.x - 36, o.y - 40, z)); }
                     if (!feito5 && t >= 14.5f) { feito5 = true; p.LabC4(new CSM.View.V3(A.x + 55, A.y - 25, z)); }
                     p.LabPasso(DT);
-                    Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720);
+                    Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", (int)Arg("-v3d_w", 1280), (int)Arg("-v3d_h", 720));
                 }
                 Debug.Log($"[Visual3D] laboratório: {N} quadros");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Quanto a smoke por volume custa por quadro (Logs: "[Visual3D] DESEMPENHO"): cena do laboratório com 2 smokes
+        /// cheias, 1920x1080, mede o render com e sem as smokes e com e sem a sombra delas. Ler 1 pixel força a GPU a
+        /// terminar o quadro, então o tempo é o da GPU de verdade (aproximado).
+        /// </summary>
+        public static void MedirSmokeBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center;
+                float z = CSM.Map.NavGrid.ZAt(new CSM.Sim.V2(A.x, A.y));
+                p.LabCamera(new CSM.Sim.V2(A.x - 5, A.y + 15), 8.5f);
+                p.LabSmoke(new CSM.View.V3(A.x - 10, A.y + 10, z)); p.LabSmoke(new CSM.View.V3(A.x - 46, A.y - 35, z));
+                for (int f = 0; f < 90; f++) p.LabPasso(1 / 30f);
+                var cam = p.Cenario.cam;
+                var rt = new RenderTexture(1920, 1080, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
+                var um = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                var smokes = Object.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None).Where(r => r.name == "smoke").ToArray();
+                double Medir()
+                {
+                    cam.targetTexture = rt;
+                    for (int i = 0; i < 5; i++) cam.Render();   // aquece
+                    var sw = System.Diagnostics.Stopwatch.StartNew();
+                    const int N = 30;
+                    for (int i = 0; i < N; i++)
+                    {
+                        p.LabPasso(1 / 30f); cam.Render();
+                        RenderTexture.active = rt; um.ReadPixels(new Rect(0, 0, 1, 1), 0, 0); um.Apply(); RenderTexture.active = null;
+                    }
+                    cam.targetTexture = null;
+                    return sw.Elapsed.TotalMilliseconds / N;
+                }
+                double com = Medir();
+                foreach (var r in smokes) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                double semSombra = Medir();
+                foreach (var r in smokes) r.enabled = false;
+                double sem = Medir();
+                Debug.Log($"[Visual3D] DESEMPENHO 1920x1080, {smokes.Length} smokes: com tudo {com:0.0} ms, sem a sombra da smoke {semSombra:0.0} ms, sem smoke {sem:0.0} ms");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Build de Windows da partida 3D pra medir FPS de verdade (CSM.View3D.Desempenho, ligado por "-csm_perf saida.txt").
+        /// -v3d_build pasta (padrão Logs/perfbuild). Liga as estatísticas de tempo de quadro só durante a build.
+        /// </summary>
+        public static void BuildPerfBatch()
+        {
+            string pasta = ArgS("-v3d_build", "Logs/perfbuild");
+            bool antes = PlayerSettings.enableFrameTimingStats;
+            try
+            {
+                Setup();
+                PlayerSettings.enableFrameTimingStats = true;
+                var r = BuildPipeline.BuildPlayer(new[] { CENA3D }, Path.Combine(pasta, "CSManager.exe"), BuildTarget.StandaloneWindows64, BuildOptions.None);
+                Debug.Log($"[Visual3D] BUILD {r.summary.result} {r.summary.totalTime.TotalSeconds:0}s {r.summary.totalErrors} erros");
+                PlayerSettings.enableFrameTimingStats = antes;
+                EditorApplication.Exit(r.summary.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
+            }
+            catch (System.Exception e) { PlayerSettings.enableFrameTimingStats = antes; Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        public const string PASTA_JOGO = "Build";
+
+        /// <summary>O jogo pra jogar fora do editor: Build/CSManager.exe (tela cheia, partida 3D, dados dos bonecos e dos bots
+        /// copiados pra dentro por BuildDados). Roda bem mais leve que o Play do editor.</summary>
+        [MenuItem("CS Manager/Gerar jogo (.exe)")]
+        public static void GerarJogo()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            var r = Gerar(PASTA_JOGO);
+            if (r == UnityEditor.Build.Reporting.BuildResult.Succeeded) EditorUtility.RevealInFinder(Path.Combine(PASTA_JOGO, "CSManager.exe"));
+        }
+
+        public static void GerarJogoBatch()
+        {
+            try { EditorApplication.Exit(Gerar(ArgS("-v3d_build", PASTA_JOGO)) == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1); }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        static UnityEditor.Build.Reporting.BuildResult Gerar(string pasta)
+        {
+            Setup();
+            var r = BuildPipeline.BuildPlayer(new[] { CENA3D }, Path.Combine(pasta, "CSManager.exe"), BuildTarget.StandaloneWindows64, BuildOptions.None);
+            Debug.Log($"[Visual3D] JOGO {r.summary.result} em {Path.GetFullPath(pasta)} ({r.summary.totalTime.TotalSeconds:0}s, {r.summary.totalErrors} erros)");
+            return r.summary.result;
+        }
+
+        static string ArgS(string nome, string padrao)
+        {
+            var a = System.Environment.GetCommandLineArgs();
+            int i = System.Array.IndexOf(a, nome);
+            return i >= 0 && i + 1 < a.Length ? a[i + 1] : padrao;
+        }
+
+        /// <summary>Print do laboratório de arremesso (PartidaAoVivo3D.LabArremesso): fases x jeitos, CT e TR, granada do
+        /// kit na mão. -v3d_giro graus (pra onde os bonecos olham), -v3d_zoom. Saída Logs/visual3d/arremesso.png.</summary>
+        public static void CapturarArremessoBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22, A.y + 18);
+                bool tr = Arg("-v3d_tr", 0) > 0;
+                p.LabCamera(c, Arg("-v3d_zoom", 3.0f));
+                p.LabArremesso(c, Arg("-v3d_giro", 150), tr, Arg("-v3d_passo", 11));
+                for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
+                Directory.CreateDirectory("Logs/visual3d");
+                Salvar(p.Cenario.cam, $"Logs/visual3d/arremesso_{(tr ? "tr" : "ct")}.png", 1920, 1080);
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>Print do laboratório do body block (PartidaAoVivo3D.LabEncosto): pares a -v3d_d unidades (padrão 8),
+        /// -v3d_giro, -v3d_zoom. Saída Logs/visual3d/encosto.png.</summary>
+        /// <summary>Laboratório das mortes (PartidaAoVivo3D.LabMortes): 8 casos morrendo juntos, quadros em Logs/visual3d/mortes e
+        /// resumo "[Visual3D] MORTE" (giro do tronco, pra onde a cabeça caiu). -v3d_giro, -v3d_zoom, -v3d_quadros.</summary>
+        public static void CapturarMortesBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                foreach (var b0 in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b0.gameObject.SetActive(false);
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22 + Arg("-v3d_dx", 0), A.y + 18 + Arg("-v3d_dy", 0));
+                p.LabCamera(c, Arg("-v3d_zoom", 3.4f));
+                var arM = System.Environment.GetCommandLineArgs(); int qm = System.Array.IndexOf(arM, "-v3d_casos");
+                p.LabMortes(c, Arg("-v3d_giro", 120), 0.3f, qm >= 0 && qm + 1 < arM.Length ? arM[qm + 1] : "0,1,2,3,4,5,6,7");
+                string dir = "Logs/visual3d/mortes";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                int N = (int)Arg("-v3d_quadros", 100);
+                for (int f = 0; f < N; f++) { p.LabPasso(1 / 30f); Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720); }
+                Debug.Log(p.LabMortesResumo());
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>Laboratório da mira inclinada (Boneco3D: cadeia girando nos ombros): mede a junta mais aberta de cada
+        /// animação a -60..+60° contra a mesma pose reta e fotografa a luneta da AWP e o agachado. Log "[Visual3D] PITCH".
+        /// Fotos em Logs/visual3d/pitch_*.png.</summary>
+        public static void CapturarPitchBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                foreach (var b0 in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b0.gameObject.SetActive(false);
+                float[] graus = { -60, -30, 0, 30, 60 };
+                string[] anims = { "mira_AWP", "awp_mirando", "tiro_AK47", "agachado_M4A4", "andar_AK47", "recarga_AWP", "devagar_MP9", "mira_Glock", "agachado_USP", "sacar_AWP" };
+                float piorGeral = 0; string piorQual = "";
+                foreach (var time in new[] { "ct", "tr" })
+                    foreach (var an in anims)
+                    {
+                        var b = CSM.View3D.Boneco3D.Criar(time, p.transform);
+                        if (!b.Tem(an)) { Object.DestroyImmediate(b.gameObject); continue; }
+                        b.pitch = 0; b.Pose(an, 0.3f, 0); float g0 = b.PiorJunta(out _);
+                        string linha = $"[Visual3D] PITCH {time} {an}: reta {g0 * 100:0.0} cm |";
+                        foreach (var gr in graus)
+                        {
+                            if (gr == 0) continue;
+                            b.pitch = gr; b.Pose(an, 0.3f, 0); float g = b.PiorJunta(out string q);
+                            linha += $" {gr:+0;-0}° +{(g - g0) * 100:0.0} ({q})";
+                            if (g - g0 > piorGeral) { piorGeral = g - g0; piorQual = $"{time} {an} {gr}° {q}"; }
+                        }
+                        Debug.Log(linha);
+                        Object.DestroyImmediate(b.gameObject);
+                    }
+                Debug.Log($"[Visual3D] PITCH pior junta a mais: {piorGeral * 100:0.0} cm ({piorQual})");
+                // fotos: fileira de -60 a +60 com a câmera de lado
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22, A.y + 18);
+                Directory.CreateDirectory("Logs/visual3d");
+                foreach (var (time, an) in new[] { ("ct", "awp_mirando"), ("tr", "awp_mirando"), ("ct", "agachado_M4A4"), ("tr", "tiro_AK47") })
+                {
+                    var feitos = new System.Collections.Generic.List<CSM.View3D.Boneco3D>();
+                    for (int i = 0; i < graus.Length; i++)
+                    {
+                        var b = CSM.View3D.Boneco3D.Criar(time, p.transform);
+                        var q = new CSM.Sim.V2(c.x + (i - 2) * 13, c.y);
+                        b.transform.SetPositionAndRotation(CSM.View3D.MalhaMapa.ParaUnity(q.x, q.y, CSM.Map.NavGrid.ZAt(q)), Quaternion.Euler(0, 180, 0));
+                        b.pitch = graus[i]; b.Pose(an, 0.3f, 0); feitos.Add(b);
+                    }
+                    p.LabCamera(c, Arg("-v3d_zoom", 2.2f));
+                    Salvar(p.Cenario.cam, $"Logs/visual3d/pitch_{time}_{an}.png", 1600, 900);
+                    foreach (var b in feitos) Object.DestroyImmediate(b.gameObject);
+                }
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        public static void CapturarEncostoBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22, A.y + 18);
+                p.LabCamera(c, Arg("-v3d_zoom", 3.0f));
+                p.LabEncosto(c, Arg("-v3d_giro", 120), Arg("-v3d_d", 8));
+                for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
+                Directory.CreateDirectory("Logs/visual3d");
+                Salvar(p.Cenario.cam, "Logs/visual3d/encosto.png", 1920, 1080);
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>Print de um ponto do mapa (sem partida rodando): -v3d_x -v3d_y (unidades do jogo), -v3d_zoom, -v3d_nome.
+        /// Saída Logs/visual3d/ponto_NOME.png.</summary>
+        public static void CapturarPontoBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                CSM.View3D.Cenario3D.SigmaTeste = Arg("-v3d_sigma", -1);
+                CSM.View3D.Cenario3D.QuinaViva = Arg("-v3d_quina", 1);
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                foreach (var b in p.GetComponentsInChildren<CSM.View3D.Boneco3D>()) b.gameObject.SetActive(false);
+                var ar = System.Environment.GetCommandLineArgs();
+                // -v3d_cover TIPO: centro da primeira cobertura desse tipo (ex.: fountain), no lugar de -v3d_x/-v3d_y
+                int ci = System.Array.IndexOf(ar, "-v3d_cover");
+                var alvo = new CSM.Sim.V2(Arg("-v3d_x", 0), Arg("-v3d_y", 0));
+                if (ci >= 0 && ci + 1 < ar.Length)
+                {
+                    int k = CSM.Map.MapData.covers.FindIndex(c => c.kind == ar[ci + 1]);
+                    if (k >= 0) { var cv = CSM.Map.MapData.covers[k]; alvo = new CSM.Sim.V2((cv.r.x0 + cv.r.x1) / 2f, (cv.r.y0 + cv.r.y1) / 2f); }
+                }
+                int ni = System.Array.IndexOf(ar, "-v3d_nome");
+                string nome = ni >= 0 && ni + 1 < ar.Length ? ar[ni + 1] : "ponto";
+                Directory.CreateDirectory("Logs/visual3d");
+                // -v3d_pontos "nome:x:y:zoom;nome:x:y:zoom": vários prints numa rodada só (a montagem do mapa é a parte cara)
+                // -v3d_ab_quina: cada print sai duas vezes, quina viva desligada (_q0) e ligada (_q1) — só a global do shader
+                int pi = System.Array.IndexOf(ar, "-v3d_pontos");
+                var lista = new System.Collections.Generic.List<(string n, CSM.Sim.V2 a, float z)>();
+                if (pi >= 0 && pi + 1 < ar.Length)
+                    foreach (var s in ar[pi + 1].Split(';'))
+                    {
+                        var q = s.Split(':'); var ci2 = System.Globalization.CultureInfo.InvariantCulture;
+                        // "nome:cover:TIPO:zoom" = centro da 1ª cobertura desse tipo
+                        if (q[1] == "cover")
+                        {
+                            int k = CSM.Map.MapData.covers.FindIndex(c => c.kind == q[2]); if (k < 0) continue;
+                            var cv = CSM.Map.MapData.covers[k];
+                            lista.Add((q[0], new CSM.Sim.V2((cv.r.x0 + cv.r.x1) / 2f, (cv.r.y0 + cv.r.y1) / 2f), float.Parse(q[3], ci2)));
+                        }
+                        else lista.Add((q[0], new CSM.Sim.V2(float.Parse(q[1], ci2), float.Parse(q[2], ci2)), float.Parse(q[3], ci2)));
+                    }
+                else lista.Add((nome, alvo, Arg("-v3d_zoom", 2.0f)));
+                bool ab = System.Array.IndexOf(ar, "-v3d_ab_quina") >= 0;
+                foreach (var (n, a, z) in lista)
+                {
+                    p.LabCamera(a, z);
+                    for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
+                    if (!ab) { Salvar(p.Cenario.cam, $"Logs/visual3d/ponto_{n}.png", 1920, 1080); continue; }
+                    for (int q = 0; q < 2; q++)
+                    {
+                        Shader.SetGlobalFloat("_QuinaViva", q);
+                        Salvar(p.Cenario.cam, $"Logs/visual3d/ponto_{n}_q{q}.png", 1920, 1080);
+                    }
+                }
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>Print das granadas do kit no chão do bomb A, de perto, com um boneco do lado (Logs/visual3d/granadas.png).</summary>
+        public static void CapturarGranadasBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 30, A.y + 20);
+                p.LabCamera(new CSM.Sim.V2(c.x + 10, c.y), 2.2f);
+                p.LabGranadas(c);
+                for (int f = 0; f < 3; f++) p.LabPasso(1 / 30f);
+                Directory.CreateDirectory("Logs/visual3d");
+                Salvar(p.Cenario.cam, "Logs/visual3d/granadas.png", 1920, 1080);
                 EditorApplication.Exit(0);
             }
             catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
@@ -500,6 +1009,168 @@ namespace CSM.EditorTools
             EditorApplication.Exit(0);
         }
 
+        /// <summary>Só simulação (body block): a menor distância entre dois vivos na mesma altura (|dz| &lt; 18) em cada round,
+        /// fora dos 2 s do spawn, e os 3 encostos mais apertados (round, tempo, quem). -v3d_rounds N (padrão 6).</summary>
+        public static void AcharEncostoBatch()
+        {
+            int seed = (int)Arg("-v3d_seed", 15), rounds = (int)Arg("-v3d_rounds", 6);
+            var pt = new CSM.Sim.Partida(seed, null, null);
+            var top = new System.Collections.Generic.List<(float d, int r, float t, string a, string b)>();
+            while (!pt.acabou && pt.r < rounds)
+            {
+                var m = pt.Preparar(); int r = pt.r + 1; float menor = 999;
+                while (!m.over && m.t < 200)
+                {
+                    m.Step();
+                    if (m.t < 2) continue;
+                    for (int i = 0; i < m.agents.Count; i++)
+                        for (int j = i + 1; j < m.agents.Count; j++)
+                        {
+                            var a = m.agents[i]; var b = m.agents[j];
+                            if (!a.alive || !b.alive || System.Math.Abs(a.z - b.z) >= 18) continue;
+                            float d = (a.pos - b.pos).Len;
+                            if (d < menor) menor = d;
+                            if (d < 9) top.Add((d, r, m.t, a.name, b.name));
+                        }
+                }
+                Debug.Log($"[Visual3D] ENCOSTO round {r}: menor distância {menor:0.00}");
+                pt.Fechar(m);
+            }
+            top.Sort((x, y) => x.d.CompareTo(y.d));
+            var vistos = new System.Collections.Generic.HashSet<string>();
+            foreach (var e in top)
+            {
+                string k = e.r + e.a + e.b + (int)(e.t / 3);
+                if (!vistos.Add(k)) continue;
+                Debug.Log($"[Visual3D] ENCOSTO apertado: {e.d:0.00} round {e.r} t={e.t:0.0} {e.a} x {e.b}");
+                if (vistos.Count >= 5) break;
+            }
+            EditorApplication.Exit(0);
+        }
+
+        /// <summary>
+        /// Só simulação: o trecho de -v3d_dur segundos (padrão 25) de cada round com mais coisa acontecendo — bunny hop,
+        /// granada de cada tipo, abate — pra escolher o vídeo "com tudo". Log: "[Visual3D] CENA seed s round r de t ...".
+        /// </summary>
+        public static void AcharCenaBatch() => AcharCena();
+
+        /// <summary>Só simulação: cada granada jogada (round, hora que saiu da mão, quem, tipo, jeito e força), pra escolher
+        /// os quadros das animações de arremesso. -v3d_rounds N (padrão 4).</summary>
+        /// <summary>Só simulação: lances pra conferir no visual — granada/kit caindo do morto (onde, rolou até onde, quem pegou e
+        /// quando), arma/C4 pegas do chão e jump throws. -v3d_rounds N (padrão 6). Log "[Visual3D] LAB ...".</summary>
+        public static void AcharLabBatch()
+        {
+            int seed = (int)Arg("-v3d_seed", 15), rounds = (int)Arg("-v3d_rounds", 6);
+            var pt = new CSM.Sim.Partida(seed, null, null);
+            while (!pt.acabou && pt.r < rounds)
+            {
+                var m = pt.Preparar(); int r = pt.r + 1;
+                var itens = new System.Collections.Generic.HashSet<CSM.Sim.Match.ItemChao>();
+                var vivos = new System.Collections.Generic.Dictionary<CSM.Sim.Match.ItemChao, (float t, CSM.Sim.V2 p)>();
+                var drops = new System.Collections.Generic.HashSet<CSM.Sim.Match.Drop>();
+                var nades = new System.Collections.Generic.HashSet<CSM.Sim.Match.Nade>();
+                bool c4Chao = false;
+                while (!m.over && m.t < 200)
+                {
+                    m.Step();
+                    foreach (var it in m.itensChao)
+                        if (it.morto != null && itens.Add(it)) Debug.Log($"[Visual3D] LAB caiu round {r} t={m.t:0.00} {it.nade} de {it.morto.name} em ({it.origem.x:0},{it.origem.y:0})");
+                    foreach (var it in itens)
+                        if (!m.itensChao.Contains(it) && !vivos.ContainsKey(it)) { vivos[it] = (m.t, it.pos); Debug.Log($"[Visual3D] LAB pegou round {r} t={m.t:0.00} {it.nade} por {it.pegouPor?.name} em ({it.pos.x:0},{it.pos.y:0}) rolou {(it.pos - it.origem).Len:0.0}"); }
+                    foreach (var d in m.drops) drops.Add(d);
+                    foreach (var d in drops)
+                        if (!m.drops.Contains(d) && d.pegouPor != null && d.pegouT >= m.t - 0.05f) Debug.Log($"[Visual3D] LAB pegou-arma round {r} t={m.t:0.00} {d.gun} por {d.pegouPor.name} em ({d.pos.x:0},{d.pos.y:0})");
+                    if (m.bombDropped && !m.bombPlanted) c4Chao = true;
+                    else if (c4Chao && !m.bombDropped) { c4Chao = false; var q = m.agents.Find(a => a.hasBomb); if (q != null) Debug.Log($"[Visual3D] LAB pegou-c4 round {r} t={m.t:0.00} por {q.name} em ({q.pos.x:0},{q.pos.y:0})"); }
+                    foreach (var n in m.flying)
+                        if (nades.Add(n) && (n.tipo == CSM.Sim.Arremesso.Tipo.Pulo || n.tipo == CSM.Sim.Arremesso.Tipo.CorrePulo))
+                            Debug.Log($"[Visual3D] LAB jumpthrow round {r} t={n.t0:0.00} {n.by?.name} {n.l.kind} {n.tipo} em ({n.from.x:0},{n.from.y:0})");
+                }
+                pt.Fechar(m);
+            }
+            EditorApplication.Exit(0);
+        }
+
+        public static void AcharArremessosBatch()
+        {
+            int seed = (int)Arg("-v3d_seed", 15), rounds = (int)Arg("-v3d_rounds", 4);
+            var pt = new CSM.Sim.Partida(seed, null, null);
+            while (!pt.acabou && pt.r < rounds)
+            {
+                var m = pt.Preparar(); int r = pt.r + 1;
+                var vistas = new System.Collections.Generic.HashSet<CSM.Sim.Match.Nade>();
+                while (!m.over && m.t < 200)
+                {
+                    m.Step();
+                    foreach (var n in m.flying)
+                        if (vistas.Add(n)) Debug.Log($"[Visual3D] ARREMESSO round {r} t={n.t0:0.00} {n.by?.name} {n.l.kind} {n.tipo} forca {n.forca:0.0} up {n.up:0}");
+                }
+                pt.Fechar(m);
+            }
+            EditorApplication.Exit(0);
+        }
+
+        static void AcharCena()
+        {
+            int seed = (int)Arg("-v3d_seed", 15); float dur = Arg("-v3d_dur", 25);
+            var pt = new CSM.Sim.Partida(seed, null, null);
+            while (!pt.acabou)
+            {
+                var m = pt.Preparar(); int r = pt.r + 1;
+                var ev = new System.Collections.Generic.List<(float t, string k, string quem)>();
+                var vistas = new System.Collections.Generic.HashSet<CSM.Sim.Match.Nade>(); var livre = new bool[m.agents.Count]; int feed = 0;
+                while (!m.over && m.t < 200)
+                {
+                    m.Step();
+                    foreach (var n in m.flying) if (vistas.Add(n)) ev.Add((m.t, n.l.kind, n.by?.name));
+                    for (int i = 0; i < m.agents.Count; i++)
+                    {
+                        var a = m.agents[i];
+                        if (a.puloLivre && !livre[i] && a.pulosSeguidos >= 2) ev.Add((m.t, "bhop", a.name));
+                        livre[i] = a.puloLivre;
+                    }
+                    for (; feed < m.feed.Count; feed++) ev.Add((m.t, "abate", m.feed[feed].Item2));
+                }
+                pt.Fechar(m);
+                float melhor = -1, de = 0; string resumo = "";
+                foreach (var (t0, _, _) in ev)
+                {
+                    var j = ev.Where(e => e.t >= t0 - 2 && e.t < t0 - 2 + dur).ToList();
+                    int bh = j.Count(e => e.k == "bhop"), ab = j.Count(e => e.k == "abate"), nd = j.Count(e => e.k != "bhop" && e.k != "abate");
+                    int tipos = j.Where(e => e.k != "bhop" && e.k != "abate").Select(e => e.k).Distinct().Count();
+                    float s = (bh > 0 ? 6 : 0) + bh + nd * 1.5f + tipos * 3 + ab;
+                    if (s > melhor) { melhor = s; de = Mathf.Max(0, t0 - 2); resumo = $"bhop {bh}, granadas {nd} ({string.Join("/", j.Where(e => e.k != "bhop" && e.k != "abate").Select(e => e.k).Distinct())}), abates {ab}; bhop de {string.Join(",", j.Where(e => e.k == "bhop").Select(e => e.quem).Distinct())}"; }
+                }
+                Debug.Log($"[Visual3D] CENA seed {seed} round {r} de {de:0.0}s (nota {melhor:0}): {resumo}");
+            }
+            EditorApplication.Exit(0);
+        }
+
+        /// <summary>Só simulação: drops de propósito entre colegas por round (arma, granada, C4), pra escolher o vídeo.</summary>
+        public static void AcharDropsBatch()
+        {
+            int seed = (int)Arg("-v3d_seed", 15);
+            var pt = new CSM.Sim.Partida(seed, null, null);
+            while (!pt.acabou)
+            {
+                var m = pt.Preparar(); int r = pt.r + 1;
+                var vD = new System.Collections.Generic.HashSet<CSM.Sim.Match.Drop>(); var vI = new System.Collections.Generic.HashSet<CSM.Sim.Match.ItemChao>();
+                var ev = new System.Collections.Generic.List<string>(); float ultC4 = -1;
+                // o round roda até o fim (senão a partida nunca acaba); só os primeiros 12 s contam
+                while (!m.over && m.t < 200)
+                {
+                    m.Step();
+                    if (m.t > 12) continue;
+                    foreach (var d in m.drops) if (d.de != null && vD.Add(d)) ev.Add($"{m.t:0.0}s arma {d.gun} {d.de.name}->{d.para?.name ?? "chão"}");
+                    foreach (var it in m.itensChao) if (it.de != null && vI.Add(it)) ev.Add($"{m.t:0.0}s {it.nade} {it.de.name}->{it.para?.name ?? "chão"}");
+                    if (m.bombDe != null && m.bombDeT > ultC4) { ultC4 = m.bombDeT; ev.Add($"{m.t:0.0}s C4 {m.bombDe.name}"); }
+                }
+                pt.Fechar(m);
+                if (ev.Count > 0) Debug.Log($"[Visual3D] DROPS seed {seed} round {r}: {string.Join(" | ", ev)}");
+            }
+            EditorApplication.Exit(0);
+        }
+
         /// <summary>Só simulação: em que round/tempo alguém pega arma/granada/C4 do chão (pra escolher o vídeo da troca).</summary>
         public static void AcharTrocaBatch()
         {
@@ -509,9 +1180,19 @@ namespace CSM.EditorTools
             {
                 var m = pt.Preparar(); int r = pt.r + 1, vistos = 0;
                 var trocas = m.agents.Select(a => a.trocouArma).ToArray();
+                var livre = new bool[m.agents.Count]; var naSmoke = new bool[m.agents.Count];
                 while (!m.over && m.t < 200)
                 {
                     m.Step();
+                    for (int i = 0; i < m.agents.Count; i++)
+                    {
+                        var a = m.agents[i];
+                        if (a.puloLivre && !livre[i]) Debug.Log($"[Visual3D] PULO seed {seed} round {r} t={m.t:0.0} {a.name} seguidos={a.pulosSeguidos}");
+                        livre[i] = a.puloLivre;
+                        bool dentro = a.alive && m.smokes.Any(s => s.Sample(new CSM.View.V3(a.pos.x, a.pos.y, a.z + 8), m.t) > 0.5f);
+                        if (dentro && !naSmoke[i]) Debug.Log($"[Visual3D] SMOKE seed {seed} round {r} t={m.t:0.0} {a.name}");
+                        naSmoke[i] = dentro;
+                    }
                     for (int i = 0; i < m.agents.Count; i++)
                         if (m.agents[i].trocouArma != trocas[i]) { trocas[i] = m.agents[i].trocouArma; Debug.Log($"[Visual3D] TROCA(Q) seed {seed} round {r} t={m.t:0.0} {m.agents[i].name} -> {m.agents[i].gunId}"); }
                     for (; vistos < m.log.Count; vistos++)
@@ -549,6 +1230,56 @@ namespace CSM.EditorTools
             new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
             new GameObject("Partida ao vivo 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
             EditorSceneManager.SaveScene(s, CENA3D);
+        }
+
+        /// <summary>Radar do mapa (estilo CS): piso onde anda claro (mais claro quanto mais alto), escada um tom no meio,
+        /// prédio/parede escuro, contorno escuro entre piso e parede, zona dos bombs em vermelho. Sai
+        /// Assets/Game/Interface/Resources/Icones/radar.png (o HUD usa) — 1 pixel = 2 unidades do mapa.</summary>
+        public static void RadarBatch()
+        {
+            try
+            {
+                Setup();
+                int NX = CSM.Map.MapData.NX, NY = CSM.Map.MapData.NY, S = 2, W = NX / S, H = NY / S;
+                var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
+                var px = new Color32[W * H];
+                bool Anda(int x, int y) => x >= 0 && y >= 0 && x < NX && y < NY && CSM.Map.MapData.walk[x, y];
+                Color32 C(int r, int g, int b, int a = 255) => new Color32((byte)r, (byte)g, (byte)b, (byte)a);
+                int GZ = CSM.Map.MapData.GZ;
+                for (int py = 0; py < H; py++)
+                    for (int px_ = 0; px_ < W; px_++)
+                    {
+                        int x = px_ * S + S / 2, y = py * S + S / 2;
+                        Color32 c;
+                        if (!Anda(x, y)) c = C(38, 34, 32, 235);
+                        else
+                        {
+                            bool borda = !Anda(x - 3, y) || !Anda(x + 3, y) || !Anda(x, y - 3) || !Anda(x, y + 3);
+                            int alt = CSM.Map.MapData.floor[x, y] - GZ;
+                            if (borda) c = C(24, 21, 19, 255);
+                            else if (CSM.Map.MapData.stair[x, y]) c = C(170, 152, 128);
+                            else if (alt > 20) c = C(232, 219, 196);
+                            else if (alt > 4) c = C(214, 198, 172);
+                            else c = C(196, 178, 150);
+                        }
+                        foreach (var kv in CSM.Map.MapData.SITES)
+                        {
+                            var r = kv.Value;
+                            if (x >= r.x0 && x < r.x1 && y >= r.y0 && y < r.y1 && Anda(x, y))
+                            {
+                                bool b = x < r.x0 + 4 || x >= r.x1 - 4 || y < r.y0 + 4 || y >= r.y1 - 4;
+                                c = b ? C(200, 52, 44) : new Color32((byte)((c.r + 230) / 2), (byte)((c.g + 110) / 2), (byte)((c.b + 96) / 2), 255);
+                            }
+                        }
+                        px[(H - 1 - py) * W + px_] = c;   // y do jogo cresce pro sul: linha de cima da imagem = norte
+                    }
+                tex.SetPixels32(px); tex.Apply();
+                System.IO.Directory.CreateDirectory("Assets/Game/Interface/Resources/Icones");
+                System.IO.File.WriteAllBytes("Assets/Game/Interface/Resources/Icones/radar.png", tex.EncodeToPNG());
+                Debug.Log($"[Visual3D] radar {W}x{H}; A {CSM.Map.MapData.SITES["A"].x0},{CSM.Map.MapData.SITES["A"].y0} B {CSM.Map.MapData.SITES["B"].x0},{CSM.Map.MapData.SITES["B"].y0}");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
 
         /// <summary>Deixa o projeto pronto pro Play: recria a cena 3D, põe ela em primeiro no Build Settings e abre ela
@@ -593,7 +1324,7 @@ namespace CSM.EditorTools
         static bool aquecido, videoRodando;
         static void Salvar(Camera c, string arq, int w, int h, CSM.View3D.Hud3D hud = null)
         {
-            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 1 };
+            var rt = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };   // MSAA igual ao jogo (com 1 o print saía serrilhado)
             c.targetTexture = rt;
             c.Render(); if (!aquecido) c.Render();   // o 1º print renderiza 2x (aquece sombra/SSAO); no vídeo o quadro anterior já aqueceu
             aquecido = videoRodando;
@@ -603,22 +1334,36 @@ namespace CSM.EditorTools
             RenderTexture.active = old; c.targetTexture = null;
             if (hud != null)
             {
-                // HUD numa textura transparente (câmera própria, sem pós) e composto por cima pela alfa
+                // HUD renderizado 2x (fundo preto e fundo branco): a diferença dá a cobertura exata de cada pixel e o preto dá a
+                // cor já multiplicada, então a borda suave do texto/painel compõe certo por cima da cena (a alfa da textura do
+                // HUD sozinho sai ao quadrado com o blend da UI e a borda ficava dura e serrilhada). Conta em espaço linear.
                 var rh = new RenderTexture(w, h, 24, RenderTextureFormat.ARGB32) { antiAliasing = 1 };
                 hud.canvas.renderMode = RenderMode.ScreenSpaceCamera; hud.canvas.worldCamera = hud.cam;
-                hud.cam.targetTexture = rh; Canvas.ForceUpdateCanvases(); hud.cam.Render(); hud.cam.targetTexture = null;
-                RenderTexture.active = rh;
-                var th = new Texture2D(w, h, TextureFormat.RGBA32, false); th.ReadPixels(new Rect(0, 0, w, h), 0, 0);
-                RenderTexture.active = old;
-                hud.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-                var a = tex.GetPixels32(); var b = th.GetPixels32();
-                for (int i = 0; i < a.Length; i++)
+                var fundo0 = hud.cam.backgroundColor;
+                Color[] Hud(Color fundo)
                 {
-                    int al = b[i].a; if (al == 0) continue;
-                    a[i] = new Color32((byte)((b[i].r * al + a[i].r * (255 - al)) / 255), (byte)((b[i].g * al + a[i].g * (255 - al)) / 255), (byte)((b[i].b * al + a[i].b * (255 - al)) / 255), 255);
+                    hud.cam.backgroundColor = fundo; hud.cam.targetTexture = rh; Canvas.ForceUpdateCanvases(); hud.cam.Render(); hud.cam.targetTexture = null;
+                    RenderTexture.active = rh;
+                    var th = new Texture2D(w, h, TextureFormat.RGBA32, false); th.ReadPixels(new Rect(0, 0, w, h), 0, 0);
+                    RenderTexture.active = old;
+                    var px = th.GetPixels(); Object.DestroyImmediate(th); return px;
                 }
-                tex.SetPixels32(a); tex.Apply();
-                Object.DestroyImmediate(th); rh.Release(); Object.DestroyImmediate(rh);
+                var kp = Hud(Color.black); var kb = Hud(Color.white);
+                hud.cam.backgroundColor = fundo0; hud.canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+                var cena = tex.GetPixels();
+                static float Lin(float v) => Mathf.GammaToLinearSpace(v);
+                for (int i = 0; i < cena.Length; i++)
+                {
+                    Color p = kp[i], q = kb[i];
+                    float cob = 1 - ((q.r - p.r) + (q.g - p.g) + (q.b - p.b)) / 3f;   // em gama dá ~igual; refina abaixo
+                    if (cob <= 0.001f) continue;
+                    float pr = Lin(p.r), pg = Lin(p.g), pb = Lin(p.b);
+                    float fica = Mathf.Clamp01(((Lin(q.r) - pr) + (Lin(q.g) - pg) + (Lin(q.b) - pb)) / 3f);   // 1 - cobertura
+                    var cc = cena[i];
+                    cena[i] = new Color(Mathf.LinearToGammaSpace(pr + fica * Lin(cc.r)), Mathf.LinearToGammaSpace(pg + fica * Lin(cc.g)), Mathf.LinearToGammaSpace(pb + fica * Lin(cc.b)), 1);
+                }
+                tex.SetPixels(cena); tex.Apply();
+                rh.Release(); Object.DestroyImmediate(rh);
             }
             // PNG sem alfa (a alfa do render 3D não é 1 em todo pixel)
             var opaco = new Texture2D(w, h, TextureFormat.RGB24, false);

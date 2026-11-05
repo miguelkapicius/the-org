@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using CSM.Map;
@@ -58,8 +58,13 @@ namespace CSM.Sim
             {
                 float h = float.MaxValue; string a = site.ToString();
                 for (int k = 0; k < 5; k++) foreach (var p in js[k].passos) if (p.area == a) { h = MathF.Min(h, p.de); break; }
-                if (h < float.MaxValue) return MathF.Max(3, h - 4);
-                return plant > 0 ? MathF.Max(3, plant - 12) : padrao;
+                // o time se comprometeu antes de alguém pisar no bomb (rush que segurou no casarão/na curta): a hora é a do
+                // compromisso — senão um "rush" virava entrada aos 77 s
+                // (só no rush: nos outros o "comprometeu" do pro é tomar o mapa, e entrar nele adiantava o round ~10 s)
+                if (comprometeu >= 0 && comprometeu < 25 && !TeamBrain.EXP.Contains("horaVelha")) h = MathF.Min(h, comprometeu + 8);
+                // até ~80 s: o mapa daqui é mais curto que a Mirage e entrar depois disso é o tempo acabar (real 7,6%)
+                if (h < float.MaxValue) return MathX.Clamp(h - 4, 3, 80);
+                return plant > 0 ? MathX.Clamp(plant - 12, 3, 80) : MathF.Min(padrao, 72);
             }
             public string Nome => $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo})";
             public string Tipo => !tr ? "setup" : comprometeu >= 0 && comprometeu < 25 ? "rush" : comprometeu >= 0 && comprometeu < 50 ? "execução" : "default";
@@ -116,7 +121,7 @@ namespace CSM.Sim
                         for (int y = s.box.y0; y < s.box.y1; y += NavGrid.CELL)
                         {
                             var q = new V2(x + 1, y + 1);
-                            if (!s.has(x, y) || !NavGrid.Movable(q) || AreaAt(q.x, q.y) != area) continue;
+                            if (!s.has(x, y) || !Chao(q) || AreaAt(q.x, q.y) != area) continue;
                             sx += q.x; sy += q.y; n++; cel.Add(q);
                         }
                 }
@@ -130,7 +135,10 @@ namespace CSM.Sim
                 return r;
             }
         }
-        public static string ZonaDaArea(string area) => Places.Zona(Centro(area));
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string> zonas = new System.Collections.Concurrent.ConcurrentDictionary<string, string>();
+        public static string ZonaDaArea(string area) => zonas.GetOrAdd(area, a => Places.Zona(Centro(a)));
+        /// <summary>Chão de verdade pra ficar: andável, fora de cima de caixa e fora da escada de mão (lá o boneco engancha).</summary>
+        static bool Chao(V2 q) { if (!NavGrid.Movable(q)) return false; var (cx, cy) = NavGrid.CellOf(q); return !NavGrid.onTop[cx, cy] && !NavGrid.ladder[cx, cy]; }
 
         static readonly Dictionary<string, List<V2>> celulas = new Dictionary<string, List<V2>>();
         /// <summary>Pontos andáveis da área (um a cada 2 células).</summary>
@@ -147,7 +155,7 @@ namespace CSM.Sim
                         for (int y = s.box.y0; y < s.box.y1; y += 2 * NavGrid.CELL)
                         {
                             var q = new V2(x + 1, y + 1);
-                            if (s.has(x, y) && NavGrid.Movable(q) && AreaAt(q.x, q.y) == area) l.Add(q);
+                            if (s.has(x, y) && Chao(q) && AreaAt(q.x, q.y) == area) l.Add(q);
                         }
                 }
                 celulas[area] = l; return l;
@@ -157,15 +165,43 @@ namespace CSM.Sim
         /// <summary>Se já tem colega segurando perto (45) do ponto, escolhe outro ponto da mesma área que vê o mesmo lado.</summary>
         public static Places.Hold Espalhado(string area, Places.Hold h, List<V2> ocupados, Rng rng)
         {
-            bool cheio(V2 q) { foreach (var o in ocupados) if ((o - q).Len < 45) return true; return false; }
+            bool cheio(V2 q) { foreach (var o in ocupados) if ((o - q).Len < 70) return true; return false; }
+            float folga(V2 q) { float d = 999; foreach (var o in ocupados) d = MathF.Min(d, (o - q).Len); return d; }
+            // ponto atrás de colega, mirando o mesmo lado através dele, não vê nada (e o outro fica com a mira nas costas)
+            bool atras(V2 q, V2 alvo)
+            {
+                if (TeamBrain.EXP.Contains("espalhaAtras")) return false;
+                V2 d = alvo - q; float L = d.Len; if (L < 1) return false; d = d * (1 / L);
+                foreach (var o in ocupados) { V2 w = o - q; float ao = w.x * d.x + w.y * d.y; if (ao > 20 && ao < L && MathF.Abs(w.x * d.y - w.y * d.x) < 18) return true; }
+                return false;
+            }
             if (!cheio(h.pos)) return h;
             V2 olha = h.look.Length > 0 ? h.look[0] : h.pos;
             V2 best = h.pos; float bs = float.MinValue;
-            foreach (var q in Celulas(area))
+            // região pequena (o pro tinha lugares diferentes que aqui viram um só): vale também o entorno da mesma zona
+            var cand = new List<V2>(Celulas(area)); string zona = Places.Zona(h.pos);
+            for (int k = 0; k < 24; k++)
+                foreach (float r in new[] { 70f, 110f, 150f })
+                {
+                    V2 q = NavGrid.Snap(h.pos + V2.Ang(k * 0.2618f) * r);
+                    if (Chao(q) && Places.Zona(q) == zona && NavGrid.Direct(h.pos, q)) cand.Add(q);   // reto daqui (barato; caminho custa caro)
+                }
+            foreach (var q in cand)
             {
                 if (cheio(q)) continue;
-                float sc = -0.02f * (q - h.pos).Len + (MapData.LosWalk(q, NavGrid.ZAt(q), olha, NavGrid.ZAt(olha), 18f) ? 3 : 0) + rng.Uniform(0, 0.5f);
+                float sc = -0.02f * (q - h.pos).Len + (MapData.LosWalk(q, NavGrid.ZAt(q), olha, NavGrid.ZAt(olha), 18f) ? 3 : 0) + rng.Uniform(0, 0.5f) - (atras(q, olha) ? 3 : 0);
                 if (sc > bs) { bs = sc; best = q; }
+            }
+            if (bs == float.MinValue && !TeamBrain.EXP.Contains("espalhaVelho"))
+            {   // lugar apertado (nenhum ponto a 70 de todo mundo): o mais afastado que der, de preferência vendo o mesmo lado —
+                // desistir deixava 3 no mesmo pixel
+                float f0 = folga(h.pos);
+                foreach (var q in cand)
+                {
+                    float f = folga(q); if (f < f0 + 15) continue;
+                    float sc = 0.08f * MathF.Min(f, 70) - 0.01f * (q - h.pos).Len + (MapData.LosWalk(q, NavGrid.ZAt(q), olha, NavGrid.ZAt(olha), 18f) ? 1.5f : 0) + rng.Uniform(0, 0.3f) - (atras(q, olha) ? 1.5f : 0);
+                    if (sc > bs) { bs = sc; best = q; }
+                }
             }
             return bs == float.MinValue ? h : new Places.Hold(h.name + " (do lado)", best, h.look);
         }
@@ -175,7 +211,22 @@ namespace CSM.Sim
         /// Posição de segurar numa área: o ponto dela e pra onde olhar — o caminho que leva até quem vem
         /// (TR: pro bomb daquela zona ou pra base CT; CT: pra base TR), uns 140 à frente.
         /// </summary>
+        static readonly Dictionary<string, Places.Hold> holdsG = new Dictionary<string, Places.Hold>();
+        // feito na 1ª vez com NavGrid.Path: quem cria paga o A* no orçamento do passo e o caminho depende do cache — dividido
+        // entre rounds paralelos, o resultado dependia de quem chegou antes. No modo NavGrid.PorRound é da thread e zera por round.
+        [System.ThreadStatic] static Dictionary<string, Places.Hold> holdsT;
+        static Dictionary<string, Places.Hold> holds => NavGrid.PorRound ? (holdsT ??= new Dictionary<string, Places.Hold>()) : holdsG;
+        public static void NovoRound() { if (NavGrid.PorRound) holdsT?.Clear(); }
+        public static void ZeraDinamico() { lock (trava) holdsG.Clear(); holdsT?.Clear(); }
         public static Places.Hold Hold(string area, bool tr, char site)
+        {
+            string k = area + (tr ? "|T|" : "|C|") + site;
+            lock (trava) if (holds.TryGetValue(k, out var h0)) return h0;
+            var h = CriaHold(area, tr, site);
+            lock (trava) holds[k] = h;
+            return h;
+        }
+        static Places.Hold CriaHold(string area, bool tr, char site)
         {
             V2 p = Centro(area);
             V2 alvo = tr ? (ZonaDaArea(area) == "B" ? Places.PlantB : ZonaDaArea(area) == "A" ? Places.PlantA : Places.Plant(site)) : SPAWN_T[0];

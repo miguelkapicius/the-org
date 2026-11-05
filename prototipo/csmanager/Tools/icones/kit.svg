@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 152">
+  <!-- kit de defuse: alicate de corte (cabos com capa, pino, bico) -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="152">
+      <rect width="160" height="152" fill="#fff"/>
+      <circle cx="96" cy="76" r="3.6" fill="#000"/>
+      <g stroke="#000" fill="none" stroke-width="2" stroke-linecap="round">
+        <path d="M40 58 L42 66"/><path d="M40 94 L42 86"/>   <!-- fim da capa dos cabos -->
+        <path d="M108 76 L150 76" stroke-width="1.8"/>        <!-- corte do bico -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- cabos -->
+    <path d="M12 48 Q10 42 16 42 Q60 50 98 70 L94 78 Q56 62 16 56 Q12 55 12 48 Z"/>
+    <path d="M12 104 Q10 110 16 110 Q60 102 98 82 L94 74 Q56 90 16 96 Q12 97 12 104 Z"/>
+    <!-- cabeça + bico -->
+    <path d="M86 66 Q96 60 108 66 L152 74 Q156 76 152 78 L108 86 Q96 92 86 86 Z"/>
+  </g>
+</svg>

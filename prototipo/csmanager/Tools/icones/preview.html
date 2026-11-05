@@ -1,0 +1,35 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Ícones teste</title>
+<style>
+  body { margin: 0; background: #2a2622; font-family: "Segoe UI", sans-serif; color: #fff4e2; padding: 24px; }
+  h2 { font-size: 18px; margin: 18px 0 8px; opacity: .8; font-weight: 600; }
+  .linha { display: flex; gap: 28px; align-items: center; flex-wrap: wrap; }
+  .bloco { background: rgba(31,27,24,.92); padding: 14px 18px; border-radius: 0; }
+  .rot { font-size: 12px; opacity: .55; margin-bottom: 6px; letter-spacing: .05em; text-transform: uppercase; }
+  img { display: block; }
+  .card { width: 440px; height: 56px; background: rgba(31,27,24,.92); display: flex; align-items: center; justify-content: flex-end; padding-right: 14px; box-sizing: border-box; position: relative; }
+  .card .vida { position: absolute; left: 0; top: 0; bottom: 0; width: 58px; background: #A85A00; display:flex; align-items:center; justify-content:center; font-weight: 900; font-size: 26px; }
+  .card .nome { position: absolute; left: 70px; top: 4px; font-weight: 900; font-size: 20px; }
+</style></head>
+<body>
+  <h2>Grande (pra ver o desenho)</h2>
+  <div class="linha">
+    <div class="bloco"><div class="rot">atual</div><img src="../../Assets/Game/View3D/Resources/Icones/AK47.png" width="512"></div>
+    <div class="bloco"><div class="rot">novo</div><img src="ak47.svg" width="512"></div>
+    <div class="bloco"><div class="rot">novo</div><img src="flash.svg" height="152"></div>
+  </div>
+  <h2>No tamanho do card do HUD</h2>
+  <div class="linha">
+    <div class="card"><div class="vida">100</div><div class="nome">VULCAO</div><img src="../../Assets/Game/View3D/Resources/Icones/AK47.png" width="100"></div>
+    <div class="card"><div class="vida">100</div><div class="nome">VULCAO</div><img src="ak47.svg" width="104"></div>
+  </div>
+  <h2>Killfeed</h2>
+  <div class="linha">
+    <div class="bloco" style="display:flex;gap:10px;align-items:center;font-weight:800">
+      <span style="color:#F5A524">VULCAO</span><img src="ak47.svg" height="22"><span style="color:#5B9BFF">ROCHA</span>
+    </div>
+    <div class="bloco" style="display:flex;gap:10px;align-items:center;font-weight:800">
+      <span style="color:#5B9BFF">ESCUDO</span><img src="flash.svg" height="24"><span style="opacity:.6">cegou</span><span style="color:#F5A524">SOMBRA</span>
+    </div>
+  </div>
+</body></html>

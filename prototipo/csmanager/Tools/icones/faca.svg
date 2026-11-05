@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 310 152">
+  <!-- faca padrão: cabo com dedeira, guarda, lâmina com ponta recortada (clip point) e canal -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="310" height="152">
+      <rect width="310" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M140 60 L246 60" stroke-width="2.4"/>         <!-- canal da lâmina -->
+        <path d="M30 60 L30 76" stroke-width="2"/>             <!-- pomo -->
+      </g>
+      <circle cx="40" cy="68" r="3" fill="#000"/>              <!-- furo do cordão -->
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- cabo com dedeira -->
+    <path d="M16 60 Q16 54 22 54 L110 56 L110 80 L88 80 Q82 86 76 80 Q70 86 64 80 Q58 86 52 80 L22 82 Q16 82 16 76 Z"/>
+    <!-- guarda -->
+    <path d="M108 46 Q108 42 112 42 L118 42 Q122 42 122 46 L122 90 Q122 94 118 94 L112 94 Q108 94 108 90 Z"/>
+    <!-- lâmina: costa reta, recorte até a ponta, fio curvo -->
+    <path d="M120 54 L250 54 L296 64 Q290 72 270 76 Q220 84 120 80 Z"/>
+  </g>
+</svg>

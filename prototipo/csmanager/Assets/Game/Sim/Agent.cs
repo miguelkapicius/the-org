@@ -21,6 +21,29 @@ namespace CSM.Sim
         public float aggression = 0.5f;     // 0 = passivo, 1 = agressivo
         public float composure = 0.8f;      // erra menos no clutch / sob pressão
         public float utilitaria = 0.8f;     // execução de granada: sabe o pixel, mas quanto acerta (0..1)
+
+        /// <summary>
+        /// Estilo de jogador pela função (arquétipos do cenário pro): entry agressivo que abre (tipo apEX), AWPer calmo e
+        /// preciso (tipo FalleN), lurker paciente, suporte da utilitária, IGL que pensa pelo time (mira um pouco pior),
+        /// âncora do CT que segura calmo. A MÉDIA de cada time fica igual ao jogador padrão — muda o jeito, não a força.
+        /// estilosVelho = todo mundo igual (como era).
+        /// </summary>
+        public static Skill Estilo(Role r)
+        {
+            var s = new Skill();
+            if (!TeamBrain.EXP.Contains("estilos") || TeamBrain.EXP.Contains("estilosVelho")) return s;   /* opt-in: sozinho mexia o retake (−7); volta com os status dos jogadores */
+            switch (r)
+            {
+                case Role.Entry: s.aggression = 0.82f; s.composure = 0.66f; s.aimSigma = 0.62f; s.reaction = 0.18f; s.utilitaria = 0.7f; break;
+                case Role.Awper: s.aggression = 0.38f; s.composure = 0.9f; s.aimSigma = 0.61f; s.utilitaria = 0.75f; break;
+                case Role.Lurker: s.aggression = 0.3f; s.composure = 0.9f; s.utilitaria = 0.75f; break;
+                case Role.Suporte: s.aggression = 0.45f; s.composure = 0.8f; s.aimSigma = 0.68f; s.utilitaria = 0.95f; break;
+                case Role.Igl: s.aggression = 0.55f; s.composure = 0.78f; s.aimSigma = 0.72f; s.reaction = 0.2f; s.utilitaria = 0.9f; break;
+                case Role.Ancora: s.aggression = 0.35f; s.composure = 0.88f; s.utilitaria = 0.85f; break;
+                case Role.Rotacao: s.aggression = 0.6f; s.composure = 0.75f; s.utilitaria = 0.8f; break;
+            }
+            return s;
+        }
     }
 
     /// <summary>Um jogador: corpo, arma, movimento, mira, estado. O que ele decide está no Brain.</summary>
@@ -31,11 +54,24 @@ namespace CSM.Sim
         // corpo
         public bool alive = true; public int hp = 100, armor = 100; public bool helmet = true;
         public V2 pos, vel; public float z;
-        public bool noAr; public float vz, quedaDe;   // pulando/caindo: velocidade vertical e de que altura saiu
+        public Agent travadoPor; public float travadoDesde = -9, travadoUlt = -9, daPassagemAte = -9; public V2 daPassagemDir;   // body block
+        public bool noAr, puloAgachado; public float vz, quedaDe;
+        /* pezinho (boost): dandoPezinho = agachado encostado na pilha servindo de degrau; subindoPezinho = quem vai subir
+           (a física deixa o pulo chegar no topo da pilha só com o colega agachado colado). O visual lê os dois */
+        public bool dandoPezinho, subindoPezinho; public float naPilhaAte = -9, saltandoAte = -9; public V2 saltoAlvo; public float saltoZ;   /* saltandoAte: pulo de salto por cima de vão (a física deixa passar sobre o mais baixo) */
+        /* pezinho como no CS: o boneco é chão pra quem está em cima dele. emCimaDe = em quem estou em pé (o z já é o do topo
+           dele); AlturaCorpo = onde fica a cabeça (em pé 25; agachado ~18,75: 54/72 do CS) */
+        public Agent emCimaDe;
+        public float AlturaCorpo => 25f - 6.25f * duck;   // pulando/caindo: velocidade vertical e de que altura saiu
+        public float subindoDegrauAte = -9;            // pediu pulo pro degrau há pouco: a folga da parede não empurra (borda estreita da caixa)
         public float pularPara;                       // o cérebro pediu pulo pra essa altura (degrau logo à frente)
         public float aim, aimPitch;            // pra onde olha (rad) e altura da mira (unidades, relativo ao olho)
+        public float aimV;                     /* ângulo vertical da mira (rad; + pra cima): na altura da cabeça de quem estaria onde ele olha */
         public Move move = Move.Parado; public bool crouch;
         public float blindUntil = -1; public V2 flashDe;   // onde estourou a flash que cegou
+        // pro killfeed (Match.abates): quem jogou a flash que me cegou (total), dano que levei de cada um neste round e se a
+        // AWP estava na luneta no último tiro (o tiro tira da luneta antes do dano)
+        public Agent flashPor; public readonly int[] danoDe = new int[10]; public bool lunetaNoTiro;
         public V2 dirAnt; public float dirAntT = -9; public int vaiVoltaFrente, vaiVoltaLado;   // inverteu o rumo em <0,7 s (validador)
         public int popFlash;
         public float panico;                    // 0..1: situação ruim x sangue-frio (Brain.Panico)
@@ -55,12 +91,14 @@ namespace CSM.Sim
             if (outraId == null) return;
             gun.reloadLeft = 0;
             (gunId, outraId) = (outraId, gunId); (gun, outraGun) = (outraGun, gun);
-            scoped = false; spray = 0; faca = false; sacaAte = t + TempoSacar; trocouArma++;
+            scoped = false; spray = 0; faca = false; sacaAte = t + (TeamBrain.EXP.Contains("sacarTrocaCurta") ? TempoSacarCurto : TempoSacar); trocouArma++;
         }
         public int spray;                      // bala do spray atual (zera quando para de atirar)
         public float aimErrV;                  // erro vertical atual da mira (graus), vem do Brain ao achar um alvo
-        public float lastShotT = -9; public bool killedByFire;
+        public float lastShotT = -9, cliqueT = -9; public bool killedByFire;
         public List<string> nades = new List<string>();
+        /// <summary>O que ele comprou pro colega e ainda vai dropar (começo do round): pra quem e o quê (arma ou granada).</summary>
+        public List<(Agent para, string item)> entregar = new List<(Agent, string)>();
         public bool hasBomb, hasKit = true;
         // estatística do round/jogo
         public int kills, deaths, hs, shots, hits, damage, firstKills, firstDeaths, traded, tradeKills;
@@ -90,13 +128,47 @@ namespace CSM.Sim
 
         public bool IsT => team == Team.T;
         public bool Blind(float t) => t < blindUntil;
-        public float Eye => crouch ? 13f : 18f;
+        public float Eye => 18f - 5f * duck;
+        /// <summary>Agachar como no CS2: crouch é a vontade (o cérebro aperta); duck é o corpo (0 em pé, 1 agachado) e anda
+        /// com a velocidade duckVel. Cada apertada nova tira 2 da velocidade (spam de agachar fica lento: 1ª normal, 2ª e 3ª
+        /// mais lentas, depois bem lento) e ela volta 3/s até 8 (CS: CS_PLAYER_DUCK_SPEED_IDEAL). Mira e recuo de agachado só
+        /// valem com o corpo inteiro embaixo (FL_DUCKING).</summary>
+        public float duckCorpo, duckVel = DUCK_IDEAL; bool crouchAntes;
+        public bool CrouchAntes => crouchAntes;
+        public static bool AgacharVelho => AgVelho;
+        /// <summary>Quanto o corpo está agachado (0..1). Com agacharVelho é o botão na hora (como era antes).</summary>
+        public float duck => AgVelho ? (crouch ? 1 : 0) : duckCorpo;
+        static string agExp; static bool agVelho;
+        static bool AgVelho { get { var e = TeamBrain.EXP; if (!ReferenceEquals(e, agExp)) { agExp = e; agVelho = e.Contains("agacharVelho"); } return agVelho; } }
+        public const float DUCK_IDEAL = 8f, DUCK_POR_APERTO = 2f, DUCK_MIN = 1.5f, DUCK_VOLTA = 3f, DUCK_RITMO = 0.6f;
+        public bool Agachado => AgVelho ? crouch : duckCorpo >= 0.999f;
+        public int apertosAgachar;   // validador: quantas vezes apertou no round
+        /// <returns>0 nada, 1 apertou, 2 apertou já com o agachar lento (spam)</returns>
+        public int Agachar(float dt)
+        {
+            if (AgVelho) return 0;
+            int r = 0;
+            if (crouch && !crouchAntes) { r = duckVel < 5f ? 2 : 1; duckVel = MathF.Max(DUCK_MIN, duckVel - DUCK_POR_APERTO); apertosAgachar++; }
+            crouchAntes = crouch;
+            float passo = duckVel * (TeamBrain.EXP.Contains("duckRapido") ? 100f : DUCK_RITMO) * dt, alvo = crouch ? 1 : 0;
+            duckCorpo = duckCorpo < alvo ? MathF.Min(alvo, duckCorpo + passo) : MathF.Max(alvo, duckCorpo - passo);
+            duckVel = MathF.Min(DUCK_IDEAL, duckVel + DUCK_VOLTA * dt);
+            return r;
+        }
         /// <summary>Velocidade máxima com a arma (CS2: faca 250, AK 215, M4 225, AWP 200, SMG/pistola 240) na nossa escala.</summary>
-        public float MaxSpeed => MapCheck.RUN * (faca ? 1f : gunId switch { "ak" => 0.86f, "m4" => 0.9f, "m4s" => 0.9f, "awp" => scoped ? 0.4f : 0.8f, _ => 0.96f });
+        public float MaxSpeed => MapCheck.RUN * (faca ? 1f : gunId switch { "ak" => 0.86f, "m4" => 0.9f, "m4s" => 0.9f, "galil" => 0.86f, "famas" => 0.88f, "awp" => scoped ? 0.4f : 0.8f, _ => 0.96f });   // Galil 215, FAMAS 220
         /// <summary>Faca na mão (corre mais: CS2 faca 250 x AK 215) — longe de onde o inimigo pode estar. Pra atirar
         /// precisa sacar a arma, e sacar leva um tempo.</summary>
-        public bool faca; public float sacaAte = -9;
-        public float TempoSacar => gunId == "awp" ? 0.75f : gunId == "deagle" ? 0.6f : WeaponStats.Pistola(gunId) || gunId == "mp9" || gunId == "mac10" ? 0.45f : 0.55f;
+        public bool faca; public float sacaAte = -9, ultArremesso = -9;
+        /// <summary>Granada já sacada chegando na lineup (pro chega com ela na mão): qual e desde quando. Enquanto isso a arma
+        /// não está na mão — se aparecer alguém, tem que sacar.</summary>
+        public string nadeNaMao; public float nadeNaMaoDesde = -9;
+        /// <summary>Sacar até poder atirar: CS2 weapons.vdata m_flDeployDuration (quase tudo 1,0; M4 1,13, AWP 1,27, MP9 1,2,
+        /// Galil 1,1). sacarVelho = os tempos curtos de antes.</summary>
+        public float TempoSacarCurto => gunId == "awp" ? 0.75f : gunId == "deagle" ? 0.6f : WeaponStats.Pistola(gunId) || gunId == "mp9" || gunId == "mac10" ? 0.45f : 0.55f;
+        public float TempoSacar => TeamBrain.EXP.Contains("sacarVelho")
+            ? TempoSacarCurto
+            : gunId switch { "awp" => 1.267f, "m4" or "m4s" => 1.133f, "mp9" => 1.2f, "galil" => 1.1f, _ => 1.0f };
         public bool ArmaPronta(float t) => !faca && t >= sacaAte;
         public float Speed => vel.Len;
         /// <summary>Andando rápido demais pra atirar com precisão (CS: acima de ~34% da velocidade máxima).</summary>
@@ -105,6 +177,9 @@ namespace CSM.Sim
         public bool ArmaLeve => gunId == "mp9" || gunId == "mac10" || WeaponStats.Pistola(gunId) && gunId != "deagle";
         public V2 c4Pos; public float c4Desde = -1;   // com o C4: desde quando não sai de perto do mesmo lugar
         public float rapidoEm = -9;   // última vez acima da velocidade de tiro preciso (a mira leva um instante pra assentar)
+        // pulo de deslocamento (strafe jump / bunny hop): o cérebro pede, a física do ar é a do Source
+        public float pedidoAcum;   // quanto o cérebro pediu pra andar desde a última vez que saiu do lugar (detector de travado)
+        public bool querPular, puloLivre; public float pousouEm = -9; public int pulosSeguidos, pulos;
     }
 
     /// <summary>
@@ -120,6 +195,8 @@ namespace CSM.Sim
             ["awp"] = (115, 0.975f, 0.06f, 6.0f), ["mp9"] = (26, 0.60f, 0.65f, 1.6f), ["mac10"] = (29, 0.575f, 0.8f, 1.8f),
             ["usp"] = (35, 0.505f, 0.4f, 1.6f), ["glock"] = (30, 0.47f, 0.55f, 1.5f),
             ["deagle"] = (53, 0.932f, 0.3f, 3.0f), ["p250"] = (38, 0.64f, 0.5f, 1.6f),
+            ["tec9"] = (33, 0.906f, 0.55f, 1.5f), ["fiveseven"] = (32, 0.9115f, 0.5f, 1.6f),
+            ["galil"] = (30, 0.775f, 0.40f, 4.2f), ["famas"] = (30, 0.70f, 0.38f, 4.0f),
         };
 
         public const float H = 25f;   // altura do boneco em pé
@@ -133,9 +210,11 @@ namespace CSM.Sim
 
         /// <summary>Altura (acima do pé) onde o atirador mira: cabeça perto/médio, peito longe ou de AWP, e no spray
         /// desce pro peito depois das primeiras balas (o recuo sobe; pro segura o spray no corpo).</summary>
-        public static float AimHeight(Agent a, float dist, bool targetCrouch)
+        public static float AimHeight(Agent a, float dist, bool targetCrouch) => AimHeight(a, dist, targetCrouch ? 1f : 0f);
+        /// <summary>Altura da mira pelo quanto o alvo está agachado (0..1): a cabeça desce junto com o corpo.</summary>
+        public static float AimHeight(Agent a, float dist, float duckAlvo)
         {
-            float k = targetCrouch ? 0.72f : 1f;
+            float k = 1f - 0.28f * duckAlvo;
             bool head = a.gunId != "awp" && dist < 450 && a.spray < a.pesos.sprayPeito;
             return (head ? 21.5f : 15f) * k;
         }
@@ -156,14 +235,14 @@ namespace CSM.Sim
             // + penalidade de tiro acumulada + andando (cheia na velocidade máxima, começa a partir de 34% dela); a bala
             // sai num ponto aleatório do cone (raio sorteado) + o spread da arma
             bool luneta = a.gunId == "awp" && a.scoped;
-            float inac = (a.crouch ? (luneta ? s.inCrouchAlt : s.inCrouch) : (luneta ? s.inStandAlt : s.inStand)) + a.gun.penalidade;
+            float inac = (a.Agachado ? (luneta ? s.inCrouchAlt : s.inCrouch) : (luneta ? s.inStandAlt : s.inStand)) + a.gun.penalidade;
             float vr = MathX.Clamp((a.Speed - 0.34f * a.MaxSpeed) / (0.61f * a.MaxSpeed), 0, 1);
             if (vr > 0) inac += s.inMove * MathF.Pow(vr, 0.25f);
             else if (!a.ArmaLeve && !TeamBrain.EXP.Contains("semAssentar"))
                 inac += 0.35f * s.inMove * MathF.Max(0, 1 - (m.t - a.rapidoEm) / 0.2f);   // acabou de frear: rifle ainda não assentou
             if (a.gunId == "awp" && a.brain.target != null) m.Aud("AWP: acerto por distância", Faixa((a.brain.target.pos - a.pos).Len) + " tiro");
             if (a.gunId == "awp") m.Ev(!luneta ? "AWP tiro sem luneta/round" : vr > 0 ? "AWP tiro na luneta andando/round" : "AWP tiro na luneta parado/round");
-            if (luneta && vr <= 0 && !TeamBrain.EXP.Contains("awpVelha")) inac = (a.crouch ? s.inCrouchAlt : s.inStandAlt) / ESCALA_ARMA;   // parada na luneta é exata (cancela a escala abaixo): quem erra é a mão
+            if (luneta && vr <= 0 && !TeamBrain.EXP.Contains("awpVelha")) inac = (a.Agachado ? s.inCrouchAlt : s.inStandAlt) / ESCALA_ARMA;   // parada na luneta é exata (cancela a escala abaixo): quem erra é a mão
             inac *= ESCALA_ARMA;   // o nosso mundo não é o do CS: proporções entre armas/situações do CS2, escala calibrada aqui
             float r1 = rng.Rand() * inac, t1 = rng.Uniform(0, 6.2832f), r2 = rng.Rand() * s.spread, t2 = rng.Uniform(0, 6.2832f);
             const float RAD = 57.29578f;
@@ -179,8 +258,7 @@ namespace CSM.Sim
             // Perto/médio quase não muda; de 250 em diante o erro cresce (de muito longe acertar é raro)
             if (a.gunId == "awp" && luneta)
             {
-                var mk = System.Text.RegularExpressions.Regex.Match(TeamBrain.EXP, @"awpLonge(\d+)");
-                float k = mk.Success ? int.Parse(mk.Groups[1].Value) / 100f : 0f;   // desligado: 0,35/0,7/1,4 deixam o TR em 55-59% (a AWP sustenta o CT — volta junto com ajuste do CT, ver backlog)
+                float k = TeamBrain.ExpNum("awpLonge", 0f);   // desligado: 0,35/0,7/1,4 deixam o TR em 55-59% (a AWP sustenta o CT — volta junto com ajuste do CT, ver backlog)
                 sig *= 1 + k * MathX.Clamp((dist - 250f) / 250f, 0, 2);
             }
             float recoilV = 0, recoilL = 0;
@@ -192,6 +270,18 @@ namespace CSM.Sim
                 recoilL = MathF.Sin(a.spray * 0.7f) * 1.4f * (s.recoilVar / 70f) * (1 - a.skill.spray) * MathF.Min(1, a.spray / 8f);
             }
             float eL = armaL + rng.Normal(0, sig) + recoilL, eV = armaV + rng.Normal(0, sig) + recoilV + a.aimErrV;
+            // alvo cruzando de lado: a mão segue o alvo com atraso (~0,06 s), então quem anda de lado é mais difícil de acertar
+            // (o que faz o jiggle e o strafe valerem, sobretudo contra AWP). Erro horizontal = velocidade angular x atraso.
+            // apRastreioVelho desliga (não sorteia nada: o jogo fica como antes); ExpNum("apRastreio") ajusta (100 = atraso de 0,06 s, o padrão)
+            float kRastreio = TeamBrain.EXP.Contains("apRastreioVelho") ? 0f : TeamBrain.ExpNum("apRastreio", 1f);   /* A/B 900: neutro, nota de erros 0,98 -> 0,84 */
+            var alvoR = a.brain.target;
+            if (kRastreio > 0 && alvoR != null && alvoR.alive)
+            {
+                V2 dir0 = (alvoR.pos - a.pos) / MathF.Max(1, (alvoR.pos - a.pos).Len);
+                float vLat = MathF.Abs(alvoR.vel.x * dir0.y - alvoR.vel.y * dir0.x);
+                float omega = vLat / MathF.Max(30, (alvoR.pos - a.pos).Len) * RAD;   // graus por segundo
+                eL += rng.Normal(0, omega * 0.06f * kRastreio);
+            }
             a.gun.penalidade += s.inFire;   // cada tiro abre o cone (recupera com o tempo: Gun.Recupera)
             // trajetória: reta do olho do atirador na direção mirada + erro
             float ang = (aimPoint - a.pos).Atan2 + eL * MathF.PI / 180f;
@@ -209,7 +299,7 @@ namespace CSM.Sim
                     if (!b.alive || b == a) continue;
                     V2 rel = b.pos - p;
                     if (rel.Len > 5f) continue;
-                    float hz = zz - b.z, k = b.crouch ? 0.72f : 1f;
+                    float hz = zz - b.z, k = 1f - 0.28f * b.duck;
                     float lat = MathF.Abs(rel.x * -dir.y + rel.y * dir.x);
                     // hitbox interna: o desenho chibi tem a cabeça grande, mas a área que conta como cabeça no jogo fica
                     // dentro dela, na proporção do CS (~35% da largura do tronco) — senão o HS vai lá pra cima
@@ -226,6 +316,14 @@ namespace CSM.Sim
         {
             var w = W[shooter.gunId];
             float d = w.dmg * (part == Part.Cabeca ? shooter.gun.s.hsMult : part == Part.Perna ? 0.75f : 1f);   // M4A1-S: 3,475 na cabeça
+            if (!TeamBrain.EXP.Contains("quedaDanoVelha"))
+            {   // CS2 weapons.vdata m_flRangeModifier: o dano cai rm^(distância/500) — pesa em pistola e SMG (Glock 0,85, Tec-9
+                // 0,79, MAC-10 0,80), quase nada em rifle (AK 0,98). Distância em unidades do CS (a nossa horizontal x4)
+                bool rifleQ = TeamBrain.EXP.Contains("quedaDanoRifle");   /* rifle/AWP: opt-in — com a calibração atual o TR subia +5 (M4 cai mais que a AK) */
+                float rm = shooter.gunId switch { "ak" => rifleQ ? 0.98f : 1f, "m4" => rifleQ ? 0.97f : 1f, "m4s" => rifleQ ? 0.94f : 1f, "awp" => rifleQ ? 0.99f : 1f, "galil" => rifleQ ? 0.98f : 1f, "famas" => rifleQ ? 0.96f : 1f, "mp9" => 0.87f, "mac10" => 0.80f, "glock" => 0.85f, "usp" => 0.91f, "deagle" => 0.85f, "p250" => 0.90f, "tec9" => 0.79f, "fiveseven" => 0.81f, _ => 1f };
+                float distCs = (victim.pos - shooter.pos).Len * 4f;
+                d *= MathF.Pow(rm, distCs / 500f);
+            }
             bool armored = part == Part.Tronco ? victim.armor > 0 : part == Part.Cabeca && victim.helmet;
             if (armored) d *= w.pen;
             return (int)MathF.Round(d);

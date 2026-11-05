@@ -20,6 +20,7 @@ namespace CSM.Sim
         public bool waitSmoke; public V2 smokeAt;            // espera a smoke subir antes de sair
         public float until = 999; public Order then;         // jogada com hora pra acabar (agressão cedo) e o que fazer depois
         public bool paciente;                                // jogo lento: segura e espera o outro se expor (menos wide/avanço)
+        public bool doPlano;                                 // ordem da rota do banco (ou que saiu dela): o IGL pode seguir a rota depois
         public bool zona;                                    // jogada pra tomar espaço (agressão cedo): no fim decide se segura, malota ou volta
         public bool zonaSegura;                              // decidiu ficar na zona (reavalia de tempos em tempos)
         public bool malote; public V2 maloteOlha; public char maloteSite; public float maloteDesde; public int deixaPassar;   // escondido fora da rota deles: deixa passar e pega de costas
@@ -43,7 +44,9 @@ namespace CSM.Sim
         public V2 wantVel; float wantAim; bool hasWantAim; float wantPitch;
         // combate
         public Agent target; public float reactAt, alvoDesde; public V2 lastSeenPos; public float lastSeenT = -9; Agent lastSeen;
-        int burst; float errV0;
+        float agachaSprayAte = -9, calmoLog = -9; V2 tradeMira; float c4DentroDesde = -1; bool c4FoiDentro; float plantaJaLog = -9;
+        int burst; float errV0, errVSalto, errVSaltoT, agachaPeekAte = -9; bool alvoAgachado;
+        public bool AgachouNoPeek => m.t < agachaPeekAte + 1.5f && agachaPeekAte > 0;
         bool adadDuelo, agachaDuelo; int adadLado = 1; float adadTroca;
         string faseAnt = "", miraFonte = "";
         public float flickAlvo;   // quantos graus a mira estava fora quando viu o alvo atual (anatomia do HS)
@@ -61,9 +64,81 @@ namespace CSM.Sim
         // ações
         public string action; float actionEnd; Lineup actionNade;
         public float ActionEnd => actionEnd;   // (vídeo: progresso da animação de plantar/desarmar/granada)
+        /// <summary>
+        /// (visual) Granada na mão: o jeito que ela VAI sair (mesmo cálculo do arremesso, sem o erro de mira) e pra onde
+        /// ele está mirando. A ação "granada" inteira é a fase de alinhar a mira no ponto; ela sai da mão em ActionEnd.
+        /// </summary>
+        public (Arremesso.Tipo tipo, float forca, float up, float yaw, V2 alvo, bool sabe)? PlanoGranada
+        {
+            get
+            {
+                if (action != "granada" || actionNade == null) return null;
+                if (planoDe == actionNade && planoCache.HasValue) return planoCache;
+                bool sabe = Places.Treinada(actionNade) && ConheceLineup(actionNade);
+                var pl = Arremesso.Resolve(me.pos, me.z, actionNade.to, actionNade.kind, sabe ? Arremesso.Tipo.CorrePulo : Arremesso.Tipo.Correndo);
+                planoDe = actionNade; planoCache = (pl.tipo, pl.forca, pl.up, pl.yaw, actionNade.to, sabe);
+                return planoCache;
+            }
+        }
+        bool esperouBang;
+        float recargaAte = -9, recargaProx; V2 recargaPonto, recargaDe; bool recargaPula;
+        /// <summary>
+        /// Recarregar como pro: com pouca bala e sem ninguém na mira, não recarrega parado no aberto — se o lugar está
+        /// exposto pra onde o inimigo deve aparecer, primeiro sai da linha (passo pra trás da quina, às vezes com pulo) e
+        /// recarrega coberto. Quanto mais vazio o pente e mais perigo, mais ele quer recarregar já; com o pente meio cheio
+        /// e perigo perto, segura (recarregar é ficar 2-3 s sem atirar). Pelo que ele acha, não pelo que é.
+        /// </summary>
+        void RecargaPro(float t)
+        {
+            if (me.gun.Reloading || t < recargaProx || action != null) return;
+            float frac = me.gun.inMag / (float)me.gun.s.mag; if (frac >= 0.5f) return;
+            recargaProx = t + 0.4f;
+            var it = m.intel[(int)me.team];
+            float perigo = it.HeatIn(me.pos, 260) + it.Esperados(me.pos, 450);
+            // quer recarregar: pente vazio pesa muito; perigo perto pesa contra (recarregar agora é ficar sem arma)
+            float quer = (1 - frac) * 1.6f - perigo * (frac > 0.2f ? 0.5f : 0.15f);
+            if (quer < 0.6f) return;
+            V2 de = DeOndeAparece();
+            bool exposto = MapData.LosWalk(de, NavGrid.ZAt(NavGrid.Snap(de)), me.pos, me.z, 18f) && (de - me.pos).Len < 900 && perigo > 0.25f;
+            if (exposto && recargaAte < t)
+            {   // ponto coberto perto, pra trás da linha de onde ele vem
+                V2 fora = me.pos - de; float lf = fora.Len; if (lf > 1) fora = fora / lf;
+                foreach (float r in new[] { 25f, 40f, 60f })
+                    foreach (float ang in new[] { 0.9f, -0.9f, 0.4f, -0.4f, 1.4f, -1.4f })
+                    {
+                        V2 q = NavGrid.Snap(me.pos + V2.Ang(fora.Atan2 + ang) * r);
+                        if (!NavGrid.Movable(q) || !NavGrid.Direct(me.pos, q)) continue;
+                        if (MapData.LosWalk(de, NavGrid.ZAt(NavGrid.Snap(de)), q, NavGrid.ZAt(q), 18f)) continue;
+                        recargaPonto = q; recargaDe = de; recargaAte = t + 1.6f;
+                        recargaPula = rng.Rand() < 0.08f + 0.2f * P.Agr(me.skill.aggression);
+                        m.Ev("recarga: saiu da linha antes/round"); Think("pouca bala — saio da linha pra recarregar"); return;
+                    }
+            }
+            if (exposto && t < recargaAte) return;   // ainda indo pra cobertura
+            if (me.gun.StartReload()) { m.Ev(exposto ? "recarga: recarregou exposto/round" : "recarga: recarregou coberto/round"); Think(exposto ? "recarregando aqui mesmo (não achei cobertura)" : "recarregando coberto"); }
+        }
+        /// <summary>
+        /// O corpo faz o jeito do arremesso: parado e pulo param (mira alinhada), andando/correndo dão o passo na direção
+        /// do arremesso só no fim (o embalo de ~0,3 s antes de soltar), e o pulo sai no tique em que a granada sai da mão.
+        /// </summary>
+        void MovimentoDoArremesso(float t)
+        {
+            var pg = PlanoGranada; if (pg == null) return;
+            var (tipo, _, _, yaw, _, _) = pg.Value;
+            float falta = actionEnd - t;
+            if ((tipo == Arremesso.Tipo.Andando || tipo == Arremesso.Tipo.Correndo || tipo == Arremesso.Tipo.CorrePulo) && falta < (EXP.Contains("embaloLongo") ? 0.32f : 0.15f))
+                wantVel = V2.Ang(yaw) * me.MaxSpeed * (tipo == Arremesso.Tipo.Andando ? 0.52f : 1f);
+            if ((tipo == Arremesso.Tipo.Pulo || tipo == Arremesso.Tipo.CorrePulo) && falta < Match.DT * 1.5f && !me.noAr)
+            {   // pulo do jump throw: o Match só deixa pular "de deslocamento" já correndo; parado é o pulo seco
+                if (tipo == Arremesso.Tipo.CorrePulo) me.querPular = true;
+                else { me.noAr = true; me.vz = Match.PULO; me.quedaDe = me.z; }
+                m.Ev($"granada: pulou no arremesso ({Arremesso.Nome(tipo)})/round");
+            }
+        }
+        Lineup planoDe; (Arremesso.Tipo tipo, float forca, float up, float yaw, V2 alvo, bool sabe)? planoCache;
         public string AcaoGranada => action == "granada" ? actionNade?.kind : null;   // (visual: qual granada está na mão)
         int holdLook; float holdLookUntil;
-        public float tradeUntil = -9; V2 tradePos;
+        public float tradeUntil = -9; V2 tradePos; Agent tradeMatador; bool tradeViu, tradeFlash; float trocaAudAte; int trocaTicks, trocaJuizTicks;
         public float stuckT; V2 stuckRef; float stuckCheck;
         // segurar ativo (micro): segurando posição o bot não fica plantado — dá jiggle, wide, ajeita, troca de ângulo,
         // avança; ficar quieto é uma escolha (ouviu passo, é AWP), não falta do que fazer
@@ -90,7 +165,7 @@ namespace CSM.Sim
         float levouAte = -9; V2 levouDe;
         public void Atingido(Agent by)
         {
-            if (by == null) return;
+            if (by == null || by.team == me.team && !EXP.Contains("tiroAmigoConta")) return;   // bala do colega sem querer: não vira pra ele
             // já duelando com ele: o tiro não é surpresa, mas se eu perder ele de vista, o lugar do tiro é o que vale olhar
             if (target == by) { if (!EXP.Contains("levouVelho") && me.alive) { levouDe = by.pos; levouAte = m.t + rng.Uniform(1.2f, 2.2f); } return; }
             if (m.t - lastSeenT > 1.5f) m.aparecidos.Add((me.team, me.pos, m.t, m.bombPlanted, (by.pos - me.pos).Atan2));   // pegou desprevenido: também conta como de onde ele aparece
@@ -98,9 +173,11 @@ namespace CSM.Sim
             levouDe = by.pos + V2.Ang(rng.Uniform(0, 6.2832f)) * rng.Uniform(0, 20);
             // de onde veio o tiro vira o lugar mais importante por um tempo: inteiro, segura a linha esperando ele
             // reaparecer; machucado, tende a sair da linha (decide na hora, no "levei tiro")
-            levouAte = m.t + (EXP.Contains("levouVelho") ? rng.Uniform(0.6f, 1f) : rng.Uniform(1.2f, 2.6f));
+            // sem ter visto quem atirou, ninguém volta a andar 1 s depois: segura o lado do tiro uns 2-3 s (ou sai da linha)
+            levouAte = m.t + (EXP.Contains("levouVelho") ? rng.Uniform(0.6f, 1f) : EXP.Contains("reacaoCurta") ? rng.Uniform(1.2f, 2.6f) : rng.Uniform(2f, 3f));
             levouSair = !EXP.Contains("levouVelho") && rng.Rand() < (me.hp < 35 ? 0.75f : me.hp < 65 ? 0.4f : 0.12f) * (1.3f - 0.6f * P.Agr(me.skill.aggression));
-            if (action == "granada") { Think("levei tiro — larguei a granada"); action = null; }
+            if (action == "granada") { Think("levei tiro — larguei a granada"); action = null; if (!EXP.Contains("sacaGranadaVelho")) me.sacaAte = MathF.Max(me.sacaAte, m.t + me.TempoSacar); }
+            GuardaGranada(m.t, "levei tiro com a granada na mão");   // estava com a granada na mão: saca a arma
         }
 
         readonly Dictionary<string, float> lastLogged = new Dictionary<string, float>();
@@ -196,11 +273,17 @@ namespace CSM.Sim
             if (h.look.Length == 0) return h;
             V2 alvo = h.look[0], cen = NavGrid.Snap(h.pos); float zAlvo = NavGrid.ZAt(alvo), z0 = NavGrid.ZAt(cen);
             float t = m.t + NavGrid.PathLen(me.pos, h.pos) / MathF.Max(1, me.MaxSpeed);
-            float atual = Exposicao(cen, t), melhor = atual - 0.5f; V2? res = null;
+            // o ponto bom é bom pra todo mundo: sem isso quem vai pra mesma região acaba colado no mesmo pixel (o melhor
+            // canto é de quem chegou primeiro; o resto fica a uns 50 dele)
+            var colegas = new List<V2>();
+            if (!EXP.Contains("pontoColado"))
+                foreach (var x in m.agents) if (x != me && x.alive && x.team == me.team && x.brain.order.hold != null) colegas.Add(x.brain.order.hold.pos);
+            bool colado(V2 q) { foreach (var c in colegas) if ((c - q).Len < 50) return true; return false; }
+            float atual = colado(cen) ? 99 : Exposicao(cen, t), melhor = atual - 0.5f; V2? res = null;
             for (int k = 0; k < 28; k++)
             {
                 V2 q = NavGrid.Snap(h.pos + V2.Ang(k * 2.4f) * (14 + 62 * (k + 1) / 28f));   // espiral: cobre o entorno sem sorteio
-                if (!NavGrid.Movable(q) || MathF.Abs(NavGrid.ZAt(q) - z0) > 6 || !MapData.LosWalk(q, NavGrid.ZAt(q), alvo, zAlvo, 18f)) continue;
+                if (!NavGrid.Movable(q) || MathF.Abs(NavGrid.ZAt(q) - z0) > 6 || colado(q) || !MapData.LosWalk(q, NavGrid.ZAt(q), alvo, zAlvo, 18f)) continue;
                 float e = Exposicao(q, t) + (q - h.pos).Len / 200f;
                 if (e < melhor) { melhor = e; res = q; }
             }
@@ -274,12 +357,12 @@ namespace CSM.Sim
         float ReactionTime(Agent e)
         {
             float da = MathF.Abs(MathX.AngDiff((e.pos - me.pos).Atan2, me.aim)) * 180 / MathF.PI;
+            if (MiraVertical) { float dv = FlickV(e); da = MathF.Sqrt(da * da + dv * dv); }   /* o flick é na diagonal (lado + altura) */
             // achar e corrigir a mira custa caro: pré-mirado (<6°) quase nada; 30° ~0,13 s a mais (antes 0,03 s: segurar
             // ângulo pré-mirado não dava vantagem nenhuma e o CT perdia duelo segurando posição)
             // real (143 partidas pro): com a mira a <2° do inimigo 63% atira na hora; virando >8° a mediana é 0,28 s. A
             // reação "pura" é rápida — o que custa é achar e virar. Só a base é acelerada (o flick e o frear continuam)
-            var mr = System.Text.RegularExpressions.Regex.Match(EXP, @"reac(\d+)");
-            float fBase = mr.Success ? int.Parse(mr.Groups[1].Value) / 100f : 1f;   // testado 0,55-0,75: não encurtou o duelo (o tempo está em virar/assentar) e o TR subiu
+            float fBase = TeamBrain.ExpNum("reac", 1f);   // testado 0,55-0,75: não encurtou o duelo (o tempo está em virar/assentar) e o TR subiu
             float r = me.skill.reaction * rng.Uniform(0.85f, 1.25f) * fBase + 0.08f * MathF.Pow(da / 30f, 0.7f) + da / (me.skill.flick * 0.66f);
             if (da < 6) r -= 0.04f;                         // mira já no lugar (crosshair placement)
             // parado e com a mira no lugar o pro atira quase na hora (real: 63% atira até 0,1 s depois de ver quando a mira está a menos de 2°); quem vem andando ainda tem que parar
@@ -297,6 +380,9 @@ namespace CSM.Sim
         public void Tick(float dt)
         {
             wantVel = V2.Zero; hasWantAim = false; me.crouch = false;
+            if (me.nadeNaMao != null && action != "granada" && (order.nades.Count == 0 || order.nades[0].kind != me.nadeNaMao || !me.nades.Contains(me.nadeNaMao)))
+                GuardaGranada(m.t, "a lineup mudou — guardei a granada");
+            if (m.t < evasivoPulaAte && me.Speed > me.MaxSpeed * 0.7f && !me.noAr) { me.querPular = true; evasivoPulaAte = -9; }   // pulo da quebra de linha
             float t = m.t; faseAnt = fase; fase = "ordem";
             Panico(t, dt);
             // ---- vê
@@ -332,6 +418,7 @@ namespace CSM.Sim
                         {
                             float aq = 999, dirE = (best.pos - me.pos).Atan2; bool pontoCego = false;
                             foreach (var q in Pixels.Em(me.pos)) aq = MathF.Min(aq, MathF.Abs(MathX.AngDiff((q.ponto - me.pos).Atan2, dirE)) * 180 / MathF.PI);
+                            { float dvA = FlickV(best); m.Aud("mira no contato: erro vertical (°)", dvA < 2 ? "a <2" : dvA < 6 ? "b 2-6" : dvA < 12 ? "c 6-12" : "d 12+"); if (MathF.Abs(best.z - me.z) > 10) m.Aud("contato com diferença de altura (>10)", (best.z > me.z ? "ele acima · " : "ele abaixo · ") + (dvA < 6 ? "mira na altura" : "mira fora da altura")); }
                             m.Aud("onde o inimigo apareceu", flick0 < 6 ? "na mira" : aq < 8 ? "em OUTRA quina que eu não olhava" : (best.pos - me.pos).Len < 120 ? "colado, sem quina" : "em lugar aberto, sem quina");
                             if (flick0 >= 6 && aq < 8) m.Aud("olhando outra quina porque", $"{fonteMira} / {(target == null ? faseAnt : "")}");
                             if (flick0 >= 6)
@@ -352,6 +439,11 @@ namespace CSM.Sim
                             }
                             float atrasoM = MathF.Abs(MathX.AngDiff(wantAim, me.aim)) * 180 / MathF.PI, querM = MathF.Abs(MathX.AngDiff(dirE, wantAim)) * 180 / MathF.PI;
                             if (flick0 >= 6) m.Aud("mira fora: por quê", querM < 6 ? "queria o ponto certo, a mão atrasou" : atrasoM > 15 ? "virando pra outro lugar" : "parado no lugar errado");
+                            if (!me.IsT && Segurando)
+                            {   // CT segurando ângulo no contato: de onde vinha a mira (fonte) e se acertou o lado
+                                m.Aud("CT segurando: mira no contato", (flick0 < 6 ? "a pré-mirado <6°" : flick0 < 25 ? "b perto 6-25°" : "c errado 25°+") + " · " + fonteMira);
+                                if (flick0 >= 6) m.Aud("CT segurando: mira fora por quê", querM < 6 ? "a mão atrasou" : atrasoM > 15 ? "virando pra outro lugar" : "parado no lugar errado · " + fonteMira);
+                            }
                             { float ex = Exposicao(me.pos, t); m.Aud(Segurando ? "ângulos expostos segurando, no contato" : "ângulos expostos andando, no contato", ex < 2 ? "até 2" : ex < 3.5f ? "2-3,5" : ex < 6 ? "3,5-6" : "6+"); }
                             m.Aud("mira no contato por time", (me.IsT ? "TR " : "CT ") + (flick0 < 2 ? "<2" : flick0 <= 8 ? "2-8" : ">8")); m.Aud("contato por distância", (best.pos - me.pos).Len < 150 ? "perto (<150)" : (best.pos - me.pos).Len < 350 ? "médio" : "longe");
                         }
@@ -367,12 +459,22 @@ namespace CSM.Sim
                                 : dAlvo > 220 ? 0.2f + 0.2f * P.Agr(me.skill.aggression)    // de longe: às vezes um passo entre os toques
                                 : 0.05f + 0.08f * P.Agr(me.skill.aggression);
                     adadDuelo = me.gunId != "awp" && rng.Rand() < pAdad;
-                    agachaDuelo = rng.Rand() < 0.3f;
+                    // spray agachado (CS2: agachado a arma abre menos): de rifle, médio, mais em quem é calmo; real ~20% dos tiros
+                    float agrD = P.Agr(me.skill.aggression); bool awpD = me.gunId == "awp";
+                    agachaDuelo = EXP.Contains("agachaVelho") ? rng.Rand() < 0.3f
+                        : !awpD && rng.Rand() < (rifle ? 0.17f + 0.15f * (1 - agrD) + (dAlvo > 150 && dAlvo < 420 ? 0.1f : 0) : 0.12f);
+                    // agachar no peek: quem aparece pra quem segura o ângulo (mira parada na altura da cabeça em pé) às vezes
+                    // agacha na hora — a primeira bala dele passa por cima. Pelo jeito do jogador e pela situação
+                    bool peekando = me.Speed > 15 || micro == Micro.Jiggle || micro == Micro.Wide || micro == Micro.Avancar;
+                    float pPeek = peekando && !awpD && dAlvo > 60 && dAlvo < 450 ? (0.06f + 0.22f * agrD) * (best.Speed < 8 ? 1.5f : 0.6f) : 0;
+                    agachaPeekAte = !EXP.Contains("semAgachaPeek") && rng.Rand() < pPeek ? t + rng.Uniform(0.5f, 1.1f) : -9;
+                    if (agachaPeekAte > t) m.Ev("agachou no peek/round");
+                    alvoAgachado = false; errVSalto = 0;   // quem aparece, aparece em pé até eu ver o contrário
                     c4ModoAte = -9;   // situação nova: o C4 reavalia já
-                    duelModo = 0; duelHpRef = best.hp; duelReval = t + 2.5f;
+                    duelModo = 0; duelHpRef = best.hp; duelReval = t + 2.5f; duelHpEu = me.hp; evasivoProx = t + 0.5f; evasivoDecidiu = false;
                     // a mira raramente está na altura exata da cabeça quando ele aparece (mais baixa, em geral); quem já
                     // estava mirando ali (pré-mirado) erra pouco, quem precisa dar flick erra mais; AWP de luneta erra metade
-                    float flick = MathX.Clamp(MathF.Abs(MathX.AngDiff((best.pos - me.pos).Atan2, me.aim)) * 180 / MathF.PI / 25f, EXP.Contains("hsVelho") ? 0.2f : 0.5f, 1f);
+                    float flick = MathX.Clamp((MiraVertical ? MathF.Sqrt(MathF.Pow(MathX.AngDiff((best.pos - me.pos).Atan2, me.aim) * 180 / MathF.PI, 2) + FlickV(best) * FlickV(best)) : MathF.Abs(MathX.AngDiff((best.pos - me.pos).Atan2, me.aim)) * 180 / MathF.PI) / 25f, EXP.Contains("hsVelho") ? 0.2f : 0.5f, 1f);
                     flickAlvo = MathF.Abs(MathX.AngDiff((best.pos - me.pos).Atan2, me.aim)) * 180 / MathF.PI;
                     errV0 = rng.Normal(-0.6f * flick, me.skill.pitchErr * (1.4f - me.skill.crosshair) * flick * (me.gunId == "awp" ? 0.5f : 1f));
                     Think($"vi {best.name} {(Region(best.pos) != "?" ? "na " + Region(best.pos) : "")}{(best.Speed < 5 ? " (parado)" : "")}");
@@ -390,7 +492,12 @@ namespace CSM.Sim
                 { Think($"parei de {action}: inimigo à vista"); if (action == "desarmar") m.ParouDefuse(me); action = null; }
                 else if (action == "desarmar" && m.FireAt(me.pos)) { Think("molotov no bomb — larguei o defuse"); action = null; m.ParouDefuse(me); }
                 else if (t >= actionEnd) FinishAction();
-                else { fase = "ação"; Face(action == "granada" ? actionNade.to : me.pos + V2.Ang(me.aim) * 10, 0); return; }
+                else
+                {
+                    fase = "ação"; Face(action == "granada" ? actionNade.to : me.pos + V2.Ang(me.aim) * 10, 0);
+                    if (action == "granada" && !EXP.Contains("arremessoParado")) MovimentoDoArremesso(t);
+                    return;
+                }
             }
 
             // ---- pisou no fogo: sai (pro lado seguro, de preferência pra trás) e segura dali — molotov tira do lugar,
@@ -443,6 +550,10 @@ namespace CSM.Sim
                     return;
                 }
                 Face(levouDe, 3);   // vira pro tiro; parado (counter-strafe) pra poder responder quando achar
+                // só termina de reagir depois de olhar pra lá: o tempo sorteado curto acabava no meio da virada e ele voltava a
+                // andar com a mira no caminho, sem nunca ter olhado de onde veio
+                if (!EXP.Contains("reacaoCurta") && MathF.Abs(MathX.AngDiff((levouDe - me.pos).Atan2, me.aim)) > 0.3f && t - me.apanhouEm < 3.5f)
+                    levouAte = MathF.Max(levouAte, t + 0.4f);
                 Think("levei tiro — virando pra onde veio");
                 return;
             }
@@ -468,19 +579,39 @@ namespace CSM.Sim
             VoltarArma(t);
             FacaOuArma(t);
             LargarC4(t);
+            C4NaPonta(t);
             // ---- recarga com calma
-            if (me.gun.inMag < me.gun.s.mag * 0.35f && !me.gun.Reloading && m.intel[(int)me.team].HeatIn(me.pos, 220) < 1.5f && me.gun.StartReload())
+            if (!EXP.Contains("recargaVelha")) RecargaPro(t);
+            else if (me.gun.inMag < me.gun.s.mag * 0.35f && !me.gun.Reloading && m.intel[(int)me.team].HeatIn(me.pos, 220) < 1.5f && me.gun.StartReload())
                 Think("recarregando (ninguém perto)");
+            if (t < recargaAte && !me.gun.Reloading && (recargaPonto - me.pos).Len > 6)
+            {   // saindo da linha pra recarregar: passo firme até a cobertura (às vezes um pulo — tira a mira de quem pré-mira)
+                fase = "saindo da linha pra recarregar"; MoveTo(recargaPonto, true); Face(recargaDe, 3);
+                if (recargaPula && me.Speed > me.MaxSpeed * 0.75f) { me.querPular = true; recargaPula = false; m.Ev("recarga: pulou saindo da linha/round"); }
+                return;
+            }
+            if (!EXP.Contains("juizVelho"))
+            {
+                // sobrevivência e compra vêm antes de tudo (reflexo); o resto disputa no juiz
+                if (SairDoBomb(t)) return;
+                if (RoundGanho && !order.defuse) { if (LootGranada(t)) return; DeBoa(); return; }
+                if (EntregarCompra(t)) return;
+                if (PegarEntrega(t)) return;
+                Juiz(t); return;
+            }
             // ---- troca: aliado morreu perto, vai em cima de quem matou
             if (t < tradeUntil) { fase = "indo trocar"; MoveTo(tradePos, true); ClearAngles(true); Face(Pixel(tradePos), 3); Think("indo trocar"); return; }   // pré-mirado na quina dele
-            if (RoundGanho && !order.defuse) { DeBoa(); return; }
+            if (RoundGanho && !order.defuse) { if (LootGranada(t)) return; DeBoa(); return; }
             if (SairDoBomb(t)) return;
+            if (EntregarCompra(t)) return;
+            if (PegarEntrega(t)) return;
             if (PegarArma(t)) return;
             if (PegarGranada(t)) return;
             if (Utilitaria(t)) return;
             if (UtilProativa(t)) return;
             if (GranadaNoBarulho(t)) return;
             if (AbrirSmoke(t)) return;
+            if (SprayNaSmoke(t)) return;
             if (AtenderBang(t)) return;
             if (AjudarNoDuelo(t)) return;
             DoOrder(t);
@@ -554,11 +685,23 @@ namespace CSM.Sim
         void Fight(Agent e, float t)
         {
             float dist = (e.pos - me.pos).Len;
-            float aimH = Combat.AimHeight(me, dist, e.crouch);
+            float aimH = Agent.AgacharVelho || EXP.Contains("miraDuckBinaria") ? Combat.AimHeight(me, dist, e.duck > 0.5f) : Combat.AimHeight(me, dist, e.duck);
             V2 aimPt = e.pos + e.vel * rng.Normal(0.02f, 0.07f);   // rastrear alvo andando: às vezes adianta, às vezes atrasa
             Face(aimPt, aimH - me.Eye + e.z - me.z);
-            if (me.faca) { Sacar(t, $"pego de faca pelo {e.name}!"); reactAt = MathF.Max(reactAt, me.sacaAte); }
-            me.aimErrV = errV0 * MathF.Exp(-MathF.Max(0, t - reactAt) / 0.3f);
+            if (me.faca) { m.Ev("faca: pego de faca (viu inimigo com a faca na mão)/round"); Sacar(t, $"pego de faca pelo {e.name}!"); reactAt = MathF.Max(reactAt, me.sacaAte); }
+            if (me.nadeNaMao != null && action != "granada") { m.Ev("granada: pego com a granada sacada/round"); GuardaGranada(t, $"pego com a {me.nadeNaMao} na mão pelo {e.name}!"); reactAt = MathF.Max(reactAt, me.sacaAte); }
+            if (t < agachaPeekAte) me.crouch = true;   // agachou no peek (some quando acaba ou na troca de jeito)
+            // agachou no spray: fica embaixo entre os tiros e as rajadas deste duelo (CS2 pune levantar e agachar de novo)
+            if (t < agachaSprayAte && !Agent.AgacharVelho && !EXP.Contains("agacharSemJeito")) me.crouch = true;
+            // o alvo mudou de altura (apareceu agachado, agachou ou levantou no meio do duelo): a mira estava na cabeça de
+            // antes — fica alta/baixa ~6 unidades até a mão corrigir (~0,25 s, depois de reagir)
+            if (!EXP.Contains("miraVerticalVelha") && e.duck > 0.5f != alvoAgachado)
+            {
+                float graus = MathF.Atan2(21.5f * 0.28f, MathF.Max(dist, 30f)) * 180 / MathF.PI;
+                errVSalto = e.duck > 0.5f ? graus : -graus; errVSaltoT = t; alvoAgachado = e.duck > 0.5f;
+                if (Match.Auditar && e.duck > 0.5f) m.Aud("alvo agachou: mira ficou alta", t < reactAt ? "ao aparecer" : "no meio do duelo");
+            }
+            me.aimErrV = errV0 * MathF.Exp(-MathF.Max(0, t - reactAt) / 0.3f) + errVSalto * MathF.Exp(-MathF.Max(0, t - MathF.Max(errVSaltoT, reactAt)) / 0.25f);
             if (t < reactAt) { Trava("a reação"); wantVel = me.vel * 0.6f; return; }   // ainda reagindo
             if (me.gunId == "awp" && !me.scoped) { Trava("b luneta"); me.scoped = true; reactAt = MathF.Max(reactAt, t + 0.14f); return; }   // entrar na luneta leva um tempo
             // ---- movimento no duelo, como no CS: ADAD entre os tiros (não ficar parado igual bot, que é alvo fácil) e
@@ -582,8 +725,36 @@ namespace CSM.Sim
                 if (!progresso && dist > 220) duelModo = ModoDuelo(e, dist, t);
                 else if (progresso) duelModo = 0;
             }
+            // "vou morrer": perdendo o duelo (levei muito e ele quase nada, ou vários me vendo) — decide UMA vez, pelo jeito
+            // dele e pela situação: quebrar a linha (às vezes pulando pra tirar a mira dele), agachar e spray (aposta
+            // tudo na mira) ou seguir no ADAD. Não é regra: às vezes fica e ganha, às vezes foge e morre de costas
+            if (!EXP.Contains("evasivoVelho") && !evasivoDecidiu && t >= evasivoProx && duelModo != 2)
+            {
+                evasivoProx = t + 0.4f;
+                int vendo = 0; foreach (var x in m.agents) if (x.alive && x.team != me.team && x.brain.target == me) vendo++;
+                bool perdendo = me.hp <= duelHpEu - 35 && e.hp >= duelHpRef - 20 || vendo >= 2 && me.hp < 70;
+                if (perdendo)
+                {
+                    evasivoDecidiu = true;
+                    float agr = P.Agr(me.skill.aggression);
+                    bool pressa = me.IsT ? m.RoundLeft < 25 || order.plant : order.defuse;
+                    float wFoge = 0.3f + (me.hp < 40 ? 0.5f : 0) + (vendo >= 2 ? 0.5f : 0) - (pressa ? 0.4f : 0) - (dist < 150 ? 0.35f : 0) + 0.3f * (1 - agr);
+                    float wAgacha = 0.25f + (dist < 320 ? 0.3f : 0) + 0.4f * me.skill.spray + 0.2f * agr;
+                    float wSegue = 0.35f + 0.2f * agr;
+                    int k = rng.Weighted(new[] { wFoge, wAgacha, wSegue });
+                    if (k == 0)
+                    {
+                        duelModo = 2; evasivoPula = rng.Rand() < 0.25f + 0.3f * me.skill.composure;
+                        m.Ev(evasivoPula ? "evasivo: quebrou a linha pulando/round" : "evasivo: quebrou a linha/round");
+                    }
+                    else if (k == 1) { agachaDuelo = true; m.Ev("evasivo: agachou e foi no spray/round"); Think($"tô perdendo pro {e.name} — agacho e vou no spray"); }
+                    else m.Ev("evasivo: seguiu no ADAD/round");
+                }
+            }
             if (duelModo == 2)
-            {   // sair da linha: vai pra onde ele não me vê e larga esse duelo um tempo
+            {   // sair da linha
+                // vai pra onde ele não me vê e larga esse duelo um tempo (pulando, se decidiu: o pulo sai já embalado)
+                if (evasivoPula) { evasivoPulaAte = t + 0.9f; evasivoPula = false; }
                 largouAlvo = e; largouAte = t + rng.Uniform(3f, 6f); duelModo = 0; target = null;
                 V2 sai = SemVisaoDe(e);
                 MoveTo(sai, true); Face(PixelDele(e.pos), 3); fase = "saindo do duelo";
@@ -611,7 +782,7 @@ namespace CSM.Sim
             wantVel = V2.Zero;
             if (me.TemOutra && !EXP.Contains("semPistola") && TrocaNoDuelo(e, dist, t)) return;
             if (me.gun.Reloading) { Think("recarregando no meio da troca — me escondendo"); Retreat(e); return; }
-            if (me.gun.inMag == 0) { me.gun.StartReload(); return; }
+            if (me.gun.inMag == 0) { m.Clique(me); me.gun.StartReload(); return; }   // apertou com o pente vazio: clique seco (som), e recarrega se tem bala
             int maxBurst = me.gunId == "awp" ? 1 : deagle ? (dist > 120 ? 1 : 3) : dist > 420 ? 2 : dist > 220 ? 5 : 30;   // longe toca, médio rajada, perto spray; Deagle: um tiro e espera a mira voltar
             if (burst >= maxBurst)
             {
@@ -644,14 +815,14 @@ namespace CSM.Sim
                 return;
             }
             if (runGun && adadDuelo) wantVel = adadVel * 0.8f;
-            if (agachaDuelo && me.spray >= 2 && dist > 100 && dist < 420) me.crouch = true;   // spray agachado (mais preciso, cabeça mais baixa)
+            if (agachaDuelo && me.spray >= 2 && dist > 100 && dist < 420) { me.crouch = true; agachaSprayAte = t + 0.9f; }   // spray agachado (mais preciso, cabeça mais baixa)
             if (primeiroTiro < 0)
             {
                 primeiroTiro = t; float rr = t - alvoDesde;   // real (143 partidas pro): p25 0,08 · p50 0,16 · p75 0,25 · p90 0,45
                 m.Aud("viu → 1º tiro (todos os duelos)", rr < 0.08f ? "a <0,08" : rr < 0.16f ? "b 0,08-0,16" : rr < 0.25f ? "c 0,16-0,25" : rr < 0.45f ? "d 0,25-0,45" : "e 0,45+");
             }
             tirosNoAlvo++;
-            m.Aud("tiro parado/andando/agachado (real 58% parado, 20% agachado)", me.crouch ? "agachado" : me.Speed < me.MaxSpeed * 0.16f ? "parado" : "andando");
+            m.Aud("tiro parado/andando/agachado (real 58% parado, 20% agachado)", me.Agachado ? "agachado" : me.Speed < me.MaxSpeed * 0.16f ? "parado" : "andando");
             m.Shoot(me, aimPt, e.z + aimH);
             if (t < tiroAte) { m.contatosTiro.Add(tiroFlick); tiroAte = -9; }
             burst++;
@@ -691,6 +862,12 @@ namespace CSM.Sim
             {
                 pist = 0.4f + (exposto ? 0.7f : 0) + (dist < 350 ? 0.5f : 0) + (hpDele <= 45 ? 0.4f : 0) + (me.gun.s.Reload > 2.8f ? 0.2f : 0) + (vistos >= 2 ? 0.3f : 0);
                 fica = 0.5f + (!exposto ? 0.9f : 0) + (dist > 550 ? 0.5f : 0) + 0.3f * me.skill.composure + (me.gun.mags == 0 ? -9 : 0);
+                if (!EXP.Contains("trocaSemTempo"))
+                {   // a conta que o pro faz sem pensar: sacar a pistola (CS2 ~1 s) x recarregar (2,4-3,7 s). Pouca diferença e
+                    // coberto, recarrega; exposto, a pistola ainda chega antes
+                    float tPist = 1.0f, ganho = me.gun.s.Reload - tPist;
+                    pist += 0.5f * MathX.Clamp((ganho - 1.6f) / 1.2f, -1, 1);
+                }
             }
             else
             {
@@ -705,7 +882,66 @@ namespace CSM.Sim
             Think(vazio ? $"acabou o pente com o {e.name} na cara — pistola!" : $"dei o tiro de AWP e tem {vistos} vindo — puxo a {WeaponStats.ALL[me.gunId].name}");
             return true;
         }
-        float awpTiroVisto = -9, amigoNaLinhaLog = -9;
+        float awpTiroVisto = -9, amigoNaLinhaLog = -9, proxPulo = 2;
+
+        /// <summary>
+        /// Pulo de deslocamento, como o pro faz girando: correndo numa reta plana, longe de inimigo (aterrissar faz barulho
+        /// e no ar não se acerta nada), às vezes dá um strafe jump — e às vezes emenda um 2º (bunny hop; a estamina do
+        /// servidor oficial não deixa mais que isso). No ar faz o strafe: aperta de lado pro lado que quer virar, o que
+        /// ganha um pouco de velocidade. Vai do jogador: tem quem pule muito e quem quase nunca pule.
+        /// </summary>
+        public void Pulo(float dt)
+        {
+            if (EXP.Contains("semPulo")) return;
+            if (me.noAr) { if (me.puloLivre) StrafeNoAr(); return; }
+            float t = m.t;
+            float jeito = JeitoPulo;
+            bool emendou = t - me.pousouEm < 0.04f && me.pulosSeguidos == 1;   // só o tick em que pousou (uma chance por pouso)
+            if (t < proxPulo && !emendou) return;
+            if (target != null || action != null) return;
+            if (wantVel.Len < me.MaxSpeed * 0.9f || me.Speed < me.MaxSpeed * 0.85f || me.hasBomb && order.plant || order.quiet || Silencio(order)) return;
+            var it = m.intel[(int)me.team];
+            // no ar não se acerta nada: perto de onde pode ter inimigo, ou logo depois de ver/ouvir alguém, fica no chão
+            float risco = MathX.Clamp(it.Esperados(me.pos, 500) * 2, 0, 1);
+            if (risco > 0.6f || t - lastSeenT < 5 || t - somT < 3) return;
+            V2 dir = wantVel / wantVel.Len;
+            // o pulo leva ~0,55 s (uns 40 de chão): precisa de reta plana até depois de aterrissar
+            if (!NavGrid.Direct(me.pos, me.pos + dir * 55) || MathF.Abs(NavGrid.ZAt(me.pos + dir * 55) - me.z) > 2) return;
+            proxPulo = t + rng.Uniform(0.6f, 1.4f);
+            float p;
+            if (emendou) p = 0.05f + 0.3f * jeito;   // bunny hop: emenda no tick em que pousa (e a estamina come o resto)
+            else
+            {   // o strafe jump é o pro ganhando tempo: saindo da base, girando, indo pro bomb na execução ou no retake —
+                // longe do destino e com pressa pula mais; quem segura posição/anda devagar não pula
+                float longe = MathX.Clamp(((order.hold != null ? order.hold.pos : order.dest) - me.pos).Len / 400f, 0, 1);
+                float pressa = t < 12 ? 0.8f : order.push || order.defuse || m.bombPlanted ? 1f : order.paciente ? 0.2f : 0.5f;
+                p = (0.05f + 0.25f * jeito * jeito) * (0.3f + longe) * pressa * (1 - risco);
+            }
+            if (rng.Rand() >= p) return;
+            me.querPular = true;
+        }
+        /// <summary>Tendência e técnica de pulo do jogador (0..1, fixa): quem pula muito também faz melhor o strafe.</summary>
+        float JeitoPulo => ((uint)Estavel(me.name + "pulo") * 2654435761u >> 24) / 255f;
+        int ladoStrafe;
+
+        /// <summary>
+        /// No ar: o A/D sincronizado com a mira (strafe). No ar do Source só ganha velocidade quem aperta quase de lado
+        /// em relação à velocidade (a ~90° dela): aí cada tick soma até o teto do ar e a velocidade cresce virando pro
+        /// lado apertado. Alterna o lado quando passa do rumo, então a curva oscila em volta do caminho e o ganho fica.
+        /// Humano: o ângulo sai torto (menos quem tem jeito) e às vezes dessincroniza (aperta pra frente: não ganha nada).
+        /// </summary>
+        void StrafeNoAr()
+        {
+            V2 v = me.vel; float vl = v.Len; if (vl < 5) return;
+            V2 g = wantVel.Len > 1 ? wantVel / wantVel.Len : v / vl;
+            float desvio = MathX.AngDiff(g.Atan2, v.Atan2);   // >0: o rumo está pro lado anti-horário da velocidade
+            if (ladoStrafe == 0 || desvio * ladoStrafe < -0.3f) ladoStrafe = desvio >= 0 ? 1 : -1;
+            if (EXP.Contains("strafeVelho")) { wantVel = V2.Ang(v.Atan2 + ladoStrafe * (MathF.PI / 2 - 0.25f)) * me.MaxSpeed; return; }
+            float q = 0.4f + 0.6f * JeitoPulo;
+            if (rng.Rand() < 0.08f + 0.3f * (1 - q)) { wantVel = g * me.MaxSpeed; return; }   // dessincronizou
+            float ang = MathF.PI / 2 + rng.Normal(0, (3 + 15 * (1 - q)) * MathF.PI / 180f);
+            wantVel = V2.Ang(v.Atan2 + ladoStrafe * ang) * me.MaxSpeed;
+        }
 
         /// <summary>Tem colega no caminho da bala (corpo dele cruza a linha até o alvo, na altura em que ela passa)?</summary>
         bool AmigoNaLinha(V2 alvo, float zAlvo, float dist, out Agent amigo)
@@ -716,11 +952,18 @@ namespace CSM.Sim
             {
                 if (x == me || !x.alive || x.team != me.team) continue;
                 V2 rel = x.pos - me.pos; float ao = rel.Dot(dir);
-                if (ao < 3 || ao > dist - 3) continue;
+                if (ao < -5 || ao > dist - 3) continue;   // colado (até do lado/um pouco atrás) também: a bala já pega ele nos primeiros passos
+                ao = MathF.Max(ao, 0);
                 float lat = MathF.Abs(rel.x * dir.y - rel.y * dir.x);
-                if (lat > 6.5f) continue;   // corpo ~4,6 de meia largura + a abertura do tiro
+                // a bala pode sair até aqui do lado: a abertura da arma (spray) + o erro da mão (2 sigmas da mira do jogador)
+                // (mesma conta do Combat.Fire: imprecisão parado + penalidade do spray + andando, recoil não compensado)
+                var sg = me.gun.s; float vr = MathX.Clamp((me.Speed - 0.34f * me.MaxSpeed) / (0.61f * me.MaxSpeed), 0, 1);
+                float inac = (me.Agachado ? sg.inCrouch : sg.inStand) + me.gun.penalidade + (vr > 0 ? sg.inMove * MathF.Pow(vr, 0.25f) : 0);
+                float recoil = me.spray > 0 && me.gunId != "awp" ? Math.Min(me.spray + 1, 12) * 0.55f * sg.recoil / 30f * (1 - me.skill.spray) : 0;
+                float abre = inac * Combat.ESCALA_ARMA + (2 * me.skill.aimSigma + recoil + 1.4f) * MathF.PI / 180f;
+                if (lat > 4.8f + MathF.Min(MathF.Tan(abre) * ao, 10f)) continue;   // corpo ~4,6 de meia largura
                 float zb = z0 + (zAlvo - z0) * (ao / dist);
-                if (zb < x.z - 1 || zb > x.z + (x.crouch ? 18 : 25)) continue;   // passa por cima/baixo dele
+                if (zb < x.z - 1 || zb > x.z + (25 - 7 * x.duck)) continue;   // passa por cima/baixo dele
                 amigo = x; return true;
             }
             return false;
@@ -743,7 +986,7 @@ namespace CSM.Sim
         public float primeiroTiro = -1, reacao0; public int tirosNoAlvo;
         float tiroFlick, tiroAte = -9, proxReavaliaSave, c4ModoAte = -9;
         int c4Modo; bool levouSair; float preTrocaAte = -9;
-        int duelModo, duelHpRef; float duelReval, largouAte = -9; Agent largouAlvo;
+        int duelModo, duelHpRef, duelHpEu = 100; float duelReval, largouAte = -9, evasivoProx; bool evasivoDecidiu, evasivoPula; float evasivoPulaAte = -9; Agent largouAlvo;
         /// <summary>
         /// Duelo de longe sem ninguém acertar: 0 continua, 1 fecha a distância, 2 sai da linha. Pesa a minha vida e a
         /// dele, a pressa (TR sem tempo, C4, defuse), se eu sou AWP (de longe é a arma dele), e o jeito do jogador.
@@ -770,7 +1013,7 @@ namespace CSM.Sim
                 {
                     V2 q = NavGrid.Snap(me.pos + V2.Ang(k * 0.3927f) * r);
                     if (!NavGrid.Movable(q) || MapData.LosWalk(e.pos, e.z, q, NavGrid.ZAt(q), 18f)) continue;
-                    float pl = NavGrid.PathLen(me.pos, q); if (pl <= 0 || pl > 180) continue;
+                    float pl = NavGrid.PathLenAte(me.pos, q, 180); if (pl <= 0 || pl > 180) continue;
                     float sc = pl - 0.3f * (q - e.pos).Len;
                     if (sc < bd) { bd = sc; best = q; }
                 }
@@ -820,21 +1063,59 @@ namespace CSM.Sim
             if (!me.alive) return;
             float d = (dead.pos - me.pos).Len;
             V2 matador = killer != null ? ContatoDe(killer) ?? dead.pos : dead.pos;   // ninguém viu quem matou: só sei onde o colega caiu
+            if (killer != null && !EXP.Contains("apTrocaSomVelho") && ContatoDe(killer) == null)
+            {   /* TROCA PELO SOM (padrão desde 2026-11-05; apTrocaSomVelho volta): ninguém viu quem matou, mas todo mundo ouviu o tiro — o tiro mais recente perto de onde
+                   o colega caiu é onde o matador está (crença do time, não a posição real). Antes ia pra onde o colega caiu: 47% das trocas */
+                var hs = m.intel[(int)me.team].heard; float melhor = 1e9f;
+                for (int i = hs.Count - 1; i >= 0 && m.t - hs[i].t < 1.2f; i--)
+                    if (hs[i].kind == "tiro") { float dd = (hs[i].p - dead.pos).Len; if (dd < 700 && dd < melhor) { melhor = dd; matador = hs[i].p; } }
+            }
             if (killer != null && d < 650) { focoMorteDe = killer; focoMortePos = matador; focoMorteT = m.t; focoMorteAte = m.t + 6; }
             // longe pra trocar, mas sei onde ele está: não entro no mesmo ângulo do mesmo jeito (um de cada vez é morrer igual)
             if (killer != null && d <= 1100 && (d > 420 || me.guardando || action != null) && !EXP.Contains("semCuidado") && !me.guardando)
             { cuidadoDe = killer; cuidadoPos = matador; cuidadoAte = m.t + 10; cuidadoModo = -1; }
+            if (Match.Auditar && d <= 420 && killer != null) m.Aud("troca: colega a até 420 — por que não foi", me.guardando ? "guardando a arma" : action != null ? "em ação (" + action + ")" : target != null ? "já em combate" : "avaliou");
             if (d > 420 || killer == null || me.guardando || action != null) { if (d < 260) Think($"{dead.name} caiu perto — segurando"); return; }
             // troca (refrag): quem está perto vai em cima de quem matou — o suporte/entry quase sempre, quem segura
             // posição às vezes (depende do jeito dele e de quanto a posição importa); o AWP raramente sai do ângulo
             bool trader = me.role == Role.Suporte || me.role == Role.Entry || me.role == Role.Igl || me.role == Role.Rotacao;
-            float p = (trader ? 1f : 0.65f) * (order.hold == null ? 1f : 0.8f) * (me.gunId == "awp" ? 0.35f : 1f) * (0.7f + 0.5f * P.Agr(me.skill.aggression)) * (d < 180 ? 1.15f : 0.85f);
+            bool tv = EXP.Contains("trocaVelha");
+            // pro troca quase sempre quem está do lado: o matador acabou de atirar (mira no colega morto, às vezes
+            // recarregando) — é a hora de abrir. Quem segura posição chave (AWP, âncora) troca menos
+            float p = (trader ? 1f : tv ? 0.65f : 0.8f) * (order.hold == null ? 1f : tv ? 0.8f : 0.9f) * (me.gunId == "awp" ? 0.35f : 1f) * (0.7f + 0.5f * P.Agr(me.skill.aggression)) * (d < 180 ? (tv ? 1.15f : 1.3f) : 0.85f);
             // trocar correndo pra dentro de 2+ inimigos é morrer junto: aí segura o ângulo e espera ele aparecer
-            if (m.intel[(int)me.team].Esperados(matador, 300) >= 2f) p *= 0.3f;
+            float espM = m.intel[(int)me.team].Esperados(matador, 300);
+            if (tv ? espM >= 2f : espM >= 2.5f) p *= tv ? 0.3f : 0.45f;
             if (Explicar) porquePendente = $"chance de trocar {p:0%}: colega a {d:0} de mim, função {me.role}, devem ter {m.intel[(int)me.team].Esperados(matador, 300):0.0} em volta do matador";
+            if (Match.Auditar) m.Aud("troca: decisão (chance)", (p >= 0.8f ? "a alta" : p >= 0.5f ? "b média" : p >= 0.25f ? "c baixa" : "d quase nada"));
             if (rng.Rand() < p)
             {
                 tradeUntil = m.t + 3.4f; tradePos = matador;
+                if (!EXP.Contains("apTrocaJanelaVelho"))
+                {   /* janela pela distância (padrão desde 2026-11-05; apTrocaJanelaVelho volta): 3,4 s não dá pra chegar de 250+ (51% das trocas); tempo andando + 1,2 s pra abrir, até 6 s */
+                    float pl = NavGrid.PathLenAte(me.pos, matador, 700); if (!float.IsInfinity(pl)) tradeUntil = m.t + Math.Clamp(pl / me.MaxSpeed + 1.2f, 3.4f, 6f);
+                } tradeMatador = killer; tradeViu = false; tradeMira = matador;
+                if (Match.Auditar)
+                {   /* auditoria da troca: sabia onde o matador estava? a que distância (andando) eu estava? */
+                    bool sabia = ContatoDe(killer) != null; trocaAudAte = tradeUntil; trocaTicks = 0; trocaJuizTicks = 0;
+                    m.Aud("troca: começou — sabia do matador", sabia ? "sim (contato)" : "não (vou onde o colega caiu)");
+                    float dl = (matador - me.pos).Len; m.Aud("troca: começou — distância até o alvo", dl < 150 ? "a <150" : dl < 250 ? "b 150-250" : dl < 350 ? "c 250-350" : "d 350+");
+                }
+                if (EXP.Contains("trocaPico") && !EXP.Contains("trocaPicoVelho"))   /* opt-in: swing na troca deu TR +1,9 e retake −3 */
+                {   // troca de pro é o swing: o primeiro ponto do caminho de onde eu vejo onde ele estava, já mirando lá — não
+                    // andar até o lugar dele (dava a volta na quina e quase nunca via o matador: 2 vezes em 450 rounds)
+                    var cam = NavGrid.Path(me.pos, matador);
+                    float zm = NavGrid.ZAt(NavGrid.Snap(matador));
+                    if (cam != null)
+                        foreach (var w in cam)
+                            if (MapData.LosWalk(w.p, w.z, matador, zm, 18f)) { tradePos = w.p; break; }
+                }
+                if (EXP.Contains("trocaCruzada"))   // A/B: ângulo cruzado na troca ficou neutro/levemente pior (trocas 14,1→13,4) — desligado
+                {   // não entro pelo mesmo caminho em que ele acabou de matar (ele está mirando ali): outro ângulo se tiver,
+                    // e com flash, banga ele antes de abrir (quem sabe usar utilitária faz mais)
+                    V2 cruz = AnguloCruzado(dead, matador); if ((cruz - matador).Len > 1) tradePos = cruz;
+                    tradeFlash = EXP.Contains("trocaComFlash") && me.nades.Contains("flash") && rng.Rand() < 0.35f + 0.45f * me.skill.utilitaria;   // A/B: bangar antes atrasa a troca (o matador sai do ângulo) — desligado
+                }
                 Think($"{dead.name} morreu do {killer.name} — vou trocar");
             }
             else Think($"{dead.name} caiu perto — segurando o ângulo dele");
@@ -860,7 +1141,7 @@ namespace CSM.Sim
                 bool ocupada = nx.hold != null && HoldOcupado(nx.hold);
                 if (o.zona) { m.Ev("jogada de zona acabou/round"); if (ocupada) m.Ev("voltou pra posição que um aliado já segura/round"); }
                 // voltar pro mesmo pixel que o colega já segura não existe: pega uma posição livre parecida
-                if (ocupada && !EXP.Contains("zonaVelha") && HoldLivrePerto(nx.hold) is Hold livre) { nx = new Order { name = livre.name, hold = livre, why = $"{nx.hold.name} já tem gente — fico com {livre.name}" }; m.Ev("trocou pra posição livre ao voltar/round"); }
+                if (ocupada && !EXP.Contains("zonaVelha") && HoldLivrePerto(nx.hold) is Hold livre) { nx = new Order { name = livre.name, hold = livre, why = $"{nx.hold.name} já tem gente — fico com {livre.name}", doPlano = nx.doPlano && !EXP.Contains("livreSemPlano") }; m.Ev("trocou pra posição livre ao voltar/round"); }
                 SetOrder(nx); return;
             }
             if (o.malote && Malote(o, t)) return;
@@ -890,22 +1171,74 @@ namespace CSM.Sim
                     break;
                 }
             }
+            // bomb dominado e eu com o C4: a prioridade é plantar (as smokes das saídas viram pós-plant) — o pro não fica
+            // jogando util com o bomb limpo e o relógio da rotação correndo
+            bool plantaJa = false;
+            if (o.plant && me.hasBomb && !m.bombPlanted && o.nades.Count > 0 && !EXP.Contains("plantaPrimeiroVelho"))
+            {
+                V2 ps0 = m.PlantSpot; var it0 = m.intel[(int)me.team];
+                bool perto = (ps0 - me.pos).Len < 420;
+                bool limpo = it0.Esperados(ps0, 380) < 0.5f && !it0.contacts.Values.Any(c => t - c.t < 3 && m.agents[c.id].alive && (c.pos - ps0).Len < 450);
+                if (perto && limpo) { plantaJa = true; if (t - plantaJaLog > 3) { plantaJaLog = t; m.Ev("plant: bomb dominado, plantou antes da util/round"); Think("bomb limpo: planto primeiro, a util fica pro pós-plant"); } }
+            }
             // granadas na fila
-            if (o.nades.Count > 0 && me.alive)
+            if (o.nades.Count > 0 && me.alive && !plantaJa)
             {
                 var n = o.nades[0];
-                if (!me.nades.Contains(n.kind)) { o.nades.RemoveAt(0); Think($"sem {n.kind} — {n.name} fica pra outra"); return; }   // não comprou ou já gastou
-                if ((n.from - me.pos).Len > 14) { MoveTo(n.from, true); ClearAngles(false); Think($"indo jogar {n.name}"); return; }
+                if (!me.nades.Contains(n.kind))
+                {   // não comprei/gastei: se pedi e alguém dropou (ou vai), pego no caminho; senão a lineup fica pra outra
+                    bool esperando = !EXP.Contains("semPedirItem") && meuPedidoItem != null && meuPedidoItem.nade == n.kind && t - meuPedidoItem.t < 4;
+                    if (!esperando) { o.nades.RemoveAt(0); Think($"sem {n.kind} — {n.name} fica pra outra"); return; }
+                    Esperando(null); fase = "esperando o colega dropar"; return;
+                }
+                if ((n.from - me.pos).Len > 14)
+                {
+                    // chegando: saca a granada antes (o saque de 1 s acontece andando), se está calmo — ninguém visto agora
+                    if (!EXP.Contains("semPreSaque") && !EXP.Contains("sacaGranadaVelho") && me.nadeNaMao == null && (n.from - me.pos).Len < 110 && target == null && t - lastSeenT > 2.5f && t >= me.sacaAte)
+                    { me.nadeNaMao = n.kind; me.nadeNaMaoDesde = t; me.sacaAte = float.MaxValue; m.Ev("granada: pré-sacou chegando na lineup/round"); }
+                    MoveTo(n.from, true); ClearAngles(false); Think($"indo jogar {n.name}"); return;
+                }
                 if (!CaiNoLugar(n.kind, n.to, n.name)) { o.nades.RemoveAt(0); return; }
-                action = "granada"; actionNade = n; actionEnd = t + 0.9f;
+                action = "granada"; actionNade = n; actionEnd = SoltaGranada(t, 0.9f);
                 Think($"jogando {n.name}");
                 return;
             }
             // plantar
             if (o.plant && me.hasBomb && !m.bombPlanted)
             {
+                if (!EXP.Contains("plantaOndeEstaVelho"))
+                {   // já estou DENTRO do outro bomb, limpo (o IGL trocou o plano pro outro lado): planto aqui — atravessar o mapa
+                    // com o C4 pela base CT pro bomb do plano era o bug "passou do A e foi pra base CT"
+                    char outroS = m.planSite == 'A' ? 'B' : 'A';
+                    var itS = m.intel[(int)me.team];
+                    if (MapData.SITES[outroS.ToString()].Contains(me.pos.x, me.pos.y) && itS.Esperados(me.pos, 300) < 1.2f
+                        && !itS.contacts.Values.Any(c => t - c.t < 2f && m.agents[c.id].alive && (c.pos - me.pos).Len < 350))   /* atravessar pela base CT com o C4 é pior que plantar com risco */
+                    { m.planSite = outroS; m.Ev("C4: plantou no bomb onde já estava (plano era o outro)/round"); Think($"tô no {outroS} limpo com o C4 — planto aqui"); }
+                }
                 V2 ps = m.PlantSpot;
                 if ((ps - me.pos).Len > 10 && C4NaFrente(ps)) { Esperando(null); fase = "C4 atrás de quem abre"; return; }
+                if (Match.Auditar && ((int)(t / Match.DT)) % 8 == 0)
+                {   // validador: portador que ENTROU no bomb do plano e SAIU sem plantar (o bug que o usuário viu no A)
+                    bool dentro = MapData.SITES[m.planSite.ToString()].Contains(me.pos.x, me.pos.y);
+                    if (dentro) { c4DentroDesde = c4DentroDesde < 0 ? t : c4DentroDesde; c4FoiDentro = true; }
+                    else if (c4FoiDentro && c4DentroDesde >= 0)
+                    {
+                        m.Ev("C4: entrou no bomb e saiu sem plantar/round");
+                        Match.GuardaExemplo("C4 entrou no bomb e saiu sem plantar", m.seedRound, m.t, $"{me.name} saiu do {m.planSite} ({Region(me.pos)}) com o C4 depois de {t - c4DentroDesde:0.0}s dentro; ordem {order.name}; fase {fase}; ação {action}; alvo {(target != null ? target.name : "-")}; plant em {Region(m.PlantSpot)} a {(m.PlantSpot - me.pos).Len:0}");
+                        c4DentroDesde = -1;
+                    }
+                }
+                if (Match.Auditar && ((int)(t / Match.DT)) % 16 == 0)
+                {   // validador do bug "passou do bomb com o C4 e foi pra base CT": portador com ordem de plantar longe do bomb
+                    bool noSite = MapData.SITES[m.planSite.ToString()].Contains(me.pos.x, me.pos.y);
+                    float dBase = (me.pos - MapData.SPAWN_CT[2]).Len, dPs = (ps - me.pos).Len;
+                    if (dBase < 380 && dPs > 150)
+                    {
+                        m.Ev("C4: portador com ordem de plantar perto da base CT/round");
+                        if (((int)(t / Match.DT) * 7919 + me.id) % 5 == 0)
+                            Match.GuardaExemplo("C4 indo pra base CT", m.seedRound, m.t, $"{me.name} em {Region(me.pos)} com o C4 ({order.name}, {fase}); plant {m.planSite} em {Region(ps)} a {dPs:0}; ps andável {NavGrid.Movable(ps)}");
+                    }
+                }
                 if ((ps - me.pos).Len > 10) { MoveTo(ps, true); ClearAngles(true); Think($"levando o bomb pro {m.planSite}"); return; }
                 if (t < fakeSegura) { Esperando(null); Face(DeOndeAparece(), 3); fase = "segurando depois do fake"; return; }
                 if (fakeSegura > 0) { fakeSegura = -9; decidiuFakePlant = false; }   // segurei e ninguém veio: decide de novo (fingir de novo ou fazer)
@@ -955,7 +1288,7 @@ namespace CSM.Sim
                     float p = tr == 0 || folga < 2.5f ? 0 : 0.15f + 0.12f * tr + (perto ? 0.3f : 0) - (folga < 5 ? 0.2f : 0);
                     if (me.nades.Contains("smoke") && rng.Rand() < p)
                     {
-                        action = "granada"; actionNade = new Lineup("smoke no bomb (smoke defuse)", "smoke", me.pos, m.bombPos + V2.Ang(rng.Uniform(0, 6.28f)) * 6); actionEnd = t + 0.6f;
+                        action = "granada"; actionNade = new Lineup("smoke no bomb (smoke defuse)", "smoke", me.pos, m.bombPos + V2.Ang(rng.Uniform(0, 6.28f)) * 6); actionEnd = SoltaGranada(t, 0.6f);
                         esperaSmoke = t + 0.6f + 1.8f;
                         Think($"smoke defuse: {tr} TR vivo{(tr > 1 ? "s" : "")}{(perto ? ", tem gente perto" : "")}, {folga:0.0}s de folga"); return;
                     }
@@ -993,11 +1326,20 @@ namespace CSM.Sim
             }
             V2 dest = o.hold != null ? o.hold.pos : o.dest;
             // chegou = perto E na altura (do lado da caixa, embaixo, não é "em cima da caixa": tem que pular)
-            if (baseP == null && ((dest - me.pos).Len > 12 || MathF.Abs(NavGrid.ZAt(NavGrid.Snap(dest)) - me.z) > 6 || me.noAr))   // no meio do pulo não chegou
+            // a C4 caída só é pega passando quase por cima (Match.RAIO_PEGA, ímã): quem vai buscar ela só "chegou" ali dentro
+            float chega = me.IsT && m.bombDropped && (dest - m.droppedBomb).Len < 2 && Match.RAIO_PEGA < 12 ? Match.RAIO_PEGA - 2 : 12;
+            if (baseP == null && ((dest - me.pos).Len > chega || MathF.Abs(NavGrid.ZAt(NavGrid.Snap(dest)) - me.z) > 6 || me.noAr))   // no meio do pulo não chegou
             {
                 // o colega avisou "vou bangar" pra onde eu estou indo: espero estourar e entro junto
-                if (o.push && t < me.bangAmigaEm - 0.3f && (me.bangAmigaPos - me.pos).Len < 450 && (me.bangAmigaPos - dest).Len < (me.pos - dest).Len + 60)
-                { Esperando(null); Face(me.bangAmigaPos, 3); Think($"o {me.bangAmigaDe.name} vai bangar — espero estourar pra entrar"); return; }
+                bool minhaBang = me.bangAmigaDe == me && !EXP.Contains("abreJuntoVelho");
+                if ((o.push || minhaBang) && t < me.bangAmigaEm - 0.3f && (me.bangAmigaPos - me.pos).Len < 450 && (me.bangAmigaPos - dest).Len < (me.pos - dest).Len + 60)
+                {
+                    // fico atrás da quina (sem dar o peek antes) e saio no estouro: quem estiver ali olhando está cego
+                    Esperando(null); Face(me.bangAmigaPos, 3); fase = "esperando a flash estourar";
+                    if (!esperouBang) { esperouBang = true; m.Ev(minhaBang ? "flash: abriu junto com a própria/round" : "flash: abriu junto com a do colega/round"); }
+                    Think(minhaBang ? "bangei — espero estourar e abro junto" : $"o {me.bangAmigaDe.name} vai bangar — espero estourar pra entrar"); return;
+                }
+                esperouBang = false;
                 if (SegurarContraVarios(t)) return;
                 if (CuidadoComMatador(t, dest)) return;
                 if (o.push && !o.plant && EsperaOGrupo(t, dest)) { Esperando(null); fase = "esperando o colega pra entrar junto"; return; }
@@ -1127,7 +1469,7 @@ namespace CSM.Sim
                     if (ve && primeiro < 0 && j >= j0 - 2) primeiro = j;
                 }
                 if (upN > 0 && up > 0.2f * upN || down < 2) continue;
-                float pl = NavGrid.PathLen(me.pos, s.p); if (pl <= 0 || pl > 480) continue;
+                float pl = NavGrid.PathLenAte(me.pos, s.p, 480); if (pl <= 0 || pl > 480) continue;
                 float sc = 0.3f * MathF.Min(down, 8) - 6f * (upN > 0 ? up / (float)upN : 0) - pl / 250 + (s.kind == Spots.Kind.AtrasCaixa ? 0.5f : 0) - Perigo.Visto(me.team, s.p) + rng.Uniform(0, 0.5f) - 2.5f * (m.leitura[(int)me.team]?.Adapta == true ? m.leitura[(int)me.team].Queimado(s.p, me.team, 90) : 0);
                 if (sc > best) { best = sc; res = s.p; olha = rota[primeiro >= 0 ? primeiro : Math.Min(rota.Count - 1, j0)]; }
             }
@@ -1175,16 +1517,53 @@ namespace CSM.Sim
             bool costas = MathF.Abs(MathX.AngDiff(e.aim, deMim.Atan2)) > 1.75f;   // > 100°: está de costas pra mim
             if (passaram.Add(e.id)) passouUlt = t;
             if (costas && (passaram.Count >= o.deixaPassar || t - passouUlt > 1.4f)) { m.Ev1("malote: abriu fogo de costas % rounds");m.Ev("malote: tiros de costas/round"); return false; }
-            fase = "malotando"; me.crouch = true; Face(e.pos, Combat.AimHeight(me, (e.pos - me.pos).Len, e.crouch) - me.Eye + e.z - me.z);
+            fase = "malotando"; me.crouch = true; Face(e.pos, Combat.AimHeight(me, (e.pos - me.pos).Len, e.duck > 0.5f) - me.Eye + e.z - me.z);
             reactAt = MathF.Max(reactAt, t + 0.05f);   // ainda não atiro (mas já estou mirando nele)
             Think($"deixando o {e.name} passar ({passaram.Count}/{o.deixaPassar})");
             return true;
         }
         readonly HashSet<int> passaram = new HashSet<int>(); float passouUlt;
 
+        /// <summary>Quando a granada sai da mão: sacar leva DEPLOY_NADE (CS2) — se acabou de jogar outra, só começa a sacar depois
+        /// que o braço termina. A mira (ajustar o ponto) acontece junto com o saque.</summary>
+        float SoltaGranada(float t, float mira)
+        {
+            if (EXP.Contains("sacaGranadaVelho")) return t + mira;
+            float ini = me.nadeNaMao != null ? me.nadeNaMaoDesde : MathF.Max(t, me.ultArremesso + Match.FIM_ARREMESSO);
+            return MathF.Max(t + mira, ini + Match.DEPLOY_NADE);
+        }
+
+        /// <summary>
+        /// Como gente agacha (CS2 pune o spam: cada apertada nova desce mais devagar): agachou no duelo, fica embaixo entre
+        /// os tiros e as rajadas — levanta quando o duelo acaba ou quando vai andar. E cansado (agachar lento) não aperta de
+        /// novo por qualquer coisa: só pra se esconder (cego, malote) ou se já estava descendo.
+        /// </summary>
+        /// <summary>Estava com a granada sacada (pré-saque) e não vai jogar agora: volta pra arma (leva o tempo de sacar).</summary>
+        void GuardaGranada(float t, string porque)
+        {
+            if (me.nadeNaMao == null) return;
+            me.nadeNaMao = null; me.sacaAte = t + me.TempoSacar; Think(porque);
+        }
+
+        public void SeguraAgachado(float t)
+        {
+            if (Agent.AgacharVelho || EXP.Contains("agacharSemJeito")) return;
+            if (me.crouch && !me.CrouchAntes && me.duckVel < 4.5f && me.duckCorpo < 0.05f && fase != "malotando" && !me.MeioCego(t))
+            { me.crouch = false; m.Ev("agachar: cansado, não apertou de novo/round"); }
+            if (me.crouch) agachouQuer = t;
+        }
+        float agachouQuer = -9;
+
         void FinishAction()
         {
-            if (action == "granada") { m.Throw(me, actionNade); order.nades.Remove(actionNade); me.nades.Remove(actionNade.kind); Think($"{actionNade.name} jogada"); }   // a ordem pode ter mudado no meio do arremesso
+            if (action == "granada")
+            {
+                m.Throw(me, actionNade); order.nades.Remove(actionNade); me.nades.Remove(actionNade.kind); Think($"{actionNade.name} jogada");   // a ordem pode ter mudado no meio do arremesso
+                me.ultArremesso = m.t;
+                float ts = EXP.Contains("sacarGranadaCurto") ? me.TempoSacarCurto : me.TempoSacar;
+                if (me.nadeNaMao != null) { me.nadeNaMao = null; me.sacaAte = m.t + Match.FIM_ARREMESSO + ts; }
+                else if (!EXP.Contains("sacaGranadaVelho")) me.sacaAte = MathF.Max(me.sacaAte, m.t + Match.FIM_ARREMESSO + ts);   // CS: depois de jogar, volta pra arma sacando
+            }   // a ordem pode ter mudado no meio do arremesso
             else if (action == "plantar") { m.Plant(me); Think("bomb plantado"); }
             else if (action == "desarmar") { m.Defuse(me); Think("desarmei"); }
             else if (action == "fake defuse")
@@ -1227,6 +1606,19 @@ namespace CSM.Sim
             // (ele vai ouvir de onde estiver segurando)
             if (plant && perto < 0.4f) return false;
             bool cobertura = m.agents.Any(x => x != me && x.alive && x.team == me.team && (x.pos - me.pos).Len < 300);
+            if (plant && !EXP.Contains("fakeVelho"))
+            {   // fake plant como pro: é pra quem ACHA que tem CT bem perto, escondido, pronto pra sair no barulho do plant —
+                // mais em fim de round com pouca gente (1x1, 2x2); no execute 5x5 o tempo vale mais (a rotação está vindo)
+                float colado = m.intel[(int)me.team].Esperados(me.pos, 380);
+                if (colado < 0.6f) return false;
+                float poucos = eles <= 1 ? 0.45f : eles == 2 ? 0.25f : eles == 3 ? -0.2f : -0.6f;
+                float fingirP = 0.5f * MathF.Min(colado, 2) + poucos + (cobertura ? 0.2f : 0) + 0.15f * me.skill.composure + (folga > 8 ? 0.1f : 0) - 0.6f * fakes;
+                float fazerP = 1.45f + (folga < 6 ? 0.6f : 0) + (nos > eles + 1 ? 0.4f : 0);
+                fingirP += rng.Normal(0, 0.3f); fazerP += rng.Normal(0, 0.3f);
+                m.Aud("fake plant: decisão", fingirP > fazerP ? $"fingiu ({nos}x{eles})" : $"plantou ({nos}x{eles})");
+                if (fingirP <= fazerP) return false;
+                fakes++; m.Ev("fake plant/round"); return true;
+            }
             float fingir = 0.7f * MathF.Min(perto, 2) + (folga > 6 ? 0.4f : 0.1f) + (nos <= eles ? 0.25f : 0) + (cobertura ? 0.25f : 0) + 0.2f * me.skill.composure - 0.35f * fakes;
             float fazer = (plant ? 0.9f : 0.5f) + (perto < 0.25f ? (plant ? 0.9f : 0.4f) : 0) + (folga < 4 ? 0.9f : 0) + (nos > eles + 1 ? 0.3f : 0);
             fingir += rng.Normal(0, 0.3f); fazer += rng.Normal(0, 0.3f);
@@ -1238,8 +1630,49 @@ namespace CSM.Sim
         }
 
         // ================================================================ segurar ativo
-        /// <summary>Pra onde olhar segurando: passo ouvido perto agora, senão os ângulos da posição em rodízio.</summary>
+        /// <summary>
+        /// Pra onde olhar segurando, sem mirar nas costas do colega: se ele está parado na frente, na linha do ângulo, quem
+        /// segura aquele ângulo é ele (e o meu tiro sairia nele) — pego outro ângulo da posição, a borda de onde vem
+        /// gente, ou abro uns 35° pro lado dele que tem mais perigo.
+        /// </summary>
         V2 LookAlvo(V2[] look)
+        {
+            V2 r = LookAlvo0(look);
+            if (EXP.Contains("miraNoColega") || target != null || ColegaNaFrente(r) == null) return r;
+            foreach (var L in look) if (ColegaNaFrente(L) == null && Ameaca(L) > 0.002f) return Fonte("ângulo livre do colega", L);
+            if ((Borda() ?? DeOndeVem()) is V2 vem && ColegaNaFrente(vem) == null) return Fonte("borda livre do colega", vem);
+            float a0 = (r - me.pos).Atan2, dl = MathF.Min((r - me.pos).Len, 300);
+            V2 e = me.pos + V2.Ang(a0 + 0.6f) * dl, d = me.pos + V2.Ang(a0 - 0.6f) * dl;
+            return Fonte("do lado do colega", Ameaca(e) >= Ameaca(d) ? e : d);
+        }
+        /// <summary>
+        /// O pixel que eu miro esperando (a quina por onde ele apareceria) também não pode ser as costas do colega: o
+        /// LookAlvo checa o ponto, mas o pixel do caminho até ele pode cair noutra direção — então checa o pixel também.
+        /// </summary>
+        V2 PixelSemColega(V2[] look)
+        {
+            V2 px = Pixel(LookAlvo(look));
+            if (EXP.Contains("esperaMiraVelha") || target != null || ColegaNaFrente(px) == null) return px;
+            foreach (var L in look) { var q = Pixel(L); if (ColegaNaFrente(q) == null && Ameaca(L) > 0.002f) return q; }
+            float a0 = (px - me.pos).Atan2, dl = MathF.Min((px - me.pos).Len, 300);
+            V2 e = me.pos + V2.Ang(a0 + 0.6f) * dl, d = me.pos + V2.Ang(a0 - 0.6f) * dl;
+            return Ameaca(e) >= Ameaca(d) ? e : d;
+        }
+        /// <summary>Colega parado entre mim e L, quase na linha (ele tapa o ângulo).</summary>
+        Agent ColegaNaFrente(V2 L)
+        {
+            V2 dir = L - me.pos; float dl = dir.Len; if (dl < 30) return null; dir = dir / dl;
+            foreach (var x in m.agents)
+            {
+                if (x == me || !x.alive || x.team != me.team) continue;
+                V2 rel = x.pos - me.pos; float ao = rel.Dot(dir);
+                // a mira não para no ponto: colega logo depois dele também tapa (e fica com a mira nas costas)
+                if (ao < 20 || ao > (EXP.Contains("colegaAteAlvo") ? dl : MathF.Max(dl, 200))) continue;
+                if (MathF.Abs(rel.x * dir.y - rel.y * dir.x) < 8 + 0.05f * ao) return x;
+            }
+            return null;
+        }
+        V2 LookAlvo0(V2[] look)
         {
             if (m.t > holdLookUntil)
             {
@@ -1264,7 +1697,18 @@ namespace CSM.Sim
                 if (k == 0) Think($"smoke em {Region(L0)} — seguro outro ângulo");
                 holdLook = (holdLook + 1) % look.Length;
             }
-            if (m.t - somT < 2f && (somP - me.pos).Len < 400) { m.Aud("passo que virou a mira", "ele ouviu"); return Fonte("passo", somP); }
+            if (m.t - somT < 2f && (somP - me.pos).Len < 400)
+            {
+                // o passo do lado de um ângulo que eu seguro: ele vai sair pela MINHA quina — a mira fica nela (virar pro som
+                // tirava a mira de onde ele aparece: 15% das miras fora do CT segurando)
+                if (EXP.Contains("passoNaQuina"))   /* opt-in: no A/B piorou o retake (mirar no som já acertava 18% pré-mirado) */
+                {
+                    float aS = (somP - me.pos).Atan2;
+                    foreach (var L in look)
+                        if (MathF.Abs(MathX.AngDiff((L - me.pos).Atan2, aS)) < 35f * MathF.PI / 180f) { m.Aud("passo que virou a mira", "fiquei na quina dele"); return Fonte("passo pela quina", L); }
+                }
+                m.Aud("passo que virou a mira", "ele ouviu"); return Fonte("passo", somP);
+            }
             var hd = m.intel[(int)me.team].heard;
             if (hd.Count > 0 && m.t - hd[hd.Count - 1].t < 2f && (hd[hd.Count - 1].p - me.pos).Len < 400 && !Lotado(hd[hd.Count - 1].p)) { m.Aud("passo que virou a mira", "colega cantou"); return Fonte("passo cantado", hd[hd.Count - 1].p); }   // ouviu passo (a mira vai na quina: Pixel)
             if (!EXP.Contains("semQuinaProvavel") && QuinaProvavel() is V2 qp) return Fonte("quina provável", qp);
@@ -1386,6 +1830,7 @@ namespace CSM.Sim
             Match.Drop best = null; float bv = ValorArma(me.gunId) + ganhoMin;
             foreach (var d in m.drops)
             {
+                if (d.para != null && d.para != me && m.t - d.t < 6) continue;   // dropada pra um colega: é dele
                 float v = ValorArma(d.gun);
                 if (v > bv && (d.pos - me.pos).Len < raio) { bv = v; best = d; }
             }
@@ -1438,15 +1883,207 @@ namespace CSM.Sim
             return true;
         }
 
+        /// <summary>
+        /// Começo do round: o que comprei pro colega (rifle pro pobre, AWP pro AWPer, smoke/flash pra quem faz o lineup)
+        /// eu dropo na direção dele — chego perto se ele já se afastou; passados 10 s, já era (o round começou).
+        /// </summary>
+        bool EntregarCompra(float t)
+        {
+            if (me.entregar.Count == 0 || action != null) return false;
+            if (t > 10 || target != null) { me.entregar.Clear(); return false; }
+            if (entregaEm < 0) entregaEm = rng.Uniform(0.2f, 1.4f);   // cada um no seu tempo (ninguém dropa no mesmo tique)
+            if (t < entregaEm) return false;
+            var (para, item) = me.entregar[0];
+            if (!para.alive) { me.entregar.RemoveAt(0); return false; }
+            fase = "dropando pro colega";
+            string nome = WeaponStats.ALL.ContainsKey(item) ? WeaponStats.ALL[item].name : item;
+            // perto (até ~220): joga na direção dele e ele vem buscar (como no CS2). Longe: vai até onde ele estava, num ponto
+            // que só muda a cada 1 s — seguir o colega andando era um caminho novo por tique (destino nunca repete no cache)
+            if ((para.pos - me.pos).Len > (EXP.Contains("dropPerto") ? 90 : 220))
+            {
+                if (t > entregaAlvoT) { entregaAlvoT = t + 1; entregaAlvo = NavGrid.Snap(para.pos); }
+                MoveTo(entregaAlvo, false); Face(para.pos, 3); Think($"levando {nome} pro {para.name}"); return true;
+            }
+            Face(para.pos, 3);
+            m.Entregar(me, para, item); me.entregar.RemoveAt(0); entregaEm = t + rng.Uniform(0.3f, 0.6f);
+            return true;
+        }
+        float entregaEm = -1, entregaAlvoT = -1; V2 entregaAlvo;
+        public bool Reagindo => m.t < levouAte;
+        public float ViuEm(Agent x) => m.intel[(int)me.team].contacts.TryGetValue(x.id, out var c) ? c.t : -99;
+
+        /// <summary>Colega dropou arma pra mim (compra): vou lá e pego — é minha, ninguém mais pega nos primeiros segundos.</summary>
+        bool PegarEntrega(float t)
+        {
+            bool velho = EXP.Contains("dropVelho");
+            if (!velho && action == null && target == null && t < 10)
+            {   // o colega comprou arma pra mim e ainda não dropou: espero na base olhando pra ele (pro fica e pega)
+                Agent vem = null;
+                foreach (var x in m.agents) if (x != me && x.alive && x.team == me.team) foreach (var (pa, it) in x.entregar) if (pa == me && WeaponStats.ALL.ContainsKey(it)) { vem = x; break; }
+                if (vem != null) { Esperando(null); Face(vem.pos, 3); fase = "esperando o drop"; Think($"o {vem.name} vai dropar pra mim — espero"); return true; }
+            }
+            if (action != null || target != null || m.drops.Count == 0 || t > 25) return false;   // roda todo tique: sem LINQ (aloca no Mono)
+            Match.Drop d = null;
+            float raio = velho ? 250 : t < 20 ? 650 : 250;   // já saí andando: no começo do round volto pra buscar (a arma é minha)
+            foreach (var x in m.drops) if (x.para == me && x.pegouPor == null && t - x.t < (velho ? 12 : 18) && (x.pos - me.pos).Len < raio) { d = x; break; }
+            if (d == null) return false;
+            if (!velho && (d.pos - me.pos).Len > 250 && m.intel[(int)me.team].Esperados(d.pos, 400) > 0.4f) return false;   // voltar só se é seguro
+            fase = "pegando o drop";
+            if ((d.pos - me.pos).Len > 8) { MoveTo(d.pos, false); Face(d.pos, 3); Think($"pegando a {WeaponStats.ALL[d.gun].name} que o {d.de?.name} dropou"); }
+            else m.Pegar(me, d);
+            return true;
+        }
+
         /// <summary>Colega dropou granada pra mim, perto e sem perigo: vou lá pegar.</summary>
         bool PegarGranada(float t)
         {
             if (action != null || m.itensChao.Count == 0 || me.hasBomb && order.plant) return false;
             var it = m.itensChao.FirstOrDefault(x => x.para == me && (x.pos - me.pos).Len < 220 && Match.CabeGranada(me, x.nade));
-            if (it == null || m.intel[(int)me.team].Esperados(me.pos, 300) > 0.5f) return false;
+            if (it == null) return LootGranada(t);
+            if (m.intel[(int)me.team].Esperados(me.pos, 300) > 0.5f) return false;
             fase = "pegando granada"; MoveTo(it.pos, true); Think($"pegando a {it.nade} que o {it.de?.name} dropou");
             return true;
         }
+
+        /// <summary>
+        /// Lootear: granada caída de quem morreu (colega ou inimigo) perto de mim. Pesa: o quanto ela me falta (smoke e
+        /// flash valem mais, inventário vazio vale mais), o desvio, o perigo ali (corpo de quem morreu costuma estar na
+        /// mira de alguém — o que eu acho, não o que é) e a pressa. Decide uma vez por item; às vezes vai e se dá mal.
+        /// </summary>
+        bool LootGranada(float t) => LootGranada(t, false);
+        /// <param name="propor">juiz: só avalia (o melhor item e a chance de valer a pena em lootNota), sem decidir</param>
+        bool LootGranada(float t, bool propor)
+        {
+            lootCand = null; lootNota = 0;
+            if (EXP.Contains("semLoot") || target != null || order.defuse && !(!me.IsT && m.bombPlanted && action == null) || order.plant) return false;
+            if (lootAlvo != null && (!m.itensChao.Contains(lootAlvo) || !Match.CabeGranada(me, lootAlvo.nade) || t > lootAte)) lootAlvo = null;
+            if (lootAlvo != null && !m.over && !EXP.Contains("lootTeimoso"))
+            {   // indo pegar e a situação mudou (inimigo visto agora perto, ou um colega caiu aqui): larga o item e volta pro jogo
+                var itL = m.intel[(int)me.team];
+                bool viuAgora = itL.contacts.Values.Any(c => m.agents[c.id].alive && t - c.t < 1.5f && (c.pos - me.pos).Len < 500);
+                bool caiuColega = m.agents.Any(c => !c.alive && c.team == me.team && t - c.diedAt < 2f && (c.pos - me.pos).Len < 500 && c.killedBy != null && c.killedBy.alive);
+                if (viuAgora || caiuColega) { lootAlvo = null; lootProx = t + 2f; m.Ev("loot: largou o item (situação mudou)/round"); Think("largo a granada do chão — tem gente aqui"); return false; }
+            }
+            if (lootAlvo == null)
+            {
+                if (t < lootProx) { if (propor && lootUltCand != null && m.itensChao.Contains(lootUltCand)) { lootCand = lootUltCand; lootNota = lootUltNota; lootCandPl = lootUltPl; return true; } return false; }
+                lootProx = t + 0.7f; lootUltCand = null;
+                var intel = m.intel[(int)me.team]; float agr = P.Agr(me.skill.aggression);
+                float melhorP = 0; Match.ItemChao melhor = null; float melhorPl = 0;
+                // pressa pelo que EU entendo do tempo: CT com bomb plantado tem pressa só se o desvio não cabe na folga
+                // (chegar no bomb + desarmar); TR, fim de tempo ou entrando
+                bool ctRetake = !me.IsT && m.bombPlanted;
+                float folga = ctRetake ? m.BombLeft - NavGrid.PathLenAte(me.pos, m.bombPos, 1500) / (MapCheck.RUN * 0.85f) - Match.DefuseTime(me) : 99;
+                bool pressa = !m.over && (me.IsT ? m.RoundLeft < 25 || order.push : ctRetake ? folga < 6 : false);
+                bool fimRound = m.over;   // acabou o round: quem sobrou cata o que vê (granada que sobra vai pro próximo round)
+                foreach (var x in m.itensChao)
+                {
+                    if (x.morto == null || !Match.CabeGranada(me, x.nade) || lootVisto.Contains(x)) continue;
+                    // o que vale ir buscar depende do que vem: CT indo pro retake quer smoke (cortar a visão de quem segura o
+                    // bomb) e, sem kit, o kit vale muito (desarme pela metade); retake provável (bomb plantado ou time perdendo
+                    // o bomb) também conta antes do plant
+                    bool retakeVem = !me.IsT && (m.bombPlanted || order.name.Contains("retomar") || order.name.Contains("retake"));
+                    float alcance = x.nade == "kit" ? (retakeVem ? 320 : 200) : retakeVem && x.nade == "smoke" ? 240 : 170;
+                    float d = (x.pos - me.pos).Len; if (d > alcance) continue;
+                    // só o que eu vejo no chão (ou vi cair do lado de quem morreu perto de mim)
+                    if (!MapData.LosWalk(me.pos, me.z, x.pos, x.z + 2, 18f)) continue;
+                    if (!propor) lootVisto.Add(x);
+                    float pl = NavGrid.PathLenAte(me.pos, x.pos, alcance * 1.3f); if (float.IsInfinity(pl)) continue;
+                    if (ctRetake && pl / (MapCheck.RUN * 0.85f) * 2 > folga - 3) continue;   // ir e voltar não cabe no tempo
+                    float valor = x.nade == "kit" ? (retakeVem ? 3.0f : 1.2f)
+                        : (x.nade == "smoke" ? (retakeVem ? 1.8f : 1.0f) : x.nade == "flash" ? (retakeVem ? 1.3f : 0.8f) : x.nade == "molotov" ? 0.75f : 0.5f) * (me.nades.Count == 0 ? 1.4f : me.nades.Count >= 3 ? 0.6f : 1f);
+                    float perigo = intel.Esperados(x.pos, 300) + intel.HeatAvg(x.pos, 120) * 2;
+                    // colega acabou de cair perto: quem matou se expôs atirando e está ali (ainda vivo) — a hora é de cravar
+                    // onde ele aparece/trocar, não de olhar pro chão. Some em ~5 s
+                    if (!fimRound && !EXP.Contains("lootSemAmeaca"))
+                        foreach (var c in m.agents)
+                            if (!c.alive && c.team == me.team && c.killedBy != null && c.killedBy.alive && t - c.diedAt < 5f
+                                && ((c.pos - me.pos).Len < 600 || (c.pos - x.pos).Len < 400))
+                                perigo += 2.5f * (1 - (t - c.diedAt) / 5f);
+                    float wVai = valor * (1.2f - pl / (alcance * 1.3f)) * (pressa ? 0.3f : 1f) * (fimRound ? 2.5f : 1f);
+                    if (fimRound) perigo *= 0.3f;
+                    float wNao = 0.35f + perigo * (1.5f - 0.7f * agr);
+                    if (!fimRound && !EXP.Contains("lootTeimoso"))
+                    {   // pro não cata granada no meio da troca: inimigo visto há pouco por perto pesa muito, e o perigo onde ela
+                        // está conta o dobro (10 s/round catando, 70% com inimigo que ele mesmo achava perto)
+                        bool viuPerto = intel.contacts.Values.Any(c => m.agents[c.id].alive && t - c.t < 3f && (c.pos - x.pos).Len < 650);
+                        wNao = 0.35f + perigo * (2.6f - 1.0f * agr) + (viuPerto ? 1.6f : 0);
+                    }
+                    if (propor)
+                    {   // o gosto dele por aquele item (repertório, não sorteio a cada passo)
+                        float gosto = 0.8f + 0.4f * (((uint)(me.id * 7919 + (int)(x.origem.x * 73 + x.origem.y * 151 + x.t * 977)) % 1000) / 1000f);
+                        float pv = wVai / (wVai + wNao) * gosto; if (pv > melhorP) { melhorP = pv; melhor = x; melhorPl = pl; }
+                        continue;
+                    }
+                    if (rng.Weighted(new[] { wNao, wVai }) == 1) { lootAlvo = x; lootAte = t + 4 + pl / 60f; if (x.nade == "kit") m.Ev("kit do chão: foi buscar/round"); else if (retakeVem) m.Ev("granada do chão: buscou antes do retake/round"); m.Ev(fimRound ? "granada do chão: looteou no fim do round/round" : "granada do chão: foi lootear/round"); Think(x.nade == "kit" ? $"vou pegar o kit do {x.morto.name} antes do retake" : $"vou pegar a {x.nade} do {x.morto.name}"); break; }
+                }
+                if (propor) { lootCand = melhor; lootNota = melhorP; lootCandPl = melhorPl; lootUltCand = melhor; lootUltNota = melhorP; lootUltPl = melhorPl; return melhor != null; }
+                if (lootAlvo == null) return false;
+            }
+            else if (propor) { lootNota = 0.75f; return true; }   // já estou indo: continuar vale
+            fase = "looteando granada"; MoveTo(lootAlvo.pos, true); ClearAngles(true);
+            return true;
+        }
+        Match.ItemChao lootAlvo, lootCand, lootUltCand; float lootAte, lootProx, lootNota, lootCandPl, lootUltNota, lootUltPl; readonly HashSet<Match.ItemChao> lootVisto = new HashSet<Match.ItemChao>();
+
+        // ================================================================ troca de itens no meio do round
+        /// <summary>
+        /// "Dropa uma flash pra mim": quem vai abrir o lugar (entry entrando, ou quem pega o ponto de contato) sem flash
+        /// pede pra um colega perto que tem sobrando — o AWP e o suporte costumam ter e ficar atrás. Pede uma vez por
+        /// situação, antes do contato; depois ele mesmo banga pra si. Não é regra: só pede quem acha que vai precisar.
+        /// </summary>
+        void PedirItem(float t)
+        {
+            if (EXP.Contains("semPedirItem") || t < proxPedidoItem || action != null || target != null) return;
+            proxPedidoItem = t + 2f;
+            if (meuPedidoItem != null && m.pedidosItem.Contains(meuPedidoItem)) return;
+            // o que EU vou precisar agora, pelo que acho que vem (não é lista fixa):
+            string quero = null; float vontade = 0;
+            // a lineup que o plano me deu e eu não tenho (não comprei/gastei): peço pra quem tem, antes de largar ela
+            foreach (var l in order.nades) if (!me.nades.Contains(l.kind) && Match.CabeGranada(me, l.kind)) { quero = l.kind; vontade = 0.9f; break; }
+            // vou abrir o lugar (entry entrando, bang pra mim): flash
+            if (quero == null && !me.nades.Contains("flash") && Match.CabeGranada(me, "flash") && !m.bombPlanted
+                && (order.push && (me.role == Role.Entry || order.follow == null) || micro == Micro.Bang)
+                && m.intel[(int)me.team].HeatAvg(order.hold?.pos ?? order.dest, 200) >= 0.15f) { quero = "flash"; vontade = 0.6f; }
+            // retake vindo: smoke pra cortar quem segura o bomb
+            if (quero == null && !me.IsT && m.bombPlanted && !me.nades.Contains("smoke") && Match.CabeGranada(me, "smoke") && m.BombLeft > 20) { quero = "smoke"; vontade = 0.55f; }
+            // âncora segurando o bomb sem nada pra atrasar a entrada: molotov
+            if (quero == null && !me.IsT && !m.bombPlanted && me.role == Role.Ancora && me.nades.Count == 0 && Match.CabeGranada(me, "molotov")) { quero = "molotov"; vontade = 0.35f; }
+            if (quero == null) return;
+            bool temQuem = false;
+            foreach (var x in m.agents) if (x != me && x.alive && x.team == me.team && (x.pos - me.pos).Len < 350 && x.nades.Contains(quero) && x.brain.target == null) { temQuem = true; break; }
+            if (!temQuem || !Rola($"pedir {quero} " + (int)(t / 10), vontade * (0.6f + 0.5f * P.Agr(me.skill.aggression)))) return;
+            meuPedidoItem = new Match.PedidoItem { quem = me, nade = quero, t = t };
+            m.pedidosItem.Add(meuPedidoItem); m.Ev($"item: pediu drop de {quero}/round");
+            Think($"dropa uma {quero} pra mim!");
+        }
+        float proxPedidoItem; Match.PedidoItem meuPedidoItem;
+
+        /// <summary>
+        /// Colega pediu item: dropo se tenho sobrando e não vou usar agora. Pesa: tenho 2 flashes, sou AWP/suporte (fico
+        /// atrás e quem abre é ele), a minha lineup precisa dela, estou no meio de algo. Dropar é o G: cai na frente,
+        /// na direção dele; ele passa e pega.
+        /// </summary>
+        void AtenderItem(float t)
+        {
+            if (EXP.Contains("semPedirItem") || action != null || target != null || m.pedidosItem.Count == 0) return;
+            for (int i = m.pedidosItem.Count - 1; i >= 0; i--)
+            {
+                var p = m.pedidosItem[i];
+                if (!p.quem.alive || t - p.t > 4 || p.atendido != null) { if (t - p.t > 4 || !p.quem.alive) m.pedidosItem.RemoveAt(i); continue; }
+                if (p.quem == me || p.quem.team != me.team || !me.nades.Contains(p.nade) || (p.quem.pos - me.pos).Len > 350) continue;
+                if (!MapData.LosWalk(me.pos, me.z, p.quem.pos, p.quem.z, 18f)) continue;   // dropar é jogar na frente: tem que ver ele
+                if (!rolouItem.Add(p)) continue;   // decido uma vez por pedido
+                int minhas = me.nades.Count(n => n == p.nade);
+                bool usoNaLineup = order.nades.Any(l => l.kind == p.nade);
+                float wDrop = 0.5f + (minhas >= 2 ? 0.6f : 0) + (me.gunId == "awp" ? 0.6f : 0) + (me.role == Role.Suporte ? 0.3f : 0);
+                float wNao = 0.35f + (usoNaLineup && minhas < 2 ? 1.2f : 0) + (order.push && me.role == Role.Entry ? 0.5f : 0);
+                if (rng.Weighted(new[] { wNao, wDrop }) == 0) continue;
+                if (m.DropaGranada(me, p.quem, p.nade)) { p.atendido = me; m.pedidosItem.RemoveAt(i); m.Ev($"item: dropou {p.nade} pro colega que pediu/round"); }
+                return;
+            }
+        }
+        readonly HashSet<Match.PedidoItem> rolouItem = new HashSet<Match.PedidoItem>();
 
         /// <summary>
         /// O pixel provável: onde o inimigo que está (ou pode estar) em `alvo` vai aparecer pra mim. Se eu já vejo o
@@ -1455,11 +2092,29 @@ namespace CSM.Sim
         /// </summary>
         V2 Pixel(V2 alvo)
         {
-            if ((alvo - pixelDe).Len < 20 && (me.pos - pixelMeu).Len < 15 && m.t - pixelAt < 0.6f) return pixelRes;
-            pixelDe = alvo; pixelMeu = me.pos; pixelAt = m.t; pixelRes = alvo;
+            // memória de vários pontos (quem testa ângulos alternativos pede vários seguidos; com um só, cada pedido
+            // apagava o anterior e todos viravam caminho novo)
+            for (int i = 0; i < PIX; i++)
+                if (m.t - pixAt[i] < 0.6f && (alvo - pixDe[i]).Len < 20 && (me.pos - pixMeu[i]).Len < 15) return pixRes[i];
+            int slot = 0; for (int i = 1; i < PIX; i++) if (pixAt[i] < pixAt[slot]) slot = i;
+            long pc = P0(); pixelAdiado = false; pixelRes = PixelCalc(alvo); P1("pixel (quina do caminho)", pc);
+            if (pixelAdiado)
+            {   // o passo estourou o orçamento de A*: mira no último pixel desse alvo (mesmo velho, de perto daqui); sem ele, no
+                // alvo — e não guarda, o próximo passo calcula
+                for (int i = 0; i < PIX; i++) if ((alvo - pixDe[i]).Len < 20 && (me.pos - pixMeu[i]).Len < 60) return pixRes[i];
+                return pixelRes;
+            }
+            pixDe[slot] = alvo; pixMeu[slot] = me.pos; pixAt[slot] = m.t; pixRes[slot] = pixelRes;
+            return pixelRes;
+        }
+        const int PIX = 6; readonly V2[] pixDe = new V2[PIX], pixMeu = new V2[PIX], pixRes = new V2[PIX]; readonly float[] pixAt = { -9, -9, -9, -9, -9, -9 };
+        V2 PixelCalc(V2 alvo)
+        {
+            pixelRes = alvo;
             if (MapData.LosWalk(me.pos, me.z, alvo, NavGrid.ZAt(alvo), 18f)) return alvo;
-            var p = NavGrid.Path(me.pos, alvo, Perigo.Camada(me.team));
-            if (p == null || p.Count < 2) return alvo;
+            var p = NavGrid.Path(me.pos, alvo, Perigo.Camada(me.team), !EXP.Contains("orcAVelho"));
+            if (p == null) { pixelAdiado = true; return alvo; }   // orçamento de A* do passo estourado: adia
+            if (p.Count < 2) return alvo;
             V2 prev = me.pos, ultimoVisto = me.pos; bool viu = false;
             for (int i = 1; i < p.Count; i++)
             {
@@ -1477,7 +2132,7 @@ namespace CSM.Sim
             }
             pixelRes = viu ? ultimoVisto : alvo; return pixelRes;
         }
-        V2 pixelDe = new V2(-9999, -9999), pixelMeu, pixelRes; float pixelAt = -9;
+        V2 pixelRes; bool pixelAdiado;
 
         /// <summary>Inimigo em lugar conhecido atrás da parede: a quina atrás da qual ele está, na direção dele.</summary>
         V2 PixelDele(V2 alvo)
@@ -1706,6 +2361,379 @@ namespace CSM.Sim
         }
         Agent ajudaAlvo; float ajudaAte = -9, ajudaCooldown = -9; V2 ajudaPos;
 
+        // ================================================================ juiz
+        /// <summary>
+        /// O que fazer agora, quando não estou em combate nem reagindo: cada possibilidade (seguir o plano, trocar o
+        /// colega, ajudar no duelo, pegar arma, pegar/lootear granada) dá uma nota pela MESMA leitura da situação — o
+        /// que eu acho que está acontecendo, o tempo, o meu jeito — e ganha a maior. A escolha atual tem um bônus de
+        /// compromisso (ninguém troca de ideia a cada passo); só troca se a outra for bem melhor. Feature nova = mais
+        /// uma possibilidade disputando, não mais um degrau numa fila.
+        /// </summary>
+        void Juiz(float t)
+        {
+            PedirItem(t); AtenderItem(t);   // pedir/dropar item é de passagem (o G não para ninguém)
+            float agr = P.Agr(me.skill.aggression);
+            var intel = m.intel[(int)me.team];
+            juizN = 0;
+            // 1) o plano (a ordem do IGL): quanto ele aperta agora
+            float nOrdem = 0.35f;
+            if (order.plant && me.hasBomb && !m.bombPlanted) nOrdem += m.RoundLeft < 35 ? 0.65f : 0.4f;
+            if (order.defuse) nOrdem += 0.6f;
+            if (order.push) nOrdem += me.IsT && m.RoundLeft < 30 ? 0.35f : 0.15f;
+            if (order.hold != null && (me.role == Role.Ancora || me.gunId == "awp")) nOrdem += 0.12f;   // meu ângulo é o que segura o bomb
+            if (me.guardando) nOrdem += 0.5f;
+            Prop(J_ORDEM, nOrdem);
+            // 2) trocar o colega que caiu do meu lado
+            if (Match.Auditar && trocaAudAte > 0)
+            {   /* auditoria: durante a janela, quanto o juiz ficou na troca; no fim, viu o matador? */
+                if (t < trocaAudAte) { trocaTicks++; if (juizAtual == J_TROCAR) trocaJuizTicks++; if (!tradeViu && tradeMatador != null && CanSee(tradeMatador)) tradeViu = true; }
+                else
+                {
+                    m.Aud("troca: fim da janela", (tradeViu ? "viu o matador" : "não viu") + (tradeMatador != null && !tradeMatador.alive ? " · matador morreu" : "") + $" · faltava {((tradePos - me.pos).Len < 60 ? "<60" : (tradePos - me.pos).Len < 150 ? "60-150" : "150+")}");
+                    m.Aud("troca: tempo do juiz na troca", trocaTicks == 0 ? "?" : trocaJuizTicks * 1f / trocaTicks > 0.8f ? "a >80%" : trocaJuizTicks * 1f / trocaTicks > 0.4f ? "b 40-80%" : "c <40%");
+                    trocaAudAte = 0;
+                }
+            }
+            if (t < tradeUntil)
+            {
+                float d = (tradePos - me.pos).Len;
+                float n = 0.6f + 0.25f * agr + (d < 180 ? 0.1f : 0);   // o perigo já pesou na hora de decidir trocar
+                Prop(J_TROCAR, n);
+            }
+            // 3) ajudar no duelo do colega
+            if (t < ajudaAte && ajudaAlvo != null && ajudaAlvo.alive) Prop(J_AJUDAR, 0.7f);
+            else if (AjudaPropor(t, out float nAj)) Prop(J_AJUDAR, nAj);
+            // 4) pegar arma melhor do chão
+            if (ArmaPropor(t, out float nArma)) Prop(J_ARMA, nArma);
+            // 5) granada dropada pra mim / lootear a de quem morreu
+            if (GranadaPraMim(t)) Prop(J_GRANADA, 0.5f);
+            else if (LootGranada(t, true)) Prop(J_LOOT, 0.15f + 0.75f * lootNota);
+            // 6) item útil a poucos passos (de passagem): desvia e passa por cima
+            if (PassagemPropor(t, out float nPa)) Prop(J_PASSA, nPa);
+            // 7) pezinho: subir na pilha alta com o colega (CT no começo do round) ou dar o pezinho pra quem pediu
+            if (BoostPropor(t, out float nBo)) Prop(J_BOOST, nBo);
+            if (PezinhoPropor(t, out float nPz)) Prop(J_PEZINHO, nPz);
+
+            // escolhe: a atual ganha um bônus enquanto ainda é possível
+            int esc = 0; float bn = float.MinValue;
+            for (int i = 0; i < juizN; i++)
+            {
+                float n = juizNota[i] + (juizOp[i] == juizAtual && juizOp[i] != J_ORDEM ? 0.15f : 0);   // compromisso com o que comecei (o plano não precisa: é o padrão)
+                if (n > bn) { bn = n; esc = juizOp[i]; }
+            }
+            if (esc != juizAtual)
+            {
+                if (Match.Auditar && juizAtual >= 0) m.Aud("juiz: troca de ideia", $"{J_NOME[juizAtual]} → {J_NOME[esc]}");
+                juizAtual = esc; juizDesde = t;
+                if (Explicar) porquePendente += $" → juiz: {J_NOME[esc]} ({bn:0.00})";
+            }
+            if (Match.Auditar && juizN > 1) m.Aud("juiz: venceu com concorrência", J_NOME[esc]);
+            Executa(esc, t);
+        }
+        const int J_ORDEM = 0, J_TROCAR = 1, J_AJUDAR = 2, J_ARMA = 3, J_GRANADA = 4, J_LOOT = 5, J_PASSA = 6, J_BOOST = 7, J_PEZINHO = 8;
+        static readonly string[] J_NOME = { "seguir o plano", "trocar o colega", "ajudar no duelo", "pegar arma", "pegar granada dropada", "lootear", "pegar de passagem", "subir no pezinho", "dar pezinho" };
+
+        /* ---- PEZINHO (boost; apBoostVelho desliga) -----------------------------------------------------------------------
+           Pro: o CT monta o boost no começo do round pra segurar o bomb de um lugar que ninguém pré-mira (em cima da pilha alta,
+           vendo por cima). Precisa de um colega livre perto, sem contato à vista e do ângulo que eu seguro dar pra ver lá de
+           cima. O colega agacha encostado na pilha, eu subo pelo ombro dele e ele volta pro lugar dele. Decidido uma vez por
+           round (só sorteia quando existe pilha boa e colega: senão nem gasta o rng). */
+        float audSemCam = -9;
+        bool boostDecidido; public int boostEstado; public V2 boostTopo; V2 boostBase, boostEspera; Agent boostColega; float boostAte, boostChega;
+        public Agent pezinhoPara; public V2 pezinhoBase; public float pezinhoAte;
+        bool BoostPropor(float t, out float nota)
+        {
+            nota = 0;
+            if (boostEstado == 1 || boostEstado == 2)
+            {   // em andamento: compromisso enquanto o colega está vindo/agachado e ninguém aparece
+                if (t > boostAte || boostColega == null || !boostColega.alive || target != null || ContatoIminente()) { CancelaBoost("desisti do pezinho"); return false; }
+                if (boostEstado == 1 && t > boostChega && !boostColega.dandoPezinho) { CancelaBoost("o colega não chegou pro pezinho — volto pro meu ponto"); return false; }
+                if (boostEstado == 2 && !boostColega.dandoPezinho && me.emCimaDe != boostColega && !me.noAr && me.z < NavGrid.ZAt(boostTopo) - 3) { CancelaBoost("o colega largou o pezinho"); return false; }
+                nota = 0.66f; return true;
+            }
+            if (AtalhoPezinho(t)) { nota = 0.64f; return true; }
+            if (boostDecidido || !NavGrid.BOOST || EXP.Contains("apBoostVelho") || me.IsT || me.gunId == "awp" || order.hold == null || m.t > 30 || target != null || action != null || order.name.StartsWith("esticando")) return false;   /* AWPer não sobe: lá em cima o FK dele disparava */
+            if (NavGrid.Ilhas.Count == 0 || ContatoIminente()) return false;
+            V2 hp = order.hold.pos;
+            if ((hp - me.pos).Len > 250) return false;   /* decide perto do meu ponto, não do spawn */ V2 look = order.hold.look != null && order.hold.look.Length > 0 ? order.hold.look[0] : hp + V2.Ang(me.aim) * 200;
+            float zLook = NavGrid.ZAt(look);
+            // melhor topo: perto do meu ponto, que veja o ângulo lá de cima (e mais longe do que do chão)
+            float melhor = 0; V2 topo = default, chaoEsc = default; bool deBorda = false;
+            void Avalia(V2 q, float zq, V2 chao, bool borda)
+            {
+                if (!MapData.LosWalk(q, zq + NavGrid.EYE, look, zLook + 18, 0f)) return;
+                float ganho = MapData.Raio(q, zq, V2.Ang((look - q).Atan2), 700, NavGrid.EYE) - MapData.Raio(hp, NavGrid.ZAt(hp), V2.Ang((look - hp).Atan2), 700, NavGrid.EYE);
+                float sc = 1 + MathF.Max(0, ganho) / 200 - (q - hp).Len / 300;
+                if (sc > melhor) { melhor = sc; topo = q; chaoEsc = chao; deBorda = borda; }
+            }
+            foreach (var il in NavGrid.Ilhas)
+            {
+                if ((il.centro - hp).Len > 160) continue;
+                foreach (var q in il.pontos) { var (cx0, cy0) = NavGrid.NearestChao(q); Avalia(q, il.z, NavGrid.Center(cx0, cy0), false); }
+            }
+            foreach (var bd in NavGrid.BordasPezinho) if ((bd.alto - hp).Len <= 160) Avalia(bd.alto, NavGrid.ZAt(bd.alto), bd.chao, true);
+            if (melhor <= 0) { boostDecidido = true; return false; }
+            if (MapData.Callout(topo).StartsWith("bomb") && !EXP.Contains("apBoostBombLivre"))
+            {   /* CT no bomb (decisão pela situação): subir tira o parceiro do chão e lá em cima morre-se fácil (66-92% no A/B).
+                   Só sobe com gente pra trocar (2+ colegas a até 400 do topo — âncora sozinho nunca gasta o parceiro) e se
+                   não acredita que vem gente agora (contato ou som perto nos últimos 3 s: subir tarde é morrer em cima) */
+                int perto = 0; foreach (var x in m.agents) if (x != me && x.alive && x.team == me.team && (x.pos - topo).Len <= 400) perto++;
+                var it = m.intel[(int)me.team]; bool vem = it.RecentNear(topo, 600, m.t, 3f) > 0;
+                for (int i = it.heard.Count - 1; i >= 0 && !vem && m.t - it.heard[i].t < 3f; i--) if ((it.heard[i].p - topo).Len < 600) vem = true;
+                if (perto < 2 || vem) { if (Match.Auditar) m.Aud("pezinho no bomb: não subiu", perto < 2 ? "sem gente pra trocar" : "vem gente"); boostDecidido = perto < 2; return false; }
+            }
+            foreach (var x in m.agents) if (x.team == me.team && x != me && (x.brain.boostEstado == 1 || x.brain.boostEstado == 2 || x.brain.boostEstado == 4 || x.brain.pezinhoPara != null)) return false;   /* um pezinho por time */
+            Agent col = null; float dc = 260;
+            foreach (var x in m.agents)
+                if (x != me && x.alive && x.team == me.team && x.brain.target == null && x.brain.action == null && x.brain.pezinhoPara == null && x.brain.boostEstado == 0 && !x.hasBomb && x.gunId != "awp" && !x.brain.order.name.StartsWith("esticando") && (x.pos - me.pos).Len < dc)
+                { dc = (x.pos - me.pos).Len; col = x; }
+            if (col == null) return false;
+            boostDecidido = true;
+            float p = TeamBrain.ExpNum("apBoostChance", 0.025f) * (0.5f + P.Agr(me.skill.aggression)) * MathF.Min(1.5f, melhor);   /* pro: boost é raro (~1 em 10 rounds de CT) */
+            if (rng.Rand() >= p) return false;
+            PedirPezinho(topo, chaoEsc, col, t);
+            m.Ev(deBorda ? "pezinho: pediu pra borda/round" : "pezinho: pediu pra pilha/round");
+            nota = 0.66f; return true;
+        }
+        /// <summary>
+        /// Monta o pezinho (como no CS): o colega agacha no chão (perto do alto), eu pulo na cabeça dele, ele levanta e eu pulo
+        /// pro alto. Serve pro CT segurar de cima e pra quem quiser usar numa rota (ex.: rush pelo palácio) — a sessão dos bots
+        /// decide quando. Precisa de NavGrid.BOOST.
+        /// </summary>
+        public void PedirPezinho(V2 alto, V2 chao, Agent col, float t)
+        {
+            boostTopo = alto; boostBase = chao; boostColega = col; boostEstado = 1; boostDecidido = true;
+            boostChega = t + 3 + (boostBase - col.pos).Len / MathF.Max(1, col.MaxSpeed * 0.8f);   /* o colega tem a viagem + 3 s pra chegar e agachar */
+            boostAte = t + 6 + MathF.Max((boostBase - me.pos).Len, (boostBase - col.pos).Len) / MathF.Max(1, col.MaxSpeed * 0.8f);
+            { V2 fora = boostBase - alto; float lf = fora.Len; V2 e = lf > 0.5f ? boostBase + fora / lf * 10 : boostBase; boostEspera = NavGrid.Movable(e) ? e : boostBase; }   /* espero atrás do colega, não no lugar dele */
+            col.brain.pezinhoPara = me; col.brain.pezinhoBase = boostBase; col.brain.pezinhoAte = boostAte;
+            m.Ev("pezinho: pediu/round"); m.Aud("pezinho por ponto: pediu", Match.PontoBoost(alto) + " · " + (me.IsT ? "TR" : "CT")); m.Log($"PEZINHO {me.name} pede ao {col.name}: alto ({alto.x:0},{alto.y:0}) z {NavGrid.ZAt(alto):0}, base ({boostBase.x:0},{boostBase.y:0}), espera ({boostEspera.x:0},{boostEspera.y:0})"); Think($"vou subir com o pezinho do {col.name} — seguro de cima, ninguém mira lá");
+        }
+        /* PEZINHO COMO ATALHO (só com o pezinho ligado): andando pra um lugar longe, se subir na borda com o colega (o chão
+           perto, ~4 s de pezinho, o resto do caminho de lá de cima) sai bem mais curto que dar a volta, propõe. Pro: boost
+           que economiza tempo (apartamento rápido, rush pelo casarão/palácio) — nunca de pistola, nunca com o C4, nunca com
+           contato perto. Reavalia no máximo a cada 2 s (PathLen por borda) */
+        bool boostAtalho; float atalhoProx;
+        bool AtalhoPezinho(float t)
+        {
+            if (!NavGrid.BOOST || EXP.Contains("apBoostVelho") || EXP.Contains("apAtalhoVelho") || boostEstado != 0 || t < atalhoProx) return false;
+            atalhoProx = t + 2f;
+            if (target != null || action != null || me.hasBomb || WeaponStats.Pistola(me.gunId) || NavGrid.BordasPezinho.Count == 0 || ContatoIminente()) return false;
+            V2 goal = order.hold != null ? order.hold.pos : order.dest;
+            float direto = NavGrid.PathLen(me.pos, goal); if (float.IsInfinity(direto) || direto < 250) return false;
+            float melhor = 150; (V2 chao, V2 alto) esc = default; bool achou = false;
+            float custoPezinho = 4f * me.MaxSpeed;   /* ~4 s parado montando e subindo, em distância */
+            foreach (var bd in NavGrid.BordasPezinho)
+            {
+                if ((bd.chao - me.pos).Len > 200) continue;
+                if (m.intel[(int)me.team].Esperados(bd.chao, 400) > 0.3f || m.intel[(int)me.team].Esperados(bd.alto, 400) > 0.3f) continue;   /* pezinho no meio da briga não: só onde acho que não tem ninguém */
+                float ida = NavGrid.PathLenAte(me.pos, bd.chao, 260); if (float.IsInfinity(ida)) continue;
+                float resto = NavGrid.PathLen(bd.alto, goal); if (float.IsInfinity(resto)) continue;
+                float ganho = direto - (ida + custoPezinho + resto);
+                if (ganho > melhor) { melhor = ganho; esc = (bd.chao, bd.alto); achou = true; }
+            }
+            if (!achou) return false;
+            Agent col = null; float dc = 140;
+            foreach (var x in m.agents)
+                if (x != me && x.alive && x.team == me.team && x.brain.target == null && x.brain.action == null && x.brain.pezinhoPara == null && x.brain.boostEstado == 0 && !x.hasBomb && (x.pos - me.pos).Len < dc)
+                { dc = (x.pos - me.pos).Len; col = x; }
+            if (col == null) return false;
+            float p = 0.5f * (0.6f + P.Agr(me.skill.aggression)) * MathF.Min(1, melhor / 400f);   /* ganho maior, mais vontade */
+            if (rng.Rand() >= p) return false;
+            boostAtalho = true; PedirPezinho(esc.alto, esc.chao, col, t);
+            m.Ev("pezinho: atalho/round"); Think($"atalho: subo com o pezinho do {col.name} — economiza {melhor / me.MaxSpeed:0} s");
+            return true;
+        }
+        void CancelaBoost(string porque)
+        {
+            if (boostColega != null && boostColega.brain.pezinhoPara == me) { boostColega.brain.pezinhoPara = null; boostColega.dandoPezinho = false; }
+            me.subindoPezinho = false; m.Log($"PEZINHO {me.name} desiste no estado {boostEstado}: {porque} (eu ({me.pos.x:0},{me.pos.y:0}) z {me.z:0}; colega {(boostColega != null ? $"({boostColega.pos.x:0},{boostColega.pos.y:0}) agachado {boostColega.dandoPezinho}" : "-")})"); boostEstado = 3; m.Ev("pezinho: desistiu/round"); Think(porque);
+        }
+        bool PezinhoPropor(float t, out float nota)
+        {
+            nota = 0;
+            if (pezinhoPara == null) return false;
+            if (!pezinhoPara.alive || t > pezinhoAte || target != null || pezinhoPara.brain.boostEstado >= 2 && pezinhoPara.z > me.z + 20 && pezinhoPara.emCimaDe != me) { pezinhoPara = null; me.dandoPezinho = false; return false; }   /* com ele na minha cabeça, não solto */
+            nota = 0.66f; return true;
+        }
+        void ExecutaBoost(float t)
+        {
+            if (boostEstado == 1)
+            {   // indo: espero atrás do colega até ele agachar colado na base
+                fase = "indo pro pezinho";
+                bool pronto = boostColega != null && boostColega.dandoPezinho && (boostColega.pos - boostBase).Len < 6;
+                if ((boostEspera - me.pos).Len > 5 || !pronto)
+                {   /* esperando o colega: olho pro ângulo que vou segurar (não pra pilha) */
+                    if ((boostEspera - me.pos).Len > 3) MoveTo(boostEspera, false);
+                    var hd = order.hold; Face(hd != null && hd.look != null && hd.look.Length > 0 ? hd.look[0] : boostTopo, 3); return;
+                }
+                boostEstado = 2; me.subindoPezinho = true; m.Log($"PEZINHO {me.name} vai subir");
+            }
+            if (boostEstado == 2)
+            {   // 1) encosto no colega (a física pula pra cabeça dele); 2) em cima, espero ele levantar; 3) ando pra borda e pulo
+                fase = "subindo no pezinho";
+                if (me.z >= NavGrid.ZAt(boostTopo) - 3 && !me.noAr && me.emCimaDe == null && (boostTopo - me.pos).Len < 14)
+                {   // na borda: segura dali (posição especial, como em cima da caixa)
+                    boostEstado = 4; me.subindoPezinho = false;
+                    if (boostAtalho) { boostAtalho = false; boostEstado = 0; boostDecidido = true; if (boostColega != null) { boostColega.brain.pezinhoPara = null; boostColega.dandoPezinho = false; } m.Ev("pezinho: atalho feito/round"); Think("subi — sigo pelo alto"); return; }   /* atalho: segue a ordem lá de cima */
+                    baseP = ancora = boostTopo; baseDesde = t; posEspecial = 2; m.AudBoostSubiu(me, boostTopo);   /* âncora também: o replanejar do cover partia de (0,0) */
+                    if (boostColega != null) { boostColega.brain.pezinhoPara = null; boostColega.dandoPezinho = false; }
+                    m.Ev("pezinho: segurando de cima/round"); Think("em cima — seguro daqui"); return;
+                }
+                bool acima = me.z > boostColega.z + 15f;   /* já na altura da cabeça dele (em cima ou no pulo pro alto): o alvo é o alto */
+                V2 alvo = !acima ? boostColega.pos : me.emCimaDe == boostColega && boostColega.duck > 0.1f ? boostColega.pos : boostTopo;   /* em cima: espero ele levantar */
+                V2 d0 = alvo - me.pos; float l0 = d0.Len;
+                if (l0 > 0.6f) { wantVel = d0 / l0 * me.MaxSpeed * (me.emCimaDe != null ? 0.45f : 0.6f); me.move = Move.Andando; }   /* reto: não há caminho de navegação até a borda (só o pezinho) */
+                Face(boostTopo, 3);
+            }
+        }
+        void ExecutaPezinho(float t)
+        {
+            fase = "dando pezinho";
+            bool emCima = pezinhoPara != null && pezinhoPara.emCimaDe == me;
+            if (!emCima && (pezinhoBase - me.pos).Len > (me.dandoPezinho ? 8f : 3.5f)) { me.dandoPezinho = false; MoveTo(pezinhoBase, true); return; }   /* já agachado: empurrão pequeno não desfaz */
+            me.dandoPezinho = true; wantVel = V2.Zero;
+            me.crouch = !emCima;   /* agachado pra ele subir; com ele na cabeça, levanto (ele ganha a altura do em pé) */
+            var hp = pezinhoPara.brain.order.hold; if (hp != null && hp.look != null && hp.look.Length > 0) Face(hp.look[0], 3);
+        }
+
+        /// <summary>
+        /// Item útil a poucos passos e reto (granada que cabe, kit se sou CT sem kit, primária se estou sem): desviar
+        /// custa quase nada — passo por cima. Só onde acho seguro e sem pressa de verdade.
+        /// </summary>
+        bool PassagemPropor(float t, out float nota)
+        {
+            nota = 0;
+            if (EXP.Contains("semPassagem") || action != null || order.defuse && m.BombLeft < Match.DefuseTime(me) + 4) return false;
+            if (m.intel[(int)me.team].Esperados(me.pos, 300) > 0.5f) return false;
+            float melhor = 999; V2 alvo = default;
+            foreach (var it in m.itensChao)
+            {
+                bool livre = it.morto != null || it.time == me.team && (it.para == me || t - it.t > 3 && it.de != me);
+                if (!livre || !Match.CabeGranada(me, it.nade)) continue;
+                float d = (it.pos - me.pos).Len; if (d < melhor && d < 45 && NavGrid.Direct(me.pos, it.pos)) { melhor = d; alvo = it.pos; }
+            }
+            if (me.Primaria == null)
+                foreach (var dr in m.drops)
+                {
+                    if (dr.para != null && dr.para != me && t - dr.t < 3 || WeaponStats.Pistola(dr.gun)) continue;
+                    float d = (dr.pos - me.pos).Len; if (d < melhor && d < 45 && NavGrid.Direct(me.pos, dr.pos)) { melhor = d; alvo = dr.pos; }
+                }
+            if (melhor >= 999) return false;
+            passaAlvo = alvo; nota = 0.62f - melhor / 150f; return true;
+        }
+        V2 passaAlvo;
+        readonly int[] juizOp = new int[12]; readonly float[] juizNota = new float[12]; int juizN, juizAtual = -1; float juizDesde;
+        void Prop(int op, float nota) { juizOp[juizN] = op; juizNota[juizN] = nota; juizN++; }
+
+        void Executa(int op, float t)
+        {
+            if (op != J_PEZINHO && me.dandoPezinho) me.dandoPezinho = false;
+            switch (op)
+            {
+                case J_BOOST: ExecutaBoost(t); return;
+                case J_PEZINHO: ExecutaPezinho(t); return;
+                case J_TROCAR:
+                    if (tradeFlash && action == null && tradeMatador != null && tradeMatador.alive)
+                    {
+                        tradeFlash = false; V2 mp = ContatoDe(tradeMatador) ?? tradePos;
+                        if (Alcanca(NaCara(mp), "flash") && !AmigoNoAlvo(mp))
+                        {
+                            float t1 = Jogar("flash", $"flash no {tradeMatador.name} pra trocar", NaCara(mp));
+                            if (action != null) { tradeUntil = MathF.Max(tradeUntil, t1 + 1.2f); m.Ev("troca: bangou antes de trocar/round"); return; }
+                        }
+                    }
+                    if (Match.Auditar && tradeMatador != null && !tradeViu && CanSee(tradeMatador)) { tradeViu = true; m.Aud("troca: viu o matador indo trocar", "sim"); }
+                    if (me.bangAmigaDe == me && t < me.bangAmigaEm - 0.3f && !EXP.Contains("trocaRetaVelha"))
+                    { Esperando(null); Face(me.bangAmigaPos, 3); fase = "esperando a flash pra trocar"; return; }   // abre no estouro
+                    fase = "indo trocar"; MoveTo(tradePos, true); ClearAngles(true); Face(!EXP.Contains("trocaPico") || EXP.Contains("trocaPicoVelho") ? Pixel(tradePos) : tradeMira, 3); Think("indo trocar"); return;
+                case J_AJUDAR:
+                    if (!(t < ajudaAte && ajudaAlvo != null && ajudaAlvo.alive)) AjudaCompromete(t);
+                    if (AjudarNoDuelo(t)) return; break;
+                case J_ARMA:
+                    if (PegarArma(t)) return; break;
+                case J_GRANADA:
+                    if (PegarGranada(t)) return; break;
+                case J_PASSA:
+                    fase = "pegando de passagem"; MoveTo(passaAlvo, true); return;
+                case J_LOOT:
+                    if (lootAlvo == null && lootCand != null)
+                    {
+                        var x = lootCand; lootAlvo = x; lootVisto.Add(x); lootAte = t + 4 + lootCandPl / 60f; lootUltCand = null;
+                        bool retakeVem = !me.IsT && (m.bombPlanted || order.name.Contains("retomar") || order.name.Contains("retake"));
+                        if (x.nade == "kit") m.Ev("kit do chão: foi buscar/round"); else if (retakeVem) m.Ev("granada do chão: buscou antes do retake/round");
+                        m.Ev(m.over ? "granada do chão: looteou no fim do round/round" : "granada do chão: foi lootear/round");
+                        Think(x.nade == "kit" ? $"vou pegar o kit do {x.morto.name} antes do retake" : $"vou pegar a {x.nade} do {x.morto.name}");
+                    }
+                    if (LootGranada(t)) return; break;
+            }
+            // seguir o plano (e as granadas que ele pede no caminho)
+            if (Utilitaria(t)) return;
+            if (UtilProativa(t)) return;
+            if (GranadaNoBarulho(t)) return;
+            if (AbrirSmoke(t)) return;
+            if (SprayNaSmoke(t)) return;
+            if (AtenderBang(t)) return;
+            DoOrder(t);
+        }
+
+        /// <summary>Granada que um colega dropou pra mim, perto e sem perigo (o juiz decide se vale ir agora).</summary>
+        bool GranadaPraMim(float t)
+        {
+            if (action != null || m.itensChao.Count == 0 || me.hasBomb && order.plant) return false;
+            foreach (var x in m.itensChao) if (x.para == me && (x.pos - me.pos).Len < 220 && Match.CabeGranada(me, x.nade)) return m.intel[(int)me.team].Esperados(me.pos, 300) <= 0.5f;
+            return false;
+        }
+
+        /// <summary>Arma melhor no chão perto e lugar seguro: a nota é pelo ganho (o juiz pesa com o resto).</summary>
+        bool ArmaPropor(float t, out float nota)
+        {
+            nota = 0;
+            if (action != null || me.hasBomb && order.plant || m.drops.Count == 0) return false;
+            bool comPressa = order.push || order.defuse || m.bombPlanted && !me.IsT;
+            var d = MelhorDrop(comPressa ? 45 : 130, 1.5f);
+            if (d == null || m.intel[(int)me.team].Esperados(me.pos, 350) > 0.3f) return false;
+            nota = 0.62f; return true;
+        }
+
+        // candidato de ajuda avaliado (sem decidir): quem, contra quem, onde
+        Agent ajudaCandColega, ajudaCandAlvo; V2 ajudaCandVi; int ajudaCandVistos; float ajudaCandD, ajudaCandEm = -9, ajudaCandNota;
+        /// <summary>Colega trocando tiro perto: a nota de ir ajudar (pelo meu jeito, pela entrada, por quantos tem lá).</summary>
+        bool AjudaPropor(float t, out float nota)
+        {
+            nota = 0;
+            if (me.hasBomb && order.plant || action != null || t < ajudaCooldown) return false;
+            // mesma situação avaliada há pouco: mesma nota (o gosto do momento não muda a cada passo)
+            if (t - ajudaCandEm < 1.2f && ajudaCandColega != null && ajudaCandColega.alive && ajudaCandAlvo != null && ajudaCandAlvo.alive && ajudaCandColega.brain.target == ajudaCandAlvo)
+            { nota = ajudaCandNota; return true; }
+            ajudaCandColega = null;
+            float agr = P.Agr(me.skill.aggression);
+            foreach (var x in m.agents)
+            {
+                if (x == me || !x.alive || x.team != me.team || x.brain.target == null) continue;
+                float d = (x.pos - me.pos).Len, raio = (me.role == Role.Ancora ? 150 : me.gunId == "awp" ? 180 : 260) * (order.push && !EXP.Contains("semSwing") ? 1.4f : 1f);
+                if (d > raio || !x.brain.target.alive) continue;
+                if (ContatoDe(x.brain.target) is not V2 vi) continue;
+                if (me.hasBomb && !m.bombPlanted && !EXP.Contains("c4Ajuda")
+                    && m.agents.Any(y => y != me && y != x && y.alive && y.team == me.team && (y.pos - x.pos).Len < d + 60))
+                { ajudaCooldown = t + 1.5f; return false; }
+                int vistos = m.intel[(int)me.team].contacts.Values.Count(c => t - c.t < 3 && m.agents[c.id].alive && (c.pos - vi).Len < 300);
+                if (vistos >= 2 && !EXP.Contains("semSegurarVarios") && !Rola("ajuda varios " + x.brain.target.id + (int)(t / 4), 0.08f * agr))
+                { ajudaCooldown = t + 2; Think($"{vistos} deles ali com o {x.name} — seguro a troca daqui"); return false; }
+                float pr = 0.35f + (order.push && !EXP.Contains("semSwing") ? 0.3f : 0) + 0.5f * agr;
+                ajudaCandColega = x; ajudaCandAlvo = x.brain.target; ajudaCandVi = vi; ajudaCandVistos = vistos; ajudaCandD = d; ajudaCandEm = t;
+                ajudaCandNota = 0.2f + 0.5f * MathF.Min(1.2f, pr) + (float)rng.Normal(0, 0.08f);
+                nota = ajudaCandNota; return true;
+            }
+            return false;
+        }
+        void AjudaCompromete(float t)
+        {
+            var x = ajudaCandColega; if (x == null) return;
+            ajudaAlvo = ajudaCandAlvo; ajudaAte = t + 2.5f; ajudaCooldown = t + 5; ajudaPos = AnguloCruzado(x, ajudaCandVi);
+            Think($"ajudando o {x.name}: trocando tiro com {ajudaAlvo.name} — {((ajudaPos - ajudaCandVi).Len > 1 ? "por outro ângulo" : "indo pra cena")}", $"ele está a {ajudaCandD:0} de mim, {ajudaCandVistos} visto(s) ali: dá pra virar 2x1");
+        }
+
         /// <summary>
         /// Posição exata do inimigo (o colega está trocando com ele): vou num ângulo DIFERENTE do colega (crossfire — ele
         /// não consegue mirar nos dois), um lugar que vê o inimigo, a 100-220 dele, perto de mim. Sem achar, vou na cena.
@@ -1723,7 +2751,7 @@ namespace CSM.Sim
                 {
                     V2 q = NavGrid.Snap(inimigo + V2.Ang(ang) * r);
                     if (!NavGrid.Movable(q) || !MapData.LosWalk(q, NavGrid.ZAt(q), inimigo, zI, 18f)) continue;
-                    float pl = NavGrid.PathLen(me.pos, q);
+                    float pl = NavGrid.PathLenAte(me.pos, q, 320);
                     if (pl <= 0 || pl > 320) continue;
                     if (pl < bv) { bv = pl; best = q; }
                 }
@@ -1735,10 +2763,26 @@ namespace CSM.Sim
         /// Utilitária por conta própria (CT): ouviu/viu gente chegando na entrada do bomb dele → molotov na entrada pra
         /// atrasar enquanto a rotação vem. Uma por round.
         /// </summary>
+        /// <summary>
+        /// Dá pra parar e jogar granada agora? Soltar deixa ~1 s sem arma (CS2: volta sacando). Com inimigo visto há pouco
+        /// perto (ou que eu acredito colado), granada fora de lineup espera — quem joga com o cara em cima morre jogando.
+        /// </summary>
+        bool CalmoPraGranada(float t, bool atraso = false)
+        {
+            if (EXP.Contains("granadaSemCuidado") || EXP.Contains("sacarVelho")) return true;
+            var it = m.intel[(int)me.team];
+            // inimigo visto há pouco perto: quem joga com ele ali é pego virando a quina no segundo sem arma. A granada de
+            // atrasar a entrada (CT) é feita pra isso: só segura se ele já me vê
+            foreach (var c in it.contacts.Values)
+                if (m.agents[c.id].alive && t - c.t < 1.5f && (c.pos - me.pos).Len < 380 && (!atraso || MapData.LosWalk(c.pos, c.z, me.pos, me.z, 18f)))
+                { if (t - calmoLog > 2) { calmoLog = t; m.Ev("granada: segurou (inimigo perto)/round"); } return false; }
+            return atraso || it.Esperados(me.pos, 220) < 0.9f;
+        }
+
         bool Utilitaria(float t)
         {
             bool molo = me.nades.Contains("molotov"), he = me.nades.Contains("he");
-            if (action != null || !(molo || he || me.nades.Contains("smoke"))) return false;
+            if (action != null || !(molo || he || me.nades.Contains("smoke")) || !CalmoPraGranada(t, true)) return false;
             var it = m.intel[(int)me.team];
             Lineup l = null; string porque = null;
             if (!me.IsT && !m.bombPlanted && atrasos < 2)
@@ -1762,13 +2806,16 @@ namespace CSM.Sim
                     // vários vindo juntos: HE pega todo mundo de uma vez (e tira vida pra rotação)
                     string kind = he && (nMax >= 4 && rng.Rand() < 0.45f || !molo && !smk) ? "he"
                                 : molo && (!smk || rng.Rand() < 0.6f) ? "molotov" : smk ? "smoke" : "he";
+                    if (kind == "he" && !EXP.Contains("heAlcanceVelho") && !Alcanca(alvo.p, "he")) kind = molo ? "molotov" : smk ? "smoke" : null;   // a HE daqui estoura no ar
+                    if (kind == null) return false;
                     l = new Lineup($"{kind} na {alvo.nome}", kind, me.pos, alvo.p); atrasos++;
                     m.utilUsada.Add("atraso " + alvo.nome);
                     porque = $"{(nMax >= 4 ? "vi gente" : "ouvi passo")} chegando — atrasar até a rotação vir";
                 }
             }
             else if (he && HeNoParado(t, it, out l, out porque)) { }
-            else if (!molo) return false;
+            else if (!molo && !(he && me.IsT && m.bombPlanted && m.defuserActive && !EXP.Contains("heAlcanceVelho"))) return false;
+            else if (!molo) { if ((m.bombPos - me.pos).Len < 500 && Alcanca(m.bombPos, "he") && Rola("defuse", 0.6f)) { l = new Lineup("HE no bomb", "he", me.pos, m.bombPos); porque = "ouvi o defuse — HE em quem desarma"; m.Ev("HE: no defuse/round"); } }
             else if (!me.IsT && m.bombPlanted && !order.defuse)
             {
                 // CT na retomada: TR segurando o pós-plant → molotov pra tirar ele de lá (às vezes ele morre saindo, às vezes ganha a troca)
@@ -1779,7 +2826,9 @@ namespace CSM.Sim
             else if (me.IsT && m.bombPlanted && m.defuserActive && (m.bombPos - me.pos).Len < 500 && Alcanca(m.bombPos) && Rola("defuse", 0.75f))
             { l = new Lineup("molotov no bomb", "molotov", me.pos, m.bombPos); porque = "ouvi o defuse"; }
             if (l == null) return false;
-            m.utilUsada.Add(l.name); action = "granada"; actionNade = l; actionEnd = t + 0.9f; fase = "ação";
+            if (!l.name.Contains(" na ") && !l.name.EndsWith("no bomb"))   /* não é atraso de entrada nem no defuse: a regra cheia */
+                if (!CalmoPraGranada(t, !EXP.Contains("heNoVistoVelho") && l.kind == "he" && l.name.StartsWith("HE no "))) return false;   /* HE no inimigo que acabei de ver atrás da cobertura: só segura se ele me vê (barrar atrasava e ele saía do lugar: HE perto 47→35%) */
+            m.utilUsada.Add(l.name); action = "granada"; actionNade = l; actionEnd = SoltaGranada(t, 0.9f); fase = "ação";
             Think($"{l.name}: {porque}");
             return true;
         }
@@ -1825,12 +2874,49 @@ namespace CSM.Sim
             }
             return false;
         }
+        /// <summary>
+        /// Spam na smoke, como pro: sem ver ninguém, mas ACHANDO que tem gente atrás da fumaça (passo ouvido ali há pouco, o
+        /// inimigo que eu vi sumir dentro dela, ou call do time), dá uma rajada curta onde acho que ele está — às vezes erra
+        /// (é crença, não visão). O tiro também abre o túnel na fumaça (Shot) e às vezes revela. Pausa entre rajadas.
+        /// </summary>
+        bool SprayNaSmoke(float t)
+        {
+            if (t < spamAte && target == null && action == null && !EXP.Contains("spamSmokeVelho"))
+            {   // a rajada em andamento (uma bala por cadência da arma)
+                Face(spamAlvo, 4); fase = "spam na smoke";
+                if (me.gun.CanFire(t) && me.ArmaPronta(t)) m.Shoot(me, spamAlvo + new V2(rng.Uniform(-6, 6), rng.Uniform(-6, 6)), spamZ + rng.Uniform(-3, 3));
+                return true;
+            }
+            if (EXP.Contains("spamSmokeVelho") || target != null || action != null || m.smokes.Count == 0 || t < spamProx || me.faca || me.gun.inMag < 4 || me.gun.Reloading || !me.ArmaPronta(t) || me.gunId == "awp") return false;
+            spamProx = t + 0.5f;
+            var it = m.intel[(int)me.team];
+            V2? alvo = null; string porque = null;
+            for (int i = it.heard.Count - 1; i >= 0 && t - it.heard[i].t < 2f; i--)
+                if (it.heard[i].kind == "passos" && (it.heard[i].p - me.pos).Len < 600) { alvo = it.heard[i].p; porque = "ouvi passo atrás da smoke"; break; }
+            if (alvo == null && lastSeen != null && lastSeen.alive && t - lastSeenT < 2.5f) { alvo = lastSeenPos; porque = $"o {lastSeen.name} sumiu na smoke"; }
+            if (alvo == null && Chamada(550) is V2 ch) { alvo = ch; porque = "call: tem gente ali"; }
+            if (alvo == null) return false;
+            V2 a = alvo.Value; float d = (a - me.pos).Len;
+            if (d < 100 || d > 600) return false;
+            float za = NavGrid.ZAt(NavGrid.Snap(a));
+            if (!MapData.LosWalk(me.pos, me.z + me.Eye, a, za + 18, 18f) || !m.SmokeBlocks(me.pos, me.z + me.Eye, a, za + 18)) return false;
+            if (m.agents.Any(x => x != me && x.alive && x.team == me.team && (x.pos - me.pos).Len < d && MathF.Abs(MathX.AngDiff((x.pos - me.pos).Atan2, (a - me.pos).Atan2)) < 0.22f)) return false;
+            if (!Rola($"spam smoke {(int)(t / 3)}", 0.25f + 0.45f * P.Agr(me.skill.aggression))) { spamProx = t + 2f; return false; }
+            spamAlvo = a + new V2(rng.Uniform(-18, 18), rng.Uniform(-18, 18)); spamZ = za + 18;
+            spamAte = t + me.gun.s.Interval * (3 + rng.Int(4)) + 0.05f;   // 3-6 balas
+            Face(spamAlvo, 4);
+            spamProx = spamAte + rng.Uniform(2f, 4f);
+            m.Ev("spam na smoke (rajada)/round"); Think($"spam na smoke ({Region(a)}): {porque}");
+            fase = "spam na smoke";
+            return true;
+        }
+        float spamProx, spamAte = -9, spamZ; V2 spamAlvo;
         float heOlhar = -9, furoAte = -9, furoDesde; V2 furoPos;
 
         /// <summary>Ouviu passo perto, fora da vista, e ele deve estar parado ali ou passando: molotov/HE no barulho (às vezes).</summary>
         bool GranadaNoBarulho(float t)
         {
-            if (action != null || EXP.Contains("semPunir") || t < proxBarulho) return false;
+            if (action != null || EXP.Contains("semPunir") || t < proxBarulho || !CalmoPraGranada(t)) return false;
             var som = (p: somP, kind: somK);
             if (som.kind != "passos" || t - somT > 1.2f) return false;
             float d = (som.p - me.pos).Len; if (d < 120 || d > 330) return false;
@@ -1852,7 +2938,7 @@ namespace CSM.Sim
         string guardaUtil;
         bool UtilProativa(float t)
         {
-            if (action != null || t < proxUtil || m.bombPlanted && !me.IsT || order.defuse || me.hasBomb && order.plant || EXP.Contains("semUtilPro") || EscondeStack(t)) return false;
+            if (action != null || t < proxUtil || !CalmoPraGranada(t) || m.bombPlanted && !me.IsT || order.defuse || me.hasBomb && order.plant || EXP.Contains("semUtilPro") || EscondeStack(t)) return false;
             proxUtil = t + 1.2f;
             var inim = me.IsT ? Team.CT : Team.T; var it = m.intel[(int)me.team];
             string[] tipos = me.IsT ? new[] { "flash", "smoke", "molotov", "he" } : new[] { "molotov", "smoke", "he", "flash" };
@@ -1867,11 +2953,14 @@ namespace CSM.Sim
                 if (d < 140 || d > 560 || m.utilUsada.Contains($"pro {nome} {(int)(t / 12)}")) return;
                 float v = Rotas.Perto(inim, p, t, 120) + Rotas.Perto(inim, p, t + 5, 120);
                 if (me.IsT) v *= MathF.Min(1, it.HeatAvg(p, 70) * 4);   // TR: só onde ainda pode ter alguém
+                // HE machuca quem ESTÁ lá: só vale onde eu acredito que tem gente agora (visto/ouvido/cantado), não onde costuma ter
+                if (kind == "he" && !EXP.Contains("heVelha")) v *= MathX.Clamp(it.Esperados(p, 110), 0, 1.2f);
                 if (v > bv) { bv = v; alvo = (nome, p); }
             }
             if (me.IsT) foreach (var h in HOLDS_CT) Ve(h.name, h.pos);
             else foreach (var e in ENTRADAS_A.Concat(ENTRADAS_B)) Ve(e.nome, e.p);
-            if (bv < 0.12f || AmigoNoAlvo(alvo.p) || !Alcanca(alvo.p) || rng.Rand() > 0.1f + 0.25f * MathF.Min(1, bv)) return false;
+            float sobra = EXP.Contains("utilVolumeVelho") || !me.IsT ? 1 : 1 + 0.3f * MathF.Max(0, me.nades.Count - 1);   // CT guarda pro retake: quem gasta a sobra é quem ataca   // quanto mais granada na mão, mais fácil gastar uma
+            if (bv < 0.12f || AmigoNoAlvo(alvo.p) || !Alcanca(alvo.p, kind == "he" && !EXP.Contains("heAlcanceVelho") ? "he" : "molotov") || rng.Rand() > (0.1f + 0.25f * MathF.Min(1, bv)) * sobra) return false;
             m.utilUsada.Add($"pro {alvo.nome} {(int)(t / 12)}"); m.Ev($"granada proativa {kind}/round");
             V2 cai = kind == "flash" ? NaCara(alvo.p) : alvo.p;
             if (kind == "flash" && m.agents.Any(x => x != me && x.alive && x.team == me.team && (x.pos - cai).Len < 300)) return false;   // colega perto da flash
@@ -1891,10 +2980,14 @@ namespace CSM.Sim
             foreach (var c in it.contacts.Values)
             {
                 if (t - c.t > 4 || t - c.t < 0.6f || !m.agents[c.id].alive) continue;
-                float d = (c.pos - me.pos).Len; if (d < 130 || d > 400 || !Alcanca(c.pos)) continue;
+                float d = (c.pos - me.pos).Len; if (d < 130 || d > 400 || !Alcanca(c.pos, EXP.Contains("heAlcanceVelho") ? "molotov" : "he")) continue;
                 if (m.agents.Any(x => x.alive && x.team == me.team && (x.pos - c.pos).Len < 120)) continue;
                 bool pos = m.bombPlanted && (c.pos - m.bombPos).Len < 350;   // segurando o bomb / indo desarmar
-                if (!Rola("he dano " + c.id, (pos ? 0.4f : 0.22f) + (c.hp < 100 ? 0.15f : 0))) continue;
+                // acabou de matar um nosso (se expôs, está ali, provavelmente machucado da troca): HE em cima dele, como pro
+                bool matou = !EXP.Contains("heAlcanceVelho") && m.agents.Any(x => !x.alive && x.team == me.team && x.killedBy == m.agents[c.id] && t - x.diedAt < 3.5f);
+                float pHe = (pos ? 0.4f : 0.22f) + (c.hp < 100 ? 0.15f : 0) + (matou ? 0.2f : 0) + (!EXP.Contains("heAlcanceVelho") && c.hp < 60 ? 0.2f : 0);
+                if (!Rola("he dano " + c.id, pHe)) continue;
+                if (matou) m.Ev("HE: no matador do colega/round");
                 var nome = m.agents[c.id].name;
                 l = new Lineup($"HE no {nome}", "he", me.pos, c.pos);
                 porque = c.hp < 100 ? $"ele tá com {c.hp} — HE pode matar" : pos ? "tirar vida de quem segura o bomb" : "tirar vida antes do duelo";
@@ -1929,20 +3022,42 @@ namespace CSM.Sim
             if (it.HeatIn(me.pos, 200) > 0.05f) return me.pos;   // já estou onde pode ter gente: espera aqui
             var p = NavGrid.Path(me.pos, dest, Perigo.Camada(me.team));
             if (p == null || p.Count == 0) return me.pos;
-            V2 seguro = me.pos, prev = me.pos;
+            V2 prev = me.pos;
+            var seguros = new List<V2> { me.pos };
             foreach (var w in p)
             {
-                float seg = (w.p - prev).Len;
+                float seg = (w.p - prev).Len; bool parou = false;
                 for (float s = 10; s <= seg; s += 10)
                 {
                     V2 q = prev + (w.p - prev) * (s / seg);
                     // pode ter gente perto, ou fica na mira de onde eles costumam segurar (a AWP do janelão vê de longe)
-                    if ((q - dest).Len < 100 || it.HeatIn(q, 200) > 0.05f || Perigo.Visto(me.team, q) > 0) return seguro;
-                    seguro = q;
+                    if ((q - dest).Len < 100 || it.HeatIn(q, 200) > 0.05f || Perigo.Visto(me.team, q) > 0) { parou = true; break; }
+                    seguros.Add(q);
                 }
+                if (parou) break;
                 prev = w.p;
             }
-            return seguro;
+            if (EXP.Contains("esperaColada")) return seguros[seguros.Count - 1];
+            // quem vem pelo mesmo caminho pararia todo mundo na mesma borda do perigo: recua pelo caminho até ter espaço
+            // (colado é uma granada pega dois, e um só vê o que o outro já vê)
+            bool Livre(V2 q)
+            {
+                foreach (var x in m.agents)
+                {
+                    if (x == me || !x.alive || x.team != me.team) continue;
+                    if ((x.pos - q).Len < 45 || x.brain.order.hold != null && (x.brain.order.hold.pos - q).Len < 45) return false;
+                    // nem na frente da mira de quem está segurando: ele fica com a mira nas minhas costas e não vê nada
+                    V2 dq = q - x.pos; float dl = dq.Len;
+                    if (!EXP.Contains("esperaNaMira") && x.Speed < 10 && dl < 300 && MathF.Abs(MathX.AngDiff(MathF.Atan2(dq.y, dq.x), x.aim)) < 0.3f) return false;
+                }
+                return true;
+            }
+            /* fora da porta/beco (folga ≤ 15): o pro espera atrás da quina, não no batente — ali é alvo e trava quem vem atrás.
+               Sem lugar largo no caminho seguro, vale o de antes. apPortaVelho desliga */
+            if (EXP.Contains("apPortaLigado") && !EXP.Contains("apPortaVelho"))   /* opt-in até o A/B */
+                for (int i = seguros.Count - 1; i >= 0; i--) { var (fx, fy) = NavGrid.CellOf(seguros[i]); if (NavGrid.folga[fx, fy] > 15f && Livre(seguros[i])) return seguros[i]; }
+            for (int i = seguros.Count - 1; i >= 0; i--) if (Livre(seguros[i])) return seguros[i];
+            return seguros[seguros.Count - 1];
         }
 
         /// <summary>Esperando a vez (entry ir primeiro, smoke subir, colado no entry): ajeita de um lado pro outro devagar,
@@ -1951,7 +3066,7 @@ namespace CSM.Sim
         {
             fase = "esperando a vez";
             DecidirC4(m.t);
-            if (look != null && look.Length > 0) Face(Pixel(LookAlvo(look)), 3); else ClearAngles(false);
+            if (look != null && look.Length > 0) Face(PixelSemColega(look), 3); else ClearAngles(false);
             if (m.intel[(int)me.team].HeatIn(me.pos, 350) < 0.05f) return;   // ninguém pode estar perto: fica parado, sem dançar
             if (!EXP.Contains("dancaEspera")) return;   // esperando a vez gente fica parada mirando (dançar A-D sem duelo não é de pro)
             V2 f = V2.Ang(me.aim), side = new V2(-f.y, f.x);
@@ -1972,11 +3087,42 @@ namespace CSM.Sim
             if (SairDaLinhaLonga(t)) return;
             if (me.gunId == "awp" && !EXP.Contains("semLuneta")) me.scoped = micro == Micro.Nada || micro == Micro.Quieto;   // AWP segurando já está na luneta; só sai pra se mexer
             V2? L = null;
-            if (look != null && look.Length > 0) { L = micro == Micro.Wide || micro == Micro.Avancar ? microRumo : LookAlvo(look); alvoMira = Pixel(L.Value); Reservar(L.Value, alvoMira); Face(alvoMira.Value, 3); }   // do cover: mira na quina por onde o ângulo aparece
-            else { ClearAngles(false); L = focus; }
+            if (look != null && look.Length > 0)
+            {   // do cover: mira na quina por onde o ângulo aparece — e a quina não pode ser as costas do colega (o pixel do
+                // caminho até o ângulo às vezes cai em cima de quem está na frente)
+                bool mexendo = micro == Micro.Wide || micro == Micro.Avancar;
+                L = mexendo ? microRumo : LookAlvo(look); alvoMira = Pixel(L.Value);
+                if (!mexendo && !EXP.Contains("esperaMiraVelha") && ColegaNaFrente(alvoMira.Value) != null)
+                {
+                    bool achou = false;
+                    foreach (var o in look) { var q = Pixel(o); if (ColegaNaFrente(q) == null && Ameaca(o) > 0.002f) { L = o; alvoMira = q; achou = true; break; } }
+                    if (!achou)
+                    {
+                        float a0 = (alvoMira.Value - me.pos).Atan2, dl = MathF.Min((alvoMira.Value - me.pos).Len, 300);
+                        V2 e = me.pos + V2.Ang(a0 + 0.6f) * dl, d = me.pos + V2.Ang(a0 - 0.6f) * dl;
+                        alvoMira = Ameaca(e) >= Ameaca(d) ? e : d;
+                    }
+                }
+                Reservar(L.Value, alvoMira); Face(alvoMira.Value, 3);
+            }
+            else
+            {
+                ClearAngles(false); L = focus;
+                if (L == null && !EXP.Contains("olharParadoVelho"))
+                {   // parado sem ângulo da ordem (guardando a arma, esperando) e nenhum canto quente: olha de onde PODE vir gente
+                    // (a quina mais provável, senão de onde vem o calor) — não fica com a mira onde estava andando (a parede)
+                    V2? q = Borda() ?? DeOndeVem();
+                    if (q != null) { q = ForaDaParede(q.Value); Face(q.Value, 3); L = q; m.Ev("parado sem ângulo: olhou de onde pode vir/round"); }
+                    else if (MapData.Raio(me.pos, me.z, V2.Ang(me.aim), 450, 18f) < 40)
+                    {   // nada provável à vista e a mira chapada na parede: vira pro lado aberto
+                        V2 aberto = ForaDaParede(me.pos + V2.Ang(me.aim) * 120); Face(aberto, 3);
+                    }
+                }
+            }
             if (baseP == null) { baseP = ancora = me.pos; baseDesde = t; baseLook = new V2(-999, -999); trilha.Clear(); }
             // a mira mudou: só replaneja o lugar se daqui não dá pra ver o novo ângulo (segurar é ficar, não dançar a cada call)
-            if (micro == Micro.Nada && L != null && (L.Value - baseLook).Len > 30 && t - planAt > 1.5f
+            bool emPilha = NavGrid.ESTADO && NavGrid.SobrePilha(me.pos) && boostEstado == 4;   /* segurando de cima da pilha: fica no topo (sem cover/peek, que são do chão) */
+            if (!emPilha && micro == Micro.Nada && L != null && (L.Value - baseLook).Len > 30 && t - planAt > 1.5f
                 && (baseLook.x < -900 || alvoMira == null || !MapData.LosWalk(me.pos, me.z, alvoMira.Value, NavGrid.ZAt(alvoMira.Value), 18f))) PlanCover(L.Value);
             if (micro != Micro.Nada) { fase = FASE_MICRO[(int)micro]; RunMicro(L); return; }
             fase = deCover ? "pausa no cover" : "pausa segurando aberto";
@@ -1988,7 +3134,7 @@ namespace CSM.Sim
             }
             V2 home = baseP.Value;
             if ((home - me.pos).Len > 3) { Ir(home, (home - me.pos).Len < 45 ? me.MaxSpeed : me.MaxSpeed * 0.52f); return; }
-            if (t >= microProx) Escolher(L);
+            if (t >= microProx && !emPilha) Escolher(L);
             else if (micro == Micro.Nada) Think($"segurando {order.hold?.name ?? "posição"}{(L != null ? ", olhando " + Region(L.Value) : "")}{(deCover ? " do cover" : "")}");
         }
 
@@ -2044,13 +3190,13 @@ namespace CSM.Sim
                 sep = MathF.Min(sep, MathF.Abs(MathX.AngDiff(dirS.Atan2, (L - me.pos).Atan2)));
                 if (ruim || sep < 0.7f || it.Esperados(s.p, 140) >= 0.35f) continue;
                 if (!MapData.LosWalk(s.p, s.z, L, NavGrid.ZAt(L), 18f)) continue;
-                float pl = NavGrid.PathLen(me.pos, s.p); if (pl < 90 || pl > 850) continue;
+                float pl = NavGrid.PathLenAte(me.pos, s.p, 850); if (pl < 90 || pl > 850) continue;
                 float v = sep * (1.3f - pl / 900f) * rng.Uniform(0.7f, 1.3f) * (EXP.Contains("semUmAngulo") ? 1 : 1 / MathF.Max(1, Exposicao(s.p, t)));
                 if (v > bv) { bv = v; best = s; }
             }
             if (best == null) return false;
             var q = best.Value; m.Ev("buscou ângulo novo/round");
-            SetOrder(new Order { name = "buscando outro ângulo", hold = new Hold("outro ângulo", q.p, L), quiet = true, why = $"{colegas[0].name} já olha {Region(L)} daqui: vou por outro lado pra ele ter que olhar dois lugares", paciente = order.paciente });
+            SetOrder(new Order { name = "buscando outro ângulo", hold = new Hold("outro ângulo", q.p, L), quiet = true, why = $"{colegas[0].name} já olha {Region(L)} daqui: vou por outro lado pra ele ter que olhar dois lugares", paciente = order.paciente, doPlano = order.doPlano });
             return true;
         }
 
@@ -2065,16 +3211,44 @@ namespace CSM.Sim
             bool contato = false;
             foreach (var c in it.contacts.Values) if (t - c.t < 8 && (c.pos - me.pos).Len < 900) contato = true;
             V2 frente = path != null && wp < path.Count ? path[Math.Min(path.Count - 1, wp + 1)].p : me.pos;
-            bool seguro = !contato && action == null && it.HeatAvg(me.pos, 380) < 0.004f && it.HeatAvg(frente, 300) < 0.004f
-                          && !m.bombPlanted && t < 60;
+            bool velho = EXP.Contains("facaVelha");
+            // ninguém do outro time vivo (round decidido, falta desarmar/andar): faca, que corre mais (CS2: faca 250 x AK 215)
+            bool ninguem = !velho && m.Alive(me.team == Team.T ? Team.CT : Team.T) == 0 && action == null && !order.plant;
+            // bomb plantado: o CT girando pro retake longe do bomb e sem ameaça perto também vai de faca; o TR segura com a arma
+            bool plantOk = !m.bombPlanted || !velho && !me.IsT && (m.bombPos - me.pos).Len > 500;
+            bool seguro;
+            if (velho) seguro = !contato && action == null && it.HeatAvg(me.pos, 380) < 0.004f && it.HeatAvg(frente, 300) < 0.004f && !m.bombPlanted && t < 60;
+            else if (ninguem) seguro = true;
+            else if (contato || action != null || !plantOk || target != null) seguro = false;
+            else
+            {   // é o que ELE acha (calor estimado do time), pesado pelo jeito dele e pela pressa, decidido a cada ~1 s: às
+                // vezes acha que está seguro e não está (o lurker que ninguém esperava pega ele de faca)
+                if (t >= facaDecideEm)
+                {
+                    facaDecideEm = t + rng.Uniform(0.8f, 1.3f);
+                    float r = MathF.Max(it.HeatAvg(me.pos, 380), it.HeatAvg(frente, 300)) / 0.004f;   // 1 = o antigo limite
+                    float agr = P.Agr(me.skill.aggression);
+                    bool pressa = m.bombPlanted && !me.IsT || m.RoundLeft < 25 || order.name.StartsWith("girando") || order.name.StartsWith("âncora girando");
+                    float wFaca = (0.5f + 0.6f * agr + (pressa ? 0.6f : 0)) * MathF.Exp(-r * (1.6f - 0.8f * agr));
+                    if (EXP.Contains("facaDefuse") && !EXP.Contains("facaDefuseVelho") && m.bombPlanted && !me.IsT && order.defuse && !m.defuserActive)
+                    {   // indo desarmar: de rifle não chega, de faca chega → a faca é a única chance (pro corre de faca e desarma)
+                        float dB0 = (m.bombPos - me.pos).Len * 1.15f, sobra0 = m.BombLeft - Match.DefuseTime(me);
+                        if (sobra0 - dB0 / 54f < 0.8f && sobra0 - dB0 / MapCheck.RUN > -0.3f) { wFaca *= 4f; m.Ev("faca: pra chegar no defuse/round"); }
+                    }
+                    float wArma = 0.25f + 0.35f * (1 - agr);
+                    facaQuer = rng.Weighted(new[] { wArma, wFaca }) == 1;
+                }
+                seguro = facaQuer;
+            }
             if (seguro && !me.faca && target == null && me.gun.inMag > 0 && !me.gun.Reloading)
             {
                 me.faca = true; me.scoped = false;
-                if (!logouFaca) { logouFaca = true; Think("faca na mão — ninguém chega aqui ainda", $"calor perto {it.HeatAvg(me.pos, 380):0.000}, à frente {it.HeatAvg(frente, 300):0.000}: inimigo não chega aqui agora"); }
+                m.Ev(ninguem ? "faca: sem inimigo vivo/round" : "faca: com inimigo vivo/round");
+                if (!logouFaca) { logouFaca = true; Think(ninguem ? "faca na mão — não tem mais ninguém deles" : "faca na mão — ninguém chega aqui ainda", $"calor perto {it.HeatAvg(me.pos, 380):0.000}, à frente {it.HeatAvg(frente, 300):0.000}: inimigo não chega aqui agora"); }
             }
             else if (!seguro && me.faca) Sacar(t, contato ? "saquei: tem contato perto" : "saquei a arma — chegando na zona de contato");
         }
-        bool logouFaca;
+        bool logouFaca, facaQuer; float facaDecideEm = -9;
 
         /// <summary>
         /// Portador do C4 no controle de mapa: chegando na zona de contato (sem inimigo conhecido perto), deixa o bomb num
@@ -2097,6 +3271,15 @@ namespace CSM.Sim
                 bool vaiSegurar = order.hold != null && !order.push && !order.plant && (order.hold.pos - MapData.SPAWN_T[0]).Len > 200 && !EXP.Contains("c4SeguraVelho");
                 if (t < 5)
                 {
+                    // default (tomada de mapa lenta): como pro, às vezes o C4 fica num canto seguro da base e os cinco vão pegar
+                    // espaço; quem o IGL mandar busca quando decidir o bomb (é o que dá pra fazer com cinco no mapa)
+                    bool lento = (order.paciente || eq.plan.StartsWith("default")) && !eq.plan.StartsWith("rush");
+                    if (lento && !EXP.Contains("c4EspacoVelho") && m.Alive(me.team) >= 4 && Rola("c4 base pro espaço", 0.3f + (order.paciente ? 0.15f : 0) - 0.1f * me.skill.aggression))
+                    {
+                        V2 c = CantoC4(it); m.GuardaBomb(me, c); m.c4ProEspaco = true; m.Ev("C4 deixado na base pro espaço/round"); eq.c4Resolvido = true;
+                        Think($"deixo o C4 na base ({Region(c)}) e vou pegar espaço", "default: os cinco tomam o mapa, o C4 vem quando decidir o bomb");
+                        return;
+                    }
                     float pPassa = livreNaoLeva ? 0.8f - 0.2f * me.skill.aggression
                                  : vaiSegurar ? 0.45f + (order.paciente ? 0.25f : 0) - 0.2f * me.skill.aggression : 0;
                     if (pPassa > 0 && Rola("c4 passa na base", pPassa))
@@ -2212,7 +3395,7 @@ namespace CSM.Sim
                 bool vem = x.brain.order.push || novo && x.brain.order.plant;
                 if (x == me || !x.alive || x.team != me.team || !vem || x.hasBomb && !novo) continue;
                 float ele = NavGrid.PathLen(x.pos, dest);
-                if (ele < meu + 40 || (x.pos - me.pos).Len < (novo ? 170 : 230)) { colado = true; break; }
+                if (ele < meu + 40 || (x.pos - me.pos).Len < (novo ? (EXP.Contains("grupoLonge") ? 170 : 115) : 230)) { colado = true; break; }   // junto = a distância de troca (de 170 pra lá ninguém chega a tempo de trocar)
                 if (ele < meu + (novo ? 900 : 500)) temQuemVem = true;
             }
             if (colado || !temQuemVem) { esperaGrupoDesde = -1; return false; }
@@ -2258,6 +3441,33 @@ namespace CSM.Sim
         float proxC4;
 
         /// <summary>Vou entrar onde não conheço: dropa pro amigo que está mais pra trás (nunca pro entry nem pra quem está em duelo).</summary>
+        /// <summary>
+        /// O C4 virou a ponta: antes da entrada, o portador é o mais perto do bomb do plano e está chegando onde pode ter
+        /// gente (a rota do pro às vezes põe ele na frente). Passa pro colega de trás — o C4 entra atrás de quem abre.
+        /// Um teste por segundo; sem colega perto pra passar, segue (não força).
+        /// </summary>
+        void C4NaPonta(float t)
+        {
+            if (!me.hasBomb || !me.IsT || order.plant || m.bombPlanted || target != null || action != null || t < proxPonta || EXP.Contains("c4PontaVelho")) return;
+            proxPonta = t + 1;
+            var ig = m.igl[(int)me.team]; var it = m.intel[(int)me.team];
+            // uma vez por round, só com perigo de verdade perto e colega logo atrás: passar à toa deixava o C4 no chão em
+            // lugar disputado (e o round acabava no tempo)
+            if (ig.Executou || ig.c4PontaPassou || t - ig.c4PassadoEm < 8 || it.Esperados(me.pos, 400) < 0.5f) return;
+            V2 pl = Plant(m.planSite); float meu = NavGrid.PathLen(me.pos, pl);
+            int atras = 0;
+            foreach (var x in m.agents)
+            {
+                if (x == me || !x.alive || x.team != me.team) continue;
+                float d = NavGrid.PathLen(x.pos, pl);
+                if (d < meu) return;   // tem alguém na frente: o C4 já está atrás
+                if ((x.pos - me.pos).Len < 250 && x.brain.target == null) atras++;
+            }
+            if (atras == 0) return;
+            if (PassarC4(it)) { ig.c4PontaPassou = true; m.Ev("C4 passado: era a ponta/round"); }
+        }
+        float proxPonta;
+
         bool PassarC4(Intel it)
         {
             if (EXP.Contains("c4Velho")) return false;
@@ -2333,7 +3543,8 @@ namespace CSM.Sim
         {
             V2 d = p - me.pos; float l = d.Len; if (l < 0.8f) return;
             if (m.fires.Count > 0 && m.FireAt(me.pos + d / l * 20)) return;   // passinho de jiggle/ajeitar não entra no fogo
-            if (NavGrid.Direct(me.pos, p)) { if (l < 8) spd *= MathF.Max(0.35f, l / 8); wantVel = d / l * spd; me.move = spd > me.MaxSpeed * 0.6f ? Move.Correndo : Move.Andando; }
+            bool naPilha = NavGrid.ESTADO && NavGrid.SobrePilha(me.pos) && NavGrid.SobrePilha(p);   /* em cima da pilha (fora da malha): anda direto no topo */
+            if (naPilha || NavGrid.Direct(me.pos, p)) { if (l < 8) spd *= MathF.Max(0.35f, l / 8); wantVel = d / l * spd; me.move = spd > me.MaxSpeed * 0.6f ? Move.Correndo : Move.Andando; }
             else MoveTo(p, spd > me.MaxSpeed * 0.6f);
         }
 
@@ -2371,6 +3582,8 @@ namespace CSM.Sim
                     if (sc < best && NavGrid.Direct(c.p, d.p)) { best = sc; cov = c.p; pk = d.p; achou = true; }
                 }
             }
+            posEspecial = 0;
+            if (!EXP.Contains("semPosEspecial") && PosicaoEspecial(a, L, zL, cand)) return;
             if (achou && rng.Rand() < P.cover * (me.gunId == "awp" ? 0.4f : 1f)) { baseP = cov; peekPt = pk; temPeek = true; deCover = true; return; }
             // aberto: fica num ponto que vê; o jiggle é um passo de lado (A-D) até outro ponto que vê
             deCover = false;
@@ -2385,6 +3598,102 @@ namespace CSM.Sim
         }
 
         static string Onde(V2? p) => p != null ? Region(p.Value) : "o ângulo";
+
+        /// <summary>
+        /// Acabei de matar e o time ficou na frente (5x4, 4x3...): como pro, o padrão é SEGURAR a vantagem — sair do
+        /// ângulo onde matei (o próximo deles vem trocar mirando ali) e segurar de um lugar coberto perto, olhando pra onde
+        /// ele veio; depois volto pro que fazia. Seguir em frente pesa pra quem é agressivo, está embalado (2+ abates no
+        /// round), está na entrada do bomb ou é TR sem tempo. Objetivo (plantar, desarmar, retake) sempre segue.
+        /// </summary>
+        public void Abateu(Agent v)
+        {
+            if (!me.alive || EXP.Contains("semSegurarVantagem")) return;
+            Team outro = me.team == Team.T ? Team.CT : Team.T;
+            int nos = m.Alive(me.team), eles = m.Alive(outro);
+            if (eles == 0 || nos <= eles) return;   // sem vantagem: segue o jogo
+            if (order.plant || order.defuse || me.hasBomb || m.bombPlanted || me.guardando || action != null) return;
+            if (m.t - ordemDesde < 2f && !EXP.Contains("vantagemSempre")) return;   // acabou de receber ordem do time: ela já cuida da situação
+            float agr = P.Agr(me.skill.aggression), vant = nos - eles;
+            float wSegura = 1f + 0.35f * vant + 0.6f * (1 - agr);
+            float wSegue = 0.25f + 0.7f * agr + (me.kills >= 2 ? 0.4f * (me.kills - 1) : 0) + (me.IsT && m.RoundLeft < 30 ? 1.2f : 0) + (order.push ? 0.8f : 0);
+            if (rng.Weighted(new[] { wSegura, wSegue }) == 1) { m.Ev("abateu com vantagem: seguiu em frente/round"); return; }
+            // um lugar perto, pra trás da linha de onde ele veio e fora da vista de lá (se tiver)
+            V2 de = v.pos, fora = me.pos - de; float lf = fora.Len; if (lf < 1) return; fora = fora / lf;
+            V2 ponto = me.pos; bool coberto = false;
+            foreach (float r in new[] { 30f, 50f, 70f })
+            {
+                foreach (float ang in new[] { 0f, 0.5f, -0.5f, 1f, -1f })
+                {
+                    V2 q = NavGrid.Snap(me.pos + V2.Ang(fora.Atan2 + ang) * r);
+                    if (!NavGrid.Movable(q) || !NavGrid.Direct(me.pos, q)) continue;
+                    if (!MapData.LosWalk(de, NavGrid.ZAt(de), q, NavGrid.ZAt(q), 18f)) { ponto = q; coberto = true; break; }
+                }
+                if (coberto) break;
+            }
+            m.Ev("abateu com vantagem: segurou/round");
+            var antes = order;
+            SetOrder(new Order { name = "segurando a vantagem", hold = new Places.Hold("vantagem", ponto, de), until = m.t + rng.Uniform(5f, 10f), then = antes,
+                why = $"{nos}x{eles}: não dou o mesmo peek — o próximo deles vem trocar mirando onde eu matei" });
+            Think(coberto ? $"matei o {v.name}: saio do ângulo e seguro a vantagem" : $"matei o {v.name}: seguro a vantagem daqui");
+        }
+
+        /// <summary>1 = só a cabeça aparece (caixa tapa o corpo); 2 = em cima de caixa (ângulo que ninguém pré-mira).</summary>
+        int posEspecial;
+        /// <summary>
+        /// Segurar como pro, quando o lugar deixa: (1) do lado de uma caixa baixa onde em pé o olho vê o ângulo e a caixa
+        /// tapa o corpo — de lá só a cabeça aparece pra quem vem; (2) em cima de uma caixa perto, pegando quem chega
+        /// mirando na altura de sempre. Pesado pela situação: a cabeça só é quase sempre boa (mais pra quem é calmo); a
+        /// caixa é surpresa — mais pra quem é agressivo, quando deve vir gente, e não toda vez (vira previsível).
+        /// </summary>
+        bool PosicaoEspecial(V2 a, V2 L, float zL, List<(V2 p, bool ve)> cand)
+        {
+            if ((L - a).Len < 1) return false;
+            float agr = P.Agr(me.skill.aggression);
+            // (1) só a cabeça: vê de pé, e do ângulo não se vê o meu tronco
+            V2? cab = null; float dc = float.MaxValue;
+            foreach (var c in cand)
+            {
+                if (!c.ve) continue;
+                float zc = NavGrid.ZAt(c.p);
+                if (MapData.LosWalk(c.p, zc + 13f, L, zL + 18f, 0f)) continue;   // tronco à vista: não é cabeça só
+                float d = (c.p - a).Len; if (d < dc) { dc = d; cab = c.p; }
+            }
+            // (2) em cima de caixa: célula de topo perto, alcançável, que vê o ângulo lá de cima
+            V2? cx = null; float dx = float.MaxValue;
+            var (ax, ay) = NavGrid.CellOf(a);
+            for (int gx = ax - 22; gx <= ax + 22; gx += 2)
+                for (int gy = ay - 22; gy <= ay + 22; gy += 2)
+                {
+                    if (gx < 0 || gy < 0 || gx >= NavGrid.NGX || gy >= NavGrid.NGY || !NavGrid.onTop[gx, gy] || !NavGrid.move[gx, gy] || NavGrid.soBoost[gx, gy]) continue;   /* topo de pilha é só de pezinho (decisão à parte) */
+                    V2 q = NavGrid.Center(gx, gy); float d = (q - a).Len; if (d > 46 || d >= dx) continue;
+                    if (!MapData.LosWalk(q, NavGrid.ZAt(q), L, zL, 18f)) continue;
+                    bool colega = false; foreach (var o in m.agents) if (o != me && o.alive && o.team == me.team && (o.pos - q).Len < 20) colega = true;
+                    if (colega) continue;
+                    float pl = NavGrid.PathLenAte(me.pos, q, d * 2.5f + 40); if (float.IsInfinity(pl) || pl > d * 2.5f + 40) continue;
+                    dx = d; cx = q;
+                }
+            if (cab == null && cx == null) return false;
+            var it = m.intel[(int)me.team];
+            float vem = MathF.Min(1, it.HeatAvg(L, 120) * 2f);
+            float wNormal = 1f;
+            float wCab = cab != null ? 1.1f + 0.5f * (1 - agr) : 0;
+            float wCaixa = cx != null && me.gunId != "awp" && caixaNoRound < 2 ? (0.12f + 0.45f * agr) * (0.4f + vem) : 0;
+            int op = rng.Weighted(new[] { wNormal, wCab, wCaixa });
+            if (op == 0) return false;
+            deCover = false; temPeek = false;
+            if (op == 1)
+            {
+                baseP = cab.Value; posEspecial = 1; m.Ev("segurou só com a cabeça (caixa na frente)/round");
+                Think($"seguro {Onde(L)} do lado da caixa: só a cabeça aparece", "a caixa tapa o corpo: pra me acertar ele tem que acertar a cabeça");
+            }
+            else
+            {
+                baseP = cx.Value; posEspecial = 2; caixaNoRound++; m.Ev("segurou em cima da caixa/round");
+                Think($"subo na caixa pra segurar {Onde(L)} de um ângulo que ele não espera", $"quem vem mira na altura de sempre{(vem > 0.3f ? "; deve vir gente agora" : "")}");
+            }
+            return true;
+        }
+        int caixaNoRound;
 
         float pixelProx = -9, lookFocoAte = -9; V2 lookFoco;
         /// <summary>
@@ -2426,7 +3735,7 @@ namespace CSM.Sim
                 }
             foreach (var c in cands.OrderByDescending(c => c.sc).Take(4))
             {
-                float pl = NavGrid.PathLen(me.pos, c.q);
+                float pl = NavGrid.PathLenAte(me.pos, c.q, 340);
                 if (pl > 340) continue;
                 alvo = c.q; olhar = c.olha; ataca = (c.q - L).Len < dL - 80;
                 return true;
@@ -2463,7 +3772,7 @@ namespace CSM.Sim
             bool amigoLa = L != null && !EXP.Contains("bangVelho") && AmigoNoAlvo(L.Value);
             if (EXP.Contains("bangVelho")) contatoL = contato;
             u[(int)Micro.Bang] = L != null && !amigoLa && me.gunId != "awp" && (calor > 0.3f || contatoL) && (me.nades.Contains("flash") || AliadoComFlash(320) != null)
-                ? P.bang * (calor + (contatoL ? 0.6f : 0)) * (0.5f + agr) : 0;
+                ? P.bang * (calor + (contatoL ? 0.6f : 0)) * (0.5f + agr) * (EXP.Contains("utilVolumeVelho") ? 1 : 1 + 0.4f * MathF.Max(0, me.nades.Count(n => n == "flash") - 1) + (me.IsT ? 0.15f * MathF.Max(0, me.nades.Count - 2) : 0)) : 0;   // granada sobrando na mão: morrer com ela é desperdício
             u[(int)Micro.Jiggle] = temPeek && L != null ? P.jiggle * (0.35f + P.sedeInfo * calor + (awp ? 0.5f : 0)) : 0;
             u[(int)Micro.Wide] = L != null && me.gunId != "awp" ? P.wide * agr * (contato ? 0.5f : 1) * (awp ? 0.25f : 1) * (aliado ? 1.3f : 0.6f) : 0;
             u[(int)Micro.Ajeitar] = P.ajeitar * 0.6f;
@@ -2475,6 +3784,29 @@ namespace CSM.Sim
             float forca = order.hold != null ? Posicoes.Forca(me.IsT, order.hold.name) : 0.5f, fk = MathX.Clamp((forca - 0.35f) / 0.15f, 0, 2);
             u[(int)Micro.Quieto] *= 0.7f + 1.5f * fk; u[(int)Micro.Bang] *= 0.7f + 1.5f * fk; u[(int)Micro.Avancar] *= 1.3f - 0.5f * fk; u[(int)Micro.Ajeitar] *= 1.2f - 0.5f * fk; u[(int)Micro.Wide] *= 1.2f - 0.4f * fk;
             if (!entregue) u[(int)Micro.Trocar] *= 1.3f - 0.5f * fk;
+            /* LINHA LONGA CEDO (apLinhaCedoLigado): nos primeiros ~22 s, sem info (nada visto nem ouvido perto), segurar parado numa
+               linha longa (AWP meio × janelão) é o duelo que o pro evita sem motivo — ele espia e sai (shoulder/jiggle) e espera
+               a info. A posição continua a mesma; muda o COMO. Com info, volta ao normal */
+            if (EXP.Contains("apLinhaCedoLigado") && L != null && m.t < 22 && !contato && !ouviuPerto && temPeek)
+            {
+                float alc = MapData.Raio(me.pos, me.z, V2.Ang((L.Value - me.pos).Atan2), 700, 18f), kL = MathX.Clamp((alc - 300) / 300, 0, 1);
+                if (kL > 0)
+                {
+                    u[(int)Micro.Quieto] *= 1 - 0.55f * kL; u[(int)Micro.Jiggle] *= 1 + 1.0f * kL;
+                    if (me.IsT && me.gunId == "awp") u[(int)Micro.Avancar] *= 1 - 0.6f * kL;   /* AWP do TR no meio: peek longo só com info */
+                }
+            }
+            // time na frente (5x4...): quem segura não sai caçando — wide e avançar ficam raros, ficar quieto vale mais
+            if (!EXP.Contains("semSegurarVantagem"))
+            {
+                int vantM = m.Alive(me.team) - m.Alive(me.team == Team.T ? Team.CT : Team.T);
+                if (vantM > 0 && !(me.IsT && m.RoundLeft < 30))
+                {
+                    float f = 1f / (1f + 0.6f * vantM * (1.3f - agr));
+                    u[(int)Micro.Wide] *= f; u[(int)Micro.Avancar] *= f; u[(int)Micro.Quieto] *= 1f + 0.3f * vantM;
+                }
+            }
+            if (posEspecial != 0 && !EXP.Contains("semPosEspecial")) { u[(int)Micro.Jiggle] = 0; u[(int)Micro.Wide] = 0; u[(int)Micro.Ajeitar] = 0; u[(int)Micro.Avancar] = 0; u[(int)Micro.Quieto] *= 1.6f; }   // não desce da caixa nem sai da cabeça só à toa
             if (semPorque) { u[(int)Micro.Jiggle] = 0; u[(int)Micro.Wide] = 0; u[(int)Micro.Bang] = 0; u[(int)Micro.Ajeitar] = 0; u[(int)Micro.Trocar] = 0; u[(int)Micro.Quieto] += 0.5f; }
             if (order.paciente)
             {   // jogo lento: segura o ângulo e espera alguém se expor (pouco wide/avanço; jiggle pra info ainda vale)
@@ -2528,7 +3860,7 @@ namespace CSM.Sim
             if (dupla != null && me.gunId != "awp" && rng.Rand() < 0.4f + 0.5f * agr) { esc = Micro.Wide; L = dupla.brain.Rumo; }
 
             // o colega avisou "vou bangar" pro ângulo que eu seguro: saio junto quando estourar (em vez de outra jogada)
-            if (L != null && t < me.bangAmigaEm - 0.3f && (me.bangAmigaPos - L.Value).Len < 220 && me.gunId != "awp" && rng.Rand() < 0.5f + 0.4f * agr)
+            if (L != null && me.bangAmigaDe != me && t < me.bangAmigaEm - 0.3f && (me.bangAmigaPos - L.Value).Len < 220 && me.gunId != "awp" && rng.Rand() < 0.5f + 0.4f * agr)
             {
                 micro = Micro.Bang; bangPorMim = true; microFase = 1; microRumo = L.Value; bangSai = me.bangAmigaEm - 0.3f; microAte = t + 4;
                 Think($"o {me.bangAmigaDe.name} vai bangar {Onde(L)} — saio junto"); return;
@@ -2541,6 +3873,15 @@ namespace CSM.Sim
             {
                 case Micro.Jiggle:
                     microAlvo = peekPt; microDwell = rng.Uniform(0.12f, 0.45f) * (awp ? 0.5f : 1); me.peeks++;
+                    /* jump-peek: pula na saída do jiggle pra pegar info (alvo subindo de lado é difícil pra AWP; no ar vê por cima
+                       do que é baixo). Raro e situacional: AWP deles no ângulo, SMG/pistola (leve, perde pouco), agressivo.
+                       De rifle sem AWP quase nunca; AWPer não pula. apJumpPeekVelho desliga */
+                    jigglePulo = false;
+                    if (!EXP.Contains("apJumpPeekVelho") && me.gunId != "awp" && (awp || me.ArmaLeve))   /* rifle sem AWP no ângulo: nem sorteia */
+                    {
+                        float pj = (awp ? 0.35f : 0.04f) * (me.ArmaLeve ? 1.6f : 0.5f) * (0.5f + P.Agr(me.skill.aggression));
+                        jigglePulo = rng.Rand() < pj;
+                    }
                     microRep = calor > 0.3f && rng.Rand() < 0.6f ? 1 + rng.Int(2) : 0;   // deve ter gente: A-D repetido pra pegar info
                     Think($"{(microRep > 0 ? "strafe (A-D) pra" : "jiggle pra")} ver {Onde(L)}{(awp ? " (AWP deles)" : calor > 0.5f ? " (deve ter gente)" : "")}"); break;
                 case Micro.Wide:
@@ -2569,7 +3910,8 @@ namespace CSM.Sim
                     Think($"avançando pra tomar espaço ({Region(microAlvo)})"); break;
                 case Micro.Quieto:
                     microAte = t + rng.Uniform(1.2f, 2.8f);
-                    Think($"segurando apertado {Onde(L)}{(ouviuPerto ? " (ouvi passo)" : "")}"); break;
+                    gingando = !EXP.Contains("apGingaVelho") && DecideGinga(L, ouviuPerto);
+                    Think($"segurando apertado {Onde(L)}{(ouviuPerto ? " (ouvi passo)" : "")}{(gingando ? " — gingando de lado (linha de AWP / sem contato perto)" : "")}"); break;
             }
         }
 
@@ -2602,8 +3944,10 @@ namespace CSM.Sim
                 case Micro.Quieto:
                     // segurar apertado é com o ângulo à vista e a mira pré-posicionada: do cover vai de shift até o peek
                     if (microFase == 0 && deCover && temPeek) { if ((peekPt - me.pos).Len > 2.5f) { Ir(peekPt, me.MaxSpeed * 0.45f); return; } microFase = 1; }
+                    if (gingando) Ginga(L);
                     return;
                 case Micro.Jiggle:
+                    if (microFase == 0 && jigglePulo && !me.noAr && me.Speed > me.MaxSpeed * 0.75f) { me.querPular = true; jigglePulo = false; m.Ev("jump-peek pra info/round"); Think("pulo na quina pra ver (jump-peek)"); }
                     if (microFase == 0) { if ((microAlvo - me.pos).Len > 2.5f) { Ir(microAlvo, me.MaxSpeed); return; } microFase = 1; microAte = t + microDwell; }
                     else if (microFase == 2) { if ((baseP.Value - me.pos).Len > 2.5f) { Ir(baseP.Value, me.MaxSpeed); return; } microFase = 0; microAte = t + 1.5f; microDwell = rng.Uniform(0.1f, 0.35f); }
                     return;   // fase 1: parado olhando (counter-strafe) e volta pro cover; fase 2: voltando pra sair de novo
@@ -2625,7 +3969,58 @@ namespace CSM.Sim
             }
         }
 
-        void FimMicro() { micro = Micro.Nada; microProx = m.t + P.pausa * rng.Uniform(0.4f, 1.6f); }
+        void FimMicro() { micro = Micro.Nada; microProx = m.t + P.pausa * rng.Uniform(0.4f, 1.6f); gingando = false; }
+
+        /* ---- ginga segurando (apGingaVelho desliga) ------------------------------------------------------------------
+           Pro segurando ângulo de rifle fica parado com a mira no lugar (atira primeiro). Mas na linha de uma AWP, ou
+           esperando sem contato perto, ele se mexe de lado atrás do ponto (shuffle): parado é o alvo que a AWP pega, e
+           alvo cruzando de lado é difícil de acertar (rastreio, Combat.Fire). Tem custo: andando a arma dele erra
+           (inMove). Quando acredita que vem contato (passo perto, colega viu alguém perto, muita gente esperada em cima)
+           ele PARA e segura parado pra atirar primeiro. Tudo pela crença do time (intel), não pela posição real. */
+        bool gingando; int gingaLado = 1; V2 gingaCentro; float gingaAmp; bool jigglePulo;
+        bool DecideGinga(V2? L, bool ouviuPerto)
+        {
+            if (me.gunId == "awp" || ouviuPerto || L == null || target != null) return false;
+            var it = m.intel[(int)me.team];
+            if (ContatoIminente()) return false;
+            // linha de AWP: o mapa de perigo (onde a AWP deles costuma segurar) ou a AWP deles vista há pouco com visão em mim
+            float awp = Perigo.Visto(me.team, me.pos) >= 2 ? 1f : 0f;
+            foreach (var c in it.contacts.Values)
+            {
+                var e = m.agents[c.id];
+                if (!e.alive || !c.seen || m.t - c.t > (EXP.Contains("apGingaAwpCurta") ? 20 : 45) || e.gunId != "awp") continue;   /* AWP vista: o time sabe que ela está por ali (o AWPer não some) */
+                float d = (c.pos - me.pos).Len;
+                if (d > 350 && d < 1400 && MapData.LosWalk(c.pos, c.z + 18, me.pos, me.z + 18, 18f)) awp = 1f;
+            }
+            float calmo = MathX.Clamp(1 - it.Esperados(me.pos, 350), 0, 1);
+            float p = (TeamBrain.ExpNum("apGingaBase", 0.12f) + 0.55f * awp) * (0.6f + 0.6f * P.Agr(me.skill.aggression)) * (0.3f + 0.7f * calmo) * (me.ArmaLeve ? 1.3f : 1f);
+            if (rng.Rand() >= p) return false;
+            // espaço de lado (perpendicular à mira) dos dois lados, andável e em linha reta
+            V2 d0 = L.Value - me.pos; float l0 = d0.Len; if (l0 < 1) return false;
+            V2 perp = new V2(-d0.y / l0, d0.x / l0); float amp = rng.Uniform(6f, 9f);
+            if (!NavGrid.Movable(me.pos + perp * amp) || !NavGrid.Movable(me.pos - perp * amp) || !NavGrid.Direct(me.pos + perp * amp, me.pos - perp * amp)) return false;
+            gingaCentro = me.pos; gingaAmp = amp; gingaLado = rng.Rand() < 0.5f ? 1 : -1;
+            m.Ev(awp > 0 ? "ginga: segurando na linha de AWP/round" : "ginga: segurando sem contato perto/round");
+            return true;
+        }
+        /// <summary>O time acredita que vem gente agora: passo perto, colega viu inimigo perto, muita gente esperada em cima.</summary>
+        bool ContatoIminente()
+        {
+            if (m.t - somT < 3f && somK == "passos" && (somP - me.pos).Len < 450) return true;
+            var it = m.intel[(int)me.team];
+            foreach (var c in it.contacts.Values) if (m.agents[c.id].alive && m.t - c.t < 1.5f && (c.pos - me.pos).Len < 600) return true;
+            return it.Esperados(me.pos, 300) > 0.8f;
+        }
+        void Ginga(V2? L)
+        {
+            if (ContatoIminente()) { gingando = false; m.Ev("ginga: parou pro contato/round"); Think("vem gente — paro e seguro parado pra atirar primeiro"); return; }
+            if (L == null) return;
+            V2 d0 = L.Value - gingaCentro; float l0 = d0.Len; if (l0 < 1) return;
+            V2 perp = new V2(-d0.y / l0, d0.x / l0);
+            V2 alvo = gingaCentro + perp * (gingaLado * gingaAmp);
+            if ((alvo - me.pos).Len < 1.5f) { gingaLado = -gingaLado; return; }
+            Ir(alvo, me.MaxSpeed * 0.55f);
+        }
 
         /// <summary>Sai largo. Com a bang (<paramref name="podeReto"/>) entra reto se não tiver lado; wide por escolha, não.</summary>
         bool IniciaWide(V2 L, bool podeReto = true)
@@ -2717,12 +4112,13 @@ namespace CSM.Sim
         /// <summary>Daqui essa granada para perto do alvo? Mede na física antes de gastar; se não para, não joga.</summary>
         bool CaiNoLugar(string kind, V2 alvo, string nome)
         {
-            if (kind != "smoke" && kind != "molotov") return true;
+            if (kind != "smoke" && kind != "molotov" && (kind != "he" || EXP.Contains("heAlcanceVelho"))) return true;
             float erro;
             if (Arremesso.Velha) erro = Match.MiraCerta(me.pos, me.z, alvo, kind).erro;
             else
             {   // dá pra cair lá daqui? quem sabe a lineup pode pular/correr; quem não sabe, só parado/andando
                 Places.Lineup lin = null; foreach (var x in Places.TREINADAS) if (x.name == nome) { lin = x; break; }
+                if (lin == null) lock (Places.BANCO) foreach (var x in Places.BANCO) if (x.name == nome) { lin = x; break; }
                 bool sabe = lin != null && ConheceLineup(lin);
                 erro = Arremesso.Resolve(me.pos, me.z, alvo, kind, sabe ? Arremesso.Tipo.CorrePulo : Arremesso.Tipo.Correndo).erro;
             }
@@ -2753,6 +4149,7 @@ namespace CSM.Sim
         public bool ConheceLineup(Places.Lineup l)
         {
             if (EXP.Contains("todosSabem")) return true;
+            if (Places.DoBanco(l)) return Places.Aprendeu(me.name, l);   // aprendida: só quem aprendeu
             uint h = (uint)(Estavel(me.name) * 31 + Estavel(l.name));   // do jogador (é repertório dele, não sorteio do round)
             h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
             return (h % 1000) / 1000f < 0.55f + 0.45f * me.skill.utilitaria;
@@ -2761,11 +4158,30 @@ namespace CSM.Sim
         /// <summary>Joga uma granada daqui (a ação leva ~0,5 s); devolve quando ela estoura/cai.</summary>
         float Jogar(string kind, string nome, V2 alvo)
         {
+            // smoke/molotov que eu sei de outro jeito (aprendi acertando daqui de perto): vou no pixel, paro, miro e jogo
+            if ((kind == "smoke" || kind == "molotov") && !EXP.Contains("semLineupAprendida") && target == null && action == null)
+            {
+                var lb = Places.DoBanco(me.name, kind, alvo, me.pos, 28, 140);
+                if (lb != null && (lb.from - me.pos).Len > 14 && !order.nades.Contains(lb) && NavGrid.PathLenAte(me.pos, lb.from, 180) < 180)
+                {
+                    order.nades.Insert(0, lb); m.Ev("lineup: foi pro pixel de uma aprendida/round");
+                    Think($"{nome}: sei essa — vou no pixel");
+                    return m.t + (lb.from - me.pos).Len / (MapCheck.RUN * 0.8f) + 0.9f + (kind == "smoke" ? 1.5f : 1f);
+                }
+            }
             if (!CaiNoLugar(kind, alvo, nome)) return m.t;
+            // flash pra cegar quem eu JÁ estou vendo não serve (ele também me vê: é atirar, não bangar)
+            if (kind == "flash" && !EXP.Contains("flashVendo"))
+                foreach (var e in m.agents)
+                    if (e.alive && e.team != me.team && (e.pos - alvo).Len < 260 && CanSee(e))
+                    { m.Ev("flash: não bangou — já via o inimigo/round"); Think($"não bango: já estou vendo o {e.name}"); return m.t; }
             var l = new Lineup(nome, kind, me.pos, alvo);
-            action = "granada"; actionNade = l; actionEnd = m.t + 0.5f; fase = "ação";
+            action = "granada"; actionNade = l; actionEnd = SoltaGranada(m.t, 0.5f); fase = "ação";
             Think(nome);
-            return m.t + 0.5f + 0.4f + (alvo - me.pos).Len / 380f;
+            // quando estoura: flash e HE pelo pavio (sai da mão em actionEnd); o resto, pelo voo
+            if (!EXP.Contains("estouroVelho") && kind == "flash") return actionEnd + Match.FUSE_FLASH;
+            if (!EXP.Contains("estouroVelho") && kind == "he") return actionEnd + Match.FUSE_HE;
+            return actionEnd + 0.4f + (alvo - me.pos).Len / 380f;
         }
 
         /// <summary>Um colega está lá (ou indo pra lá, à minha frente): flash ali cega ele e não tem inimigo pra cegar.</summary>
@@ -2794,6 +4210,23 @@ namespace CSM.Sim
         V2 NaCara(V2 L)
         {
             V2 d = me.pos - L; float l = d.Len; if (l < 1) return L;
+            if (!EXP.Contains("naCaraVelha"))
+            {   // flash boa estoura onde QUEM ESTÁ LÁ vê (no ar, ~40 acima), de preferência atrás da quina pra mim (pop):
+                // ponto que só eu vejo cega ninguém. Procura no caminho de lá até mim e um pouco pros lados
+                float zL = NavGrid.ZAt(NavGrid.Snap(L)); V2 dn = d / l, ld = new V2(-dn.y, dn.x);
+                V2? melhor = null; float bs = float.MaxValue;
+                foreach (float k in new[] { 40f, 65f, 90f, 120f, 150f })
+                    foreach (float s in new[] { 0f, 35f, -35f })
+                    {
+                        if (k > l * 0.85f) continue;
+                        V2 q = L + dn * k + ld * s; float zq = NavGrid.ZAt(NavGrid.Snap(q)) + 40;
+                        if (!MapData.LosWalk(L, zL, q, zq, 18f)) continue;   // de lá não vê: não cega
+                        bool euVejo = MapData.LosWalk(me.pos, me.z, q, zq, 18f);
+                        float sc = k * 0.5f + MathF.Abs(s) * 0.3f + (euVejo ? 25 : 0);
+                        if (sc < bs) { bs = sc; melhor = q; }
+                    }
+                if (melhor != null) return melhor.Value;
+            }
             foreach (float k in new[] { 45f, 75f, 110f })
             {
                 V2 q = L + d / l * MathF.Min(k, l * 0.8f);
@@ -2906,9 +4339,17 @@ namespace CSM.Sim
         /// Andar de shift (sem barulho): perto de onde pode ter inimigo, ninguém entrega a posição correndo — a não ser
         /// com pressa (entrando no execute/retomada, pouco tempo, longe de tudo). Quem é mais calmo segura mais o shift.
         /// </summary>
+        // shift ou correndo é decisão de som (quem pode ouvir daqui a pouco): vale por 0,25 s — recalcular a cada tique
+        // custava duas estimativas de inimigos por jogador andando
         bool Silencio(Order o)
         {
-            if (EXP.Contains("semShift") || o.push && !o.calmo || o.defuse || me.faca) return false;
+            if (o == silOrdem && m.t - silAt < 0.25f && !EXP.Contains("silencioTique")) return silRes;
+            long pc = P0(); silRes = SilencioX(o); silAt = m.t; silOrdem = o; P1("silêncio (andar de shift?)", pc); return silRes;
+        }
+        bool silRes; float silAt = -9; Order silOrdem;
+        bool SilencioX(Order o)
+        {
+            if (EXP.Contains("semShift") || o.push && !o.calmo || o.defuse && (!o.calmo || EXP.Contains("defuseCorre")) || me.faca) return false;
             // sem tempo: corre. No retake quem manda é o tempo do defuse, não um número fixo
             if (m.RoundLeft < 25 && !m.bombPlanted || m.bombPlanted && !me.IsT && m.BombLeft < NavGrid.PathLen(me.pos, m.bombPos) / MapCheck.RUN + 10 * (EXP.Contains("retakeVelho") ? 2 : 1)) return false;
             if (me.panico > 0.6f) return false;   // em pânico esquece de andar no shift
@@ -2928,8 +4369,7 @@ namespace CSM.Sim
                 float e = it.Esperados(me.pos, OUVE);
                 if (path != null && wp < path.Count) e = MathF.Max(e, it.Esperados(path[Math.Min(path.Count - 1, wp + 3)].p, OUVE));
                 foreach (var c in it.contacts.Values) if (m.t - c.t < 6 && m.agents[c.id].alive && (c.pos - me.pos).Len < OUVE + 150) e = MathF.Max(e, 1);
-                var ml = System.Text.RegularExpressions.Regex.Match(EXP, @"shiftLim(\d+)");
-                float lim = ml.Success ? int.Parse(ml.Groups[1].Value) / 100f : 0.5f;
+                float lim = ShiftLim();
                 shift = e > lim * (1.5f - me.skill.composure);
             }
             if (Match.Auditar && m.t - audShiftT > 0.5f)
@@ -2941,6 +4381,8 @@ namespace CSM.Sim
             return shift;
         }
         float audShiftT = -9;
+        // parâmetro de experimento lido uma vez por texto de EXP (era uma expressão regular por tique por jogador andando)
+        static float ShiftLim() => TeamBrain.ExpNum("shiftLim", 0.5f);
 
         /// <summary>
         /// CT andando (girar, voltar pro lugar) e 2+ inimigos vistos agora na frente, perto: não vai pra cima deles —
@@ -3037,19 +4479,29 @@ namespace CSM.Sim
         public void MoveTo(V2 goal, bool run)
         {
             me.scoped = false;
+            goal = NavGrid.AlvoAlcancavel(me.pos, goal);   /* ponto em cima de pilha (só de pezinho) e eu no chão: o chão do lado */
             // perto do inimigo anda de shift em qualquer deslocamento — corre só no que é urgente (duelo, troca, ajudar,
             // fogo, bomb pra explodir) ou quando a ordem tem pressa (Silencio diz)
             if (run && target == null && fase != "indo trocar" && fase != "ajudando no duelo" && fase != "saindo do fogo" && fase != "saindo do bomb"
                 && fase != "round ganho" && Silencio(order)) run = false;
             // recalcula se o destino mudou, se saiu do caminho (empurrado, desviou) ou de vez em quando
             bool fora = path != null && wp < path.Count && (path[Math.Max(0, wp - 1)].p - me.pos).Len > 60 && (path[wp].p - me.pos).Len > 60;
-            if (path == null || (goal - pathGoal).Len > 8 || fora || m.t - pathAt > 5f)
+            // o recálculo de rotina (5 s) espera um passo com orçamento de A* (o caminho de agora segue valendo): todo mundo
+            // recalculando no mesmo tique era pico
+            bool rotina = m.t - pathAt > 5f && !(NavGrid.Estourou && path != null && path.Count >= 2 && wp < path.Count && !EXP.Contains("orcAVelho"));
+            if (path == null || (goal - pathGoal).Len > 8 || fora || rotina)
             {
                 long pc = P0();
                 path = NavGrid.Path(me.pos, goal, Perigo.Camada(me.team)); wp = 1; pathGoal = goal; pathAt = m.t;   // evita cruzar na mira
                 // destino fora da navmesh (em cima de borda/caixa): vai pro ponto andável mais perto dele
                 if ((path == null || path.Count < 2) && (goal - me.pos).Len > 12) { path = NavGrid.Path(me.pos, NavGrid.Snap(goal), Perigo.Camada(me.team)); if (path.Count < 2) path = NavGrid.Path(me.pos, NavGrid.Snap(goal)); }
                 P1("caminho (Path)", pc);
+            }
+            if ((path == null || path.Count < 2) && (goal - me.pos).Len > 12 && Match.Auditar && m.t - audSemCam > 1f)
+            {   audSemCam = m.t;   /* auditoria: onde está e pra onde quer ir quando não acha caminho */
+                var (cx, cy) = NavGrid.CellOf(me.pos); bool soB = cx >= 0 && cy >= 0 && cx < NavGrid.NGX && cy < NavGrid.NGY && NavGrid.soBoost[cx, cy];
+                m.Aud("sem caminho: de onde · pezinho", Match.PontoBoost(me.pos) + $" z+{me.z - MapData.GZ:0}" + (soB ? " (topo de pezinho)" : "") + $" · estado {boostEstado}" + (me.emCimaDe != null ? " · em cima de alguém" : ""));
+                m.Aud("sem caminho: pra onde", Match.PontoBoost(goal) + " · " + fase + (goal.Len < 30 ? $" · de {Match.PontoBoost(me.pos)} z+{me.z - MapData.GZ:0} base {(baseP.HasValue ? Match.PontoBoost(baseP.Value) : "-")} trilha {trilha.Count} estado {boostEstado}" : ""));
             }
             if ((path == null || path.Count < 2) && (goal - me.pos).Len > 12) { me.semCaminho += Match.DT; Think($"não acho caminho até {Region(goal)}"); return; }
             // já está na célula do destino (caminho de 1 ponto): vai reto até o ponto (antes parava a 8-12 do bomb e nunca desarmava)
@@ -3062,13 +4514,47 @@ namespace CSM.Sim
                    && ((path[wp].p - me.pos).Len < 2.5f || (path[wp].p - me.pos).Len < 8 && NavGrid.Direct(me.pos, path[wp + 1].p))) wp++;
             // destravar: quer andar e não sai do lugar há 0,8 s → recalcula o caminho a partir de onde está
             // (pelo quanto saiu do lugar, não pela velocidade: raspando na quina a velocidade não zera mas ele não sai dali)
-            if ((me.pos - destravaPos).Len > 8 || (goal - me.pos).Len < 14) { destravaPos = me.pos; semAndarDesde = m.t; }
-            else if (m.t - semAndarDesde > 0.8f && m.t - pathAt > 0.8f) { pathAt = -9; semAndarDesde = m.t; desenroscaAte = m.t + 0.35f; m.Ev("destravou (preso andando)/round"); }
+            // (preso = pediu pra andar o dobro disso e não saiu: andando devagarinho fatiando a quina não é estar preso —
+            // antes isso disparava o "destrava" com passo de lado pra dentro da parede)
+            if ((me.pos - destravaPos).Len > 8 || (goal - me.pos).Len < 14) { destravaPos = me.pos; semAndarDesde = m.t; me.pedidoAcum = 0; }
+            else if (m.t - me.travadoUlt < 0.3f && m.t - me.travadoDesde < 2.5f && me.travadoPor != null && me.travadoPor.alive && !EXP.Contains("travaCorpoVelha"))
+            {   // o que trava é um corpo (colega/inimigo), não o mapa: o caminho está certo — escorrego/ele dá passagem
+                semAndarDesde = m.t; me.pedidoAcum = 0;
+            }
+            else if (m.t - semAndarDesde > 0.8f && m.t - pathAt > 0.8f && (me.pedidoAcum > 16 || EXP.Contains("travaVelha")))
+            {
+                pathAt = -9; semAndarDesde = m.t; me.pedidoAcum = 0; desenroscaAte = m.t + 0.35f; m.Ev("destravou (preso andando)/round");
+                if (Match.Auditar)
+                {   /* onde trava: em cima de caixa, colado numa caixa alta, ou outro */
+                    float acima = me.z - MapData.floor[Math.Clamp((int)me.pos.x, 0, MapData.NX - 1), Math.Clamp((int)me.pos.y, 0, MapData.NY - 1)];
+                    bool colado = false; for (int dx = -6; dx <= 6 && !colado; dx += 2) for (int dy = -6; dy <= 6 && !colado; dy += 2) { int ux = (int)me.pos.x + dx, uy = (int)me.pos.y + dy; if (ux >= 0 && uy >= 0 && ux < MapData.NX && uy < MapData.NY && MapData.coverH[ux, uy] >= 28) colado = true; }
+                    m.Aud("destravou: lugar", Match.PontoBoost(me.pos));
+                    if (path != null && wp < path.Count) { float dzw = path[wp].z - me.z; m.Aud("destravou: próximo ponto", path[wp].link + (dzw > 4 ? " sobe " + (dzw < 14 ? "<14" : dzw < 19 ? "14-19" : "19+") : dzw < -4 ? " desce" : " plano") + $" · a {(path[wp].p - me.pos).Len:0}" + (me.noAr ? " · no ar" : "")); }
+                    m.Aud("destravou: onde", (acima > 10 ? "em cima de caixa (z " + (acima < 20 ? "~16" : "28+") + ")" : colado ? "no chão, colado em caixa alta" : "outro") + (me.noAr ? " · no ar" : ""));
+                }
+                if (Match.Auditar) m.Aud("destravou: fase / ordem", fase + " / " + (order.name.StartsWith("plano:") ? "plano" : order.name.Length > 24 ? order.name.Substring(0, 24) : order.name) + (me.Speed < 3 ? " (parado)" : " (andando)"));
+                if (Match.Auditar && order.name.StartsWith("plano:")) m.Aud("destravou no plano: onde → pra onde", $"{Region(me.pos)} → {Region(goal)}");
+            }
+            if (!EXP.Contains("apQuedaVelho") && target == null && path[wp].z < me.z - 10 && (path[wp].p - me.pos).Len < 30)
+            {   /* vai descer (sacada/caixa): colega bem embaixo de onde vou cair? espero ele passar (cair na cabeça do amigo é raro no pro) */
+                foreach (var x in m.agents)
+                    if (x != me && x.alive && x.team == me.team && x.z < me.z - 10 && (x.pos - path[wp].p).Len < 10) { wantVel = V2.Zero; fase = "esperando o colega sair de baixo"; return; }
+            }
+            if (path[wp].link == NavGrid.Link.Salto && wp > 0 && (path[wp - 1].p - me.pos).Len < 4 && !me.noAr)
+            {   /* salto por cima do vão: da beirada, pula pro outro lado (a física dá o embalo pra chegar) */
+                V2 ds = path[wp].p - me.pos; float ls = ds.Len;
+                if (ls > 0.5f) { wantVel = ds / ls * me.MaxSpeed; me.move = Move.Correndo; }
+                me.querPular = true; me.saltandoAte = m.t + 1.2f; me.saltoAlvo = path[wp].p; me.saltoZ = path[wp].z; m.Ev("salto por cima do vão/round");
+                return;
+            }
             V2 to = path[wp].p - me.pos; float l = to.Len;
+
             // ponto de queda/pulo logo abaixo/acima (no chão já cheguei, a altura não): segue na direção do trecho
             // seguinte — pisa pra fora da beira (cai) ou empurra a caixa (pula). Antes ficava parado na beira
-            if (l < 4 && MathF.Abs(path[wp].z - me.z) >= 5 && !me.noAr)
+            float pertoDegrau = NavGrid.BORDA && (path[wp].link == NavGrid.Link.Jump || path[wp].link == NavGrid.Link.Drop) ? 6.5f : 4f;   /* a folga da parede segura o corpo a 4 do degrau: com < 4 nunca pulava */
+            if (l < pertoDegrau && MathF.Abs(path[wp].z - me.z) >= 5 && !me.noAr)
             {
+                if (NavGrid.BORDA) me.subindoDegrauAte = m.t + 0.5f;   /* passando o degrau: a física deixa pisar na folga entre o chão e a caixa */
                 if (l > 0.3f) { to = to / l * 6; l = 6; }   // vai direto no ponto (passo firme, não para na beira)
                 else
                 {
@@ -3078,7 +4564,7 @@ namespace CSM.Sim
                 }
                 // degrau acima e perto: pula já (escadinha de caixas: andar até encostar fazia cair pela borda)
                 float dz = path[wp].z - me.z;
-                if (dz > 4 && dz <= NavGrid.JUMP + 0.5f) me.pularPara = path[wp].z;
+                if (dz > 4 && dz <= NavGrid.JUMP_MAX + 0.5f && path[wp].link != NavGrid.Link.Salto) { me.pularPara = path[wp].z; me.subindoDegrauAte = m.t + 0.4f; }
             }
             // travado mesmo assim: um passo pro lado livre que mais aproxima do ponto do caminho
             if (m.t < desenroscaAte)
@@ -3096,8 +4582,7 @@ namespace CSM.Sim
             // molotov no caminho: espera
             if (m.FireAt(path[wp].p) && !m.FireAt(me.pos)) { fase = "esperando a molotov"; Think("esperando a molotov apagar"); return; }
             float spd = me.MaxSpeed * (run ? 1f : 0.52f);
-            if (l < 10 && wp == path.Count - 1) spd *= l / 10;
-            wantVel = to / l * spd;
+            if (l < 10 && wp == path.Count - 1) spd *= l / 10;            wantVel = to / l * spd;
             me.move = run ? Move.Correndo : Move.Andando;
         }
 
@@ -3149,12 +4634,19 @@ namespace CSM.Sim
                     // no round passado (dedução, não wallhack: só se ainda pode ter alguém ali)
                     bool porMemoria = lembra && intel.HeatAt(s.p) > 0.15f && rng.Rand() < 0.45f + 0.35f * P.Agr(me.skill.aggression);
                     if (newly && aggressive && !prefired.Contains(key) && dl < (porMemoria ? 320 : 260) && s.kind != Spots.Kind.EmCima && me.gunId != "awp" && me.gun.CanFire(m.t) &&
-                        (porMemoria || intel.HeatAt(s.p) > 0.55f && (me.role == Role.Entry || me.skill.aggression > 0.65f)))
+                        (EXP.Contains("atiraNoAmigo") || !AmigoNaLinha(s.p, s.z + 21.5f, dl, out _)) &&   // pre-fire com colega na frente, não
+                        (porMemoria || (!EXP.Contains("prefireCrenca") ? intel.HeatAt(s.p) > 0.55f && (me.role == Role.Entry || me.skill.aggression > 0.65f) : PrefireCrenca(s.p))))   /* crença: opt-in — 2 pre-fires/round em canto vazio, retake −8 */
                     {
                         prefired.Add(key);
                         if (porMemoria) me.prefireMemoria++;
                         Think(porMemoria ? $"pre-fire no pixel de onde mataram a gente ({Region(s.p)})" : $"pre-fire no {(s.kind == Spots.Kind.Canto ? "cantinho" : "atrás da caixa")} ({Region(s.p)})");
                         for (int k = 0; k < 2; k++) m.Shoot(me, s.p, s.z + 21.5f);
+                        m.Ev("pre-fire/round");
+                        if (Match.Auditar)
+                        {   // validador: tinha alguém mesmo no canto? (verdade do jogo, só pra medir — não muda nada)
+                            bool tinha = false; foreach (var x in m.agents) if (x.alive && x.team != me.team && (x.pos - s.p).Len < 35) tinha = true;
+                            m.Aud("pre-fire: tinha alguém no canto?", (tinha ? "sim" : "não") + (porMemoria ? " · memória" : " · calor") + $" · {me.role}");
+                        }
                     }
                 }
                 if (pick != null)
@@ -3205,6 +4697,35 @@ namespace CSM.Sim
                     V2 alvoC = me.pos + wantVel / wantVel.Len * 300;
                     bool frente = !m.agents.Any(x => x != me && x.alive && x.team == me.team && (x.pos - alvoC).Len < (me.pos - alvoC).Len - 30);
                     m.Aud("andando: mira pra trás (>100° de onde vou)", costas > 100 ? $"sim · {miraFonte} · {pfTrasDiag} · picoCostume {(bordaQuina == null)}" : "não");
+                    {   // o caso que o usuário viu: AVANÇANDO pro lado deles (me afastando da minha base) e mirando pro MEU lado
+                        V2 casa = (me.IsT ? MapData.SPAWN_T[2] : MapData.SPAWN_CT[2]) - me.pos; float dc = casa.Len;
+                        if (dc > 300 && wantVel.Dot(casa) < -0.5f * wantVel.Len * dc)
+                        {
+                            float praCasa = MathF.Abs(MathX.AngDiff(wantAim, casa.Atan2)) * 180 / MathF.PI;
+                            m.Aud("avançando pro lado deles: mira pro meu lado", praCasa < 60 ? $"sim · {miraFonte}" : "não");
+                            if (praCasa < 60 && ((int)(m.t / Match.DT) * 7919 + me.id * 104729) % 60 == 0)
+                            {
+                                var itE = m.intel[(int)me.team]; V2 olho = me.pos + V2.Ang(wantAim) * 200;
+                                string ult = string.Join("; ", itE.contacts.Values.Where(c => m.agents[c.id].alive).Select(c => $"{m.agents[c.id].name} em {Region(c.pos)} há {m.t - c.t:0}s"));
+                                Match.GuardaExemplo("avançando e olhando pro próprio lado", m.seedRound, m.t, $"{me.name}({(me.IsT ? "TR" : "CT")}) em {Region(me.pos)} indo pra {Region(me.pos + wantVel / wantVel.Len * 200)} ({order.name}) mira em {Region(olho)} [{miraFonte}] esperados lá {itE.Esperados(olho, 150):0.00} · na frente {itE.Esperados(me.pos + wantVel / wantVel.Len * 250, 200):0.00} | info: {ult}");
+                            }
+                        }
+                    }
+                    if (costas > 100 && miraFonte.StartsWith("borda") && bordaQuina != null)
+                    {   // RAIZ: por que a quina de trás ganhou? quanto de crença (esperados) e de costume (rotas pro) ela tinha x a frente
+                        var itA = m.intel[(int)me.team];
+                        float eT = 0, rT = 0; foreach (var a2 in bordaQuina.atras) { eT = MathF.Max(eT, itA.Esperados(a2, 110)); rT = MathF.Max(rT, Rotas.Perto(me.IsT ? Team.CT : Team.T, a2, m.t, 110)); }
+                        float eF = 0; V2 fwA = wantVel / wantVel.Len;
+                        foreach (var q2 in Pixels.Em(me.pos)) { V2 dq = q2.ponto - me.pos; if (dq.Dot(fwA) <= 0.35f * dq.Len) continue; foreach (var a2 in q2.atras) eF = MathF.Max(eF, itA.Esperados(a2, 110)); }
+                        string fx(float v) => v < 0.05f ? "~0" : v < 0.2f ? "baixa" : v < 0.6f ? "média" : "alta";
+                        m.Aud("olhou pra trás: crença atrás x frente", $"atrás {fx(eT)} · frente {fx(eF)} · costume atrás {(rT < 0.005f ? "~0" : rT < 0.03f ? "baixo" : "alto")}");
+                        if (eT >= 0.2f && ((int)(m.t / Match.DT) * 7919 + me.id * 104729) % 40 == 0)
+                        {   // exemplo concreto: de onde vem a crença de trás (último visto/ouvido de cada inimigo vivo)
+                            string ult = string.Join("; ", itA.contacts.Values.Where(c => m.agents[c.id].alive).Select(c => $"{m.agents[c.id].name} {(c.seen ? "visto" : "ouvido")} em {Region(c.pos)} há {m.t - c.t:0}s"));
+                            V2 atr = bordaQuina.atras.Length > 0 ? bordaQuina.atras[0] : bordaQuina.ponto;
+                            Match.GuardaExemplo("olhou pra trás com crença", m.seedRound, m.t, $"{me.name}({(me.IsT ? "TR" : "CT")}) em {Region(me.pos)} indo pra {Region(me.pos + fwA * 200)} ({order.name}) olhou {Region(atr)} (esperados {eT:0.00}) | vivos info: {ult}");
+                        }
+                    }
                 }
                 m.Aud("andando: mira bate na parede a <40", parede ? "sim · " + miraFonte : "não");
                 if (parede)
@@ -3212,8 +4733,22 @@ namespace CSM.Sim
                     float rq = MapData.Raio(me.pos, me.z, V2.Ang(wantAim), 450, 18f);
                     m.Aud("parede: a mira que ele QUER também bate?", (rq < 40 ? "quer olhar a parede · " : "só a mão atrasada · ") + miraFonte + (miraFonte.StartsWith("borda") && bordaQuina != null ? (bordaQuina.dp < 40 ? " (quina colada <40)" : " (quina longe)") : ""));
                 }
-                if (parede && rng.Rand() < 0.02f) Match.GuardaExemplo("andando olhando pra parede", m.seedRound, m.t, $"{me.name} em {Region(me.pos)} ({miraFonte}, {fase}, {order.name}) mira bate a {raio:0}");
+                if (parede && ((int)(m.t / Match.DT) * 7919 + me.id * 104729) % 50 == 0) Match.GuardaExemplo("andando olhando pra parede", m.seedRound, m.t, $"{me.name} em {Region(me.pos)} ({miraFonte}, {fase}, {order.name}) mira bate a {raio:0}");
             }
+        }
+        /// <summary>
+        /// Pre-fire como pro: atira no canto quando ACHA que tem gente lá (crença: esperados, ou passo ouvido perto há pouco),
+        /// não só porque poderia ter (o calor "possível" dava 88% de canto vazio — e tiro à toa entrega a posição). Quem é
+        /// mais agressivo pre-atira com menos certeza; o entry um pouco mais.
+        /// </summary>
+        bool PrefireCrenca(V2 p)
+        {
+            var it = m.intel[(int)me.team];
+            float e = it.Esperados(p, 90);
+            bool passo = false;
+            for (int i = it.heard.Count - 1; i >= 0 && m.t - it.heard[i].t < 1.5f; i--) if ((it.heard[i].p - p).Len < 80) { passo = true; break; }
+            float limiar = 0.8f - 0.2f * P.Agr(me.skill.aggression) - (me.role == Role.Entry ? 0.1f : 0);   /* crença forte: 0,45 dava 3,8 pre-fires/round quase todos em canto vazio */
+            return passo || e > limiar;
         }
         float audParedeT = -9; string pfTrasDiag = "";
         /// <summary>A mira que eu quero bate numa parede colada (andando rente à parede, quina na mesma parede mais à frente,
@@ -3300,6 +4835,15 @@ namespace CSM.Sim
                 bool euUltimo = emGrupo && !m.agents.Any(x => x != me && x.alive && x.team == me.team && (x.pos - me.pos).Len < 350 && (x.pos - alvoC).Len > (me.pos - alvoC).Len + 30);
                 if (!euFrente && euUltimo && eTras > 0.15f && !EXP.Contains("semUltimo")) pfTras = 0.5f;
                 pfTrasDiag = euFrente ? (eFrente >= 0.8f * eTras ? "frente: perigo à frente" : "frente: perigo atrás") : "atrás de colega";
+                if (EXP.Contains("costasPush") && !EXP.Contains("costasPushVelho") && !euUltimo && (order.push || me.Speed > me.MaxSpeed * 0.75f))   /* desligado: regra por posição — o usuário quer a raiz (crença) */
+                {   // entrando/correndo pra cima deles: o da frente e o do meio olham pra FRENTE (a conta de ameaça de trás vem do
+                    // calor velho — o da frente "achava perigo atrás" e virava). Só vira se tem coisa CONCRETA atrás: alguém visto
+                    // ou ouvido há pouco atrás de mim
+                    bool atrasConcreto = false;
+                    foreach (var c in itB.contacts.Values) if (m.agents[c.id].alive && m.t - c.t < 3f && (c.pos - me.pos).Dot(fw) < -40 && (c.pos - me.pos).Len < 700) { atrasConcreto = true; break; }
+                    if (!atrasConcreto && m.t - somT < 2.5f && (somP - me.pos).Dot(fw) < -40 && (somP - me.pos).Len < 500) atrasConcreto = true;
+                    if (!atrasConcreto) { pfTras = 0.02f; pfTrasDiag = "entrando: olha pra frente"; }
+                }
             }
             foreach (var q in Pixels.Em(me.pos))
             {
@@ -3309,7 +4853,25 @@ namespace CSM.Sim
                 if (th < 0.008f) continue;
                 V2 dir = (q.ponto - me.pos) / MathF.Max(1, (q.ponto - me.pos).Len);
                 float frente = dir.Dot(fw), pf = frente > 0.35f ? 1f : frente > -0.3f ? 0.6f : pfTras;
-                float sc = th * pf * (1.3f - q.dp / Pixels.MAX) * Costume(q.ponto);
+                // RAIZ do olhar pra trás: avançando onde ninguém viu, a crença pra FRENTE é ~0 (ninguém visto) e qualquer quina de
+                // trás com um fiapo de crença ganhava. Onde eu vou e ainda pode ter alguém (o calor diz que dá pra ter chegado), é
+                // o que se checa primeiro: vale um mínimo. Crença forte atrás (visto/ouvido) ainda ganha — é leitura, não regra
+                if (frente > 0.35f && wantVel.Len > me.MaxSpeed * 0.2f && EXP.Contains("frentePossivel") && !EXP.Contains("frentePossivelVelho"))   /* opt-in: TR +4,8, retake −12 */
+                {
+                    float possivel = 0; var itP = m.intel[(int)me.team];
+                    foreach (var a in q.atras) possivel = MathF.Max(possivel, itP.HeatAvg(a, 90));
+                    if (possivel > 0.004f) th = MathF.Max(th, 0.12f);
+                }
+                // o costume dos pros (de onde costumam aparecer pra quem está aqui) REFORÇA a crença, não cria ameaça onde eu
+                // acho que não tem ninguém: era ele que virava a mira pra trás do avanço (crença 0,01 atrás x 0,86 na frente)
+                float cmB = Costume(q.ponto);
+                if (EXP.Contains("costumeSemCrenca"))   /* opt-in: não mudou o olhar pra trás e o retake caiu 5 */
+                {
+                    float crB = 0; var itC = m.intel[(int)me.team];
+                    foreach (var a in q.atras) crB = MathF.Max(crB, itC.Esperados(a, 110));
+                    if (crB < 0.05f) cmB = MathF.Min(cmB, 1f);
+                }
+                float sc = th * pf * (1.3f - q.dp / Pixels.MAX) * cmB;
                 if (bordaQuina != null && m.t < bordaTrava && (q.ponto - bordaQuina.ponto).Len < 40) sc *= 6f;   // termina de checar antes de trocar de quina
                 if (frente < 0.35f && (Lotado(q.ponto) || CobertoPor(q.ponto) != null)) sc *= 0.4f;   // o time já tem essa: prefere a que ninguém olha
                 if (bordaRes != null && (q.ponto - bordaRes.Value).Len < 40) sc *= 1.4f;   // não fica pulando entre duas quinas
@@ -3367,13 +4929,19 @@ namespace CSM.Sim
         /// a mira não chegou nela, o passo cai; com a mira lá, anda de shift abrindo largo (longe da parede, fatiando o
         /// ângulo). Vale pra qualquer lugar do mapa e qualquer ordem; só a pressa de verdade (relógio, troca, defuse) corre.
         /// </summary>
-        void AbrirPixel(V2? mira)
+        void AbrirPixel(V2? mira) { long pc = P0(); AbrirPixelX(mira); P1("abrir pixel (fatiar ângulo)", pc); }
+        void AbrirPixelX(V2? mira)
         {
             var q = bordaQuina; if (mira == null || EXP.Contains("semAbrir")) return;
             float d = (mira.Value - me.pos).Len;
             if (wantVel.Len < 1 || d < 1) return;
             // o risco é o que a gente espera ter por perto, não só o valor da quina escolhida
-            if (bordaRisco < 0.03f && m.intel[(int)me.team].Esperados(me.pos, 350) < 0.25f) return;
+            // (o que se espera do lado de lá da quina: o inimigo que está atrás de mim, no meio, não conta pro canto da base)
+            V2 ladoLa = EXP.Contains("abrirVelho") ? me.pos : me.pos + (mira.Value - me.pos) / d * MathF.Min(d, 120);
+            if (bordaRisco < 0.03f && m.intel[(int)me.team].Esperados(ladoLa, EXP.Contains("abrirVelho") ? 350 : 250) < 0.25f) return;
+            // só se abre o ângulo pra DENTRO do qual se está andando: olhando de lado ou pra trás (indo embora, girando pela
+            // base) anda normal — o pro passa pelo meio olhando a janela sem parar a perna
+            if (!EXP.Contains("abrirVelho") && MathF.Abs(MathX.AngDiff((mira.Value - me.pos).Atan2, wantVel.Atan2)) > 1.2f) return;
             float err = MathF.Abs(MathX.AngDiff((mira.Value - me.pos).Atan2, me.aim));
             bool pressa = m.t < tradeUntil || m.RoundLeft < 20 || order.defuse || order.plant || m.bombPlanted && m.BombLeft < 14;
             m.Ev(err > 0.45f ? "pixel à frente sem checar (amostras)/round" : "pixel à frente checado (amostras)/round");
@@ -3413,7 +4981,18 @@ namespace CSM.Sim
 
         static int Key(Spots.Spot s) => (int)s.p.x * 10000 + (int)s.p.y;
 
-        void Face(V2 p, float pitch) { V2 d = p - me.pos; if (d.Len < 0.5f) return; wantAim = d.Atan2; hasWantAim = true; wantPitch = pitch; }
+        void Face(V2 p, float pitch)
+        {
+            V2 d = p - me.pos; if (d.Len < 0.5f) return; wantAim = d.Atan2; hasWantAim = true; wantPitch = pitch;
+            /* mira na altura: a cabeça de quem estaria em p (piso de p + olho de quem está em pé), vista do meu olho */
+            wantV = MathF.Atan2(NavGrid.ZAt(p) + 18f - (me.z + me.Eye), MathF.Max(8f, d.Len));
+        }
+        float wantV;
+        /* MIRA VERTICAL (apMiraVerticalVelho desliga): a mira tem altura (Agent.aimV). Quem segura a janela alta e é pego por alguém
+           embaixo (ou o contrário) paga o flick vertical — no tempo de reação e no erro do 1º tiro. Antes só o ângulo de
+           lado contava: inimigo em cima do janelão na direção da mira era "pré-mirado" mesmo com a mira no chão. */
+        static bool MiraVertical => !EXP.Contains("apMiraVerticalVelho");   /* padrão: A/B 2x900 nota de erros −0,10/−0,12, TR −3,4/−1,0 */
+        float FlickV(Agent e) => MathF.Abs(MathF.Atan2(e.z + e.Eye - (me.z + me.Eye), MathF.Max(8f, (e.pos - me.pos).Len)) - me.aimV) * 180 / MathF.PI;
 
         /// <summary>
         /// Gira a mira. No duelo: flick na velocidade do jogador. Reagindo (levou tiro, perdeu o inimigo de vista agora):
@@ -3423,6 +5002,7 @@ namespace CSM.Sim
         public void TurnAim(float dt)
         {
             if (!hasWantAim) return;
+            { float dvv = wantV - me.aimV, passoV = 5.2f * dt; me.aimV += MathF.Abs(dvv) < passoV ? dvv : MathF.Sign(dvv) * passoV; }   /* altura da mira acompanha (~300°/s) */
             float diff = MathX.AngDiff(wantAim, me.aim);
             bool duelo = target != null, reagindo = m.t < levouAte || m.t - lastSeenT < 1.6f || EXP.Contains("miraRapida");
             float vmax = duelo ? me.skill.flick : reagindo ? me.skill.flick * 0.6f : 320f;   // graus/s

@@ -1,0 +1,21 @@
+﻿# pesos aprovados — treino v3 de 2026-10-30 (36 passos pareados x 48 rounds; validação 9,3 -> 4,3; bots mais ativos)
+jiggle         = 3        # jiggle peek: sai do cover, olha o ângulo e volta
+wide           = 2.017    # wide peek: sai largo pra pegar info ou duelo
+ajeitar        = 0.8      # ajeitar: anda devagarinho sem perder a mira
+trocar         = 1.928    # trocar de ângulo
+avancar        = 1.837    # avançar pra tomar espaço
+quieto         = 0.423    # ficar quieto segurando apertado
+pausa          = 1.281    # pausa média entre uma jogada e outra (s)
+peekDist       = 24.755   # até onde vai o jiggle/wide (unidades)
+cansaLugar     = 13.687   # segundos no mesmo lugar até querer trocar
+sedeInfo       = 1.17     # quanto a chance de ter inimigo (calor) puxa pra pegar info
+cover          = 1        # segurar do cover e dar peek (1) ou segurar aberto (0)
+memoria        = 19.842   # segundos pra uma área limpa voltar a ser suspeita (memória do time)
+sprayPeito     = 3.372    # a partir de qual bala do spray a mira desce pro peito
+strafeRajada   = 1        # chance de strafe entre as rajadas
+tExecDefault   = 58       # default: hora de decidir o bomb (s) — 2026-10-31: ritmo de pro (era 39, entravam cedo demais)
+tExec          = 44       # execute: hora de entrar (s) (era 25,7)
+tFake          = 54       # fake: hora da execução de verdade (s) (era 45)
+ctAgressao     = 0.773    # chance de alguém fazer jogada agressiva cedo
+ctRecua        = 15.625   # agressão cedo: volta pra posição depois de (s)
+ctGiro         = 3.395    # contatos num bomb pra girar

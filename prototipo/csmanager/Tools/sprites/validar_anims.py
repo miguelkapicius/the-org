@@ -19,8 +19,8 @@ ARGV = sys.argv[1:]
 PASTA = ARGV[0] if ARGV else r"D:\unity\CSManager\Logs\bonecos3d"
 TIMES = ["ct", "tr"] if len(ARGV) < 2 or ARGV[1] == "ambos" else [ARGV[1]]
 FILTRO = re.compile(ARGV[2]) if len(ARGV) > 2 else None
-ARMAS = ["AK47", "AWP", "Deagle", "Glock", "M4A1S", "M4A4", "MAC10", "MP9", "USP"]
-PISTOLAS = {"Deagle", "Glock", "USP"}
+ARMAS = ["AK47", "AWP", "Deagle", "Glock", "M4A1S", "M4A4", "MAC10", "MP9", "USP", "Tec9", "FiveSeven", "P250", "Galil", "Famas"]
+PISTOLAS = {"Deagle", "Glock", "USP", "Tec9", "FiveSeven", "P250"}
 
 # tolerâncias (unidades do Blender: o boneco tem ~0,75 de altura)
 NUCLEO = 0.88        # vértice dentro de 88% do raio da outra peça = atravessou de verdade (não só encostou)

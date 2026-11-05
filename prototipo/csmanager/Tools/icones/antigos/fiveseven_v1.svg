@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 168">
+  <!-- Five-SeveN. Proporção do CS2: ferrolho alto com a traseira arredondada e a frente chanfrada, dentes do trilho
+       embaixo da frente, guarda-mato de gancho, punho curto e largo com CORCOVA nas costas. Risquinhos da casa. -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="250" height="168">
+      <rect width="250" height="168" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round" stroke-width="2">
+        <path d="M44 36 L44 58"/><path d="M51 36 L51 58"/><path d="M58 36 L58 58"/>
+        <path d="M30 66.5 L226 66.5" stroke-width="2.4"/>
+        <path d="M44 152 L88 157" stroke-width="2.2"/>
+      </g>
+      <g fill="#000">
+        <path d="M180 74 L186 74 L186 79 L180 79 Z"/><path d="M193 74 L199 74 L199 79 L193 79 Z"/><path d="M206 74 L212 74 L212 79 L206 79 Z"/><path d="M219 74 L225 74 L225 79 L219 79 Z"/>
+        <path d="M122 80 L158 80 Q161 80 160 84 L157 93 Q155 98 149 98 L128 98 Q121 98 121 92 Z"/>
+      </g>
+      <path d="M131 80 Q137 86 133 94" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M28 40 Q28 28 40 28 L222 28 L232 38 L232 67 L28 67 Z"/>
+    <path d="M36 24 L46 24 L46 28 L36 28 Z"/><path d="M214 24 L220 24 L220 28 L214 28 Z"/>
+    <path d="M30 66 L230 66 L230 78 L172 79 L112 78 Z"/>
+    <path d="M110 74 L166 74 Q172 74 170 82 L164 98 Q160 106 150 106 L122 106 Q110 106 110 96 Z"/>
+    <path d="M28 66 L114 70 L112 100 Q104 104 102 116 L95 154 Q94 162 86 162 L38 157 Q28 156 29 147 C32 128 34 112 36 102 C37 94 28 88 22 82 Q18 72 28 66 Z"/>
+  </g>
+</svg>

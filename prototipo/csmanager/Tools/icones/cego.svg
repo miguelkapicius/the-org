@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152">
+  <!-- quem matou estava cego: olho com o clarão da flash -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="152" height="152">
+      <rect width="152" height="152" fill="#fff"/>
+      <circle cx="76" cy="96" r="14" fill="#000"/>
+      <circle cx="76" cy="96" r="6" fill="#fff"/>
+    </mask>
+  </defs>
+  <path d="M14 96 Q76 40 138 96 Q76 152 14 96 Z" fill="#fff" mask="url(#c)"/>
+  <g stroke="#fff" stroke-width="6" stroke-linecap="round">
+    <path d="M76 18 L76 44"/><path d="M36 30 L50 52"/><path d="M116 30 L102 52"/><path d="M12 56 L32 66"/><path d="M140 56 L120 66"/>
+  </g>
+</svg>
