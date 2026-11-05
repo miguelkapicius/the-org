@@ -41,8 +41,6 @@ namespace CSM.ManagerUI
         int filtroPainel = 1;   // 0 todos, 1 titulares, 2 reservas
         int filtroElenco;       // 0 todos, 1 titulares, 2 reservas
         int filtroFuncao;       // 0 todas, depois uma por função
-        Jogador menuDe;         // jogador cujo menu "⋮" está aberto
-        Jogador selecionado;    // jogador escolhido na escalação (o próximo clique troca de lugar)
         readonly List<Jogador> comparar = new List<Jogador>();
         int colOrdem = -1; bool ordemAsc;   // ordenação das tabelas (-1 = ordem do elenco / do mercado)
         Resultado resumoAberto;             // resumo de partida antiga aberto pelo histórico
@@ -118,15 +116,6 @@ namespace CSM.ManagerUI
             doc.rootVisualElement.Add(tela);
             tela.focusable = true;
             tela.RegisterCallback<KeyDownEvent>(AoTeclar);
-            // clicar fora do menu "⋮" fecha o menu
-            tela.RegisterCallback<PointerDownEvent>(e =>
-            {
-                if (menuDe == null) return;
-                for (var t = e.target as VisualElement; t != null; t = t.parent)
-                    if (t.ClassListContains("dropdown") || t.ClassListContains("kebab")) return;
-                menuDe = null; Mostrar();
-            }, TrickleDown.TrickleDown);
-
             janela = E("janela");
             tela.Add(janela);
             LigarDica();
@@ -166,7 +155,7 @@ namespace CSM.ManagerUI
                     if (aba == Aba.PreMatch) Ir(Aba.Serie);
                     else if (aba == Aba.Serie || aba == Aba.PosPartida) Ir(Aba.Painel);
                     else if (aba == Aba.Calendario && campAberto != null) { campAberto = null; Mostrar(); }
-                    else { menuDe = null; selecionado = null; Mostrar(); }
+                    else { Mostrar(); }
                     break;
                 case KeyCode.Return: case KeyCode.KeypadEnter:
                     if (aba == Aba.PreMatch && !c.Falido) Assistir();
@@ -317,7 +306,7 @@ namespace CSM.ManagerUI
             {
                 if (!confirmandoNova) { confirmandoNova = true; Mostrar(); return; }
                 confirmandoNova = false; Carreira.Atual = Carreira.Nova(seed + c.Semana + c.Temporada * 53 + 101); c = Carreira.Atual;
-                comparar.Clear(); selecionado = null; menuDe = null; resumoAberto = null; campAberto = null; Salvar();
+                comparar.Clear(); resumoAberto = null; campAberto = null; Salvar();
                 aba = Aba.Painel; Mostrar(); Toast("Carreira nova começada.");
             });
             m.Add(nova);
@@ -360,7 +349,6 @@ namespace CSM.ManagerUI
         /// <summary>Mostra o resultado de uma ação: erro vira aviso vermelho, sucesso vira aviso verde (que some sozinho).</summary>
         void Resposta(string erro, string ok, string acaoRotulo = null, Action acao = null)
         {
-            menuDe = null;
             if (erro == null) Salvar();
             Mostrar();
             if (erro != null) Toast(erro, true); else Toast(ok, false, acaoRotulo, acao);
@@ -370,7 +358,7 @@ namespace CSM.ManagerUI
         {
             if (a != Aba.Calendario) campAberto = null;
             if (a == Aba.Calendario && aba != Aba.Calendario) { mesCal = -1; calAba = 0; }   // abre sempre no mês atual
-            aba = a; menuDe = null; selecionado = null; colOrdem = -1; confirmandoNova = false;
+            aba = a; colOrdem = -1; confirmandoNova = false;
             if (a != Aba.PosPartida) resumoAberto = null;
             Mostrar();
         }
@@ -663,33 +651,29 @@ namespace CSM.ManagerUI
         }
 
         // ================================================================================================ elenco
+        /// <summary>O elenco só em cartões: titulares e reservas, cada cartão com os botões à vista (escalar ou tornar reserva, comparar, vender).</summary>
         void TelaElenco()
         {
-            conteudo.Add(Escalacao());
+            conteudo.Add(ResumoEscalacao());
             var cmp = Comparacao(); if (cmp != null) conteudo.Add(cmp);
 
-            conteudo.Add(L("Todos os jogadores", "h2", "topo-h2"));
-            conteudo.Add(Abas(FILTROS_ELENCO, filtroElenco, i => { filtroElenco = i; menuDe = null; Mostrar(); }));
-            var todos = c.elenco.ToList();
-            IEnumerable<Jogador> lista = filtroElenco == 1 ? todos.Where(c.Titular) : filtroElenco == 2 ? todos.Where(j => !c.Titular(j)) : todos;
-            var linhasVisiveis = lista.ToList();
-            var (tabela, linhas) = Tabela(linhasVisiveis, "Status", null,
-                j => { bool tit = c.Titular(j); return Selo(tit ? "TITULAR" : "RESERVA", tit ? "laranja" : null); },
-                MenuJogador, null, true);
-            int idx = menuDe == null ? -1 : linhas.IndexOf(menuDe);
-            if (idx >= 0) tabela.Add(Dropdown(menuDe, idx));
-            conteudo.Add(tabela);
-            conteudo.Add(L("Clique no nome de uma coluna para ordenar. UTIL. = utilitária, FRIO = sangue-frio, POT. = potencial (o teto de evolução). Os atributos são a leitura do que a IA do bot usa na partida.", "legenda"));
+            conteudo.Add(L("Titulares", "h2", "topo-h2"));
+            CartoesElenco(c.Titulares.ToList());
+
+            int vagas = c.ElencoMax - Provisorio.TITULARES;
+            var reservas = c.elenco.Skip(Provisorio.TITULARES).ToList();
+            conteudo.Add(L("Reservas (" + reservas.Count + "/" + vagas + ")", "h2"));
+            if (reservas.Count == 0) conteudo.Add(L("Sem reservas. Contrate no mercado: se alguém sair, o time fica incompleto.", "f15", "suave"));
+            else CartoesElenco(reservas);
+            conteudo.Add(L("Os atributos são a leitura do que a IA do bot usa na partida. Cansaço acima de 35 reduz a habilidade; potencial é o teto de evolução.", "legenda"));
         }
 
-        /// <summary>Os 5 titulares e as reservas como cartões: clicar em um jogador e depois em outro troca os dois de lugar, e o
-        /// efeito na força e na chance de vitória aparece ANTES de clicar no segundo.</summary>
-        VisualElement Escalacao()
+        /// <summary>Força, chance de vitória e cobertura de funções do time titular.</summary>
+        VisualElement ResumoEscalacao()
         {
             var card = E("escala");
-
             var topo = E("escala-topo");
-            topo.Add(L("Escalação titular", "f20", "negrito"));
+            topo.Add(L("Escalação", "f20", "negrito"));
             var res = E("escala-res");
             res.Add(L("Força " + c.Forca, "f17", "negrito"));
             var adv = c.Adversario;
@@ -706,67 +690,75 @@ namespace CSM.ManagerUI
             }
             topo.Add(chips);
             card.Add(topo);
-
-            var fila = E("fila-slots");
-            foreach (var j in c.Titulares) fila.Add(Slot(j));
-            card.Add(fila);
-
-            int vagasReservas = c.ElencoMax - Provisorio.TITULARES;
-            card.Add(L("Reservas (" + Math.Max(0, c.elenco.Count - Provisorio.TITULARES) + "/" + vagasReservas + ")", "f16", "negrito", "suave", "banco-tit"));
-            var banco = E("fila-slots");
-            var reservas = c.elenco.Skip(Provisorio.TITULARES).ToList();
-            for (int k = 0; k < 5; k++)
-            {
-                if (k < reservas.Count) banco.Add(Slot(reservas[k]));
-                else if (k < vagasReservas) { var v = E("slot", "vazio"); v.Add(L("Vaga livre", "f15", "apagado")); v.style.justifyContent = Justify.Center; v.style.minHeight = 150; banco.Add(v); }
-                else banco.Add(E("slot", "vazio", "oculto"));
-            }
-            card.Add(banco);
-
-            dicaTroca = L("", "dica-troca");
+            dicaTroca = L("", "dica-troca"); dicaTroca.style.marginTop = 0;
             card.Add(dicaTroca);
-            AtualizarDicaTroca(null);
+            PreverTroca(null);
             return card;
         }
 
-        VisualElement Slot(Jogador j)
+        /// <summary>Cartões do elenco em fileiras de 5 (a última fileira é completada com vazios para manter a largura).</summary>
+        void CartoesElenco(List<Jogador> lista)
         {
-            var s = E("slot"); if (selecionado == j) s.AddToClassList("sel");
-            var topo = E("slot-topo");
-            var fn = E("slot-fn"); fn.Add(L(Fmt.FuncaoCurta(j.funcao))); topo.Add(fn);
-            topo.Add(L(j.Overall.ToString(), "slot-ovr", ClasseNota(j.Overall)));
-            s.Add(topo);
-            s.Add(Retrato(j.nome, "retrato-p"));
-            s.Add(L(j.nome, "slot-nome"));
-            s.Add(L(j.idade + " anos", "f14", "suave"));
-            var cs = L("cansaço " + (int)j.cansaco, "f13", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "apagado"); cs.style.marginTop = 2; s.Add(cs);
-            Clicavel(s, () => EscolherParaTroca(j));
-            s.RegisterCallback<PointerEnterEvent>(_ => AtualizarDicaTroca(j));
-            s.RegisterCallback<PointerLeaveEvent>(_ => AtualizarDicaTroca(null));
-            return s;
+            for (int i = 0; i < lista.Count; i += 5)
+            {
+                var fila = E("fila-cards");
+                for (int k = 0; k < 5; k++) fila.Add(i + k < lista.Count ? CartaoElenco(lista[i + k]) : E("card-j", "vazio"));
+                conteudo.Add(fila);
+            }
         }
 
-        void EscolherParaTroca(Jogador j)
+        VisualElement CartaoElenco(Jogador j)
         {
-            if (selecionado == null || selecionado == j) { selecionado = selecionado == j ? null : j; Mostrar(); return; }
-            var a = selecionado; selecionado = null;
-            c.Trocar(a, j);
-            Salvar(); Mostrar();
-            Toast(a.nome + " e " + j.nome + " trocaram de lugar. Força " + c.Forca + ".");
+            bool tit = c.Titular(j);
+            var cj = E("card-j"); if (comparar.Contains(j)) cj.AddToClassList("comp");
+            var midia = E("midia");
+            midia.Add(Retrato(j.nome, "retrato-fill"));
+            var st = Selo(tit ? "TITULAR" : "RESERVA", tit ? "laranja" : null); st.AddToClassList("midia-selo"); midia.Add(st);
+            var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
+            cj.Add(midia);
+
+            var info = E("info");
+            var nome = E("linha-h"); var nm = L(j.nome, "info-nome"); nm.style.flexGrow = 1; nome.Add(nm);
+            nome.Add(L(Fmt.FuncaoCurta(j.funcao), "f13", "negrito", "suave")); info.Add(nome);
+            info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f13", "suave", "info-meta"));
+            info.Add(AtributoLinha("Mira", j.Mira)); info.Add(AtributoLinha("Reflexo", j.Reflexo)); info.Add(AtributoLinha("Spray", j.Spray));
+            info.Add(AtributoLinha("Utilitária", j.Utilitaria)); info.Add(AtributoLinha("Frio", j.SangueFrio));
+            var fad = E("attr"); fad.Add(L("Cansaço", "attr-nome")); var bc = BarraCansaco(j.cansaco); bc.style.flexGrow = 1; fad.Add(bc); fad.Add(L(((int)j.cansaco).ToString(), "attr-num", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "t")); info.Add(fad);
+            var pot = L("Potencial " + j.potencial + " · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", j.potencial >= 85 ? "verde" : "suave"); pot.style.marginTop = 6; info.Add(pot);
+            cj.Add(info);
+
+            // ações à vista
+            var ac = E("card-acoes");
+            var jj = j;
+            var principal = BotaoMini(tit ? "Reserva" : "Escalar", () =>
+            {
+                if (jj == null) return;
+                if (tit) c.MandarParaReserva(jj); else c.TornarTitular(jj);
+                Salvar(); Mostrar(); Toast(jj.nome + (tit ? " agora é reserva." : " agora é titular.") + " Força " + c.Forca + ".");
+            }, !tit, tit ? c.elenco.Count > Provisorio.TITULARES : true);
+            principal.RegisterCallback<PointerEnterEvent>(_ => PreverTroca(jj));
+            principal.RegisterCallback<PointerLeaveEvent>(_ => PreverTroca(null));
+            ac.Add(principal);
+            var cmpBtn = BotaoMini("", () => AlternarComparar(jj), comparar.Contains(j), true, "swap"); ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador"); ac.Add(cmpBtn);
+            var vender = BotaoMini("Vender", () => Vender(jj), false, c.elenco.Count > Provisorio.TITULARES, "tag"); vender.AddToClassList("perigo");
+            ComDica(vender, c.elenco.Count > Provisorio.TITULARES ? "Vende o jogador por " + Fmt.Dinheiro(j.Venda) + " (dá para desfazer logo depois)." : "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.");
+            ac.Add(vender);
+            cj.Add(ac);
+            return cj;
         }
 
-        void AtualizarDicaTroca(Jogador sobre)
+        /// <summary>Mostra, antes de clicar, o que muda na força e na chance de vitória se o jogador for escalado ou for para a reserva.</summary>
+        void PreverTroca(Jogador j)
         {
             if (dicaTroca == null) return;
-            if (selecionado == null) { dicaTroca.text = "Clique em um jogador e depois em outro para trocá-los de lugar; o efeito na força aparece antes de confirmar."; return; }
-            if (sobre == null || sobre == selecionado) { dicaTroca.text = selecionado.nome + " escolhido. Clique em outro jogador para trocar de lugar (ou no mesmo para cancelar)."; return; }
-            var lista = c.elenco.ToList();
-            int i = lista.IndexOf(selecionado), k = lista.IndexOf(sobre);
-            lista[i] = sobre; lista[k] = selecionado;
-            int depois = Carreira.ForcaDe(lista.Take(Provisorio.TITULARES));
-            int dif = depois - c.Forca;
-            dicaTroca.text = "Trocar " + selecionado.nome + " e " + sobre.nome + ": força " + c.Forca + " → " + depois + " (" + (dif > 0 ? "+" : "") + dif
-                + "), chance de vitória " + Pct(c.ChanceVitoria()) + " → " + Pct(c.ChanceVitoria(depois)) + ".";
+            if (j == null) { dicaTroca.text = "Passe o mouse em Escalar ou Tornar reserva para ver o efeito na força e na chance de vitória antes de confirmar."; return; }
+            Jogador sai, entra;
+            if (c.Titular(j)) { sai = j; entra = c.elenco.Skip(Provisorio.TITULARES).OrderByDescending(r => r.Overall).FirstOrDefault(); }
+            else { entra = j; sai = c.Titulares.OrderBy(t => t.Overall).First(); }
+            if (entra == null) { dicaTroca.text = "Não há reserva para entrar no lugar de " + j.nome + "."; return; }
+            int depois = c.ForcaCom(entra, sai), dif = depois - c.Forca;
+            dicaTroca.text = entra.nome + " entra no lugar de " + sai.nome + ": força " + c.Forca + " → " + depois + " (" + (dif > 0 ? "+" : "") + dif + "), chance de vitória "
+                + Pct(c.ChanceVitoria()) + " → " + Pct(c.ChanceVitoria(depois)) + ".";
         }
 
         // ------------------------------------------------------------------ comparação
@@ -774,7 +766,7 @@ namespace CSM.ManagerUI
         {
             if (comparar.Contains(j)) comparar.Remove(j);
             else { if (comparar.Count >= 2) comparar.RemoveAt(0); comparar.Add(j); }
-            menuDe = null; Mostrar();
+            Mostrar();
         }
 
         VisualElement Comparacao()
@@ -830,7 +822,7 @@ namespace CSM.ManagerUI
             Clicavel(cab, () =>
             {
                 if (colOrdem == col) { if (!ordemAsc) ordemAsc = true; else colOrdem = -1; } else { colOrdem = col; ordemAsc = false; }
-                menuDe = null; Mostrar();
+                Mostrar();
             });
             if (dica != null) ComDica(cab, dica);
             cel.Add(cab);
@@ -893,48 +885,16 @@ namespace CSM.ManagerUI
             return (tab, linhas);
         }
 
-        /// <summary>Botão "⋮" que abre o menu com as ações do jogador (como o "Copy link / Share" da referência).</summary>
-        VisualElement MenuJogador(Jogador j)
-        {
-            bool aberto = menuDe == j;
-            var k = E("kebab"); if (aberto) k.AddToClassList("on");
-            k.Add(new Icone("kebab", 22));
-            Clicavel(k, () => { menuDe = aberto ? null : j; Mostrar(); });
-            return k;
-        }
-
-        /// <summary>O menu aberto é um elemento à parte, no fim da tabela (fica por cima de todas as linhas sem reordená-las).</summary>
-        VisualElement Dropdown(Jogador j, int linha)
-        {
-            var dd = E("dropdown");
-            dd.style.top = 44 + linha * 68 + 4;   // altura do cabeçalho + linhas acima (ver .tr no USS)
-            bool tit = c.Titular(j);
-            bool temReserva = c.elenco.Count > Provisorio.TITULARES;
-            if (tit) dd.Add(ItemMenu("down", "Tornar reserva", temReserva, false, () => { menuDe = null; c.MandarParaReserva(j); Salvar(); Mostrar(); Toast(j.nome + " agora é reserva. Força " + c.Forca + "."); }));
-            else dd.Add(ItemMenu("up", "Escalar como titular", true, false, () => { menuDe = null; c.TornarTitular(j); Salvar(); Mostrar(); Toast(j.nome + " agora é titular. Força " + c.Forca + "."); }));
-            dd.Add(ItemMenu("swap", comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador", true, false, () => AlternarComparar(j)));
-            dd.Add(ItemMenu("tag", "Vender por + " + Fmt.Dinheiro(j.Venda), c.elenco.Count > Provisorio.TITULARES, true, () => Vender(j)));
-            return dd;
-        }
-
         void Vender(Jogador j)
         {
             var erro = c.Vender(j);
-            comparar.Remove(j); if (selecionado == j) selecionado = null;
+            comparar.Remove(j); 
             Resposta(erro, j.nome + " foi vendido por + " + Fmt.Dinheiro(j.Venda) + ".", "Desfazer", () =>
             {
                 var e2 = c.DesfazerVenda();
                 Salvar(); Mostrar();
                 Toast(e2 ?? j.nome + " voltou para o elenco.", e2 != null);
             });
-        }
-
-        static VisualElement ItemMenu(string icone, string texto, bool ativo, bool perigo, Action acao)
-        {
-            var it = E("dd-item"); if (perigo) it.AddToClassList("perigo"); if (!ativo) it.AddToClassList("off");
-            it.Add(new Icone(icone, 19)); it.Add(L(texto));
-            if (ativo) Clicavel(it, acao);
-            return it;
         }
 
         // ================================================================================================ mercado
@@ -1034,9 +994,10 @@ namespace CSM.ManagerUI
                 ("painel", () => { aba = Aba.Painel; filtroPainel = 1; }, null),
                 ("calendario", () => aba = Aba.Calendario, null),
                 ("calendario-detalhe", () => { aba = Aba.Calendario; campAberto = c.CampeonatosDoClube.FirstOrDefault(x => x.iniciado) ?? c.CampeonatosDoClube.First(); }, null),
-                ("elenco", () => { aba = Aba.Elenco; selecionado = c.elenco[0]; comparar.Clear(); comparar.Add(c.elenco[1]); comparar.Add(c.elenco[5]); }, () => AtualizarDicaTroca(c.elenco[5])),
-                ("treino", () => { aba = Aba.Treino; selecionado = null; comparar.Clear(); }, null),
-                ("mercado", () => { aba = Aba.Mercado; colOrdem = -1; menuDe = null; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
+                ("elenco", () => { aba = Aba.Elenco; comparar.Clear(); }, () => PreverTroca(c.elenco[5])),
+                ("elenco-comparar", () => { aba = Aba.Elenco; comparar.Clear(); comparar.Add(c.elenco[1]); comparar.Add(c.elenco[5]); }, null),
+                ("treino", () => { aba = Aba.Treino; comparar.Clear(); }, null),
+                ("mercado", () => { aba = Aba.Mercado; colOrdem = -1; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("scouts", () => aba = Aba.Scouts, null),
                 ("serie", () => { c.PrepararSerie(); aba = Aba.Serie; }, null),
                 ("serie-veto-auto", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.Serie; }, null),
@@ -1051,7 +1012,6 @@ namespace CSM.ManagerUI
             };
             foreach (var (nome, preparar, depois) in passos)
             {
-                menuDe = null; selecionado = null;
                 preparar();
                 Mostrar();
                 depois?.Invoke();

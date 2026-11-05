@@ -601,3 +601,15 @@
 .prox-item { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
 .prox-item:hover { background-color: #222225; }
 .prox-resumo { margin-top: 6px; padding-top: 10px; border-top-width: 1px; border-top-color: var(--linha); }
+
+
+/* ======================================================================================================
+   Elenco só em cartões: selo de status, botões à vista
+   ====================================================================================================== */
+.midia-selo { position: absolute; left: 8px; top: 8px; }
+.card-j.comp { border-color: var(--azul); }
+.card-acoes { flex-direction: row; align-items: center; margin-top: 12px; padding: 0 4px 2px 4px; }
+.card-acoes > .btn-mini { margin-right: 6px; }
+.btn-mini.perigo > .t { color: var(--vermelho); }
+.btn-mini.perigo > .ic { color: var(--vermelho); }
+.btn-mini.perigo.desligado > .t { color: #5d5d66; }
