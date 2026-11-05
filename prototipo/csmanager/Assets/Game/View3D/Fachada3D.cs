@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using CSM.Map;
 using CSM.View;
@@ -18,9 +19,15 @@ namespace CSM.View3D
     {
         static readonly int[] PINTADOS = { 5, 8, 9, 11, 12, 13, 17, 18, 19, 30, 32, 41 };
 
+        /// <summary>Onde vão as plantas de verdade (Natureza3D): ponto da boca do vaso (Unity), largura (jogo), modelos, semente.</summary>
+        public static readonly List<(Vector3 pos, float largura, string[] opcoes, int sem)> Plantas = new List<(Vector3, float, string[], int)>();
+        static readonly string[] PENDENTES = { "Fern_1" };   // vaso de parede: só a samambaia caindo (a flor roxa deitada ficava solta na parede)
+        static readonly string[] DE_PORTA = { "Bush_Common", "Bush_Common_Flowers", "Plant_1", "Flower_3_Group", "Flower_4_Group" };
+
         /// <summary>Tira a pintura dos enfeites (volta a parede) e monta os enfeites 3D. G é alterado.</summary>
         public static GameObject Montar(byte[] G, Material mat, Transform pai)
         {
+            Plantas.Clear();
             int NX = MapData.NX, NY = MapData.NY, NZ = MapVoxels.NZ;
             var walk = MapData.walk; var floor = MapData.floor;
             int Top(int x, int y) => walk[x, y] ? floor[x, y] : (MapData.solid[x, y] > 0 ? MapData.solid[x, y] : MapData.BlockH(x, y));
@@ -63,20 +70,40 @@ namespace CSM.View3D
                     var face = new Vector3(x + (fx ? 1f : 0.5f), y + (fx ? 0.5f : 1f), fz);
                     int semente = x * 7919 + y * 104729;
                     if (dbay && k == 12) Toldo(o, face, n, t, semente);
-                    if (dbay && (k == 6 || k == 23)) VasoPorta(o, face, n, t, semente);
-                    if (H >= 42 && k == 50) ArCondicionado(o, face + Vector3.forward * (H - 11), n, t);
+                    // enfeite atrás de caixa/barril encostado na parede não aparece (ficava uma flor saindo atrás da caixa)
+                    bool tapado = Tapado(face, n, t);
+                    // parede reta dos dois lados (10 casas): na quina as duas paredes caíam no mesmo sorteio e ganhavam o
+                    // enfeite grudado, um de cada lado (usuário: janela "duplicada" na quina do bomb B)
+                    bool reta = true;
+                    for (int d = -10; d <= 10 && reta; d++)
+                    {
+                        int xx = fx ? x : x + d, yy = fx ? y + d : y, ux = fx ? xx + 1 : xx, uy = fx ? yy : yy + 1;
+                        reta = In(xx, yy) && In(ux, uy) && !walk[xx, yy] && walk[ux, uy] && floor[ux, uy] == fz;
+                    }
+                    if (dbay && (k == 6 || k == 23) && !tapado) VasoPorta(o, face, n, t, semente);
+                    // (ar-condicionado saiu: usuário achou feio; parede fica lisa)
                     if (dbay && k == 25) Lanterna(o, face + Vector3.forward * 23, n, t, true);
-                    if (H >= 30 && k == 42)
+                    if (H >= 30 && k == 42 && !tapado && reta)
                         switch (v)
                         {
                             case 0: Tapete(o, face, n, t, semente); break;
                             case 1: Vaso(o, face, n, t, semente); break;
                             case 2: Prateleira(o, face, n, t, semente); break;
-                            case 3: Janela(o, face, n, t, semente); break;
+                            case 3: break;   // a janelinha com floreira saiu (usuário: "horrível"); a parede fica lisa
                             case 4: Lanterna(o, face + Vector3.forward * 19, n, t, false); Zellige(o, face, n, t, semente); break;
                         }
                 }
             return o.Montar("Enfeites de fachada", mat, pai);
+        }
+
+        /// <summary>Tem cobertura (caixa, barril, sacos...) encostada na parede na frente deste ponto?</summary>
+        static bool Tapado(Vector3 face, Vector3 n, Vector3 t)
+        {
+            var a = face + n * 0.5f - t * 9; var b = face + n * 12f + t * 9;
+            float x0 = Mathf.Min(a.x, b.x), x1 = Mathf.Max(a.x, b.x), y0 = Mathf.Min(a.y, b.y), y1 = Mathf.Max(a.y, b.y);
+            foreach (var c in MapData.covers)
+                if (c.r.x0 < x1 && c.r.x1 > x0 && c.r.y0 < y1 && c.r.y1 > y0) return true;
+            return false;
         }
 
         // ------------------------------------------------------------------ jogo -> Unity
@@ -120,19 +147,8 @@ namespace CSM.View3D
             var b0 = f + n * 2.6f + Vector3.forward * 14.9f;
             o.Cilindro(P(b0), D(Vector3.forward * 3.4f), 1.4f * MalhaMapa.ESC, 2.0f * MalhaMapa.ESC, 10, BARRO, BARRO_E);
             o.Cilindro(P(b0 + Vector3.forward * 3.1f), D(Vector3.forward * 0.6f), 2.15f * MalhaMapa.ESC, 2.15f * MalhaMapa.ESC, 10, BARRO_E);
-            // planta: tufo em cima e ramas caindo pela frente
-            for (int i = 0; i < 6; i++)
-            {
-                float a = i * 1.05f + (float)rng.NextDouble();
-                o.Bola(P(b0 + Vector3.forward * (4.2f + (float)rng.NextDouble() * 1.4f) + (t * Mathf.Cos(a) + n * Mathf.Sin(a) * 0.7f) * 1.5f),
-                       Vector3.one * (1.3f + (float)rng.NextDouble() * 0.6f) * MalhaMapa.ESC, i % 2 == 0 ? VERDE : VERDE_E, 8);
-            }
-            for (int r = 0; r < 3; r++)
-            {
-                var c = b0 + n * 1.6f + t * ((r - 1) * 1.3f);
-                for (int j = 0; j < 4; j++)
-                    o.Bola(P(c + Vector3.forward * (3.2f - j * 1.5f) + n * (0.15f * j)), Vector3.one * (0.95f - j * 0.12f) * MalhaMapa.ESC, j % 2 == 0 ? VERDE : VERDE_E, 6);
-            }
+            // planta de verdade (pack da Quaternius) saindo da boca do vaso — no lugar das bolotas verdes geradas
+            Plantas.Add((P(b0 + Vector3.forward * 3.4f), 7f, PENDENTES, sem));
         }
 
         static void Prateleira(Obra3D o, Vector3 f, Vector3 n, Vector3 t, int sem)
@@ -224,12 +240,8 @@ namespace CSM.View3D
             var b = f + n * 1.5f;   // encostado: sai no máximo 2,9 do muro (o boneco passa a 4 dele)
             o.Cilindro(P(b), D(Vector3.forward * 4.2f), 0.9f * MalhaMapa.ESC, 1.3f * MalhaMapa.ESC, 10, BARRO, BARRO_E);
             o.Cilindro(P(b + Vector3.forward * 3.9f), D(Vector3.forward * 0.6f), 1.4f * MalhaMapa.ESC, 1.4f * MalhaMapa.ESC, 10, BARRO_E);
-            for (int i = 0; i < 5; i++)
-            {
-                float a = i * 1.26f + (float)rng.NextDouble();
-                o.Bola(P(b + Vector3.forward * (6f + (float)rng.NextDouble() * 2.2f) + (t * Mathf.Cos(a) + n * Mathf.Sin(a) * 0.5f) * 0.9f),
-                       Vector3.one * (1.2f + (float)rng.NextDouble() * 0.5f) * MalhaMapa.ESC, i % 2 == 0 ? VERDE : VERDE_E, 8);
-            }
+            // moita/planta/flor de verdade (pack da Quaternius) na boca do vaso
+            Plantas.Add((P(b + Vector3.forward * 4.2f), 9f, DE_PORTA, sem));
         }
 
         /// <summary>Ar-condicionado velho no alto da parede (caixa clara, grade escura, cano descendo).</summary>

@@ -20,7 +20,8 @@ os.makedirs(OUT, exist_ok=True)
 # cano e corte de altura em fração do comprimento; None = fundo do guarda-mão). Medido com perfil_armas.py.
 # tempos do CS2 (recarga s, cadência RPM) x 0,9 = nossos; mesma fonte do Assets/Game/Sim/WeaponStats.cs
 CS2 = {"AK47": (2.4, 600), "M4A4": (3.1, 666.67), "M4A1S": (3.1, 600), "AWP": (3.7, 41.24),
-       "MP9": (2.1, 857.14), "MAC10": (2.6, 800), "USP": (2.2, 352.94), "Glock": (2.3, 400), "Deagle": (2.2, 266.67)}
+       "MP9": (2.1, 857.14), "MAC10": (2.6, 800), "USP": (2.2, 352.94), "Glock": (2.3, 400), "Deagle": (2.2, 266.67),
+       "Tec9": (2.42, 500), "FiveSeven": (2.2, 400), "P250": (2.2, 400), "Galil": (3.0, 666.67), "Famas": (3.3, 666.67)}
 RELOAD_S = {w: r * 0.9 for w, (r, _) in CS2.items()}
 SHOT_S = {w: 60.0 / rpm * 0.9 for w, (_, rpm) in CS2.items()}
 FPS = 12   # quadros por segundo das animações renderizadas
@@ -33,7 +34,15 @@ WEAP = {
     "MAC10": dict(L=0.36, grip=(0.50, 0.58), fore=(0.74, 0.84), kind="smg", mag=(0.56, 0.68, -0.27)),
     "USP":   dict(L=0.34, grip=(0.03, 0.18), fore=(0.03, 0.18), kind="pistol", mag=(0.0, 0.2, -0.30)),
     "Glock": dict(L=0.24, grip=(0.05, 0.28), fore=(0.05, 0.28), kind="pistol", mag=(0.0, 0.3, -0.48)),
-    "Deagle": dict(L=0.27, grip=(0.04, 0.28), fore=(0.04, 0.28), kind="pistol", mag=(-0.25, 0.35, -0.4)),   # procedural (build_deagle)
+    # Meshy 2026-11-04 (antes procedural). inverte: a traseira (cão) é mais fina que a boca do ferrolho largo, então a
+    # regra "boca = ponta mais fina" do import_gun pegava o lado errado
+    "Deagle": dict(L=0.27, grip=(0.06, 0.30), fore=(0.06, 0.30), kind="pistol", mag=(0.03, 0.36, -0.36), inverte=True),
+    # armas novas (Meshy 2026-11-04), pegada e pente pelo perfil_armas.py (fundo por fatia, coronha em 0, boca em 1)
+    "Tec9":      dict(L=0.30, grip=(0.02, 0.20), fore=(0.02, 0.20), kind="pistol", mag=(0.44, 0.58, -0.3)),   # pente na frente do gatilho
+    "FiveSeven": dict(L=0.27, grip=(0.02, 0.29), fore=(0.02, 0.29), kind="pistol", mag=(0.0, 0.31, -0.45)),
+    "P250":      dict(L=0.23, grip=(0.02, 0.31), fore=(0.02, 0.31), kind="pistol", mag=(0.0, 0.33, -0.45)),
+    "Galil":     dict(L=0.72, grip=(0.22, 0.30), fore=(0.58, 0.66), kind="rifle", mag=(0.40, 0.53, None)),
+    "Famas":     dict(L=0.62, grip=(0.39, 0.47), fore=(0.63, 0.71), kind="rifle", mag=(0.19, 0.36, None)),    # bullpup: pente atrás do punho
 }
 
 # ------------------------------------------------------------------ cena
@@ -324,7 +333,7 @@ def build_deagle(L):
     return g
 
 def import_gun(name, L):
-    if name == "Deagle": return build_deagle(L)
+    # (a Deagle procedural, build_deagle, saiu: agora é do Meshy como as outras)
     antes = set(sc.objects)
     bpy.ops.import_scene.fbx(filepath=os.path.join(ARMAS, name + "_3p", name + "_3p.fbx"))
     novos = [o for o in sc.objects if o not in antes]
@@ -352,6 +361,7 @@ def import_gun(name, L):
     a, b = slab(0, 0.06), slab(0.94, 1)
     va = max(v[up] for v in a) - min(v[up] for v in a); vb = max(v[up] for v in b) - min(v[up] for v in b)
     sgn_ax = 1 if vb < va else -1
+    if WEAP.get(name, {}).get("inverte"): sgn_ax = -sgn_ax
     muz = b if sgn_ax > 0 else a
     zc = sum(v[up] for v in muz) / len(muz)
     sgn_up = 1 if (mx[up] - zc) < (zc - mn[up]) else -1
@@ -422,7 +432,7 @@ class Gun:
         if "mag" in cfg:
             s.mag = split_mag(s.obj, s.L, *cfg["mag"])
             # pente com a textura crua (sem a pintura da arma: o da AWP é preto)
-            s.mag.data.materials[0] = toon(name + "_pente", "#333333", None if name == "Deagle" else os.path.join(ARMAS, name + "_3p", name + "_3p_albedo.png"))
+            s.mag.data.materials[0] = toon(name + "_pente", "#333333", os.path.join(ARMAS, name + "_3p", name + "_3p_albedo.png"))
             s.mag2 = s.mag.copy(); s.mag2.data = s.mag.data; sc.collection.objects.link(s.mag2)
             if cfg["kind"] in ("smg", "pistol") or name in ("M4A4", "M4A1S"):
                 # fora da arma o pente aparece inteiro (dentro do punho só o pé dele fica à mostra): bloco preto
@@ -621,11 +631,11 @@ class Agent:
             s.guns[name] = g
         return s.guns[name]
 
-    def pose(s, t, anim, gname, nade="smoke", pitch=0.0, from_scope=False):
+    def pose(s, t, anim, gname, nade="smoke", pitch=0.0, from_scope=False, jeito="cima"):
         """Pose no instante t (0..1) da animação. Movimento: mira, andar, devagar, correr, agachar, agachado,
         pular, escada. Ação: tiro, recarga, granada, cego, plantar, desarmar, morrer."""
         P = s.P; ct = s.team == "ct"
-        _id = (anim, gname, nade, round(pitch, 4), from_scope)
+        _id = (anim, gname, nade, round(pitch, 4), from_scope, jeito)
         if getattr(s, "_pose_id", None) != _id or t < getattr(s, "_pose_t", -1): COTOVELO_ANT.clear()
         s._pose_id, s._pose_t = _id, t
         for g in s.guns.values():
@@ -839,6 +849,11 @@ class Agent:
         dx = Vector((-0.06, -0.3, 0.95)).normalized(); dz = Vector((-1, 0, 0)); dz = (dz - dx * dz.dot(dx)).normalized()
         back_q = Matrix((dx, dz.cross(dx), dz)).transposed().to_quaternion()
         back_pos = ch + Vector((-0.17, 0.1, -0.2))   # (2 cm mais pra trás: o punho não fica dentro do colete)
+        # bullpup (FAMAS: punho 6 cm à frente do da AK): nas costas também desliza no eixo até o punho ficar onde o da AK
+        # fica (senão o saque das costas buscava o punho longe e o antebraço pulava 9 cm). Só acima de 3 cm.
+        if kind == "rifle":
+            d_punho = 0.295 * 0.70 - 0.5 * (G.cfg["grip"][0] + G.cfg["grip"][1]) * G.L
+            if abs(d_punho) > 0.03: back_pos = back_pos + back_q @ Vector((d_punho, 0, 0))
         if kind == "pistol":   # dentro do coldre da coxa: cano pra baixo, cabo pra trás saindo por cima
             cc_, up_, fora_ = coldre_em; fr_ = fora_.cross(up_)
             back_q = Matrix((-up_, fr_.cross(up_), -fr_)).transposed().to_quaternion()
@@ -886,9 +901,10 @@ class Agent:
             if kind != "pistol":   # alça da bandoleira atravessando o peito
                 place_seg(s.props["alca_arma"], ch + Vector((0.09, -0.085, 0.1)), ch + Vector((0.1, 0.09, -0.1)), 0.01)
         if anim in ("granada", "granada_fim"):   # troca de arma como no CS: o fuzil vai pras costas (bandoleira), a
-            # pistola pro coldre; depois de soltar volta pra mira
-            u = sm(k(0.0, 0.16)) if anim == "granada" else 1 - sm(k(0.4, 1.0))
-            fora = ch + Vector((0.02, -0.24, -0.06)) if kind != "pistol" else ch + Vector((0.06, -0.2, -0.1))
+            # pistola pro coldre. Depois de soltar a arma FICA guardada: o Unity emenda o saque (sacar_costas_<arma> /
+            # sacar_<pistola>), que tira ela por fora do ombro (antes voltava girando por dentro do rosto)
+            u = sm(k(0.0, 0.16)) if anim == "granada" else 1.0
+            fora = ch + Vector((0.04, -0.32, -0.04)) if kind != "pistol" else ch + Vector((0.06, -0.2, -0.1))
             fq = Quaternion((0, 1, 0), math.radians(75))
             if u < 0.5: gpos, gq = blend(aim_pos, aim_q, fora, fq, sm(u * 2))
             else: gpos, gq = blend(fora, fq, back_pos, back_q, sm(u * 2 - 1))
@@ -903,6 +919,11 @@ class Agent:
         if anim == "cego":   # arma caída, quase apontando pro chão
             # (de lado e pra fora da coxa direita: antes o cano cruzava pra dentro e entrava na perna)
             gpos, gq = low_pos + Vector((0.05, -0.07, 0.0)), Quaternion((0, 1, 0), math.radians(50)) @ Quaternion((0, 0, 1), math.radians(-18))
+            # punho longe do da AK (bullpup: FAMAS, punho 6 cm mais à frente) -> recua a arma no próprio eixo até o punho
+            # cair onde a mão da AK estaria (senão a mão não alcança: PEGADA 6 cm). Só acima de 3 cm: as outras não mudam
+            if kind == "rifle":
+                dx = 0.295 * 0.70 - 0.5 * (G.cfg["grip"][0] + G.cfg["grip"][1]) * G.L
+                if abs(dx) > 0.03: gpos = gpos + gq @ Vector((dx, 0, 0))
         if anim == "meio_cego":   # meio cego: a arma desce um pouco, segue mais ou menos na frente
             gpos, gq = blend(aim_pos, aim_q, low_pos, low_q, 0.35)
         if anim == "pegar":   # arma desce pro lado de FORA enquanto a esquerda pega no chão (antes entrava na coxa)
@@ -1019,25 +1040,39 @@ class Agent:
         # pontos pra quem compõe o vídeo/jogo: boca do cano e janela de ejeção (espaço do boneco)
         s.muzzle_local = W(Vector((L, 0, 0))); s.eject_local = W(Vector((0.42 * L if kind != "pistol" else 0.35 * L, -0.03, 0.02)))
         if anim in ("granada", "granada_fim"):
-            mol = nade == "molotov"
+            # molotov do TR: isqueiro e pano pegando fogo; a incendiária do CT (CS2) é de pino como as outras, sem fogo na mão
+            mol = nade == "molotov" and not ct
             chest = ch + Vector((0.16, -0.05, 0.02)); pouch = ch + Vector((0.12, -0.07, -0.06))
-            orelha = ch + Vector((-0.01, -0.25, 0.22))     # mão armada: do lado da cabeça, não atrás
-            solta = ch + Vector((0.22, -0.25, 0.33))        # soltura: na frente e acima do ombro (por fora do rosto)
-            segue = ch + Vector((0.25, 0.04, -0.04))        # continuação: desce cruzando na frente do corpo
-            aponta = ch + Vector((0.3, 0.12, 0.2))          # esquerda apontando pro alvo
+            # jeito do arremesso como no CS2 (o Sim escolhe pela força): botão esquerdo = por cima (mão armada do lado
+            # da cabeça, solta acima do ombro e desce cruzando o corpo); os dois = meia força (braço de lado na altura
+            # do ombro, empurra na frente do peito); direito = por baixo (mão baixa atrás do quadril, tronco curvado,
+            # solta na frente da cintura e a mão sobe acompanhando). Cada um: mão armada, soltura, continuação, mão
+            # esquerda apontando, (giro e inclinação armado, giro e inclinação soltando)
+            JEITOS = {
+                "cima": (ch + Vector((-0.01, -0.25, 0.22)), ch + Vector((0.22, -0.25, 0.33)), ch + Vector((0.25, 0.04, -0.04)),
+                         ch + Vector((0.3, 0.12, 0.2)), (-0.4, -0.06, 0.25, 0.1)),
+                "meio": (ch + Vector((0.05, -0.27, 0.09)), ch + Vector((0.27, -0.18, 0.13)), ch + Vector((0.23, 0.08, -0.03)),
+                         ch + Vector((0.3, 0.14, 0.1)), (-0.48, 0.0, 0.3, 0.06)),
+                "baixo": (ch + Vector((-0.07, -0.28, -0.19)), ch + Vector((0.25, -0.17, -0.06)), ch + Vector((0.28, -0.14, 0.08)),
+                          ch + Vector((0.29, 0.15, 0.09)), (-0.3, 0.14, 0.15, 0.05)),
+            }
+            orelha, solta, segue, aponta, (tw_a, ln_a, tw_s, ln_s) = JEITOS.get(jeito, JEITOS["cima"])
+            # por baixo a mão passa POR FORA do quadril (indo e voltando), senão corta o colete
+            passa = ch + Vector((0.05, -0.31, -0.07)) if jeito == "baixo" else orelha + Vector((0.03, 0.02, -0.06))
+            volta = [(0.86, ch + Vector((0.09, -0.27, -0.16)))] if jeito == "baixo" else []
             if anim == "granada":
-                rh_t = trilha(t, [(0.0, W(G.grip)), (0.05, ch + Vector((0.14, -0.12, -0.04))), (0.12, pouch), (0.2, chest), (0.4, chest), (0.58, orelha + Vector((0.03, 0.02, -0.06))),
-                                  (0.72, orelha), (1.0, solta)])
+                rh_t = trilha(t, [(0.0, W(G.grip)), (0.05, ch + Vector((0.14, -0.12, -0.04))), (0.12, pouch), (0.2, chest), (0.4, chest), (0.58, passa),
+                                  (0.72, orelha), *volta, (1.0, solta)])
                 if mol:   # a esquerda pega o isqueiro na cintura, acende o pano e vai pra frente
-                    isq = ch + Vector((0.1, 0.12, -0.1)); acende = chest + Vector((0.0, 0.07, 0.12))
-                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.08, ch + Vector((0.12, 0.13, -0.04))), (0.18, isq), (0.28, acende), (0.38, acende), (0.5, ch + Vector((0.12, 0.2, 0.02))),
+                    isq = ch + Vector((0.13, 0.17, -0.1)); acende = chest + Vector((0.0, 0.07, 0.12))
+                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.08, ch + Vector((0.15, 0.17, -0.04))), (0.18, isq), (0.28, acende), (0.38, acende), (0.5, ch + Vector((0.12, 0.2, 0.02))),
                                       (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
                 else:     # a esquerda tira o pino e vai pra frente apontando
                     pino = chest + Vector((0.02, 0.04, 0.07))
                     lh_t = trilha(t, [(0.0, W(G.fore)), (0.1, ch + Vector((0.12, 0.13, -0.04))), (0.24, pino), (0.3, pino), (0.38, pino + Vector((0.0, 0.1, 0.04))),
                                       (0.5, ch + Vector((0.12, 0.2, 0.06))), (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
-                twist = -0.4 * (sm(k(0.42, 0.72)) - sm(k(0.72, 1.0))) + 0.25 * sm(k(0.82, 1.0))
-                lean = -0.06 * (sm(k(0.42, 0.72)) - sm(k(0.72, 0.9))) + 0.1 * sm(k(0.85, 1.0))
+                twist = tw_a * (sm(k(0.42, 0.72)) - sm(k(0.72, 1.0))) + tw_s * sm(k(0.82, 1.0))
+                lean = ln_a * (sm(k(0.42, 0.72)) - sm(k(0.72, 0.9))) + ln_s * sm(k(0.85, 1.0))
                 nade_pos = rh_t + Vector((0, 0, 0.04))
                 if 0.06 < t: s.nade(nade, nade_pos, spin=0.0)
                 if not mol and 0.3 < t < 0.5:   # pino na mão esquerda
@@ -1058,9 +1093,11 @@ class Agent:
                                   (r, r, r * 1.8))
             else:   # granada_fim: continuação depois de soltar (mão vazia) e volta pra arma
                 rh_t = trilha(t, [(0.0, solta), (0.35, segue), (0.55, segue), (0.8, ch + Vector((0.14, -0.12, -0.04)))])
-                lh_t = trilha(t, [(0.0, aponta + Vector((-0.08, 0.04, -0.12))), (0.35, ch + Vector((0.02, 0.2, -0.04))), (0.6, ch + Vector((0.12, 0.13, -0.04)))])
-                v = sm(k(0.75, 1.0)); rh_t = rh_t.lerp(W(G.grip), v); lh_t = lh_t.lerp(W(G.fore), v)
-                twist = 0.25 * (1 - sm(k(0.3, 1.0))); lean = 0.1 * (1 - sm(k(0.3, 1.0)))
+                lh_t = trilha(t, [(0.0, aponta + Vector((-0.08, 0.04, -0.12))), (0.35, ch + Vector((0.02, 0.2, -0.04))), (0.6, ch + Vector((0.05, 0.19, -0.1)))])
+                # termina onde o saque começa: fuzil = mãos no descanso do sacar_costas; pistola = direita no punho do coldre
+                fim_r, fim_l = (W(G.grip), ch + Vector((0.02, 0.16, -0.14))) if kind == "pistol" else (ch + Vector((0.06, -0.19, -0.11)), ch + Vector((0.05, 0.19, -0.18)))
+                v = sm(k(0.75, 1.0)); rh_t = rh_t.lerp(fim_r, v); lh_t = lh_t.lerp(fim_l, v)
+                twist = tw_s * (1 - sm(k(0.3, 1.0))); lean = ln_s * (1 - sm(k(0.3, 1.0)))
         head_turn = None
         if scope_u > 0:   # bochecha na coronha, olho na luneta (cabeça inclina pro lado da arma)
             head_turn = (HT_LUNETA[0] * scope_u, HT_LUNETA[1] * scope_u)
@@ -1136,7 +1173,7 @@ class Agent:
         if anim == "sacar_costas" and kind != "pistol":
             # direita sobe por cima do ombro e pega o guarda-mão nas costas, puxa e escorrega pro punho; a esquerda
             # vem do lado e encaixa no guarda-mão quando a arma chega na frente
-            rest_r = ch + Vector((0.05, -0.17, -0.12)); rest_l = ch + Vector((0.03, 0.165, -0.2))
+            rest_r = ch + Vector((0.06, -0.19, -0.11)); rest_l = ch + Vector((0.05, 0.19, -0.18))   # descanso fora do colete (ombro na cava)
             # a mão vai por trás das costas até o punho do fuzil (lá em cima o cano passa atrás da cabeça grande: o braço
             # atravessava ela) e segura nele o resto do saque: o fuzil sobe pelo lado de fora do ombro e vem pra frente
             if t < 0.36: rh_t = trilha(t, [(0.0, rest_r), (0.13, ch + Vector((-0.1, -0.28, -0.02))), (0.25, ch + Vector((-0.17, -0.12, -0.02))), (0.36, W(G.grip))])
@@ -1145,7 +1182,10 @@ class Agent:
         if anim == "sacar":
             # direita no punho o tempo todo; esquerda vem do lado e pega a arma no fim (fuzil: puxa o ferrolho)
             side = ch + Vector((0.02, 0.16, -0.14))
-            lh_t = side.lerp(W(G.fore) + (Vector((0, 0.03, -0.01)) if kind == "pistol" else Vector()), sm(k(0.35, 0.6)))
+            if kind == "pistol":   # pistola: a esquerda passa POR FORA, na frente do colete (reto cortava o colete)
+                lh_t = trilha(t, [(0.35, side), (0.48, ch + Vector((0.2, 0.13, -0.08))), (0.6, W(G.fore) + Vector((0, 0.03, -0.01)))])
+            else:
+                lh_t = side.lerp(W(G.fore), sm(k(0.35, 0.6)))
             if kind != "pistol":
                 if G.cfg.get("bolt"):
                     rh_t = W(G.grip).lerp(bolt + Vector((0, -0.03, 0.02)), sm(k(0.56, 0.72))) + Vector((-0.06, 0, 0)) * (sm(k(0.72, 0.8)) - sm(k(0.8, 0.88)))
@@ -1153,7 +1193,7 @@ class Agent:
                 else:
                     bo = bolt + Vector((0.02, -0.03, 0.02))
                     lh_t = lh_t.lerp(bo, sm(k(0.56, 0.72))) + Vector((-0.05, 0, 0)) * (sm(k(0.72, 0.78)) - sm(k(0.78, 0.84)))
-                    lh_t = lh_t.lerp(W(G.fore), k(0.84, 0.96))
+                    lh_t = lh_t.lerp(W(G.fore), k(0.74, 1.0))   # volta pro guarda-mão em ~3 quadros (de uma vez dava salto)
         KD_FACA = Vector((0.2, 1, -0.05)).normalized()   # parado/andando: faca deitada, atravessada pra dentro (CS2)
         kd = KD_FACA   # direção da lâmina
         if knife:
@@ -1167,7 +1207,7 @@ class Agent:
             trail = []   # pontos do rastro (do mais novo pro mais velho)
             if anim == "faca_m1":
                 # M1: corte rápido na diagonal, do alto à direita pra baixo à esquerda, na frente do corpo, e volta
-                a0 = ch + Vector((0.16, -0.2, 0.2)); a1 = ch + Vector((0.34, -0.01, 0.04)); a2 = ch + Vector((0.26, 0.12, -0.1))
+                a0 = ch + Vector((0.18, -0.21, 0.2)); a1 = ch + Vector((0.36, -0.01, 0.04)); a2 = ch + Vector((0.31, 0.11, -0.1))   # por fora do colete (ombro na cava)
                 d0 = Vector((0.4, -0.6, 0.7)); d1 = Vector((1, 0, 0)); d2 = Vector((0.4, 0.6, -0.6))
                 u = sm(k(0.18, 0.48))
                 if t < 0.18: rh_t = hold_r.lerp(a0, sm(k(0.0, 0.18))); kd = KD_FACA.lerp(d0, sm(k(0.0, 0.18)))
@@ -1208,18 +1248,20 @@ class Agent:
             corpo.append(((Mh @ (hc + Vector((0.09, 0, -0.015)))) if head_turn else hc + Vector((0.09, 0, -0.015)), Vector((0.105, 0.148, 0.13)), 2))
         # mãos no fuzil (não nas costas, na faca, na granada, na bomba...): cotovelos fechados e alcance do guarda-mão
         maos_fuzil = kind == "rifle" and not knife
+        gruda = {"R": NADE_PARTS.get(nade, []) + ["fogo0", "fogo1", "fogo2"], "L": ["pino", "isqueiro", "isq_tampa", "chama_isq"]}             if anim in ("granada", "granada_fim") else {}
         for sd, sg, tgt in (("L", 1, lh_t), ("R", -1, rh_t)):
-            sh = ch + Vector((0, sg * 0.125, 0.07))
+            sh = ch + Vector((0, sg * 0.148, 0.07))   # ombro na cava do colete (0,136): a 0,125 o braço saía pela tampa e manchava o colete
             pole = Vector((0, sg * 0.4, -1))
             if maos_fuzil:   # fuzil: cotovelos pra baixo, perto do corpo (usuário: braço aberto demais)
                 pole = Vector((-0.3, -0.12, -1)) if sd == "R" else Vector((0.1, 0.22, -1))
             if sd == "R" and knife: pole = Vector((-0.3, -0.8, -0.6))
-            if sd == "R" and anim == "sacar_costas": pole = Vector((-0.8, -0.6, -0.1))   # cotovelo pra trás e pra fora   # faca: cotovelo pra fora e pra trás (na estocada subia na cabeça)
+            if sd == "R" and anim == "sacar_costas": pole = Vector((-0.6, -0.85, -0.2))   # cotovelo pra trás e pra fora   # faca: cotovelo pra fora e pra trás (na estocada subia na cabeça)
             if sd == "R" and scope_u > 0:   # cotovelo direito na luneta: pra baixo e um pouco pra fora, junto do corpo
                 # (antes levantado de lado, "asa de galinha": usuário achou o braço pra fora demais)
                 pole = pole.lerp(Vector((0.6, -0.45, -0.65)), sm(min(1.0, scope_u / 0.6)))
             # braço esquerdo estica um pouco (desenho animado) pra alcançar o guarda-mão da AWP na luneta
             lb = 0.19 + (0.075 * scope_u if sd == "L" and anim != "recarga" else 0.0)
+            lb += 0.012   # o ombro saiu 2,3 cm pra cava do colete: o braço (2 segmentos) compensa o alcance
             if sd == "L" and maos_fuzil: lb += 0.05
             if sd == "R" and maos_fuzil and scope_u <= 0: lb -= 0.015   # braço direito dobra menos: cotovelo não abre   # o guarda-mão do fuzil (do lado direito) fica longe da mão esquerda
             if sd == "L" and abs(pitch) > math.radians(25):   # mira muito pra cima/baixo: o braço esquerdo estica pro guarda-mão
@@ -1243,6 +1285,14 @@ class Agent:
                 # braço à mão cortava o cotovelo e entrava no colete)
                 place_seg(P["braco" + sd], sh, mid, 0.046); place_seg(P["ante" + sd], mid, elb, 0.037); place_seg(P["pulso" + sd], elb, hd, 0.036)
             place(P["mao" + sd], hd, (0.034, 0.032, 0.032))
+            dmao = hd - tgt
+            if sd == "R" and gruda:   # granada NA MÃO: pra frente do punho, na direção do antebraço (pegada de palma)
+                fdir = (hd - elb).normalized()
+                dmao = hd + fdir * 0.03 + Vector((0, 0, 0.012)) - (tgt + Vector((0, 0, 0.04)))
+            if dmao.length > 1e-5:
+                for nm in gruda.get(sd, []):
+                    o = s.props.get(nm)
+                    if o is not None and o.location.z > -40: o.location = o.location + dmao
             if knife and sd == "R":   # faca na mão direita: o centro do cabo fica no punho, lâmina ao longo de kd
                 kn = kd.normalized()
                 s.knife.location = hd - kn * 0.01; s.knife.rotation_mode = "QUATERNION"
@@ -1473,7 +1523,7 @@ for team in TEAMS:
         # o conjunto que o jogo usa, nas 8 direções: {team}_{anim}_{arma}_{dir}_{quadro}.png
         #   por arma: mira (parado), andar, tiro, recarga; faca: faca_parado, faca_andar; com o fuzil padrão:
         #   agachado, granada, plantar (TR) / desarmar (CT), cego, morrer (quadro maior, 288)
-        armas = (["AK47", "AWP", "Glock", "MAC10", "Deagle"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle"])
+        armas = (["AK47", "AWP", "Glock", "MAC10", "Deagle", "Tec9", "Galil", "P250"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle", "FiveSeven", "Famas", "P250"])
         # arma pedida na linha de comando vale mesmo que seja do outro time (pegou do chão: CT de AK, TR de M4)
         if len(ARGV) > 3: armas = [a for a in WEAP if a in ARGV[3].split(",")]
         TIRO_N = {"rifle": 6, "smg": 6, "pistol": 5}
@@ -1493,13 +1543,13 @@ for team in TEAMS:
         so_ar = len(ARGV) > 3 and "so_ar" in ARGV[3].split(",")
         if so_ar:
             # só as poses no ar (pulo e queda), por arma e de faca
-            todas = (["AK47", "AWP", "Glock", "MAC10", "Deagle"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle"])
+            todas = (["AK47", "AWP", "Glock", "MAC10", "Deagle", "Tec9", "Galil", "P250"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle", "FiveSeven", "Famas", "P250"])
             for w in (armas or todas):
                 jseq("no_ar_sobe", "no_ar_sobe", 1, w); jseq("no_ar_cai", "no_ar_cai", 1, w)
             if "extras" in ARGV[3].split(","):
                 jseq("faca_no_ar_sobe", "faca_no_ar_sobe", 1, padrao); jseq("faca_no_ar_cai", "faca_no_ar_cai", 1, padrao)
             armas = []
-        if so_passo and not armas and not so_ar: armas = (["AK47", "AWP", "Glock", "MAC10", "Deagle"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle"])
+        if so_passo and not armas and not so_ar: armas = (["AK47", "AWP", "Glock", "MAC10", "Deagle", "Tec9", "Galil", "P250"] if team == "tr" else ["M4A4", "M4A1S", "AWP", "USP", "MP9", "Deagle", "FiveSeven", "Famas", "P250"])
         # passos: 12 quadros por ciclo (com 8, no vídeo a perna pulava quadro e parecia mais rápida que o corpo)
         PASSO_N = 12
         for w in armas:

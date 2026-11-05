@@ -5,35 +5,123 @@ using CSM.View;
 namespace CSM.View3D
 {
     /// <summary>
-    /// Uma smoke da simulação em partículas (FumacaParticula.shader), no jeito da smoke do CS2: as bolotas da SmokeVolume
-    /// (puffs) voam da lata até o lugar de cada uma na expansão, respiram e somem no fim; cada bolota vira 3 billboards
-    /// sobrepostos (silhueta de couve-flor). O alfa de cada uma é a densidade da simulação ali (SmokeVolume.Sample): a
-    /// bolha da HE apaga e volta a encher sozinha; os furos de bala (Furo, do desenho) abrem um túnel que fecha em ~2 s.
-    /// Ordenadas de trás pra frente a cada quadro.
+    /// Uma smoke da simulação desenhada por volume, no jeito da smoke do CS2 (FumacaVolume.shader + Fumaca.hlsl): as
+    /// bolotas da SmokeVolume viram esferas macias numa fatia de uma textura 3D compartilhada (células de 4) e o shader lê
+    /// ponto a ponto, com ruído de couve-flor na borda. Tiro que atravessa abre um túnel em cone (fino onde entra, largo
+    /// onde sai) que abre na hora e fecha da borda pro meio — e quem olha de cima vê a fresta rala no caminho da bala; HE
+    /// dentro abre uma bolha grande (rompe o topo) que volta a encher em ~3 s. Publicar() manda tudo pro shader uma vez
+    /// por quadro.
     /// </summary>
     public class Fumaca3D
     {
-        public readonly SmokeVolume s;
-        readonly GameObject go; readonly Mesh malha; readonly Material mat;
-        readonly List<(Vector3 a, Vector3 b, float t)> furos = new List<(Vector3, Vector3, float)>();
-        public const float FURO_R = 3.5f, FURO_VIDA = 1.0f, ESCALA = 1.05f;   // furo de bala = o do Sim (SmokeVolume.Shot: raio 3,5, ~1 s); usuário: abria demais
-        struct Part { public Vector3 p, forma; public float tam, alfa, semente, dist, tom; }
-        readonly List<Part> ps = new List<Part>();
-        readonly List<Vector3> V = new List<Vector3>(); readonly List<Vector2> UV = new List<Vector2>(), UV2 = new List<Vector2>();
-        readonly List<Color> C = new List<Color>(); readonly List<int> T = new List<int>(); readonly List<Vector3> N = new List<Vector3>();
+        public const int MAX = 8, NX = 45, NY = 45, NZ = 18, FUROS = 24, HES = 4;
+        // túnel de tiro: raio na entrada e quanto alarga por unidade percorrida dentro da smoke, até o teto; tempo de vida
+        public const float FURO_R0 = 3.2f, FURO_ALARGA = 0.11f, FURO_RMAX = 8f, FURO_VIDA = 2.2f;   // CS2: túnel limpo que dura ~2 s
+        // bolha da HE: raio cheio, quando começa a voltar e quando fechou
+        public const float HE_R = 32f, HE_SEGURA = 1.0f, HE_VIDA = 3.2f;
 
-        public Fumaca3D(SmokeVolume s, Transform pai, Mesh _, Shader sh)
+        public readonly SmokeVolume s;
+        readonly GameObject go; readonly Material mat; readonly int fatia;
+        readonly List<(Vector3 a, Vector3 b, float r1, float t)> furos = new List<(Vector3, Vector3, float, float)>();
+        readonly List<(Vector3 p, float t)> hes = new List<(Vector3, float)>();
+
+        static Texture3D atlas, ruido;
+        static byte[] dados;
+        static readonly Fumaca3D[] slots = new Fumaca3D[MAX];
+        static readonly Vector4[] vMin = new Vector4[MAX], vA = new Vector4[FUROS], vB = new Vector4[FUROS], vHe = new Vector4[HES];
+
+        public Fumaca3D(SmokeVolume s, Transform pai, Shader sh)
         {
             this.s = s;
-            mat = new Material(sh) { name = "smoke" };
-            malha = new Mesh { name = "smoke" }; malha.MarkDynamic();
-            go = new GameObject("smoke"); go.transform.SetParent(pai, false);
-            go.AddComponent<MeshFilter>().sharedMesh = malha;
-            var r = go.AddComponent<MeshRenderer>(); r.sharedMaterial = mat; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            Preparar();
+            fatia = System.Array.IndexOf(slots, null);
+            if (fatia < 0) fatia = 0;   // mais de 8 smokes ao mesmo tempo: a mais antiga perde a fatia
+            if (slots[fatia] != null) slots[fatia].Soltar();
+            slots[fatia] = this;
+            mat = new Material(sh) { name = "smoke" }; mat.SetFloat("_Indice", fatia);
+            // caixa da grade (a face da frente é onde o raio começa)
+            go = GameObject.CreatePrimitive(PrimitiveType.Cube); go.name = "smoke";
+            Object.DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.SetParent(pai, false);
+            var (mn, mx) = s.Bounds;
+            var a = MalhaMapa.ParaUnity(mn.x, mn.y, mn.z); var b = MalhaMapa.ParaUnity(mx.x, mx.y, mx.z);
+            go.transform.localPosition = (a + b) * 0.5f;
+            go.transform.localScale = new Vector3(Mathf.Abs(b.x - a.x), Mathf.Abs(b.y - a.y), Mathf.Abs(b.z - a.z));
+            var r = go.GetComponent<MeshRenderer>(); r.sharedMaterial = mat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; r.receiveShadows = false;   // sombra: FumacaVolume ShadowCaster
+            vMin[fatia] = new Vector4(mn.x, mn.y, mn.z, 1);
         }
 
-        /// <summary>Bala atravessando (coordenadas do jogo): abre um túnel que fecha sozinho.</summary>
-        public void Furo(V3 a, V3 b, float t) => furos.Add((new Vector3(a.x, a.y, a.z), new Vector3(b.x, b.y, b.z), t));
+        /// <summary>Atlas e ruído da smoke (chamado no começo da partida: a primeira smoke não trava o quadro montando).</summary>
+        public static void Preparar()
+        {
+            if (atlas != null) return;
+            dados = new byte[NX * NY * MAX * (NZ + 1)];
+            atlas = new Texture3D(NX, NY, MAX * (NZ + 1), TextureFormat.R8, false)
+            { name = "smoke atlas", wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            ruido = Ruido();
+            Shader.SetGlobalTexture("_FumAtlas", atlas);
+            Shader.SetGlobalTexture("_FumRuido", ruido);
+            Shader.SetGlobalVector("_FumTam", new Vector4(NX * SmokeVolume.C, NY * SmokeVolume.C, NZ * SmokeVolume.C, 0));
+            Shader.SetGlobalFloat("_FumEsc", MalhaMapa.ESC);
+        }
+
+        /// <summary>Ruído de couve-flor que repete (32³): 3 oitavas de ruído de valor com a grade dando a volta.</summary>
+        static Texture3D Ruido()
+        {
+            const int N = 32;
+            var rng = new System.Random(7);
+            var px = new byte[N * N * N];
+            float[][] grades = new float[3][]; int[] f = { 4, 8, 16 }; float[] peso = { 0.55f, 0.3f, 0.15f };
+            for (int o = 0; o < 3; o++) { grades[o] = new float[f[o] * f[o] * f[o]]; for (int i = 0; i < grades[o].Length; i++) grades[o][i] = (float)rng.NextDouble(); }
+            for (int z = 0; z < N; z++)
+                for (int y = 0; y < N; y++)
+                    for (int x = 0; x < N; x++)
+                    {
+                        float v = 0;
+                        for (int o = 0; o < 3; o++)
+                        {
+                            int F = f[o]; float e = (float)F / N;
+                            float gx = x * e, gy = y * e, gz = z * e;
+                            int ix = (int)gx, iy = (int)gy, iz = (int)gz;
+                            float ax = S(gx - ix), ay = S(gy - iy), az = S(gz - iz);
+                            float G(int i, int j, int k) => grades[o][((k % F) * F + (j % F)) * F + (i % F)];
+                            float c00 = Mathf.Lerp(G(ix, iy, iz), G(ix + 1, iy, iz), ax), c10 = Mathf.Lerp(G(ix, iy + 1, iz), G(ix + 1, iy + 1, iz), ax);
+                            float c01 = Mathf.Lerp(G(ix, iy, iz + 1), G(ix + 1, iy, iz + 1), ax), c11 = Mathf.Lerp(G(ix, iy + 1, iz + 1), G(ix + 1, iy + 1, iz + 1), ax);
+                            v += peso[o] * Mathf.Lerp(Mathf.Lerp(c00, c10, ay), Mathf.Lerp(c01, c11, ay), az);
+                        }
+                        px[(z * N + y) * N + x] = (byte)Mathf.Clamp(Mathf.RoundToInt(v * 255), 0, 255);
+                    }
+            var t = new Texture3D(N, N, N, TextureFormat.R8, false) { name = "smoke ruído", wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            t.SetPixelData(px, 0); t.Apply(false);
+            return t;
+            static float S(float u) => u * u * (3 - 2 * u);
+        }
+
+        /// <summary>Bala atravessando (coordenadas do jogo): túnel do ponto onde entra na smoke até onde sai.</summary>
+        /// <returns>Onde a bala sai da smoke (Unity), pro tufo de fumaça arrastado; null se não cruzou fumaça de verdade.</returns>
+        public Vector3? Furo(V3 a, V3 b, float t)
+        {
+            var d = b - a; float L = d.Len; if (L < 1e-3f) return null;
+            float ent = -1, sai = -1;
+            for (float u = 0; u <= L; u += 1.5f)
+                if (s.Sample(a + d * (u / L), t) > 0.05f) { if (ent < 0) ent = u; sai = u; }
+            if (ent < 0) return null;
+            // além da borda desenhada (a nuvem é maior que a densidade 0,05 da Sim): o túnel abre a casca dos dois lados
+            ent = Mathf.Max(0, ent - 7f); sai = Mathf.Min(L, sai + 7f);
+            var pa = a + d * (ent / L); var pb = a + d * (sai / L);
+            furos.Add((new Vector3(pa.x, pa.y, pa.z), new Vector3(pb.x, pb.y, pb.z), Mathf.Min(FURO_RMAX, FURO_R0 + FURO_ALARGA * (sai - ent)), t));
+            var ps = a + d * (Mathf.Min(L, sai) / L);
+            return MalhaMapa.ParaUnity(ps.x, ps.y, ps.z);
+        }
+
+        /// <summary>HE estourando perto (coordenadas do jogo): bolha que abre na hora e volta a encher.</summary>
+        public void Explosao(V3 p, float t)
+        {
+            var (mn, mx) = s.Bounds;
+            if (p.x < mn.x - HE_R || p.x > mx.x + HE_R || p.y < mn.y - HE_R || p.y > mx.y + HE_R) return;
+            hes.Add((new Vector3(p.x, p.y, p.z + 6), t));
+        }
 
         public bool Cruza(V3 a, V3 b)
         {
@@ -46,79 +134,114 @@ namespace CSM.View3D
             return false;
         }
 
-        float FatorFuro(Vector3 q, float t, float raioPart)
-        {
-            float k = 1;
-            foreach (var (a, b, t0) in furos)
-            {
-                float idade = (t - t0) / FURO_VIDA;
-                float r = FURO_R * Mathf.Sqrt(Mathf.Max(0, 1 - idade)) + raioPart * 0.12f;
-                if (r < 0.5f) continue;
-                var ab = b - a; float u = Mathf.Clamp01(Vector3.Dot(q - a, ab) / Mathf.Max(ab.sqrMagnitude, 1e-6f));
-                float d = (q - (a + ab * u)).magnitude;
-                k *= Mathf.SmoothStep(0, 1, Mathf.Clamp01((d - r * 0.6f) / (r * 0.5f)));
-            }
-            return k;
-        }
-
-        public void Atualizar(float t, Camera cam)
+        /// <summary>
+        /// Bolotas da simulação (SmokeVolume.puffs: voam da lata, respiram, somem no fim) somadas como esferas macias na
+        /// fatia do atlas: o contorno de couve-flor de antes, agora em volume. A força de cada bolota é a densidade da
+        /// simulação no centro dela só enquanto cresce (nunca baixa): furo de bala e HE ficam pro shader, que abre do
+        /// tamanho certo em vez de apagar a bolota inteira.
+        /// </summary>
+        public void Atualizar(float t, Camera _)
         {
             furos.RemoveAll(f => t - f.t > FURO_VIDA);
-            ps.Clear();
-            var camPos = cam != null ? cam.transform.position : Vector3.zero;
-            int idx = 0;
-            var centro = MalhaMapa.ParaUnity(s.origin.x, s.origin.y, s.origin.z + 4);
-            foreach (var p in s.puffs)
+            hes.RemoveAll(h => t - h.t > HE_VIDA);
+            int base0 = fatia * (NZ + 1) * NX * NY;
+            System.Array.Clear(dados, base0, NZ * NX * NY);
+            if (forca == null || forca.Length != s.puffs.Count) forca = new float[s.puffs.Count];
+            var (mn, _) = s.Bounds;
+            var centro = new Vector3(s.origin.x, s.origin.y, s.origin.z + 4);
+            for (int k = 0; k < s.puffs.Count; k++)
             {
-                idx++;
+                var p = s.puffs[k];
                 float r = s.PuffR(p, t); if (r <= 0.3f) continue;
                 var c = s.PuffC(p, t);
-                // densidade da simulação no centro da bolota (crescimento, bolha da HE, desmanche) + furo de bala
                 float d = s.Sample(c, t);
-                // densa: qualquer densidade de verdade já é parede (usuário: "rala"); só a borda/desmanche afina
                 float alfa = Mathf.SmoothStep(0, 1, Mathf.Clamp01((d - 0.02f) / 0.14f));
-                // na expansão a bolota ainda voando já aparece (a densidade da célula chega depois)
                 float voo = Mathf.Clamp01((s.age - p.t0 * 0.6f) / 0.7f);
                 if (voo < 1) alfa = Mathf.Max(alfa, 0.85f * Mathf.Clamp01(r / p.r));
-                alfa *= FatorFuro(new Vector3(c.x, c.y, c.z), t, r);
-                if (alfa < 0.02f) continue;
-                var u = MalhaMapa.ParaUnity(c.x, c.y, c.z);
-                u = centro + (u - centro) * ESCALA;   // um pouco maior que a área da simulação (pedido: +5%)
-                // partícula grande e macia (se funde com as vizinhas: massa contínua, sem bola aparecendo)
-                float var = 0.7f + 0.7f * Mathf.Repeat(p.ph * 0.37f, 1f);   // lóbulos grandes e pequenos na silhueta
-                float tam = 3.5f * ESCALA * r * MalhaMapa.ESC * var;
-                float tom = 0.96f + 0.04f * Mathf.Sin(p.ph * 2.3f);
-                // normal da FORMA da smoke: do centro (um pouco abaixo, achata o domo) pra partícula — a luz é da massa inteira
-                var forma = (u - centro); forma.y *= 1.6f; forma = forma.sqrMagnitude > 1e-6f ? forma.normalized : Vector3.up;
-                ps.Add(new Part { p = u, tam = tam, alfa = alfa, semente = (idx * 0.618f) % 1, tom = tom, forma = forma });
-                // enchimento: uma segunda bolota menor, deslocada pra fora e pra cima (fecha os buracos entre as vizinhas e
-                // a silhueta fica mais cheia, de couve-flor)
-                var sai = forma * (0.32f * r * MalhaMapa.ESC) + Vector3.up * (0.12f * r * MalhaMapa.ESC);
-                ps.Add(new Part { p = u + sai, tam = tam * 0.72f, alfa = alfa, semente = (idx * 0.618f + 0.37f) % 1, tom = tom * 1.01f, forma = forma });
+                forca[k] = Mathf.Max(forca[k], alfa);
+                if (forca[k] < 0.02f) continue;
+                var q = centro + (new Vector3(c.x, c.y, c.z) - centro) * ESCALA;
+                float R = r * RAIO * (0.7f + 0.7f * Mathf.Repeat(p.ph * 0.37f, 1f));   // lóbulos grandes e pequenos
+                Esfera(base0, q - new Vector3(mn.x, mn.y, mn.z), R, forca[k]);
             }
-            for (int i = 0; i < ps.Count; i++) { var q = ps[i]; q.dist = (q.p - camPos).sqrMagnitude; ps[i] = q; }
-            ps.Sort((a, b) => b.dist.CompareTo(a.dist));   // de trás pra frente
-            V.Clear(); UV.Clear(); UV2.Clear(); C.Clear(); T.Clear(); N.Clear();
-            var dir = cam != null ? cam.transform.right : Vector3.right; var cima = cam != null ? cam.transform.up : Vector3.up;
-            bool lin = QualitySettings.activeColorSpace == ColorSpace.Linear;
-            foreach (var q in ps)
+        }
+        // a bolota da simulação vira esfera deste tamanho (raio que aparece ~0,78 disso): mesmo tamanho dos lóbulos de antes
+        const float RAIO = 1.85f, ESCALA = 1.05f;
+        float[] forca;
+
+        /// <summary>Esfera macia (cheia até 55% do raio, some na borda) somada por máximo na fatia; p relativo ao canto.</summary>
+        void Esfera(int base0, Vector3 p, float R, float f)
+        {
+            int C = SmokeVolume.C;
+            int x0 = Mathf.Max(0, Mathf.FloorToInt((p.x - R) / C)), x1 = Mathf.Min(NX - 1, Mathf.FloorToInt((p.x + R) / C));
+            int y0 = Mathf.Max(0, Mathf.FloorToInt((p.y - R) / C)), y1 = Mathf.Min(NY - 1, Mathf.FloorToInt((p.y + R) / C));
+            int z0 = Mathf.Max(0, Mathf.FloorToInt((p.z - R) / C)), z1 = Mathf.Min(NZ - 1, Mathf.FloorToInt((p.z + R) / C));
+            float inv = 1f / R, R2 = R * R;
+            for (int z = z0; z <= z1; z++)
             {
-                int b0 = V.Count; float h = q.tam * 0.5f;
-                V.Add(q.p + (-dir - cima) * h); V.Add(q.p + (-dir + cima) * h); V.Add(q.p + (dir + cima) * h); V.Add(q.p + (dir - cima) * h);
-                UV.Add(new Vector2(0, 0)); UV.Add(new Vector2(0, 1)); UV.Add(new Vector2(1, 1)); UV.Add(new Vector2(1, 0));
-                var cor = new Color(q.tom, q.tom, q.tom); if (lin) cor = cor.linear; cor.a = q.alfa;
-                for (int k = 0; k < 4; k++) { UV2.Add(new Vector2(q.semente, 0)); C.Add(cor); N.Add(q.forma); }
-                T.Add(b0); T.Add(b0 + 1); T.Add(b0 + 2); T.Add(b0); T.Add(b0 + 2); T.Add(b0 + 3);
+                float dz = (z + 0.5f) * C - p.z;
+                for (int y = y0; y <= y1; y++)
+                {
+                    float dy = (y + 0.5f) * C - p.y, dyz = dy * dy + dz * dz;
+                    if (dyz >= R2) continue;
+                    int linha = base0 + (z * NY + y) * NX;
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        float dx = (x + 0.5f) * C - p.x, d2 = dx * dx + dyz;
+                        if (d2 >= R2) continue;
+                        float v = f * Mathf.Clamp01((1 - Mathf.Sqrt(d2) * inv) / 0.45f);
+                        byte b = (byte)(v * 255);
+                        if (b > dados[linha + x]) dados[linha + x] = b;
+                    }
+                }
             }
-            malha.Clear();
-            malha.SetVertices(V); malha.SetNormals(N); malha.SetUVs(0, UV); malha.SetUVs(1, UV2); malha.SetColors(C); malha.SetTriangles(T, 0);
-            malha.RecalculateBounds();
+        }
+
+        /// <summary>Atlas, túneis e bolhas de todas as smokes pro shader (uma vez por quadro, depois de Atualizar).</summary>
+        public static void Publicar(float t)
+        {
+            Preparar();
+            int nf = 0, nh = 0;
+            foreach (var f in slots)
+            {
+                if (f == null) continue;
+                foreach (var (a, b, r1, t0) in f.furos)
+                {
+                    if (nf >= FUROS) break;
+                    float idade = t - t0;
+                    // abre na hora (~0,06 s), segura um pouco e fecha da borda pro meio
+                    float k = Mathf.SmoothStep(0, 1, idade / 0.06f) * Mathf.Pow(1 - Mathf.SmoothStep(0, 1, (idade - 0.3f) / (FURO_VIDA - 0.3f)), 0.7f);
+                    vA[nf] = new Vector4(a.x, a.y, a.z, FURO_R0 * k); vB[nf] = new Vector4(b.x, b.y, b.z, r1 * k); nf++;
+                }
+                foreach (var (p, t0) in f.hes)
+                {
+                    if (nh >= HES) break;
+                    float idade = t - t0;
+                    float k = Mathf.SmoothStep(0, 1, idade / 0.12f) * (1 - Mathf.SmoothStep(0, 1, (idade - HE_SEGURA) / (HE_VIDA - HE_SEGURA)));
+                    vHe[nh++] = new Vector4(p.x, p.y, p.z, HE_R * k);
+                }
+            }
+            for (int i = nf; i < FUROS; i++) vA[i] = vB[i] = Vector4.zero;
+            for (int i = nh; i < HES; i++) vHe[i] = Vector4.zero;
+            Shader.SetGlobalVectorArray("_FumMin", vMin);
+            Shader.SetGlobalVectorArray("_FuroA", vA); Shader.SetGlobalVectorArray("_FuroB", vB);
+            Shader.SetGlobalVectorArray("_HeP", vHe);
+            Shader.SetGlobalFloat("_FumT", t);
+            atlas.SetPixelData(dados, 0); atlas.Apply(false);
+        }
+
+        void Soltar()
+        {
+            if (slots[fatia] != this) return;
+            slots[fatia] = null; vMin[fatia] = Vector4.zero;
+            System.Array.Clear(dados, fatia * (NZ + 1) * NX * NY, NZ * NX * NY);
         }
 
         public void Apagar()
         {
-            if (Application.isPlaying) { Object.Destroy(go); Object.Destroy(malha); Object.Destroy(mat); }
-            else { Object.DestroyImmediate(go); Object.DestroyImmediate(malha); Object.DestroyImmediate(mat); }
+            Soltar();
+            if (Application.isPlaying) { Object.Destroy(go); Object.Destroy(mat); }
+            else { Object.DestroyImmediate(go); Object.DestroyImmediate(mat); }
         }
     }
 }

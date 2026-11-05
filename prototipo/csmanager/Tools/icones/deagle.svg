@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 160">
+  <!-- Desert Eagle: ferrolho grande com nervura, cano triangular, cão, guarda-mato grande, punho comprido inclinado -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="280" height="160">
+      <rect width="280" height="160" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M52 33 L262 33" stroke-width="1.8"/>               <!-- nervura -->
+        <path d="M52 57.5 L238 57.5" stroke-width="2.2"/>           <!-- ferrolho | armação -->
+        <path d="M62 38 L62 52" stroke-width="1.8"/><path d="M68 38 L68 52" stroke-width="1.8"/><path d="M74 38 L74 52" stroke-width="1.8"/>
+        <path d="M170 45 L238 45" stroke-width="1.6"/>              <!-- aresta do cano -->
+        <path d="M27 146 L72 148" stroke-width="2"/>
+      </g>
+      <path d="M110 68 L138 68 Q141 68 141 71 L141 78 Q141 83 136 83 L116 83 Q108 83 108 76 Z" fill="#000"/>
+      <path d="M118 68 Q122 73 119 79" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M38 34 L50 29 L52 44 L40 46 Z"/>                                                 <!-- cão -->
+    <path d="M48 32 Q48 28 52 28 L266 28 Q270 28 270 32 L270 44 L242 58 L48 58 Z"/>          <!-- ferrolho + cano -->
+    <path d="M262 22 L268 22 L268 28 L262 28 Z"/><path d="M54 24 L62 24 L62 28 L54 28 Z"/>    <!-- miras -->
+    <path d="M50 57 L240 57 L236 66 L130 69 L104 66 Z"/>                                      <!-- armação -->
+    <path d="M100 62 L146 62 L146 80 Q146 90 134 90 L112 90 Q100 90 98 80 Z"/>                <!-- guarda-mato -->
+    <path d="M44 58 L108 61 L100 82 Q92 108 86 130 L78 149 Q76 154 70 154 L28 152 Q18 151 21 142 L40 72 Q41 63 44 58 Z"/>  <!-- punho -->
+  </g>
+</svg>

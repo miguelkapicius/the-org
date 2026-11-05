@@ -31,6 +31,7 @@ namespace CSM.View3D
         /// <summary>Chão fixo (estúdio da galeria, sem mapa); null = piso do mapa.</summary>
         public static float? PisoFixo;
         static float Piso(Vector3 p) => PisoFixo ?? Efeitos3D.Piso(p);
+        static Vector3 Varre(Vector3 de, Vector3 ate, float alto) => PisoFixo.HasValue ? ate : Efeitos3D.Varre(de, ate, alto);
         // gravação pro replay: (tempo, pose local de cada peça)
         readonly List<(float t, Vector3[] p, Quaternion[] r)> fita = new List<(float, Vector3[], Quaternion[])>();
 
@@ -46,7 +47,8 @@ namespace CSM.View3D
             return (t.localPosition - e, t.localPosition + e);
         }
 
-        public Ragdoll3D(Boneco3D boneco, Vector3 empurrao, float forca, int semente)
+        /// <summary>vel: velocidade do boneco na hora da morte (unidades do Unity/s): quem morre correndo cai com o embalo.</summary>
+        public Ragdoll3D(Boneco3D boneco, Vector3 empurrao, float forca, int semente, bool cabeca = false, Vector3 vel = default)
         {
             b = boneco; raiz = b.transform;
             pecas = new Transform[raiz.childCount];
@@ -98,23 +100,46 @@ namespace CSM.View3D
                 minimo.Add(((int)o, (int)m, 0.4f * lb)); minimo.Add(((int)q, (int)tz, 0.55f * lp_));
                 minimo.Add(((int)m, (int)P.Cabeca, raio[(int)P.Cabeca] + raio[(int)m]));   // a mão não entra na cabeça
             }
-            // velocidade inicial (xa = x - v dt): o tiro leva peito e cabeça, os joelhos cedem pro lado de quem atirou
+            // velocidade inicial (xa = x - v dt). Morrer = desligar: o corpo cai pelo próprio peso (joelhos cedem pra FRENTE
+            // do corpo, que é pra onde dobram, e a pelve desce), com o embalo de quem estava correndo; a bala só dá um
+            // empurrão no lugar onde pegou (cabeça dá o tranco pra trás e "quica", peito leva o tronco). Nada sorteado por
+            // partícula: empurrão de lado diferente em cada mão/cotovelo fazia o corpo girar no próprio eixo (usuário).
             var rng = new System.Random(semente);
             float R(float a, float c) => a + (float)rng.NextDouble() * (c - a);
             empurrao.y = 0; empurrao = empurrao.sqrMagnitude > 1e-6f ? empurrao.normalized : -raiz.forward;
             var lado = Vector3.Cross(Vector3.up, empurrao);
+            var frenteCorpo = raiz.forward; frenteCorpo.y = 0; frenteCorpo = frenteCorpo.sqrMagnitude > 1e-6f ? frenteCorpo.normalized : -empurrao;
+            var ladoCorpo = Vector3.Cross(Vector3.up, frenteCorpo);   // pra esquerda do boneco? (sinal não importa: simétrico)
+            vel.y = 0;
+            float deLado = R(-0.18f, 0.18f);              // o corpo todo tomba um pouco pra um lado (mesmo pra todas: sem torque)
+            float joelhoMais = R(-0.12f, 0.12f);          // um joelho cede antes do outro: tomba de lado, não gira
             const float DT = 1 / 60f;
             for (int i = 0; i < (int)P.N; i++)
             {
-                Vector3 v = Vector3.zero;
-                float alto = Mathf.Clamp01((x[i].y - raiz.position.y) / (0.75f * e));   // de cima pega mais o tiro
-                v += empurrao * (0.4f + (1.3f + 2.4f * forca) * alto);
-                if (i == (int)P.JoelhoL || i == (int)P.JoelhoR) v += -empurrao * 1.1f + Vector3.down * 0.4f;
-                if (i == (int)P.MaoL || i == (int)P.MaoR || i == (int)P.CotoveloL || i == (int)P.CotoveloR)
-                    v += lado * R(-1.6f, 1.6f) + Vector3.up * R(0.2f, 1.1f);
-                v += lado * R(-0.25f, 0.25f) * alto;
+                Vector3 v = vel * 0.85f + lado * deLado;
+                float alto = Mathf.Clamp01((x[i].y - raiz.position.y) / (0.75f * e));
+                v += empurrao * (0.12f + 0.3f * forca) * alto;   // o tiro mexe pouco no corpo inteiro
+                if (cabeca)
+                {
+                    if (i == (int)P.Cabeca) v += empurrao * (1.5f + 1.8f * forca) + Vector3.up * 0.3f;
+                    else if (i == (int)P.Peito || i == (int)P.OmbroL || i == (int)P.OmbroR) v += empurrao * (0.55f + 0.5f * forca);
+                }
+                else
+                {
+                    if (i == (int)P.Peito) v += empurrao * (0.9f + 1.1f * forca);
+                    else if (i == (int)P.OmbroL || i == (int)P.OmbroR) v += empurrao * (0.45f + 0.5f * forca);
+                    else if (i == (int)P.Cabeca) v += empurrao * (0.35f + 0.4f * forca);
+                }
+                if (i == (int)P.JoelhoL) v += frenteCorpo * (0.75f + joelhoMais) + Vector3.down * 0.5f;
+                if (i == (int)P.JoelhoR) v += frenteCorpo * (0.75f - joelhoMais) + Vector3.down * 0.5f;
+                // joelho vai pra frente, quadril vai pra trás e desce (desmorona dobrando); o tronco cai pra onde a bala empurrou
+                if (i == (int)P.Pelve || i == (int)P.QuadrilL || i == (int)P.QuadrilR) v += Vector3.down * 0.55f - frenteCorpo * 0.35f;
+                // braços amolecem: caem e abrem um pouco pra fora (os dois lados iguais: sem torque)
+                if (i == (int)P.MaoL || i == (int)P.CotoveloL) v += Vector3.down * 0.35f + ladoCorpo * 0.3f;
+                if (i == (int)P.MaoR || i == (int)P.CotoveloR) v += Vector3.down * 0.35f - ladoCorpo * 0.3f;
                 xa[i] = x[i] - v * DT;
             }
+            frente0 = Horizontal(TroncoFrente()); FrenteConfere = Vector3.Dot(frente0, frenteCorpo);
             // peças -> osso
             osso = new int[pecas.Length]; lp = new Vector3[pecas.Length]; lr = new Quaternion[pecas.Length]; usa = new bool[pecas.Length];
             var Rb = new Quaternion[(int)Osso.N]; var Ob = new Vector3[(int)Osso.N];
@@ -193,8 +218,18 @@ namespace CSM.View3D
             for (int s = 0; s < sub; s++) Sub(h);
             // dorme quando quase não mexe mais (corpo assentado)
             float mov = 0; for (int i = 0; i < (int)P.N; i++) mov = Mathf.Max(mov, (x[i] - xa[i]).magnitude / h);
+            // medição (laboratório): quanto o tronco girou em volta da vertical desde a morte
+            // (pela linha dos ombros, só enquanto ela está deitada: de lado ela fica em pé e o ângulo no chão não diz nada)
+            var lado = x[(int)P.OmbroL] - x[(int)P.OmbroR]; float hz = new Vector2(lado.x, lado.z).magnitude / Mathf.Max(1e-6f, lado.magnitude);
+            if (hz > 0.6f)
+            {
+                var fz = Horizontal(lado);
+                if (fUlt.sqrMagnitude > 0) { float gy = Vector3.SignedAngle(fUlt, fz, Vector3.up); Giro += Mathf.Abs(gy); GiroLiq += gy; }
+                fUlt = fz;
+            }
             parado = mov < 0.05f ? parado + dt : 0;
-            if (parado > 0.4f || t > 6f) dormindo = true;
+            // assentou (ou passou de 3 s): congela de vez — corpo do CS2 fica parado, não treme nem desliza
+            if (parado > 0.4f || t > 3f) dormindo = true;
             Aplicar();
             Gravar();
         }
@@ -202,6 +237,22 @@ namespace CSM.View3D
         void Sub(float h)
         {
             var frente = TroncoFrente();
+            // freio do giro em volta da vertical (o corpo inteiro rodando como pião): tira 12% da velocidade angular de yaw
+            // por subpasso, sem mexer na queda nem no tombo (usuário: "gira no próprio eixo")
+            {
+                Vector3 c = Vector3.zero; for (int i = 0; i < (int)P.N; i++) c += x[i]; c /= (int)P.N;
+                float L = 0, I = 0;
+                for (int i = 0; i < (int)P.N; i++)
+                {
+                    var r = x[i] - c; r.y = 0; var v = (x[i] - xa[i]) / h;
+                    L += r.z * v.x - r.x * v.z; I += r.sqrMagnitude;   // L = ω·I com v = ω (r.z, 0, -r.x)
+                }
+                if (I > 1e-6f)
+                {
+                    float w = L / I * 0.12f;
+                    for (int i = 0; i < (int)P.N; i++) { var r = x[i] - c; r.y = 0; xa[i] += new Vector3(r.z, 0, -r.x) * w * h; }
+                }
+            }
             for (int i = 0; i < (int)P.N; i++)
             {
                 var v = (x[i] - xa[i]) * 0.996f;
@@ -226,36 +277,52 @@ namespace CSM.View3D
                 foreach (var (q, j, tz) in new[] { (P.QuadrilL, P.JoelhoL, P.TornozeloL), (P.QuadrilR, P.JoelhoR, P.TornozeloR) })
                 {
                     var meio = (x[(int)q] + x[(int)tz]) * 0.5f; float f = Vector3.Dot(x[(int)j] - meio, frente);
-                    if (f < 0) x[(int)j] -= frente * f * 0.5f;
+                    // corrige sem criar movimento: o joelho vai pra frente e quadril/tornozelo recuam metade cada (empurrar só o
+                    // joelho, a cada subpasso, injetava giro e o corpo deitado ficava rodando no chão)
+                    if (f < 0) { var c = frente * (-f * 0.5f); x[(int)j] += c; x[(int)q] -= c * 0.5f; x[(int)tz] -= c * 0.5f; }
                 }
                 Chao();
             }
         }
 
+        Vector3 frente0, fUlt;
+        /// <summary>Laboratório: giro acumulado do tronco em volta da vertical (graus) e para onde a cabeça foi em relação à
+        /// pelve (mundo).</summary>
+        public float Giro, GiroLiq, FrenteConfere;
+        public Vector3 CabecaMenosPelve => x[(int)P.Cabeca] - x[(int)P.Pelve];
+        static Vector3 Horizontal(Vector3 v) { v.y = 0; return v.sqrMagnitude > 1e-8f ? v.normalized : Vector3.zero; }
+
         Vector3 TroncoFrente()
         {
             var cima = (x[(int)P.Peito] - x[(int)P.Pelve]).normalized;
             var lado = x[(int)P.OmbroL] - x[(int)P.OmbroR]; lado = (lado - cima * Vector3.Dot(lado, cima)).normalized;
-            return Vector3.Cross(lado, cima);
+            // (cima x lado: lado aponta pra esquerda do boneco, -X; lado x cima dava as COSTAS e o "joelho não dobra pra trás"
+            // forçava o joelho a dobrar pra trás: todo mundo tombava de cara)
+            return Vector3.Cross(cima, lado);
         }
 
         void Chao()
         {
             for (int i = 0; i < (int)P.N; i++)
             {
-                float piso = Piso(x[i]);
-                // parede: o piso logo ali é mais alto que um degrau acima da partícula -> volta no eixo horizontal
-                if (piso > xa[i].y - raio[i] + 0.12f)
+                // parede: varre do começo do passo até aqui e para onde o piso fica mais alto que um degrau acima da
+                // partícula (o caminho todo, não só o ponto final: parede fina não é atravessada num passo grande)
+                float alto = Mathf.Max(xa[i].y, x[i].y) - raio[i] + 0.12f;
+                if (Piso(xa[i]) <= alto)
                 {
-                    float pAnt = Piso(xa[i]);
-                    if (pAnt < piso - 0.05f) { x[i].x = xa[i].x; x[i].z = xa[i].z; piso = pAnt; }
+                    var livre = Varre(xa[i], x[i], alto);
+                    x[i].x = livre.x; x[i].z = livre.z;
                 }
+                float piso = Piso(x[i]);
                 if (x[i].y < piso + raio[i])
                 {
+                    float vy = x[i].y - xa[i].y;   // velocidade vertical do passo (negativa caindo)
                     x[i].y = piso + raio[i];
                     // atrito: no chão a partícula quase não escorrega
                     var v = x[i] - xa[i]; xa[i].x = x[i].x - v.x * 0.55f; xa[i].z = x[i].z - v.z * 0.55f;
-                    if (xa[i].y < x[i].y) xa[i].y = x[i].y;   // sem quique (corpo não é bola)
+                    // tronco e cabeça batendo forte dão um quique baixo (corpo pesado, não bola); o resto assenta
+                    bool quica = (i == (int)P.Peito || i == (int)P.Cabeca || i == (int)P.Pelve) && vy < -1.2f * (1 / 60f);
+                    xa[i].y = quica ? x[i].y + vy * 0.22f : Mathf.Max(xa[i].y, x[i].y);
                 }
             }
         }

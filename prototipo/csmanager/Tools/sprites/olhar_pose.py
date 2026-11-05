@@ -56,6 +56,7 @@ for pi, ped in enumerate(PEDIDOS):
     kw = {}
     for ex in partes[3:]:   # "pitch=60" (graus) ou o nome da granada
         if ex.startswith("pitch="): kw["pitch"] = math.radians(float(ex[6:]))
+        elif ex.startswith("jeito="): kw["jeito"] = ex[6:]
         else: kw["nade"] = ex
     A.pose(t, anim, arma, **kw)
     bpy.context.view_layer.update()

@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using CSM.Map;
 using CSM.Sim;
 using static CSM.View3D.UiKit;
+using Text = TMPro.TextMeshProUGUI;   // texto SDF (nítido em qualquer resolução); a API usada aqui é a mesma
 
 namespace CSM.View3D
 {
@@ -16,9 +17,14 @@ namespace CSM.View3D
     /// </summary>
     public class Hud3D
     {
-        static readonly Color CT = new Color(0.36f, 0.62f, 0.98f), TR = new Color(0.96f, 0.62f, 0.22f);
-        static readonly Color ESCURO = new Color(0.10f, 0.11f, 0.17f, 0.88f), CREME = new Color(0.99f, 0.95f, 0.86f), CINZA = new Color(0.55f, 0.55f, 0.6f);
-        static readonly Color VERDE = new Color(0.55f, 0.88f, 0.45f), VERMELHO = new Color(0.95f, 0.30f, 0.26f);
+        // tema escuro aprovado no mockup (referência IEM/PGL): grafite quente, texto creme, cor do time viva na vida
+        static Color Hx(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
+        static readonly Color CT = Hx("#5B9BFF"), TR = Hx("#F5A524");
+        static readonly Color ESCURO = new Color(31 / 255f, 27 / 255f, 24 / 255f, 0.92f), CREME = Hx("#FFF4E2"), CINZA = new Color(1f, 0.957f, 0.886f, 0.45f);
+        static readonly Color VERDE = Hx("#8BE79C"), VERMELHO = Hx("#E5382E");
+        static readonly Color VIDA_TR = Hx("#D9831A"), VIDA_CT = Hx("#2F6FD6"), VIDA_BAIXA = Hx("#D63A2F"), RASTRO = Hx("#FF8A7A");
+        static readonly Color CAIXA_TR = Hx("#A85A00"), CAIXA_CT = Hx("#1E4FB0"), PLACAR_TR = Hx("#FFB43C"), PLACAR_CT = Hx("#6FA8FF");
+        static readonly Color VAZIO = new Color(1f, 0.957f, 0.886f, 0.07f);
         static Color Lado(bool t) => t ? TR : CT;
         static Color Escurece(Color c, float k) => new Color(c.r * k, c.g * k, c.b * k, c.a);
 
@@ -26,41 +32,137 @@ namespace CSM.View3D
         // tudo que é "jogo" (placar, cards, minimapa, killfeed, etiquetas) fica num grupo que some no replay
         RectTransform jogo; CanvasGroup jogoGrupo; readonly Camera principal;
         // etiqueta em cima de cada boneco: nome + vida
-        class Etiqueta { public RectTransform r; public Text nome; public Image barra, fundo; public float alfa; }
+        class Etiqueta
+        {
+            public RectTransform r; public Text nome, venda; public Image barra, fundo; public RawImage c4; public float alfa, larg, alt, y, sobe, vendaT; public Vector2 base_;
+            // compras do freeze: pilha por jogador (a mais nova embaixo, as anteriores sobem uma linha; nenhuma tapa a outra)
+            public readonly Text[] compra = new Text[COMPRA_MAX]; public readonly float[] compraT = new float[COMPRA_MAX];
+            public readonly int[] compraSeq = new int[COMPRA_MAX];
+        }
+        const float VENDA_DUR = 1.6f, COMPRA_DUR = 1.5f, COMPRA_LINHA = 22;
+        const int COMPRA_MAX = 5;
+        /// <summary>Comprou no freeze (Match.compras): o item sobe da etiqueta do boneco, em fila — quem compra 3-4 coisas
+        /// seguidas mostra todas empilhadas, a mais nova embaixo.</summary>
+        public void Comprou(int i, string item)
+        {
+            if (i < 0 || i >= 10 || string.IsNullOrEmpty(item)) return;
+            var e = etiquetas[i];
+            int livre = -1; float maisVelha = -1;
+            for (int k = 0; k < COMPRA_MAX; k++)
+            {
+                if (e.compraT[k] <= 0) { livre = k; break; }
+                float idade = COMPRA_DUR - e.compraT[k];
+                if (idade > maisVelha) { maisVelha = idade; livre = k; }   // cheia: reaproveita a mais velha
+            }
+            e.compraT[livre] = COMPRA_DUR;
+            e.compraSeq[livre] = ++compraSeq;
+            var t = e.compra[livre];
+            t.text = NomeItem(item); t.color = CorItem(item);
+            t.rectTransform.anchoredPosition = new Vector2(0, 30);
+        }
+        int compraSeq;
+        static string NomeItem(string it) => it switch
+        {
+            "colete" => "COLETE", "capacete" => "CAPACETE", "kit" => "KIT", "smoke" => "SMOKE", "flash" => "FLASH",
+            "molotov" => "MOLOTOV", "incendiaria" => "INCENDIÁRIA", "he" => "HE", _ => NomeArma(it).ToUpper()
+        };
+        static Color CorItem(string it) => it switch
+        {
+            "smoke" or "flash" or "molotov" or "incendiaria" or "he" => CorNade(it),
+            "kit" => PLACAR_CT, _ => CREME
+        };
+        /// <summary>Tempo de compra que falta (PartidaAoVivo3D): o relógio mostra a contagem do freeze.</summary>
+        public float Freeze;
+        /// <summary>Segundos desde o começo do round no visual (o freeze vem antes do t = 0 da Sim).</summary>
+        float Ti(Match m) => m.t + Match.FREEZE - Freeze;
+        /// <summary>Vendeu no tempo de compra: "$ MP9" verde sobe da etiqueta do boneco e some.</summary>
+        public void Vendeu(int i, string item)
+        {
+            if (i < 0 || i >= 10) return;
+            var e = etiquetas[i]; e.vendaT = VENDA_DUR; e.venda.text = "$ " + NomeArma(item);
+        }
         readonly Etiqueta[] etiquetas = new Etiqueta[10];
         float tempo;
 
         // placar
         Image clutchSelo; Text clutchTxt; float clutchDesde = -1;
         // histórico de rounds embaixo do placar (como nas transmissões: quem ganhou cada round e como)
-        readonly Image[] histTile = new Image[30]; readonly Text[] histTxt = new Text[30];
-        Image tileA, tileB, centro, barraC4; Text nomeA, nomeB, placarA, placarB, relogio, roundTxt; Image[] vivosA = new Image[5], vivosB = new Image[5];
+        RectTransform histFundo; Image histPainel; CanvasGroup histGrupo; Text histA, histB; float histK;
+        readonly Image[,] histCel = new Image[2, 24]; readonly RawImage[,] histIco = new RawImage[2, 24];
+        Image tileA, tileB, faixaA, faixaB, centro, barraC4; Text nomeA, nomeB, placarA, placarB, relogio, roundTxt; Image[] vivosA = new Image[5], vivosB = new Image[5];
         // killfeed
-        class Linha { public RectTransform r; public Image fundo; public readonly List<Graphic> partes = new List<Graphic>(); public float nasceu; public float y; }
-        readonly List<Linha> feed = new List<Linha>(); int feedVisto;
+        class Linha { public RectTransform r; public Image fundo, borda; public readonly List<Graphic> partes = new List<Graphic>(); public float nasceu, y, vida; public Color cor; public bool temBorda; }
+        readonly List<Linha> feed = new List<Linha>();
         // cards
         class Card
         {
-            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public Image[] nades = new Image[4];
-            public RawImage icone, iconeFora;   // arma NA MÃO (grande) e a que está guardada (pequena, apagada)
+            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public RawImage[] nades = new RawImage[4]; public RawImage c4Ico, kitIco;
+            public RawImage icone, iconeFora, capacete, caveira; public Text slot;
             public Image vidaFundo, vidaLag; public Image[] kills = new Image[5];
             public float hpMostra = 100, hpLag = 100, lagEspera, flash; public int ultHp = 100;
         }
         readonly Card[] cardsA = new Card[5], cardsB = new Card[5];
         // observado
-        RectTransform obs; Text obsNome, obsHp, obsColete, obsArma, obsMun; Image obsFundo; float obsAlfa; RawImage obsIcone;
+        RectTransform obs; Text obsNome, obsHp, obsColete, obsArma, obsMun; Image obsFundo; float obsAlfa; RawImage obsIcone, obsIcVida, obsIcColete;
         /// <summary>Modelo de onde saem os ícones de arma (as armas são as mesmas nos dois times).</summary>
         public Boneco3D.Modelo modeloArmas;
         /// <summary>Onde fica a cabeça de cada boneco no mundo (pra etiqueta de nome/vida).</summary>
         public System.Func<Agent, Vector3> Cabeca;
-        Texture2D Icone(string gunId) => modeloArmas == null ? null : Armas3D.Icone(modeloArmas, Armas3D.DoJogo(gunId));
+        static readonly Dictionary<string, Texture2D> icones = new Dictionary<string, Texture2D>();
+        /// <summary>Ícone do HUD em Resources/Icones (armas pelo nome do modelo; interface com "ui_").</summary>
+        static Texture2D Tex(string nome)
+        {
+            if (nome == null) return null;
+            if (!icones.TryGetValue(nome, out var t)) icones[nome] = t = Resources.Load<Texture2D>("Icones/" + nome);
+            return t;
+        }
+        // armas que o HUD desenha com ícone próprio (Tools/icones); o Armas3D.DoJogo mapeia algumas pra arma parecida enquanto
+        // o modelo 3D não existe, e aí o ícone sairia errado (Tec-9 com cara de Glock): sem ícone próprio, mostra o nome
+        /// <summary>Altura do ícone da arma em relação à de um fuzil: todas na mesma régua (antes o ícone se encaixava numa
+        /// caixa e a pistola saía com a altura cheia, maior que a AWP). Pistola menor, SMG um pouco menor.</summary>
+        public static float FatorArma(string gunId) => gunId switch
+        {
+            "glock" or "usp" or "p250" or "fiveseven" or "tec9" or "deagle" => 0.74f,
+            "mp9" or "mac10" => 0.88f,
+            _ => 1f
+        };
+        /// <summary>Tamanho do ícone da arma: altura = alto x FatorArma; se passar da largura máxima, encolhe inteiro.</summary>
+        static Vector2 TamArma(Texture2D t, string gunId, float alto, float largMax)
+        {
+            float h = alto * FatorArma(gunId), w = h * t.width / t.height;
+            if (w > largMax) { h *= largMax / w; w = largMax; }
+            return new Vector2(w, h);
+        }
+        static string IconeProprio(string gunId) => gunId switch
+        {
+            "tec9" => "Tec9", "fiveseven" => "FiveSeven", "p250" => "P250", "galil" => "Galil", "famas" => "Famas", _ => null
+        };
+        Texture2D Icone(string gunId)
+        {
+            if (gunId == null) return null;
+            var proprio = IconeProprio(gunId);
+            if (proprio != null) return Tex(proprio);
+            return Tex(Armas3D.DoJogo(gunId)) ?? (modeloArmas == null ? null : Armas3D.Icone(modeloArmas, Armas3D.DoJogo(gunId)));
+        }
         // banners
         RectTransform banner; Image bannerFundo; Text bannerTitulo, bannerSub; float bannerDesde = -1; string bannerChave;
         // minimapa
-        RawImage mapaImg; RectTransform mapaR; readonly Image[] pontos = new Image[10]; readonly Image[] setas = new Image[10]; Image c4Ponto;
+        // radar no padrão da transmissão IEM: planta gerada do MapData (piso escuro, contorno claro, 2º andar mais claro,
+        // escada listrada, caixotes cinza), A/B em quadrado amarelo, spawns verdes; jogador = gota com o número do slot
+        // (o mesmo do card) apontando pra mira, morto = X na cor do time, C4 = ícone (na gota de quem carrega, no chão
+        // quando cai, piscando vermelho plantada); embaixo, onde está o observado
+        RawImage mapaImg; RectTransform mapaR; bool radarPronto;
+        class Marca { public Image bola, ponta, anel, x1, x2; public Text num; public RawImage c4; }
+        readonly Marca[] marcas = new Marca[10];
+        RawImage c4Chao; Text mapaLocal;
+        readonly Dictionary<string, int> slotDe = new Dictionary<string, int>();
         readonly List<Image> manchas = new List<Image>();
+        const float MAPA_W = 340, MARCA_D = 17;
+        static readonly Color MAPA_PISO = Hx("#2B2622"), MAPA_ALTO = Hx("#3D3631"), MAPA_LINHA = Hx("#D9CCB8"), MAPA_CAIXA = Hx("#8A8079");
+        static readonly Color MAPA_SITE = Hx("#F2C200"), MAPA_SPAWN = new Color(0.16f, 0.55f, 0.3f, 0.85f), MARCA_TXT = Hx("#1A1714");
+        static readonly Color MARCA_T = Hx("#F2C76B"), MARCA_CT = Hx("#8EC0F5"), C4_MAPA = Hx("#FF4A3D");
         // economia (começo do round)
-        class LinhaEco { public Text nome, dinheiro, tags; public RawImage icone; public Image[] nades = new Image[4]; }
+        class LinhaEco { public Text nome, dinheiro, tags; public RawImage icone; public RawImage[] nades = new RawImage[4]; }
         RectTransform eco; Image ecoFundo; Text[] ecoTime = new Text[2], ecoTipo = new Text[2], ecoValor = new Text[2];
         readonly LinhaEco[,] ecoLinhas = new LinhaEco[2, 5];
         // replay
@@ -88,7 +190,7 @@ namespace CSM.View3D
             raiz = (RectTransform)go.transform;
 
             this.principal = principal;
-            MontarPlacar(); MontarCards(); MontarObservado(); MontarMapa(minimapa); MontarEconomia();
+            MontarPlacar(); MontarC4(); MontarCards(); MontarObservado(); MontarMapa(minimapa); MontarEconomia();
             jogo = No("jogo", raiz, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             jogo.anchorMin = Vector2.zero; jogo.anchorMax = Vector2.one; jogo.offsetMin = jogo.offsetMax = Vector2.zero;
             jogoGrupo = jogo.gameObject.AddComponent<CanvasGroup>(); jogoGrupo.blocksRaycasts = false; jogoGrupo.interactable = false;
@@ -114,27 +216,107 @@ namespace CSM.View3D
             foreach (bool a in new[] { true, false })
             {
                 float sx = a ? -1 : 1;
-                var tile = Painel(a ? "time A" : "time B", raiz, top, new Vector2(sx * 95, -22), new Vector2(270, 70), TR, new Vector2(a ? 1 : 0, 1), true);
+                // bloco escuro com a cor do time só na faixa de baixo e no número (antes o bloco todo laranja/azul com
+                // texto branco: pouco contraste)
+                var tile = Painel(a ? "time A" : "time B", raiz, top, new Vector2(sx * 95, -22), new Vector2(270, 70), ESCURO, new Vector2(a ? 1 : 0, 1), true);
+                var faixa = No("faixa", tile.transform, new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(0, 6), new Vector2(0.5f, 0)).gameObject.AddComponent<Image>();
+                faixa.rectTransform.anchorMin = new Vector2(0, 0); faixa.rectTransform.anchorMax = new Vector2(1, 0); faixa.rectTransform.sizeDelta = new Vector2(-16, 6);
+                faixa.raycastTarget = false; if (a) faixaA = faixa; else faixaB = faixa;
                 var nome = Texto("nome", tile.transform, new Vector2(a ? 0 : 1, 0.5f), new Vector2(sx * -18, 0), new Vector2(170, 40), "TIME", 24, CREME, a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, false, new Vector2(a ? 0 : 1, 0.5f));
                 var pl = Texto("placar", tile.transform, new Vector2(a ? 1 : 0, 0.5f), new Vector2(sx * 16, 0), new Vector2(70, 60), "0", 50, CREME, TextAnchor.MiddleCenter, true, new Vector2(a ? 1 : 0, 0.5f));
                 var vivos = a ? vivosA : vivosB;
                 for (int i = 0; i < 5; i++)
-                    vivos[i] = Bola("vivo", raiz, top, new Vector2(sx * (110 + i * 22), -104), 15, CREME);
+                    vivos[i] = Bola("vivo", raiz, top, new Vector2(sx * (110 + i * 22), -110), 15, CREME);   // abaixo da barra da C4
                 if (a) { tileA = tile; nomeA = nome; placarA = pl; } else { tileB = tile; nomeB = nome; placarB = pl; }
             }
-            for (int i = 0; i < histTile.Length; i++)
+            // histórico (como nas transmissões): fileira de cima = time A, de baixo = time B; cada round vencido mostra
+            // como (caveira, bomba, alicate, relógio) na cor do lado que venceu; divisória na troca de lado
+            const float CEL = 22, PASSO = 24;
+            float largH = 56 + 24 * PASSO + 14;
+            histPainel = Painel("histórico", raiz, top, new Vector2(0, -116), new Vector2(largH, 2 * PASSO + 12), ESCURO, new Vector2(0.5f, 1), true);
+            histFundo = histPainel.rectTransform; histGrupo = histFundo.gameObject.AddComponent<CanvasGroup>();
+            histA = Texto("A", histFundo, new Vector2(0, 1), new Vector2(10, -6), new Vector2(44, CEL), "", 15, PLACAR_TR, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
+            histB = Texto("B", histFundo, new Vector2(0, 1), new Vector2(10, -6 - PASSO), new Vector2(44, CEL), "", 15, PLACAR_CT, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
+            Painel("meio", histFundo, new Vector2(0, 1), new Vector2(56 + 12 * PASSO + 4, -6), new Vector2(2, 2 * PASSO - 2), new Color(1, 0.957f, 0.886f, 0.25f), new Vector2(0, 1));
+            for (int lin = 0; lin < 2; lin++)
+                for (int i = 0; i < 24; i++)
+                {
+                    float x = 56 + i * PASSO + (i >= 12 ? 14 : 0);
+                    histCel[lin, i] = Painel("round", histFundo, new Vector2(0, 1), new Vector2(x, -6 - lin * PASSO), new Vector2(CEL, CEL), VAZIO, new Vector2(0, 1));
+                    histIco[lin, i] = No("ícone", histCel[lin, i].transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(16, 16)).gameObject.AddComponent<RawImage>();
+                    histIco[lin, i].raycastTarget = false;
+                }
+            histFundo.gameObject.SetActive(false);
+        }
+
+        // ------------------------------------------------------------------ C4: barra embaixo do placar (padrão IEM)
+        // plantada: o relógio vira o ícone vermelho da C4 e uma barra vermelha fina corre embaixo do placar inteiro,
+        // encolhendo pro meio nos 40 s (pisca nos últimos 10). Plantando: a mesma barra em âmbar cresce do meio em
+        // Match.PLANT. Desarmando: barra azul fina logo embaixo cresce do meio (com kit 5 s, sem kit 10 s); vermelha se
+        // não dá tempo.
+        const float C4_LARG = 730, C4_Y = -96;
+        Image c4Barra, c4Def; RawImage relogioC4; float c4Alfa;
+        static readonly Color C4_VERMELHO = Hx("#E5382E"), C4_AMBAR = Hx("#F5A524"), C4_AZUL = Hx("#5B9BFF");
+        void MontarC4()
+        {
+            var top = new Vector2(0.5f, 1);
+            Image Fina(string n, float y, float h)
             {
-                histTile[i] = Painel("round " + (i + 1), raiz, top, Vector2.zero, new Vector2(19, 19), new Color(1, 1, 1, 0.15f), new Vector2(0.5f, 0.5f), true);
-                histTxt[i] = Texto("como", histTile[i].transform, new Vector2(0.5f, 0.5f), new Vector2(0, 0), new Vector2(19, 19), "", 12, CREME, TextAnchor.MiddleCenter, true, null, false);
-                histTile[i].gameObject.SetActive(false);
+                var im = No(n, raiz, top, new Vector2(0, y), new Vector2(C4_LARG, h), new Vector2(0.5f, 1)).gameObject.AddComponent<Image>();
+                im.raycastTarget = false; im.gameObject.SetActive(false); return im;
             }
+            c4Barra = Fina("c4 barra", C4_Y, 4);
+            c4Def = Fina("c4 defuse", C4_Y - 6, 4);
+            relogioC4 = No("c4 relógio", centro.transform, new Vector2(0.5f, 0.5f), new Vector2(0, 6), new Vector2(60, 40)).gameObject.AddComponent<RawImage>();
+            relogioC4.raycastTarget = false; relogioC4.gameObject.SetActive(false);
+        }
+
+        /// <summary>Atualiza a barra da C4; devolve se está na tela.</summary>
+        bool C4Barra(Match m, float dt)
+        {
+            Agent plantando = null, desarmando = null;
+            if (!m.over)
+                foreach (var a in m.agents)
+                {
+                    if (!a.alive) continue;
+                    if (a.IsT && !m.bombPlanted && a.brain.action == "plantar") plantando = a;
+                    if (!a.IsT && m.bombPlanted && m.defuserActive && a.brain.action == "desarmar") desarmando = a;
+                }
+            bool plantada = m.bombPlanted && !m.defused && !m.exploded;
+            bool mostra = plantando != null || plantada;
+            c4Alfa = Mathf.MoveTowards(c4Alfa, mostra ? 1 : 0, dt * 6);
+            relogioC4.gameObject.SetActive(plantada);
+            if (plantada)
+            {
+                float left = Mathf.Max(0, m.BombLeft);
+                float pisca = left < 10 ? 0.5f + 0.5f * Mathf.Sin(tempo * 16) : 0;
+                PorIcone(relogioC4, "ui_bomba", 34); relogioC4.color = Color.Lerp(C4_VERMELHO, Color.white, pisca * 0.5f);
+                c4Barra.color = Color.Lerp(C4_VERMELHO, Color.white, pisca * 0.4f);
+                c4Barra.rectTransform.sizeDelta = new Vector2(C4_LARG * left / Match.BOMB, 4);
+            }
+            else if (plantando != null)
+            {
+                float p = Mathf.Clamp01(1 - (plantando.brain.ActionEnd - m.t) / Match.PLANT);
+                c4Barra.color = C4_AMBAR; c4Barra.rectTransform.sizeDelta = new Vector2(C4_LARG * p, 4);
+            }
+            c4Barra.gameObject.SetActive(c4Alfa > 0.01f && mostra);
+            bool def = plantada && desarmando != null;
+            c4Def.gameObject.SetActive(def);
+            if (def)
+            {
+                float dur = Match.DefuseTime(desarmando), fim = m.plantedAt + Match.BOMB + m.DefuseFolga;
+                float p = Mathf.Clamp01(1 - (fim - m.t) / dur);
+                c4Def.color = m.DefuseVaiDar ? C4_AZUL : new Color(1f, 0.55f, 0.5f);
+                c4Def.rectTransform.sizeDelta = new Vector2(C4_LARG * p, 4);
+            }
+            return mostra;
         }
 
         void MontarCards()
         {
-            // card de transmissão (referência ESL/PGL): a VIDA preenche o fundo do card na cor do time (some da direita
-            // pra esquerda), número da vida no quadrado, nome com as kills do round (bolinhas), dinheiro + colete/kit/C4 +
-            // granadas embaixo, a arma NA MÃO grande do lado de dentro (pro meio da tela) e a guardada pequena e apagada
+            // card de transmissão (tema aprovado): a VIDA enche o card inteiro na cor do time (o que perdeu fica escuro,
+            // com rastro vermelho-claro do dano), número da vida no quadrado do lado de fora, nome com os abates do round,
+            // dinheiro + capacete + C4/KIT + granadas embaixo, a arma principal do lado de dentro (pro meio da tela)
             foreach (bool a in new[] { true, false })
             {
                 var cs = a ? cardsA : cardsB;
@@ -142,33 +324,41 @@ namespace CSM.View3D
                 for (int i = 0; i < 5; i++)
                 {
                     var c = new Card();
-                    float sx = a ? 1 : -1;
-                    c.borda = Painel("card borda", raiz, anc, new Vector2(sx * 22, 24 + (4 - i) * 66), new Vector2(404, 60), new Color(1, 1, 1, 0), anc);
-                    c.fundo = Painel("card", raiz, anc, new Vector2(sx * 24, 26 + (4 - i) * 66), new Vector2(400, 56), ESCURO, anc, true);
+                    float sx = a ? 1 : -1, y = 24 + (4 - i) * 62;
+                    c.borda = Painel("card borda", raiz, anc, new Vector2(sx * 22, y - 2), new Vector2(444, 60), new Color(1, 1, 1, 0), anc);
+                    c.fundo = Painel("card", raiz, anc, new Vector2(sx * 24, y), new Vector2(440, 56), ESCURO, anc, true);
                     c.r = c.fundo.rectTransform;
                     var t = c.r;
-                    var la = new Vector2(a ? 0 : 1, 0.5f);
                     var lado = new Vector2(a ? 0 : 1, 0.5f);
-                    // vida no fundo: atraso branco + cor do time, entre o quadrado e a ponta
-                    // (só na faixa do nome, como na ESL: a de baixo fica escura pra ler dinheiro, granadas e arma)
-                    c.vidaLag = Barra("vida atraso", t, lado, new Vector2(sx * 68, 11), new Vector2(326, 26), new Color(0, 0, 0, 0), new Color(1, 1, 1, 0.22f), !a, lado);
-                    c.vidaFundo = No("vida", c.vidaLag.transform.parent, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero).gameObject.AddComponent<Image>();
+                    c.vidaLag = Barra("vida", t, lado, new Vector2(sx * 56, 0), new Vector2(384, 56), new Color(0, 0, 0, 0), RASTRO, !a, lado);
+                    c.vidaFundo = No("vida cheia", c.vidaLag.transform.parent, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero).gameObject.AddComponent<Image>();
                     var vr = c.vidaFundo.rectTransform; vr.anchorMin = Vector2.zero; vr.anchorMax = Vector2.one; vr.offsetMin = vr.offsetMax = Vector2.zero;
                     c.vidaFundo.sprite = c.vidaLag.sprite; c.vidaFundo.type = Image.Type.Filled; c.vidaFundo.fillMethod = Image.FillMethod.Horizontal;
                     c.vidaFundo.fillOrigin = a ? 0 : 1; c.vidaFundo.raycastTarget = false;
-                    c.hpBox = Painel("hp", t, la, new Vector2(sx * 4, 0), new Vector2(60, 48), TR, la);
-                    c.hp = Texto("hp txt", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(60, 48), "100", 28, CREME, TextAnchor.MiddleCenter, true);
-                    c.nome = Texto("nome", t, new Vector2(a ? 0 : 1, 1), new Vector2(sx * 76, -4), new Vector2(200, 26), "Jogador", 20, CREME, a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, false, new Vector2(a ? 0 : 1, 1));
-                    for (int k = 0; k < 5; k++) c.kills[k] = Bola("kill", t, new Vector2(a ? 0 : 1, 1), Vector2.zero, 9, CREME);
-                    c.dinheiro = Texto("dinheiro", t, new Vector2(a ? 0 : 1, 0), new Vector2(sx * 76, 6), new Vector2(90, 22), "$0", 17, VERDE, a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, true, new Vector2(a ? 0 : 1, 0), false);
-                    c.tags = Texto("tags", t, new Vector2(a ? 0 : 1, 0), new Vector2(sx * 160, 6), new Vector2(70, 22), "", 15, CREME, a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, false, new Vector2(a ? 0 : 1, 0), false);
-                    for (int k = 0; k < 4; k++) c.nades[k] = Bola("nade", t, new Vector2(a ? 0 : 1, 0), new Vector2(sx * (236 + k * 15), 17), 11, CREME);
+                    c.hpBox = Painel("hp", t, lado, Vector2.zero, new Vector2(58, 56), CAIXA_TR, lado);
+                    c.hpBox.sprite = null; c.hpBox.type = Image.Type.Simple;   // quadrado (usuário: o canto redondo do número ficava esquisito)
+                    Raio(c.fundo, 3); Raio(c.borda, 3);                         // card com canto quase reto, casando com o número
+                    c.hp = Texto("hp txt", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(58, 56), "100", 30, Color.white, TextAnchor.MiddleCenter, true);
+                    c.caveira = No("caveira", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(26, 27)).gameObject.AddComponent<RawImage>();
+                    c.caveira.texture = Tex("ui_caveira"); c.caveira.color = CINZA; c.caveira.raycastTarget = false;
+                    // número do slot (o mesmo da gota no radar, como na IEM), no canto de cima do quadrado da vida
+                    var qs = new Vector2(a ? 0 : 1, 1);
+                    c.slot = Texto("slot", c.hpBox.transform, qs, new Vector2(sx * 4, -1), new Vector2(14, 15), "", 13, CINZA, a ? TextAnchor.UpperLeft : TextAnchor.UpperRight, true, qs, false);
+                    var al = a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
+                    c.nome = Texto("nome", t, new Vector2(a ? 0 : 1, 1), new Vector2(sx * 70, -3), new Vector2(230, 30), "Jogador", 25, CREME, al, false, new Vector2(a ? 0 : 1, 1));
+                    for (int k = 0; k < 5; k++) c.kills[k] = Painel("kill", t, new Vector2(a ? 0 : 1, 1), Vector2.zero, new Vector2(7, 7), CREME, new Vector2(0.5f, 0.5f));
+                    var pe = new Vector2(a ? 0 : 1, 0);
+                    c.dinheiro = Texto("dinheiro", t, pe, new Vector2(sx * 70, 5), new Vector2(90, 24), "$0", 19, VERDE, al, true, pe, false);
+                    c.capacete = No("capacete", t, pe, Vector2.zero, new Vector2(14, 17), new Vector2(0.5f, 0)).gameObject.AddComponent<RawImage>();
+                    c.capacete.texture = Tex("ui_capacete"); c.capacete.raycastTarget = false;
+                    c.tags = Texto("tags", t, pe, Vector2.zero, new Vector2(70, 24), "", 16, CREME, al, false, pe, false);
+                    for (int k = 0; k < 4; k++) c.nades[k] = IconeUi("nade", t, pe, new Vector2(0.5f, 0));
+                    c.c4Ico = IconeUi("c4", t, pe, new Vector2(0.5f, 0)); c.kitIco = IconeUi("kit", t, pe, new Vector2(0.5f, 0));
                     var dentro = new Vector2(a ? 1 : 0, 0.5f);
-                    c.icone = No("arma na mão", t, dentro, new Vector2(sx * -12, 2), new Vector2(80, 26), dentro).gameObject.AddComponent<RawImage>();
+                    c.icone = No("arma", t, dentro, new Vector2(sx * -14, 0), new Vector2(100, 30), dentro).gameObject.AddComponent<RawImage>();
                     c.icone.raycastTarget = false;
-                    c.iconeFora = No("arma guardada", t, dentro, new Vector2(sx * -100, -12), new Vector2(40, 13), dentro).gameObject.AddComponent<RawImage>();
-                    c.iconeFora.raycastTarget = false;
-                    c.arma = Texto("arma", t, dentro, new Vector2(sx * -12, 0), new Vector2(150, 24), "", 17, new Color(0.9f, 0.88f, 0.84f), a ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, false, dentro, false);
+                    c.iconeFora = c.icone;
+                    c.arma = Texto("arma", t, dentro, new Vector2(sx * -14, 0), new Vector2(150, 24), "", 18, CINZA, a ? TextAnchor.MiddleRight : TextAnchor.MiddleLeft, false, dentro, false);
                     c.hpAtraso = c.vidaLag; c.hpBarra = c.vidaFundo;
                     cs[i] = c;
                 }
@@ -180,8 +370,12 @@ namespace CSM.View3D
             obsFundo = Painel("observado", raiz, new Vector2(0.5f, 0), new Vector2(0, 24), new Vector2(560, 92), ESCURO, new Vector2(0.5f, 0), true);
             obs = obsFundo.rectTransform;
             obsNome = Texto("nome", obs, new Vector2(0, 1), new Vector2(22, -8), new Vector2(300, 34), "", 26, CREME, TextAnchor.MiddleLeft, false, new Vector2(0, 1));
-            obsHp = Texto("hp", obs, new Vector2(0, 0), new Vector2(22, 10), new Vector2(140, 40), "", 34, CREME, TextAnchor.MiddleLeft, true, new Vector2(0, 0));
-            obsColete = Texto("colete", obs, new Vector2(0, 0), new Vector2(150, 12), new Vector2(120, 34), "", 24, CINZA, TextAnchor.MiddleLeft, true, new Vector2(0, 0));
+            obsIcVida = No("ic vida", obs, new Vector2(0, 0), new Vector2(22, 20), new Vector2(20, 20), new Vector2(0, 0)).gameObject.AddComponent<RawImage>();
+            obsIcVida.texture = Tex("ui_vida"); obsIcVida.raycastTarget = false;
+            obsHp = Texto("hp", obs, new Vector2(0, 0), new Vector2(48, 10), new Vector2(100, 40), "", 34, CREME, TextAnchor.MiddleLeft, true, new Vector2(0, 0));
+            obsIcColete = No("ic colete", obs, new Vector2(0, 0), new Vector2(140, 19), new Vector2(18, 22), new Vector2(0, 0)).gameObject.AddComponent<RawImage>();
+            obsIcColete.texture = Tex("ui_capacete"); obsIcColete.raycastTarget = false;
+            obsColete = Texto("colete", obs, new Vector2(0, 0), new Vector2(164, 12), new Vector2(100, 34), "", 26, CREME, TextAnchor.MiddleLeft, true, new Vector2(0, 0));
             obsArma = Texto("arma", obs, new Vector2(1, 1), new Vector2(-150, -12), new Vector2(200, 30), "", 18, CINZA, TextAnchor.MiddleRight, false, new Vector2(1, 1), false);
             obsIcone = No("ícone", obs, new Vector2(1, 1), new Vector2(-20, -6), new Vector2(120, 40), new Vector2(1, 1)).gameObject.AddComponent<RawImage>();
             obsIcone.raycastTarget = false;
@@ -199,17 +393,80 @@ namespace CSM.View3D
 
         void MontarMapa(RenderTexture rt)
         {
-            float W = 340, H = W * MapData.NY / MapData.NX;
-            var f = Painel("minimapa", raiz, new Vector2(0, 1), new Vector2(22, -22), new Vector2(W + 12, H + 12), ESCURO, new Vector2(0, 1), true);
-            mapaImg = No("mapa", f.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(W, H)).gameObject.AddComponent<RawImage>();
-            mapaImg.texture = rt; mapaImg.raycastTarget = false; mapaImg.color = new Color(1, 1, 1, 0.95f);
+            float W = MAPA_W, H = W * MapData.NY / MapData.NX;
+            // fundo translúcido (a planta é que desenha o mapa; o que não é chão fica vazado, como no radar da IEM)
+            var f = Painel("minimapa", raiz, new Vector2(0, 1), new Vector2(22, -22), new Vector2(W + 12, H + 12 + 28), new Color(ESCURO.r, ESCURO.g, ESCURO.b, 0.62f), new Vector2(0, 1), true);
+            Raio(f, 3);
+            mapaImg = No("mapa", f.transform, new Vector2(0.5f, 1), new Vector2(0, -6), new Vector2(W, H), new Vector2(0.5f, 1)).gameObject.AddComponent<RawImage>();
+            // até a planta ficar pronta (MapData montado), o radar antigo do Visual3D.RadarBatch; sem ele, a câmera de cima
+            var radar = Tex("radar");
+            mapaImg.texture = radar != null ? (Texture)radar : rt; mapaImg.raycastTarget = false; mapaImg.color = Color.white;
             mapaR = mapaImg.rectTransform;
+            mapaLocal = Texto("local", f.transform, new Vector2(0.5f, 0), new Vector2(0, 3), new Vector2(W, 26), "", 18, CREME, TextAnchor.MiddleCenter, false, new Vector2(0.5f, 0), false);
+            c4Chao = IconeUi("c4 chão", mapaR, Vector2.zero, new Vector2(0.5f, 0.5f));
             for (int i = 0; i < 10; i++)
             {
-                setas[i] = Painel("mira", mapaR, new Vector2(0, 0), Vector2.zero, new Vector2(4, 13), CREME, new Vector2(0.5f, 0));
-                pontos[i] = Bola("jogador", mapaR, new Vector2(0, 0), Vector2.zero, 13, CREME);
+                var k = new Marca();
+                k.x1 = Painel("morto", mapaR, Vector2.zero, Vector2.zero, new Vector2(13, 3.2f), CREME, new Vector2(0.5f, 0.5f));
+                k.x2 = Painel("morto", mapaR, Vector2.zero, Vector2.zero, new Vector2(13, 3.2f), CREME, new Vector2(0.5f, 0.5f));
+                k.x1.rectTransform.localEulerAngles = new Vector3(0, 0, 45); k.x2.rectTransform.localEulerAngles = new Vector3(0, 0, -45);
+                k.anel = Bola("observado", mapaR, Vector2.zero, Vector2.zero, MARCA_D + 5, Color.white);
+                k.ponta = Painel("mira", mapaR, Vector2.zero, Vector2.zero, new Vector2(10, 10), CREME, new Vector2(0.5f, 0.5f));
+                k.ponta.sprite = null; k.ponta.type = Image.Type.Simple;
+                k.bola = Bola("jogador", mapaR, Vector2.zero, Vector2.zero, MARCA_D, CREME);
+                k.num = Texto("número", k.bola.transform, new Vector2(0.5f, 0.5f), new Vector2(0, 0.5f), new Vector2(MARCA_D, MARCA_D), "", 12, MARCA_TXT, TextAnchor.MiddleCenter, true, null, false);
+                k.c4 = IconeUi("c4", mapaR, Vector2.zero, new Vector2(0.5f, 0.5f));
+                marcas[i] = k;
             }
-            c4Ponto = Painel("c4", mapaR, new Vector2(0, 0), Vector2.zero, new Vector2(12, 12), VERMELHO, new Vector2(0.5f, 0.5f));
+        }
+
+        /// <summary>Planta do radar no padrão IEM, gerada do MapData (2 unidades por pixel) + A/B e spawns por cima.</summary>
+        void MontarRadar()
+        {
+            if (MapData.SITES.Count == 0) return;            // mapa ainda não montado: tenta no próximo quadro
+            radarPronto = true;
+            const int S = 2;
+            int w = MapData.NX / S, h = (MapData.NY + S - 1) / S;
+            bool Anda(int x, int y) => MapData.InMap(x, y) && (MapData.walk[x, y] || MapData.pisavel[x, y]);
+            Color32 piso = MAPA_PISO, alto = MAPA_ALTO, linha = MAPA_LINHA, caixa = MAPA_CAIXA, nada = new Color32(0, 0, 0, 0);
+            var px = new Color32[w * h]; int chao = 0;
+            for (int iy = 0; iy < h; iy++)
+                for (int ix = 0; ix < w; ix++)
+                {
+                    int x = ix * S + 1, y = MapData.NY - 1 - (iy * S + 1);   // linha 0 da textura = fundo do mapa (y grande)
+                    Color32 c = nada;
+                    if (MapData.InMap(x, y))
+                    {
+                        if (MapData.coverH[x, y] > 0) c = caixa;
+                        else if (Anda(x, y))
+                        {
+                            chao++;
+                            if (!Anda(x - 3, y) || !Anda(x + 3, y) || !Anda(x, y - 3) || !Anda(x, y + 3)) c = linha;
+                            else if (MapData.stair[x, y]) c = ((x + y) / 8) % 2 == 0 ? alto : piso;      // escada/rampa listrada
+                            else c = MapData.floor[x, y] > MapData.GZ + 6 ? alto : piso;
+                        }
+                    }
+                    px[iy * w + ix] = c;
+                }
+            if (chao == 0) return;                           // sem chão: fica o radar antigo
+            var t = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp, name = "radar IEM" };
+            t.SetPixels32(px); t.Apply(false, true);
+            mapaImg.texture = t;
+            // spawns (verde) e bombsites (quadrado amarelo com a letra), atrás das marcas
+            foreach (var sp in new[] { MapData.SPAWN_T, MapData.SPAWN_CT })
+            {
+                if (sp == null || sp.Length == 0) continue;
+                float x0 = sp.Min(q => q.x) - 14, x1 = sp.Max(q => q.x) + 14, y0 = sp.Min(q => q.y) - 14, y1 = sp.Max(q => q.y) + 14;
+                Vector2 a = NoMapa(new V2(x0, y1)), b = NoMapa(new V2(x1, y0));
+                var r = Painel("spawn", mapaR, Vector2.zero, a, b - a, MAPA_SPAWN, Vector2.zero); Raio(r, 2);
+                r.transform.SetSiblingIndex(0);
+            }
+            foreach (var kv in MapData.SITES)
+            {
+                var q = Painel("bombsite " + kv.Key, mapaR, Vector2.zero, NoMapa(kv.Value.Center), new Vector2(25, 25), MAPA_SITE, new Vector2(0.5f, 0.5f)); Raio(q, 2);
+                Texto("letra", q.transform, new Vector2(0.5f, 0.5f), new Vector2(0, 1), new Vector2(25, 25), kv.Key, 20, MARCA_TXT, TextAnchor.MiddleCenter, true, null, false);
+                q.transform.SetSiblingIndex(manchas.Count);   // por cima das smokes/fogo (que ficam no começo), atrás das marcas
+            }
         }
 
         void MontarEconomia()
@@ -230,7 +487,7 @@ namespace CSM.View3D
                     l.icone = No("ícone", eco, new Vector2(0, 1), new Vector2(x0 + 150, y - 8), new Vector2(72, 24), new Vector2(0, 1)).gameObject.AddComponent<RawImage>();
                     l.icone.raycastTarget = false;
                     l.tags = Texto("tags", eco, new Vector2(0, 1), new Vector2(x0 + 245, y), new Vector2(80, 40), "", 15, CREME, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
-                    for (int k = 0; k < 4; k++) l.nades[k] = Bola("nade", eco, new Vector2(0, 1), new Vector2(x0 + 330 + k * 14, y - 20), 10, CREME);
+                    for (int k = 0; k < 4; k++) { l.nades[k] = IconeUi("nade", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f)); l.nades[k].rectTransform.anchoredPosition = new Vector2(x0 + 336 + k * 16, y - 20); }
                     l.dinheiro = Texto("dinheiro", eco, new Vector2(0, 1), new Vector2(x0 + 448, y), new Vector2(90, 40), "", 17, VERDE, TextAnchor.MiddleRight, true, new Vector2(1, 1), false);
                     ecoLinhas[t, i] = l;
                 }
@@ -244,18 +501,32 @@ namespace CSM.View3D
             {
                 var e = new Etiqueta();
                 e.r = No("etiqueta", jogo, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(120, 34), new Vector2(0.5f, 0));
-                e.nome = Texto("nome", e.r, new Vector2(0.5f, 1), new Vector2(0, 4), new Vector2(160, 22), "", 19, CREME, TextAnchor.MiddleCenter, false, new Vector2(0.5f, 1));
-                var contorno = e.nome.gameObject.AddComponent<Outline>(); contorno.effectColor = new Color(0.05f, 0.05f, 0.08f, 0.85f); contorno.effectDistance = new Vector2(1.5f, -1.5f);
-                e.fundo = Painel("barra fundo", e.r, new Vector2(0.5f, 0), new Vector2(0, 4), new Vector2(58, 7), new Color(0, 0, 0, 0.55f), new Vector2(0.5f, 0));
-                e.barra = No("barra", e.fundo.transform, new Vector2(0, 0.5f), new Vector2(1, 0), new Vector2(56, 5), new Vector2(0, 0.5f)).gameObject.AddComponent<Image>();
-                e.barra.sprite = Redondo; e.barra.type = Image.Type.Sliced; e.barra.raycastTarget = false;
+                e.r.SetSiblingIndex(0);   // atrás do resto do HUD: boneco passando atrás do card não põe o nome por cima dele
+                e.nome = Texto("nome", e.r, new Vector2(0.5f, 1), new Vector2(0, 4), new Vector2(160, 24), "", 22, CREME, TextAnchor.MiddleCenter, false, new Vector2(0.5f, 1));
+                Contorno(e.nome);
+                e.fundo = Painel("barra fundo", e.r, new Vector2(0.5f, 0), new Vector2(0, 4), new Vector2(60, 8), new Color(0, 0, 0, 0.55f), new Vector2(0.5f, 0));
+                e.barra = No("barra", e.fundo.transform, new Vector2(0, 0.5f), new Vector2(1, 0), new Vector2(58, 6), new Vector2(0, 0.5f)).gameObject.AddComponent<Image>();
+                e.barra.sprite = Redondo; e.barra.type = Image.Type.Sliced; e.barra.raycastTarget = false; Raio(e.barra, 3);
+                e.venda = Texto("venda", e.r, new Vector2(0.5f, 1), new Vector2(0, 30), new Vector2(200, 26), "", 22, VERDE, TextAnchor.MiddleCenter, false, new Vector2(0.5f, 1));
+                Contorno(e.venda); e.venda.gameObject.SetActive(false);
+                // quem carrega a C4: ícone dela do lado do nome (antes o texto "C4")
+                e.c4 = No("c4", e.r, new Vector2(0.5f, 1), Vector2.zero, new Vector2(18, 18), new Vector2(0, 1)).gameObject.AddComponent<RawImage>();
+                e.c4.raycastTarget = false; e.c4.gameObject.SetActive(false);
+                for (int k = 0; k < COMPRA_MAX; k++)
+                {
+                    e.compra[k] = Texto("compra", e.r, new Vector2(0.5f, 1), new Vector2(0, 30), new Vector2(200, 24), "", 19, CREME, TextAnchor.MiddleCenter, true, new Vector2(0.5f, 1));
+                    Contorno(e.compra[k]); e.compra[k].gameObject.SetActive(false);
+                }
                 etiquetas[i] = e;
             }
         }
 
-        /// <summary>Nome e vida em cima de cada boneco vivo (posição da cabeça no mundo -> âncora na tela).</summary>
+        /// <summary>Nome e vida em cima de cada boneco vivo (posição da cabeça no mundo -> âncora na tela). Etiquetas que se
+        /// encostam na tela empilham: a do boneco mais embaixo (mais perto da câmera) fica no lugar e a de trás sobe.</summary>
         public void Etiquetas(Match m, System.Func<Agent, Vector3> cabeca, float dt)
         {
+            var tela = ((RectTransform)canvas.transform).rect.size;
+            int n = 0;
             for (int i = 0; i < 10; i++)
             {
                 var e = etiquetas[i];
@@ -266,32 +537,108 @@ namespace CSM.View3D
                 e.alfa = Mathf.MoveTowards(e.alfa, mostra ? 1 : 0, dt * 4);
                 e.r.gameObject.SetActive(e.alfa > 0.01f);
                 if (a == null || e.alfa <= 0.01f) continue;
-                if (mostra) { e.r.anchorMin = e.r.anchorMax = new Vector2(v.x, v.y); e.r.anchoredPosition = new Vector2(0, 6); }
+                if (mostra) e.r.anchorMin = e.r.anchorMax = new Vector2(v.x, v.y);
                 var cor = Lado(a.IsT);
-                e.nome.text = a.name + (a.hasBomb ? " <color=#ff6655>C4</color>" : "");
+                e.nome.text = a.name;
+                e.c4.gameObject.SetActive(a.hasBomb);
+                float wc4 = 0;
+                if (a.hasBomb)
+                {
+                    wc4 = PorIcone(e.c4, "ui_bomba", 19) + 5;
+                    e.c4.rectTransform.anchoredPosition = new Vector2(e.nome.preferredWidth / 2 + 5 - wc4 / 2, 1);
+                    e.nome.rectTransform.anchoredPosition = new Vector2(-wc4 / 2, 4);   // nome + ícone centrados juntos
+                    e.c4.color = new Color(1f, 0.42f, 0.37f, e.alfa);
+                }
+                else e.nome.rectTransform.anchoredPosition = new Vector2(0, 4);
                 e.nome.color = new Color(cor.r * 0.55f + 0.45f, cor.g * 0.55f + 0.45f, cor.b * 0.55f + 0.45f, e.alfa);
-                e.barra.rectTransform.sizeDelta = new Vector2(56 * Mathf.Clamp01(a.hp / 100f), 5);
+                e.barra.rectTransform.sizeDelta = new Vector2(58 * Mathf.Clamp01(a.hp / 100f), 6);
                 var cb = a.hp > 40 ? cor : VERMELHO; cb.a = e.alfa; e.barra.color = cb;
                 e.fundo.color = new Color(0, 0, 0, 0.55f * e.alfa);
+                // venda: sobe uns 34 px desacelerando e apaga no último 0,5 s
+                e.vendaT = Mathf.Max(0, e.vendaT - dt);
+                e.venda.gameObject.SetActive(e.vendaT > 0);
+                if (e.vendaT > 0)
+                {
+                    float k = 1 - e.vendaT / VENDA_DUR;
+                    e.venda.rectTransform.anchoredPosition = new Vector2(0, 30 + 34 * (1 - (1 - k) * (1 - k)));
+                    var cv = VERDE; cv.a = e.alfa * Mathf.Clamp01(e.vendaT / 0.5f) * Mathf.Clamp01(k / 0.08f); e.venda.color = cv;
+                }
+                // compras: linha pela ordem de chegada (a mais nova embaixo; as anteriores sobem uma linha, andando suave),
+                // cada uma entra subindo 10 px e apaga no último 0,4 s
+                int ativas = 0;
+                for (int c = 0; c < COMPRA_MAX; c++)
+                {
+                    e.compraT[c] = Mathf.Max(0, e.compraT[c] - dt);
+                    if (e.compraT[c] > 0) ativas++;
+                    e.compra[c].gameObject.SetActive(e.compraT[c] > 0);
+                }
+                for (int c = 0; c < COMPRA_MAX; c++)
+                {
+                    if (e.compraT[c] <= 0) continue;
+                    int maisNovas = 0;
+                    for (int o = 0; o < COMPRA_MAX; o++) if (e.compraT[o] > 0 && e.compraSeq[o] > e.compraSeq[c]) maisNovas++;
+                    float idade = COMPRA_DUR - e.compraT[c], ent = Mathf.Clamp01(idade / 0.18f);
+                    var rt = e.compra[c].rectTransform;
+                    float alvoY = 30 + maisNovas * COMPRA_LINHA + 10 * (1 - (1 - ent) * (1 - ent));
+                    rt.anchoredPosition = new Vector2(0, Mathf.Lerp(rt.anchoredPosition.y, alvoY, dt > 0 ? 1 - Mathf.Exp(-dt * 16) : 1));
+                    var cc = e.compra[c].color; cc.a = e.alfa * ent * Mathf.Clamp01(e.compraT[c] / 0.4f); e.compra[c].color = cc;
+                }
+                // venda sobe por cima da pilha de compras, se houver
+                if (e.vendaT > 0 && ativas > 0) e.venda.rectTransform.anchoredPosition += new Vector2(0, ativas * COMPRA_LINHA);
+                var anc = e.r.anchorMin;
+                e.base_ = new Vector2(anc.x * tela.x, anc.y * tela.y); e.larg = Mathf.Max(64, e.nome.preferredWidth + 10 + wc4);
+                // a pilha de compras/venda faz parte da etiqueta: a de trás sobe por cima dela, não por cima do nome
+                e.alt = ALT_ETIQUETA + ativas * COMPRA_LINHA + (e.vendaT > 0 ? COMPRA_LINHA + 4 : 0);
+                for (int c = 0; c < COMPRA_MAX; c++) if (e.compraT[c] > 0) e.larg = Mathf.Max(e.larg, e.compra[c].preferredWidth + 10);
+                visiveis[n++] = e;
+            }
+            // empilha de baixo pra cima: cada etiqueta sobe até não encostar em nenhuma já posta
+            for (int k = 1; k < n; k++)   // ordena pela altura na tela (no máximo 10: inserção)
+                for (int j = k; j > 0 && visiveis[j].base_.y < visiveis[j - 1].base_.y; j--) (visiveis[j], visiveis[j - 1]) = (visiveis[j - 1], visiveis[j]);
+            for (int k = 0; k < n; k++)
+            {
+                var e = visiveis[k]; float y = e.base_.y;
+                for (int volta = 0; volta < n; volta++)
+                {
+                    bool mexeu = false;
+                    for (int j = 0; j < k; j++)
+                    {
+                        var o = visiveis[j];
+                        if (Mathf.Abs(o.base_.x - e.base_.x) < (o.larg + e.larg) * 0.5f && y < o.y + o.alt && y > o.y - e.alt)
+                        { y = o.y + o.alt; mexeu = true; }
+                    }
+                    if (!mexeu) break;
+                }
+                e.y = y;
+                // anda até o lugar novo em ~0,1 s (sem pular de um quadro pro outro quando dois se cruzam)
+                e.sobe = dt > 0 ? Mathf.Lerp(e.sobe, y - e.base_.y, 1 - Mathf.Exp(-dt * 14)) : y - e.base_.y;
+                e.r.anchoredPosition = new Vector2(0, 6 + e.sobe);
             }
         }
+        const float ALT_ETIQUETA = 36;   // nome (24) + barra (8) + folga
+        readonly Etiqueta[] visiveis = new Etiqueta[10];
 
         void MontarReplay()
         {
             faixaCima = Painel("faixa", raiz, new Vector2(0.5f, 1), Vector2.zero, new Vector2(4000, 0), Color.black, new Vector2(0.5f, 1));
             faixaBaixo = Painel("faixa", raiz, new Vector2(0.5f, 0), Vector2.zero, new Vector2(4000, 0), Color.black, new Vector2(0.5f, 0));
             replaySelo = Painel("replay", raiz, new Vector2(0.5f, 1), new Vector2(0, -132), new Vector2(170, 38), VERMELHO, new Vector2(0.5f, 0.5f), true);
-            replayTxt = Texto("txt", replaySelo.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(170, 38), "● REPLAY", 22, Color.white, TextAnchor.MiddleCenter, true);
+            replayTxt = Texto("txt", replaySelo.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(170, 38), "REPLAY", 22, Color.white, TextAnchor.MiddleCenter, true);
             legendaFundo = Painel("legenda fundo", raiz, new Vector2(0.5f, 0), new Vector2(0, 120), new Vector2(600, 58), ESCURO, new Vector2(0.5f, 0.5f), true);
             replayLegenda = Texto("legenda", legendaFundo.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200, 58), "", 30, CREME, TextAnchor.MiddleCenter);
             replaySelo.gameObject.SetActive(false); legendaFundo.gameObject.SetActive(false);
         }
 
         /// <summary>Liga o modo replay (faixas de cinema, selo piscando, legenda do lance).</summary>
-        public void Replay(bool ligado, string legenda = "")
+        /// <summary>Faixas de cinema + selo (REPLAY / MELHORES MOMENTOS) + legenda do lance.</summary>
+        public void Replay(bool ligado, string legenda = "", string selo = "REPLAY")
         {
             replayLigado = ligado;
-            if (ligado) replayLegenda.text = legenda;
+            if (!ligado) return;
+            replayLegenda.text = legenda;
+            replayTxt.text = selo;
+            float w = replayTxt.GetPreferredValues(selo).x + 40;
+            replaySelo.rectTransform.sizeDelta = new Vector2(Mathf.Max(170, w), 38); replayTxt.rectTransform.sizeDelta = new Vector2(Mathf.Max(170, w), 38);
         }
 
         static int Preco(Agent a)
@@ -303,9 +650,11 @@ namespace CSM.View3D
             return v;
         }
 
+        /// <summary>Gravação de demonstração (-v3d_semeco): esconde o painel de economia do começo do round.</summary>
+        public static bool SemEconomia;
         void Economia(Sim.Partida pt, Match m, int rn, bool aT, Dictionary<string, Sim.Partida.Jogador> jog, float dt)
         {
-            bool mostra = !m.over && m.t > 0.3f && m.t < 7.5f && !replayLigado;
+            bool mostra = !m.over && Ti(m) > 0.3f && Ti(m) < 7.5f && !replayLigado && !SemEconomia;
             float alvo = mostra ? 1 : 0;
             ecoK = Mathf.MoveTowards(ecoK, alvo, dt * (mostra ? 3.5f : 4f));
             eco.gameObject.SetActive(ecoK > 0.01f);
@@ -324,13 +673,13 @@ namespace CSM.View3D
                     int v = Preco(a); total += v; n++;
                     l.nome.text = a.name;
                     var ic = Icone(a.Primaria ?? a.gunId); l.icone.texture = ic; l.icone.gameObject.SetActive(ic != null);
-                    if (ic != null) l.icone.rectTransform.sizeDelta = new Vector2(24f * ic.width / ic.height, 24);
+                    if (ic != null) l.icone.rectTransform.sizeDelta = TamArma(ic, a.Primaria ?? a.gunId, 24, 92);
                     // as linhas entram uma por uma
-                    float k = Mathf.Clamp01((m.t - 0.3f - i * 0.08f - t * 0.04f) / 0.3f) * ecoK;
+                    float k = Mathf.Clamp01((Ti(m) - 0.3f - i * 0.08f - t * 0.04f) / 0.3f) * ecoK;
                     l.nome.color = new Color(CREME.r, CREME.g, CREME.b, k); l.icone.color = new Color(1, 1, 1, k);
-                    l.tags.text = (a.armor > 0 ? (a.helmet ? "◈ " : "◇ ") : "") + (!a.IsT && a.hasKit ? "KIT" : "") + (a.hasBomb ? "<color=#ff6655>C4</color>" : "");
+                    l.tags.text = (a.armor > 0 ? (a.helmet ? "COLETE+CAP " : "COLETE ") : "") + (!a.IsT && a.hasKit ? "<color=#9CC2FF>KIT</color> " : "") + (a.hasBomb ? "<color=#FF6A5E>C4</color>" : "");
                     l.tags.color = new Color(1, 1, 1, k);
-                    for (int q = 0; q < 4; q++) { bool tem = q < a.nades.Count; l.nades[q].gameObject.SetActive(tem); if (tem) { var c = CorNade(a.nades[q]); c.a = k; l.nades[q].color = c; } }
+                    for (int q = 0; q < 4; q++) { bool tem = q < a.nades.Count; l.nades[q].gameObject.SetActive(tem); if (tem) { PorIcone(l.nades[q], "nade_" + a.nades[q], 20); l.nades[q].color = new Color(1, 1, 1, k); } }
                     l.dinheiro.text = $"${j.dinheiro:N0}".Replace(",", "."); l.dinheiro.color = new Color(VERDE.r, VERDE.g, VERDE.b, k);
                 }
                 int media = n > 0 ? total / n : 0;
@@ -377,10 +726,14 @@ namespace CSM.View3D
             foreach (var j in pt.B.js) jog[j.nome] = j;
 
             // placar
-            tileA.color = Escurece(Lado(aT), 0.9f); tileB.color = Escurece(Lado(!aT), 0.9f);
+            tileA.color = ESCURO; tileB.color = ESCURO; faixaA.color = Lado(aT); faixaB.color = Lado(!aT);
+            placarA.color = aT ? PLACAR_TR : PLACAR_CT; placarB.color = !aT ? PLACAR_TR : PLACAR_CT;
             nomeA.text = pt.A.nome.ToUpper(); nomeB.text = pt.B.nome.ToUpper();
             // fim de round: o ponto já entra no placar (a Partida só soma ao fechar o round), com um pulo
-            bool ganhouA = m.over && (m.winner == "TR") == aT, ganhouB = m.over && !ganhouA;
+            // o ponto do round que acabou ainda não entrou no placar só enquanto o round está aberto (pt.r = rounds fechados);
+            // no último round o Partida já somou e fica parado com m.over: somar de novo dava 7×14 num 13×7
+            bool aberto = pt.r < rn;
+            bool ganhouA = m.over && aberto && (m.winner == "TR") == aT, ganhouB = m.over && aberto && !ganhouA;
             placarA.text = (pt.A.placar + (ganhouA ? 1 : 0)).ToString(); placarB.text = (pt.B.placar + (ganhouB ? 1 : 0)).ToString();
             float pulo = m.over ? Mathf.Clamp01(1 - (tempo - bannerDesde) / 0.6f) : 0;
             placarA.rectTransform.localScale = Vector3.one * (1 + (ganhouA ? 0.35f * Mathf.Sin(pulo * Mathf.PI) : 0));
@@ -388,12 +741,21 @@ namespace CSM.View3D
             roundTxt.text = $"ROUND {rn}";
             if (m.bombPlanted && !m.defused && !m.exploded)
             {
+                // plantada: o relógio vira o ícone da C4 piscando (como nas transmissões); o tempo fica na bolinha embaixo
                 float left = Mathf.Max(0, m.BombLeft);
-                relogio.text = $"C4 {left:0}";
+                relogio.text = "";
                 float pulso = left < 10 ? 0.5f + 0.5f * Mathf.Sin(tempo * 14) : 0.5f + 0.5f * Mathf.Sin(tempo * 5);
                 centro.color = Color.Lerp(new Color(0.45f, 0.08f, 0.08f, 0.92f), new Color(0.75f, 0.12f, 0.1f, 0.95f), pulso);
-                barraC4.transform.parent.gameObject.SetActive(true); barraC4.fillAmount = left / Match.BOMB;
-                relogio.rectTransform.localScale = Vector3.one * (1 + 0.06f * pulso);
+                barraC4.transform.parent.gameObject.SetActive(false);
+                relogio.rectTransform.localScale = Vector3.one;
+            }
+            else if (Freeze > 0)
+            {
+                // tempo de compra: conta o freeze em verde (como o "buy time" do CS)
+                relogio.text = $"0:{Mathf.CeilToInt(Freeze):00}";
+                centro.color = new Color(0.12f, 0.32f, 0.18f, 0.92f);
+                barraC4.transform.parent.gameObject.SetActive(false);
+                relogio.rectTransform.localScale = Vector3.one;
             }
             else
             {
@@ -414,6 +776,7 @@ namespace CSM.View3D
             bool clutch = !m.over && va > 0 && vb > 0 && (va == 1 || vb == 1);
             if (clutch && clutchDesde < 0) clutchDesde = tempo;
             if (!clutch) clutchDesde = -1;
+            C4Barra(m, dt);
             clutchSelo.gameObject.SetActive(clutch);
             if (clutch)
             {
@@ -421,7 +784,7 @@ namespace CSM.View3D
                 clutchSelo.rectTransform.localScale = Vector3.one * SaiDeTras((tempo - clutchDesde) / 0.35f);
             }
 
-            Feed(m, dt);
+            Feed(m, seguir, dt);
             Historico(pt, m, rn);
             Cards(pt, m, aT, jog, seguir, dt);
             Observado(m, seguir, dt);
@@ -434,66 +797,116 @@ namespace CSM.View3D
             corte.color = new Color(0, 0, 0, Mathf.Clamp01(1 - corteT / 0.22f) * 0.9f);
         }
 
-        void Feed(Match m, float dt)
+        // ------------------------------------------------------------------ killfeed (padrão CS2: huddeathnotice.xml/.css)
+        // ordem da linha: [cego] MATADOR [+ (flash) ASSISTENTE] [no ar] ARMA [sem luneta][smoke][parede][HS] VÍTIMA;
+        // a mais nova entra EMBAIXO; vive 5 s (x1,5 se envolve o jogador observado) e some em 1 s; o abate do observado
+        // tem borda vermelha e fundo preto, a morte dele fundo vermelho. Tamanhos do CS2 (1080p) x1,3 pra transmissão.
+        static readonly Color KF_T = Hx("#eabe54"), KF_CT = Hx("#6f9ce6"), KF_FUNDO = new Color(0.07f, 0.065f, 0.06f, 0.78f);
+        static readonly Color KF_MATOU = new Color(0, 0, 0, 0.9f), KF_MORREU = Hx("#630606D2"), KF_BORDA = Hx("#E10000");
+        const int KF_TXT = 20;
+        const float KF_ALT = 38, KF_ICO = 27, KF_ICO_P = 23, KF_VIDA = 5, KF_SOME = 1, KF_PASSO = 4;
+        const int KF_MAX = 6;
+        Match feedMatch; int abVisto;
+        void Feed(Match m, int seguir, float dt)
         {
-            if (m.feed.Count < feedVisto) feedVisto = 0;
-            for (; feedVisto < m.feed.Count; feedVisto++)
+            if (m != feedMatch || m.abates.Count < abVisto) { feedMatch = m; abVisto = 0; }
+            for (; abVisto < m.abates.Count; abVisto++)
             {
-                var (t, s) = m.feed[feedVisto];
+                var ab = m.abates[abVisto];
                 var l = new Linha { nasceu = tempo };
-                l.fundo = Painel("kill", jogo, new Vector2(1, 1), new Vector2(-22, -22), new Vector2(300, 40), ESCURO, new Vector2(1, 1));
+                l.borda = Painel("kill borda", jogo, new Vector2(1, 1), Vector2.zero, new Vector2(300, KF_ALT + 4), KF_BORDA, new Vector2(1, 1)); Raio(l.borda, 4);
+                l.fundo = Painel("kill", jogo, new Vector2(1, 1), Vector2.zero, new Vector2(300, KF_ALT), KF_FUNDO, new Vector2(1, 1)); Raio(l.fundo, 3);
                 l.r = l.fundo.rectTransform;
-                MontarLinha(m, l, s);
-                feed.Insert(0, l);
+                bool matou = seguir >= 0 && ab.by != null && ab.by.id == seguir && ab.by != ab.v, morreu = seguir >= 0 && ab.v.id == seguir;
+                l.cor = matou ? KF_MATOU : morreu ? KF_MORREU : KF_FUNDO; l.temBorda = matou;
+                l.vida = KF_VIDA * (matou || morreu ? 1.5f : 1);
+                MontarLinha(l, ab);
+                feed.Add(l);
             }
+            while (feed.Count > KF_MAX) { Apagar(feed[0]); feed.RemoveAt(0); }   // estourou: sai a mais velha
             for (int i = feed.Count - 1; i >= 0; i--)
             {
                 var l = feed[i]; float idade = tempo - l.nasceu;
-                if (idade > 7 || i > 5)
-                {
-                    if (Application.isPlaying) Object.Destroy(l.r.gameObject); else Object.DestroyImmediate(l.r.gameObject);
-                    feed.RemoveAt(i); continue;
-                }
-                float alvoY = -22 - i * 46;
-                l.y = idade < 0.01f ? alvoY : Mathf.Lerp(l.y, alvoY, 1 - Mathf.Exp(-14 * dt));
-                float entra = SaiDeTras(idade / 0.35f), sai = Mathf.Clamp01((7 - idade) / 0.4f);
-                l.r.anchoredPosition = new Vector2(-22 + (1 - entra) * 380, l.y);
-                l.fundo.color = new Color(ESCURO.r, ESCURO.g, ESCURO.b, ESCURO.a * sai);
-                foreach (var g in l.partes) { var cc = g.color; cc.a = sai * (g is RawImage ? 0.95f : 1); g.color = cc; }
-                // morte nova: borda clara piscando um instante
-                if (idade < 0.5f) l.fundo.color = Color.Lerp(new Color(1, 1, 1, 0.9f), l.fundo.color, idade / 0.5f);
+                if (idade > l.vida + KF_SOME) { Apagar(l); feed.RemoveAt(i); continue; }
+                float alvoY = -22 - i * (KF_ALT + KF_PASSO);
+                l.y = idade < 0.01f ? alvoY : Mathf.Lerp(l.y, alvoY, 1 - Mathf.Exp(-14 * dt));   // sobe 0,2 s quando sai uma de cima
+                float entra = Mathf.Clamp01(idade / 0.18f), sai = Mathf.Clamp01((l.vida + KF_SOME - idade) / KF_SOME), a = entra * sai;
+                l.r.anchoredPosition = new Vector2(-22 + (1 - entra) * 24, l.y);
+                l.fundo.color = new Color(l.cor.r, l.cor.g, l.cor.b, l.cor.a * a);
+                l.borda.gameObject.SetActive(l.temBorda);
+                if (l.temBorda) { l.borda.rectTransform.anchoredPosition = l.r.anchoredPosition + new Vector2(2, 2); l.borda.rectTransform.sizeDelta = l.r.sizeDelta + new Vector2(4, 4); l.borda.color = new Color(KF_BORDA.r, KF_BORDA.g, KF_BORDA.b, a); }
+                foreach (var g in l.partes) { var cc = g.color; cc.a = a; g.color = cc; }
             }
         }
-
-        /// <summary>Linha do killfeed lado a lado: quem matou (cor do lado), silhueta da arma, ◎ no HS, vítima.</summary>
-        void MontarLinha(Match m, Linha l, string s)
+        static void Apagar(Linha l)
         {
-            int a0 = s.IndexOf(" ["), a1 = s.IndexOf("] ");
-            float x = 16;
+            foreach (var go in new[] { l.r.gameObject, l.borda.gameObject })
+                if (Application.isPlaying) Object.Destroy(go); else Object.DestroyImmediate(go);
+        }
+
+        /// <summary>RawImage vazio pra um ícone de Resources/Icones (o tamanho vem do PorIcone, pela proporção da textura).</summary>
+        RawImage IconeUi(string nome, Transform pai, Vector2 ancora, Vector2 pivo)
+        {
+            var ri = No(nome, pai, ancora, Vector2.zero, new Vector2(10, 10), pivo).gameObject.AddComponent<RawImage>();
+            ri.raycastTarget = false; ri.gameObject.SetActive(false); return ri;
+        }
+        /// <summary>Põe a textura e acerta o tamanho pela altura (largura pela proporção). Devolve a largura.</summary>
+        static float PorIcone(RawImage ri, string tex, float h)
+        {
+            var t = Tex(tex); ri.texture = t;
+            float w = t == null ? h * 0.6f : h * t.width / t.height;
+            ri.rectTransform.sizeDelta = new Vector2(w, h); return w;
+        }
+
+        /// <summary>Ícone do que matou (arma, granada, C4, faca) — null se não tem desenho.</summary>
+        Texture2D IconeAbate(string arma) => arma switch
+        {
+            null => null,
+            "he" or "flash" or "smoke" or "molotov" or "incendiaria" => Tex("nade_" + arma),
+            "fogo" => Tex("nade_molotov"),
+            "c4" or "bomb" or "explosão" => Tex("ui_bomba"),
+            _ => Icone(arma)
+        };
+
+        void MontarLinha(Linha l, Match.Abate ab)
+        {
+            float x = 12;
             void Txt(string t, Color c)
             {
-                var tx = Texto("txt", l.r, new Vector2(0, 0.5f), new Vector2(x, 0), new Vector2(10, 40), t, 20, c, TextAnchor.MiddleLeft, false, new Vector2(0, 0.5f));
-                float w = tx.preferredWidth; tx.rectTransform.sizeDelta = new Vector2(w, 40); x += w + 10; l.partes.Add(tx);
+                var tx = Texto("txt", l.r, new Vector2(0, 0.5f), new Vector2(x, 0), new Vector2(10, KF_ALT), t, KF_TXT, c, TextAnchor.MiddleLeft, true, new Vector2(0, 0.5f), false);
+                float w = Mathf.Min(tx.preferredWidth, 210); tx.rectTransform.sizeDelta = new Vector2(w, KF_ALT); x += w + 6; l.partes.Add(tx);
             }
-            Color Cor(string nome) { var ag = m.agents.FirstOrDefault(q => q.name == nome); return ag == null ? CREME : Lado(ag.IsT); }
-            if (a0 > 0 && a1 > a0)
+            void Ico(Texture2D t, float h, float dy = 0)
             {
-                string k = s.Substring(0, a0), arma = s.Substring(a0 + 2, a1 - a0 - 2).ToLower(), v = s.Substring(a1 + 2);
-                bool hs = v.EndsWith(" (HS)"); if (hs) v = v.Substring(0, v.Length - 5);
-                Txt(k, Cor(k));
-                var ic = Icone(arma);
-                if (ic != null)
-                {
-                    float w = 26f * ic.width / ic.height;
-                    var ri = No("ícone", l.r, new Vector2(0, 0.5f), new Vector2(x, 0), new Vector2(w, 26), new Vector2(0, 0.5f)).gameObject.AddComponent<RawImage>();
-                    ri.texture = ic; ri.raycastTarget = false; l.partes.Add(ri); x += w + 8;
-                }
-                else Txt(NomeArma(arma), new Color(0.85f, 0.82f, 0.77f));
-                if (hs) Txt("◎", Color.white);
-                Txt(v, Cor(v));
+                if (t == null) return;
+                float w = h * t.width / t.height;
+                var ri = No("ícone", l.r, new Vector2(0, 0.5f), new Vector2(x, dy), new Vector2(w, h), new Vector2(0, 0.5f)).gameObject.AddComponent<RawImage>();
+                ri.texture = t; ri.color = Color.white; ri.raycastTarget = false; l.partes.Add(ri); x += w + 6;
             }
-            else Txt(s, CREME);
-            l.r.sizeDelta = new Vector2(x + 6, 40);
+            Color Cor(Agent a) => a.IsT ? KF_T : KF_CT;
+            bool temMatador = ab.by != null && !ab.suicidio;
+            if (temMatador)
+            {
+                if (ab.cegoQuemMatou) Ico(Tex("kf_cego"), KF_ICO_P);
+                Txt(ab.by.name, Cor(ab.by));
+                if (ab.assist != null)
+                {
+                    Txt("+", new Color(1, 1, 1, 0.85f));
+                    if (ab.flashAssist) Ico(Tex("nade_flash"), KF_ICO_P);
+                    Txt(ab.assist.name, Cor(ab.assist));
+                }
+                if (ab.noAr) Ico(Tex("kf_noar"), KF_ICO_P, 4);
+            }
+            var arma = IconeAbate(ab.arma);
+            if (arma != null) Ico(arma, KF_ICO * FatorArma(ab.arma));
+            else if (!string.IsNullOrEmpty(ab.arma) && temMatador) Txt(NomeArma(ab.arma), new Color(0.85f, 0.82f, 0.77f));
+            if (ab.semLuneta) Ico(Tex("kf_semluneta"), KF_ICO_P);
+            if (ab.atravesSmoke) Ico(Tex("kf_smoke"), KF_ICO_P);
+            if (ab.parede) Ico(Tex("kf_parede"), KF_ICO_P);
+            if (ab.hs) Ico(Tex("ui_hs"), KF_ICO_P);
+            if (!temMatador && arma == null) Ico(Tex("ui_caveira"), KF_ICO_P);   // suicídio / queda: caveira no lugar da arma
+            Txt(ab.v.name, Cor(ab.v));
+            l.r.sizeDelta = new Vector2(x + 6, KF_ALT);
         }
 
         /// <summary>"Fulano [AK] Ciclano (HS)" -> com cores do lado de cada um e a arma no meio.</summary>
@@ -505,7 +918,7 @@ namespace CSM.View3D
             {
                 string k = s.Substring(0, a0), arma = s.Substring(a0 + 2, a1 - a0 - 2), v = s.Substring(a1 + 2);
                 bool hs = v.EndsWith(" (HS)"); if (hs) v = v.Substring(0, v.Length - 5);
-                return $"<color={Cor(k)}>{k}</color>   <color=#d8d2c4>{NomeArma(arma.ToLower())}</color>{(hs ? "  <color=#ffffff>◎</color>" : "")}   <color={Cor(v)}>{v}</color>";
+                return $"<color={Cor(k)}>{k}</color>   <color=#d8d2c4>{NomeArma(arma.ToLower())}</color>{(hs ? "  <color=#ffffff>HS</color>" : "")}   <color={Cor(v)}>{v}</color>";
             }
             int sp = s.IndexOf(' ');
             return sp > 0 ? $"<color={Cor(s.Substring(0, sp))}>{s.Substring(0, sp)}</color>{s.Substring(sp)}" : s;
@@ -514,7 +927,8 @@ namespace CSM.View3D
         public static string NomeArma(string g) => g switch
         {
             "ak" => "AK-47", "m4" => "M4A4", "m4s" => "M4A1-S", "awp" => "AWP", "mp9" => "MP9", "mac10" => "MAC-10",
-            "usp" => "USP-S", "glock" => "Glock-18", "deagle" => "Desert Eagle", "faca" => "faca", _ => g.ToUpper()
+            "usp" => "USP-S", "glock" => "Glock-18", "deagle" => "Desert Eagle", "faca" => "faca",
+            "tec9" => "Tec-9", "fiveseven" => "Five-SeveN", "p250" => "P250", "galil" => "Galil AR", "famas" => "FAMAS", _ => g.ToUpper()
         };
 
         static Color CorNade(string n) => n switch
@@ -548,6 +962,7 @@ namespace CSM.View3D
                     var a = m.agents.FirstOrDefault(x => x.name == j.nome);
                     if (a == null) { c.r.gameObject.SetActive(false); continue; }
                     c.r.gameObject.SetActive(true);
+                    int slot = (ladoA ? 0 : 5) + i + 1; slotDe[a.name] = slot; c.slot.text = (slot % 10).ToString();
                     if (a.hp < c.ultHp) { c.flash = 1; c.lagEspera = 0.45f; }
                     c.ultHp = a.hp;
                     c.hpMostra = Mathf.Lerp(c.hpMostra, a.hp, 1 - Mathf.Exp(-18 * dt));
@@ -556,51 +971,61 @@ namespace CSM.View3D
                     if (c.hpLag < c.hpMostra) c.hpLag = c.hpMostra;
                     c.flash = Mathf.Max(0, c.flash - dt * 3);
                     var cor = Lado(t);
-                    c.hp.text = a.alive ? a.hp.ToString() : "✕";
-                    c.hpBox.color = a.alive ? Color.Lerp(Escurece(cor, 0.85f), Color.white, c.flash * 0.8f) : new Color(0.3f, 0.3f, 0.32f, 0.9f);
-                    // vida enche o card (vermelho quando pouca)
-                    var cv = a.hp > 40 ? cor : VERMELHO; cv.a = 0.42f;
-                    c.vidaFundo.color = cv; c.vidaFundo.fillAmount = a.alive ? c.hpMostra / 100f : 0;
+                    c.hp.text = a.alive ? a.hp.ToString() : ""; c.caveira.gameObject.SetActive(!a.alive);
+                    c.hpBox.color = a.alive ? (t ? CAIXA_TR : CAIXA_CT) : new Color(1, 0.957f, 0.886f, 0.1f);
+                    c.hp.color = a.alive ? Color.white : CINZA;
+                    // vida enche o card na cor do time (vermelho quando pouca); levou tiro: pisca claro
+                    var cv = a.hp > 30 ? (t ? VIDA_TR : VIDA_CT) : VIDA_BAIXA;
+                    c.vidaFundo.color = Color.Lerp(cv, Color.white, c.flash * 0.55f); c.vidaFundo.fillAmount = a.alive ? c.hpMostra / 100f : 0;
                     c.vidaLag.fillAmount = a.alive ? c.hpLag / 100f : 0;
-                    c.nome.text = a.name;
+                    c.nome.text = a.name.ToUpper();
                     c.nome.color = a.alive ? CREME : CINZA;
                     // kills do round: bolinhas depois do nome
-                    float xn = 76 + c.nome.preferredWidth + 10;
+                    float xn = 70 + c.nome.preferredWidth + 9;
                     for (int k = 0; k < 5; k++)
                     {
                         bool tem = k < a.kills;
                         c.kills[k].gameObject.SetActive(tem);
-                        if (tem) { c.kills[k].rectTransform.anchoredPosition = new Vector2(sx * (xn + k * 12), -17); c.kills[k].color = a.alive ? CREME : CINZA; }
+                        if (tem) { c.kills[k].rectTransform.anchoredPosition = new Vector2(sx * (xn + k * 11), -18); c.kills[k].color = a.alive ? CREME : CINZA; }
                     }
                     // a arma principal (a de mais valor que ele tem: rifle se tiver, senão a pistola), não o que está na mão
                     // agora (usuário: mesma regra pra todas as armas); faca/granada/C4 na mão não trocam o ícone
                     var ic = a.alive ? Icone(a.Primaria ?? a.gunId) : null;
                     string mao = a.alive ? NaMao(a) : null;   // só pra granada que está sendo jogada pulsar
                     c.icone.texture = ic; c.icone.gameObject.SetActive(ic != null);
-                    if (ic != null) c.icone.rectTransform.sizeDelta = new Vector2(24f * ic.width / ic.height, 24);
-                    c.icone.color = new Color(0.96f, 0.94f, 0.9f, 1f);
+                    if (ic != null) c.icone.rectTransform.sizeDelta = TamArma(ic, a.Primaria ?? a.gunId, 28, 124);
+                    c.icone.color = CREME;
                     c.icone.uvRect = ladoA ? new Rect(0, 0, 1, 1) : new Rect(1, 0, -1, 1);   // o cano aponta pro meio da tela
-                    c.iconeFora.gameObject.SetActive(false);
                     if (!a.alive) c.arma.text = $"<color=#9a9aa2>K/D</color>  {j.k + a.kills} / {j.d + a.deaths}";
                     else c.arma.text = ic != null ? "" : NomeArma(a.Primaria ?? a.gunId);
                     c.dinheiro.text = $"${j.dinheiro:N0}".Replace(",", ".");
                     c.dinheiro.color = a.alive ? VERDE : Escurece(VERDE, 0.6f);
-                    string tags = "";
-                    if (a.alive && a.armor > 0) tags += a.helmet ? "◈ " : "◇ ";
-                    if (a.alive && a.hasBomb) tags += "<color=#ff6655>C4</color> ";
-                    if (a.alive && !a.IsT && a.hasKit) tags += "KIT";
-                    c.tags.text = tags;
+                    // linha de baixo: dinheiro, capacete, C4/KIT e granadas, um atrás do outro
+                    float xl = 70 + c.dinheiro.preferredWidth + 10;
+                    c.capacete.gameObject.SetActive(a.alive && a.armor > 0);
+                    if (a.alive && a.armor > 0)
+                    {   // colete + capacete = um ícone só (como no CS); só o colete = colete
+                        float wc = PorIcone(c.capacete, a.helmet ? "ui_colete_capacete" : "ui_colete", 17);
+                        c.capacete.rectTransform.anchoredPosition = new Vector2(sx * (xl + wc / 2), 7); c.capacete.color = CREME; xl += wc + 8;
+                    }
+                    // C4 e kit viram ícone (antes texto "C4"/"KIT" que encavalava nas granadas)
+                    c.tags.text = "";
+                    void Item(RawImage ri, bool tem, string tex, float h, Color cor)
+                    {
+                        ri.gameObject.SetActive(tem);
+                        if (!tem) return;
+                        float w = PorIcone(ri, tex, h); ri.color = cor;
+                        ri.rectTransform.anchoredPosition = new Vector2(sx * (xl + w / 2), 7); xl += w + 7;
+                    }
+                    Item(c.c4Ico, a.alive && a.hasBomb, "ui_bomba", 16, new Color(1f, 0.42f, 0.37f));
+                    Item(c.kitIco, a.alive && !a.IsT && a.hasKit, "ui_alicate", 12, new Color(0.61f, 0.76f, 1f));
                     for (int k = 0; k < 4; k++)
                     {
                         bool tem = a.alive && k < a.nades.Count;
-                        c.nades[k].gameObject.SetActive(tem);
-                        if (tem)
-                        {
-                            c.nades[k].color = CorNade(a.nades[k]);
-                            // a que está sendo jogada pulsa
-                            bool jogando = mao != null && mao.StartsWith("n:") && mao.Substring(2) == a.nades[k];
-                            c.nades[k].rectTransform.localScale = Vector3.one * (jogando ? 1.25f + 0.2f * Mathf.Sin(tempo * 12) : 1);
-                        }
+                        // a que está sendo jogada pulsa
+                        bool jogando = tem && mao != null && mao.StartsWith("n:") && mao.Substring(2) == a.nades[k];
+                        Item(c.nades[k], tem, tem ? "nade_" + a.nades[k] : null, 19, CREME);
+                        if (tem) c.nades[k].rectTransform.localScale = Vector3.one * (jogando ? 1.25f + 0.2f * Mathf.Sin(tempo * 12) : 1);
                     }
                     float alfa = a.alive ? 1 : 0.5f;
                     c.fundo.color = new Color(ESCURO.r, ESCURO.g, ESCURO.b, ESCURO.a * alfa);
@@ -614,28 +1039,36 @@ namespace CSM.View3D
             }
         }
 
-        /// <summary>Faixa de rounds embaixo do placar: um quadradinho por round na cor do LADO que ganhou, com o jeito
-        /// (✕ eliminação, ◎ bomba explodiu, ◈ desarmou, – tempo); vão no meio da partida (troca de lado).</summary>
+        /// <summary>Histórico de rounds (só no começo do round, como nas transmissões): fileira de cima = time A,
+        /// de baixo = time B; o round vencido mostra como (caveira eliminação, bomba explodiu, alicate desarmou,
+        /// relógio tempo) na cor do LADO que venceu.</summary>
         void Historico(Sim.Partida pt, Match m, int rn)
         {
-            var h = pt.historico; int n = Mathf.Min(h.Count, histTile.Length);
-            int ini = h.Count - n;
-            float larg = 22, total = n * larg + (n > 12 ? 12 : 0);
-            for (int i = 0; i < histTile.Length; i++)
+            bool mostra = !m.over && Ti(m) < 9f && pt.historico.Count > 0 && !replayLigado;
+            histK = Mathf.MoveTowards(histK, mostra ? 1 : 0, Time.unscaledDeltaTime * 4);
+            histFundo.gameObject.SetActive(histK > 0.01f);
+            if (histK <= 0.01f) return;
+            histGrupo.alpha = histK;
+            histFundo.anchoredPosition = new Vector2(0, -116 + (1 - SaiRapido(histK)) * 20);
+            histA.text = pt.A.nome.ToUpper().Substring(0, Mathf.Min(3, pt.A.nome.Length));
+            histB.text = pt.B.nome.ToUpper().Substring(0, Mathf.Min(3, pt.B.nome.Length));
+            bool aT = Sim.Partida.ATerrorista(pt.r);
+            histA.color = aT ? PLACAR_TR : PLACAR_CT; histB.color = aT ? PLACAR_CT : PLACAR_TR;
+            var h = pt.historico; int ini = Mathf.Max(0, h.Count - 24);
+            for (int i = 0; i < 24; i++)
+                for (int lin = 0; lin < 2; lin++) { histCel[lin, i].color = VAZIO; histIco[lin, i].gameObject.SetActive(false); }
+            for (int i = 0; i < h.Count - ini; i++)
             {
-                bool tem = i < n; histTile[i].gameObject.SetActive(tem);
-                if (!tem) continue;
                 var info = h[ini + i];
-                // lado que ganhou: o time A estava em ladoA (vencedor é o NOME do time)
+                int lin = info.timeAvenceu ? 0 : 1;
                 bool tr = info.timeAvenceu ? info.ladoA == "TR" : info.ladoA != "TR";
-                float x = -total / 2 + i * larg + larg / 2 + (ini + i >= 12 ? 12 : 0);
-                histTile[i].rectTransform.anchoredPosition = new Vector2(x, -136);
-                histTile[i].color = Escurece(Lado(tr), 0.95f);
+                var cor = tr ? PLACAR_TR : PLACAR_CT;
+                histCel[lin, i].color = new Color(cor.r, cor.g, cor.b, 0.2f);
                 string mo = (info.motivo ?? "").ToLower();
-                histTxt[i].text = mo.Contains("explod") ? "◎" : mo.Contains("desarm") ? "◈" : mo.Contains("tempo") ? "–" : "✕";
-                // o último round acabou de entrar: pulinho
-                bool novo = i == n - 1 && m.t < 3;
-                histTile[i].rectTransform.localScale = Vector3.one * (novo ? 1 + 0.3f * Mathf.Clamp01(1 - m.t / 1.5f) : 1);
+                var ico = histIco[lin, i];
+                string icn = mo.Contains("explod") ? "ui_bomba" : mo.Contains("desarm") ? "ui_alicate" : mo.Contains("tempo") ? "ui_relogio" : "ui_caveira";
+                if (PorIcone(ico, icn, 16) > 18) PorIcone(ico, icn, 16 * 18 / ico.rectTransform.sizeDelta.x);   // cabe na célula
+                ico.color = cor; ico.gameObject.SetActive(true);
             }
         }
 
@@ -647,27 +1080,36 @@ namespace CSM.View3D
             if (a == null) return;
             obs.anchoredPosition = new Vector2(0, 24 - (1 - SaiRapido(obsAlfa)) * 120);
             var cor = Lado(a.IsT);
-            obsNome.text = $"<color={Hex(cor)}>{a.name}</color>";
-            obsHp.text = $"✚ {a.hp}"; obsHp.color = a.hp > 40 ? CREME : VERMELHO;
-            obsColete.text = a.armor > 0 ? $"{(a.helmet ? "◈" : "◇")} {a.armor}" : "";
+            obsNome.text = $"<color={Hex(a.IsT ? PLACAR_TR : PLACAR_CT)}>{a.name.ToUpper()}</color>";
+            obsHp.text = a.hp.ToString(); obsHp.color = a.hp > 30 ? CREME : VERMELHO; obsIcVida.color = obsHp.color;
+            obsColete.text = a.armor > 0 ? a.armor.ToString() : ""; obsIcColete.gameObject.SetActive(a.armor > 0);
+            PorIcone(obsIcColete, a.helmet ? "ui_colete_capacete" : "ui_colete", 22); obsIcColete.color = CREME;
             string mao = NaMao(a);
             obsArma.text = mao.StartsWith("n:") ? NomeNade(mao.Substring(2)) : mao == "c4" ? "C4" : mao == "kit" ? "kit de desarme" : NomeArma(mao);
             var oi = mao.StartsWith("n:") || mao == "c4" || mao == "kit" ? null : Icone(mao);
             obsIcone.texture = oi; obsIcone.gameObject.SetActive(oi != null);
-            if (oi != null) obsIcone.rectTransform.sizeDelta = new Vector2(36f * oi.width / oi.height, 36);
+            if (oi != null) obsIcone.rectTransform.sizeDelta = TamArma(oi, mao, 38, 170);
+            obsIcone.color = CREME;
             obsMun.text = a.faca || a.gun == null ? "" : a.gun.Reloading ? "<size=24>recarregando</size>" : $"{a.gun.inMag}<size=24> / {a.gun.mags * a.gun.s.mag}</size>";
         }
 
         void Banners(Sim.Partida pt, Match m, int rn, bool aT)
         {
             string chave = null, titulo = "", sub = ""; Color cor = ESCURO;
-            if (m.over)
+            if (pt.acabou && pt.vencedor != null)
+            {
+                // fim da partida: quem ganhou e o placar final, na cor do lado em que o vencedor terminou
+                bool trV = (pt.vencedor == pt.A) == aT;
+                chave = "partida"; titulo = $"{pt.vencedor.nome} VENCEU"; cor = Escurece(Lado(trV), 0.8f);
+                sub = $"{pt.A.nome} {pt.A.placar}  ×  {pt.B.placar} {pt.B.nome}";
+            }
+            else if (m.over)
             {
                 bool tr = m.winner == "TR";
                 chave = "fim" + rn; titulo = tr ? "TR VENCEU" : "CT VENCEU"; cor = Escurece(Lado(tr), 0.8f);
                 sub = Motivo(m.reason);
             }
-            else if (m.t < 2.6f)
+            else if (Ti(m) < 2.6f)
             {
                 chave = "ini" + rn; titulo = $"ROUND {rn}";
                 sub = $"{pt.A.nome} {pt.A.placar}  ×  {pt.B.placar} {pt.B.nome}";
@@ -679,7 +1121,7 @@ namespace CSM.View3D
             if (chave == null) return;
             float idade = tempo - bannerDesde;
             float entra = SaiDeTras(idade / 0.4f);
-            float some = chave.StartsWith("ini") ? Mathf.Clamp01((2.6f - m.t) / 0.4f) : 1;
+            float some = chave.StartsWith("ini") ? Mathf.Clamp01((2.6f - Ti(m)) / 0.4f) : 1;
             banner.localScale = Vector3.one * Mathf.LerpUnclamped(0.6f, 1f, entra);
             bannerFundo.color = new Color(cor.r, cor.g, cor.b, cor.a * Mathf.Clamp01(idade / 0.15f) * some);
             bannerTitulo.text = titulo; bannerSub.text = sub;
@@ -700,31 +1142,59 @@ namespace CSM.View3D
 
         void Minimapa(Match m, int seguir)
         {
+            if (!radarPronto) MontarRadar();
+            Agent obs = null;
             for (int i = 0; i < 10; i++)
             {
-                bool tem = i < m.agents.Count; pontos[i].gameObject.SetActive(tem); setas[i].gameObject.SetActive(tem);
-                if (!tem) continue;
-                var a = m.agents[i]; var p = NoMapa(a.pos);
-                var cor = Lado(a.IsT);
-                pontos[i].rectTransform.anchoredPosition = p;
-                pontos[i].color = a.alive ? cor : new Color(0.3f, 0.3f, 0.3f, 0.7f);
-                float d = a.alive ? (seguir == a.id ? 17 + 2 * Mathf.Sin(tempo * 6) : 13) : 8;
-                pontos[i].rectTransform.sizeDelta = new Vector2(d, d);
-                setas[i].gameObject.SetActive(a.alive);
-                setas[i].rectTransform.anchoredPosition = p;
-                setas[i].rectTransform.localEulerAngles = new Vector3(0, 0, -a.aim * Mathf.Rad2Deg - 90);
-                setas[i].color = new Color(cor.r, cor.g, cor.b, 0.9f);
+                var mk = marcas[i];
+                var a = i < m.agents.Count ? m.agents[i] : null;
+                bool vivo = a != null && a.alive, morto = a != null && !a.alive, olhando = vivo && seguir == a.id;
+                if (olhando) obs = a;
+                mk.bola.gameObject.SetActive(vivo); mk.ponta.gameObject.SetActive(vivo); mk.anel.gameObject.SetActive(olhando);
+                mk.x1.gameObject.SetActive(morto); mk.x2.gameObject.SetActive(morto); mk.c4.gameObject.SetActive(vivo && a.hasBomb);
+                if (a == null) continue;
+                var p = NoMapa(a.pos); var cor = a.IsT ? MARCA_T : MARCA_CT;
+                if (morto)
+                {
+                    var cx = new Color(cor.r, cor.g, cor.b, 0.85f);
+                    mk.x1.rectTransform.anchoredPosition = mk.x2.rectTransform.anchoredPosition = p; mk.x1.color = mk.x2.color = cx;
+                    continue;
+                }
+                // gota: bola com o número + quadrado girado com a quina pra onde ele mira
+                float d = MARCA_D * (olhando ? 1.18f : 1f);
+                var dir = new Vector2(Mathf.Cos(a.aim), -Mathf.Sin(a.aim));
+                mk.bola.rectTransform.anchoredPosition = p; mk.bola.rectTransform.sizeDelta = new Vector2(d, d); mk.bola.color = cor;
+                mk.ponta.rectTransform.anchoredPosition = p + dir * d * 0.34f; mk.ponta.rectTransform.sizeDelta = new Vector2(d * 0.62f, d * 0.62f);
+                mk.ponta.rectTransform.localEulerAngles = new Vector3(0, 0, Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg - 45); mk.ponta.color = cor;
+                mk.anel.rectTransform.anchoredPosition = p; mk.anel.rectTransform.sizeDelta = new Vector2(d + 5, d + 5);
+                mk.num.text = slotDe.TryGetValue(a.name, out var sl) ? (sl % 10).ToString() : "";
+                mk.num.rectTransform.sizeDelta = new Vector2(d, d);
+                if (a.hasBomb)
+                {
+                    PorIcone(mk.c4, "ui_bomba", 13);
+                    mk.c4.rectTransform.anchoredPosition = p + new Vector2(d * 0.62f, d * 0.5f); mk.c4.color = C4_MAPA;
+                }
             }
+            // C4 fora de alguém: caída (vermelha) ou plantada (pisca; azul quando desarmada)
             bool c4 = m.bombPlanted || m.bombDropped;
-            c4Ponto.gameObject.SetActive(c4);
+            c4Chao.gameObject.SetActive(c4);
             if (c4)
             {
-                c4Ponto.rectTransform.anchoredPosition = NoMapa(m.bombPlanted ? m.bombPos : m.droppedBomb);
-                c4Ponto.color = m.bombPlanted ? Color.Lerp(VERMELHO, Color.white, 0.5f + 0.5f * Mathf.Sin(tempo * 9)) : VERMELHO;
+                PorIcone(c4Chao, "ui_bomba", m.bombPlanted ? 18 : 15);
+                c4Chao.rectTransform.anchoredPosition = NoMapa(m.bombPlanted ? m.bombPos : m.droppedBomb);
+                c4Chao.color = m.defused ? MARCA_CT : m.bombPlanted ? Color.Lerp(C4_MAPA, Color.white, 0.5f + 0.5f * Mathf.Sin(tempo * 9)) : C4_MAPA;
+                c4Chao.transform.SetAsLastSibling();
             }
+            // embaixo do radar: quem está sendo observado e onde
+            mapaLocal.text = obs == null ? "" : $"<color=#{ColorUtility.ToHtmlStringRGB(obs.IsT ? MARCA_T : MARCA_CT)}>{obs.name.ToUpper()}</color>   {Places.Region(obs.pos).ToUpper()}";
             int n = 0;
             float k = mapaR.sizeDelta.x / MapData.NX;
-            foreach (var s in m.smokes) Mancha(ref n, new V2(s.origin.x, s.origin.y), 34 * k * 2 * Mathf.Clamp01(s.age / 1.3f), new Color(0.92f, 0.92f, 0.92f, 0.7f));
+            foreach (var s in m.smokes)
+            {
+                var cs = m.smokeDe.TryGetValue(s, out var tm) ? Color.Lerp(new Color(0.93f, 0.93f, 0.93f), tm == Team.T ? MARCA_T : MARCA_CT, 0.35f) : new Color(0.93f, 0.93f, 0.93f);
+                cs.a = 0.62f;
+                Mancha(ref n, new V2(s.origin.x, s.origin.y), 34 * k * 2 * Mathf.Clamp01(s.age / 1.3f), cs);
+            }
             foreach (var f in m.fires) Mancha(ref n, new V2(f.origin.x, f.origin.y), 28 * k * 2, new Color(1f, 0.5f, 0.15f, 0.65f));
             for (int i = n; i < manchas.Count; i++) manchas[i].gameObject.SetActive(false);
         }

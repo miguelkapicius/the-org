@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 152">
+  <!-- M4A4: coronha retrátil, trilho em cima, guarda-mão com furos, massa de mira em A, quebra-chamas -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="470" height="152">
+      <rect width="470" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M22 50 L21 84" stroke-width="2.4"/>            <!-- soleira -->
+        <path d="M136 37 L136 70" stroke-width="2.6"/>          <!-- coronha | caixa -->
+        <path d="M140 54.5 L242 54.5" stroke-width="2.2"/>      <!-- superior | inferior -->
+        <path d="M246 37 L246 66" stroke-width="2.6"/>          <!-- caixa | guarda-mão -->
+        <path d="M236 78 L242 124" stroke-width="2"/>           <!-- nervura do carregador -->
+        <path d="M150 112 L170 114" stroke-width="2"/>          <!-- base da empunhadura -->
+      </g>
+      <g fill="#000">
+        <path d="M40 52 L84 49 L84 56 L42 61 Z"/>               <!-- vazado da coronha -->
+        <rect x="258" y="44" width="11" height="5" rx="2.5"/><rect x="276" y="44" width="11" height="5" rx="2.5"/><rect x="294" y="44" width="11" height="5" rx="2.5"/><rect x="312" y="44" width="11" height="5" rx="2.5"/>
+        <rect x="258" y="55" width="11" height="5" rx="2.5"/><rect x="276" y="55" width="11" height="5" rx="2.5"/><rect x="294" y="55" width="11" height="5" rx="2.5"/><rect x="312" y="55" width="11" height="5" rx="2.5"/>
+        <path d="M196 72 L220 72 Q222 72 222 75 L222 81 Q222 84 219 84 L200 84 Q196 84 196 80 Z"/>  <!-- guarda-mato -->
+        <path d="M442 50 L452 50 L452 51.5 L442 51.5 Z"/><path d="M442 54 L452 54 L452 55.5 L442 55.5 Z"/>  <!-- fendas do quebra-chamas -->
+      </g>
+      <path d="M205 72 Q209 77 206 82" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- coronha retrátil + tubo -->
+    <path d="M14 42 Q14 38 18 38 L96 40 L104 46 L104 60 L96 64 L20 84 Q14 85 14 80 Z"/>
+    <path d="M96 44 L140 44 L140 58 L96 58 Z"/>
+    <!-- caixa superior com trilho dentado e alça de mira rebatível -->
+    <path d="M134 38 L248 38 L248 55 L134 55 Z"/>
+    <path d="M140 33 L246 33 L246 38 L140 38 Z"/>
+    <path d="M150 33 L156 25 L166 25 L166 33 Z"/>
+    <!-- caixa inferior + poço do carregador -->
+    <path d="M134 54 L248 54 L246 70 L134 70 Z"/>
+    <!-- alavanca de manejo e assistente do ferrolho -->
+    <path d="M226 44 L238 44 Q241 44 241 47.5 Q241 51 238 51 L226 51 Z"/>
+    <!-- guarda-mão redondo -->
+    <path d="M244 38 L330 38 Q336 38 336 44 L336 60 Q336 66 330 66 L244 66 Z"/>
+    <!-- massa de mira em A + cano -->
+    <path d="M334 48 L352 48 L354 60 L334 60 Z"/>
+    <path d="M338 48 L341 26 Q341 24 343 24 L346 24 Q348 24 348 26 L350 48 Z"/>
+    <path d="M336 49.5 L440 49.5 L440 56.5 L336 56.5 Z"/>
+    <path d="M438 47 L455 47 Q458 47 458 50 L458 56 Q458 59 455 59 L438 59 Z"/>
+    <!-- guarda-mato -->
+    <path d="M192 68 L226 68 L226 80 Q226 88 218 88 L200 88 Q192 88 192 80 Z"/>
+    <!-- empunhadura -->
+    <path d="M166 68 L192 68 L184 112 Q182 120 174 120 L156 118 Q149 117 151 110 Z"/>
+    <!-- carregador STANAG (curva leve) -->
+    <path d="M228 68 L258 68 Q260 98 270 128 L242 136 Q232 104 228 68 Z"/>
+  </g>
+</svg>

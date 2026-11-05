@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 196 152">
+  <!-- headshot (referência: ícone de headshot do killfeed do CS2): cabeça de balaclava em três quartos olhando pra
+       direita (nuca cheia à esquerda, queixo pra baixo e pra direita), furos dos olhos e da boca, estrela do impacto
+       na testa e o rastro da bala chegando pela direita com faíscas na ponta. -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="196" height="152">
+      <rect width="196" height="152" fill="#fff"/>
+      <g fill="#000">
+        <path d="M54 74 Q60 64 72 68 Q74 76 66 80 Q58 81 54 74 Z"/>                                          <!-- olho esq -->
+        <path d="M86 68 Q96 60 106 64 Q104 74 94 76 Q88 75 86 68 Z"/>                                        <!-- olho dir -->
+        <ellipse cx="90" cy="116" rx="7" ry="5" transform="rotate(-20 90 116)"/>                           <!-- boca -->
+        <path d="M42 22 L47 34 L58 27 L54 39 L68 41 L56 47 L63 58 L50 53 L46 65 L41 53 L28 57 L35 47 L23 40 L36 38 L31 26 Z"/>  <!-- impacto -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M58 8 C28 8 12 30 14 60 C15 82 22 98 32 112 C44 128 60 140 80 146 C90 149 98 143 100 132 C102 122 104 114 108 104 C114 90 116 76 114 60 C112 30 90 8 58 8 Z"/>
+  </g>
+  <path d="M112 48 L166 41 L166 46 L112 57 Z" fill="#fff"/>                                                  <!-- rastro da bala -->
+  <g stroke="#fff" stroke-width="4" stroke-linecap="round">
+    <path d="M174 43 L186 43"/><path d="M172 35 L180 27"/><path d="M172 51 L180 59"/><path d="M168 32 L168 25"/>
+  </g>
+</svg>

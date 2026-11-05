@@ -256,7 +256,7 @@ namespace CSM.Sim
             int mp = miraPor.Values.Sum(c => c.parede), mt = miraPor.Values.Sum(c => c.total);
             sb.AppendLine("  EVENTOS (% rounds = uma vez por round; senão por round):");
             foreach (var kv in ev.Where(k => k.Key.StartsWith("FIM ") || k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       CONTA {kv.Key,-44} {kv.Value}");
-            foreach (var kv in ev.Where(k => !k.Key.StartsWith("AUD ") && !k.Key.StartsWith("FIM ") && !k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       {kv.Key,-44} {(kv.Key.EndsWith("% rounds") ? Pct(kv.Value, rounds) : kv.Value / (float)Math.Max(1, rounds)),7:0.0}");
+            foreach (var kv in ev.Where(k => !k.Key.StartsWith("AUD ") && !k.Key.StartsWith("FIM ") && !k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       {kv.Key,-44} {(kv.Key.EndsWith("% rounds") ? Pct(kv.Value, rounds) : kv.Value / (float)Math.Max(1, rounds)),7:0.00}");
             sb.AppendLine($"  MIRA COLADA NA PAREDE (<90, fora de duelo): {Pct(mp, mt):0.0}% do tempo");
             foreach (var kv in miraPor.OrderByDescending(k => k.Value.parede).Take(8))
                 sb.AppendLine($"       {kv.Key,-32} {Pct(kv.Value.parede, kv.Value.total),5:0}% de {Pct(kv.Value.total, mt),4:0}% do tempo");

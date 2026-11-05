@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152">
+  <!-- caveira (morto / suicídio): crânio com olhos e nariz recortados, dentes -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="152" height="152">
+      <rect width="152" height="152" fill="#fff"/>
+      <g fill="#000">
+        <ellipse cx="54" cy="70" rx="15" ry="16"/><ellipse cx="98" cy="70" rx="15" ry="16"/>
+        <path d="M76 88 L84 104 L68 104 Z"/>
+      </g>
+      <g stroke="#000" stroke-width="3.5"><path d="M62 118 L62 140"/><path d="M76 118 L76 140"/><path d="M90 118 L90 140"/></g>
+    </mask>
+  </defs>
+  <path d="M76 12 Q132 12 134 66 Q134 92 112 106 L112 132 Q112 140 104 140 L48 140 Q40 140 40 132 L40 106 Q18 92 18 66 Q20 12 76 12 Z" fill="#fff" mask="url(#c)"/>
+</svg>

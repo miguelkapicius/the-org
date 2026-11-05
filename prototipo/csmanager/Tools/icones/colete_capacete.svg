@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 152">
+  <!-- colete + capacete num ícone só (como no CS): colete atrás, capacete na frente em cima à esquerda, com folga entre eles -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="170" height="152">
+      <rect width="170" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round" stroke-width="2.2">
+        <path d="M105 64 L105 140"/><path d="M74 100 L98 100"/><path d="M112 100 L136 100"/>
+      </g>
+      <!-- folga em volta do capacete (recorta o colete) -->
+      <path d="M8 84 Q8 30 58 28 Q104 28 110 80 L116 86 Q118 92 112 92 L12 92 Q6 92 8 84 Z" fill="#000" stroke="#000" stroke-width="10"/>
+    </mask>
+    <mask id="h" maskUnits="userSpaceOnUse" x="0" y="0" width="170" height="152">
+      <rect width="170" height="152" fill="#fff"/>
+      <path d="M12 80 Q60 73 108 80" stroke="#000" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <path d="M74 20 L90 20 Q94 44 105 60 Q116 44 120 20 L136 20 L138 44 Q140 60 154 66 L154 136 Q154 142 148 142 L62 142 Q56 142 56 136 L56 66 Q70 60 72 44 Z" fill="#fff" mask="url(#c)"/>
+  <path d="M8 84 Q8 30 58 28 Q104 28 110 80 L116 86 Q118 92 112 92 L12 92 Q6 92 8 84 Z" fill="#fff" mask="url(#h)"/>
+</svg>

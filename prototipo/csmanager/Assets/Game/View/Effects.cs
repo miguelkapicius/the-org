@@ -20,7 +20,8 @@ namespace CSM.View
         public readonly int x0, y0, z0, nx, ny, nz;   // caixa da grade em células
         readonly float[] dens;                        // densidade base (0..1) por célula
         readonly int[] order;                         // em que ordem cada célula entra no crescimento (-1 = nunca)
-        readonly float[] clear;                       // furos (tiro/HE): 1 = limpo, volta pra 0 com o tempo
+        readonly float[] clear;                       // furos (HE; tiro na smokeVelha): 1 = limpo, volta pra 0 com o tempo
+        readonly float[] tiro;                        // túnel de tiro (fecha mais rápido que a HE)
         int filled;
 
         public SmokeVolume(V3 origin)
@@ -29,7 +30,7 @@ namespace CSM.View
             const int R = 22, HZ = 18;                  // caixa máxima (corredor comprido cabe)
             int cx = (int)(origin.x / C), cy = (int)(origin.y / C), cz = (int)(origin.z / C);
             x0 = cx - R; y0 = cy - R; z0 = Math.Max(0, cz - 1); nx = ny = 2 * R + 1; nz = HZ;
-            dens = new float[nx * ny * nz]; order = new int[nx * ny * nz]; clear = new float[nx * ny * nz];
+            dens = new float[nx * ny * nz]; order = new int[nx * ny * nz]; clear = new float[nx * ny * nz]; tiro = new float[nx * ny * nz];
             for (int i = 0; i < order.Length; i++) order[i] = -1;
             Fill(cx - x0, cy - y0, cz - z0);
         }
@@ -166,8 +167,13 @@ namespace CSM.View
         public void Update(float dt)
         {
             age += dt;
-            float k = dt / 1.4f;
-            for (int i = 0; i < clear.Length; i++) if (clear[i] > 0) clear[i] = Math.Max(0, clear[i] - k);
+            bool velha = TeamBrain.EXP.Contains("smokeVelha");
+            float k = dt * (velha ? 1 / 1.4f : HE_K), kt = dt * TIRO_K;
+            for (int i = 0; i < clear.Length; i++)
+            {
+                if (clear[i] > 0) clear[i] = Math.Max(0, clear[i] - k);
+                if (tiro[i] > 0) tiro[i] = Math.Max(0, tiro[i] - kt);
+            }
             for (int i = tunnels.Count - 1; i >= 0; i--)
             {
                 var tn = tunnels[i]; tn.age += dt;
@@ -175,13 +181,58 @@ namespace CSM.View
             }
         }
 
-        /// <summary>Tiro atravessando: abre um túnel fino (raio ~3,5, uma cabeça) ao longo do segmento, que fecha em ~1 s.
-        /// Antes era 6,5 e 1,4 s — abria buraco demais (visão dos bots inclusive).</summary>
+        /// <summary>
+        /// Tiro atravessando: o mesmo túnel que o visual desenha (smoke por volume), pra o bot ver pelo buraco que o jogador
+        /// vê — cone do ponto onde a bala entra na fumaça (densidade > 0,05) até onde sai: raio 2,5 na entrada, +0,11 por
+        /// unidade, no máximo 8. Aberto até 0,3 s, fecha da borda pro meio até 1,5 s (flag smokeVelha: cilindro 3,5 por ~1 s).
+        /// </summary>
         public void Shot(V3 a, V3 b)
         {
             tunnels.Add((a, b, 0f));
             V3 d = b - a; float L = d.Len; if (L < 1e-3f) return;
-            for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 3.5f, 0.7f);
+            if (TeamBrain.EXP.Contains("smokeVelha")) { for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 3.5f, 0.7f); return; }
+            float ent = -1, sai = -1;
+            for (float s = 0; s <= L; s += C * 0.5f) if (Base(a + d * (s / L)) > 0.05f) { if (ent < 0) ent = s; sai = s; }
+            if (ent < 0) return;
+            for (float s = ent; s <= sai; s += C * 0.5f) Furo(tiro, a + d * (s / L), MathF.Min(8f, 2.5f + 0.11f * (s - ent)), 1f, TIRO_A);
+        }
+        // furo linear no tempo: valor A, cai k por segundo; limpo (≥1) por (A−1)/k e some em A/k
+        const float TIRO_K = 1f / 1.2f, TIRO_A = 1.25f;      // aberto 0,3 s, fechado em 1,5 s
+        const float HE_K = 1f / 2.2f, HE_A = 1f + 1f / 2.2f;  // aberto 1,0 s, cheio de novo em 3,2 s
+
+        /// <summary>
+        /// HE no meio da smoke: bolha de raio r centrada 6 acima da explosão; pra cima vai o dobro (rompe o topo do domo).
+        /// Aberta até 1,0 s e volta a encher até 3,2 s — igual ao visual (flag smokeVelha: esfera, ~1,5 s limpa).
+        /// </summary>
+        public void HE(V3 p, float r, float velhoAmount)
+        {
+            if (TeamBrain.EXP.Contains("smokeVelha")) { Clear(p, r, velhoAmount); return; }
+            Furo(clear, new V3(p.x, p.y, p.z + 6), r, 2f, HE_A);
+        }
+
+        /// <summary>Furo esférico (cima esticado por "subir") no campo dado: o centro abre mais e fecha por último.</summary>
+        void Furo(float[] campo, V3 p, float r, float subir, float amount)
+        {
+            int cx = (int)(p.x / C) - x0, cy = (int)(p.y / C) - y0, cz = (int)(p.z / C) - z0, rc = (int)(r / C) + 1, rcz = (int)(r * subir / C) + 1;
+            for (int z = cz - rc; z <= cz + rcz; z++)
+                for (int y = cy - rc; y <= cy + rc; y++)
+                    for (int x = cx - rc; x <= cx + rc; x++)
+                    {
+                        if (x < 0 || y < 0 || z < 0 || x >= nx || y >= ny || z >= nz) continue;
+                        float dx = (x + x0) * C + C / 2 - p.x, dy = (y + y0) * C + C / 2 - p.y, dz = (z + z0) * C + C / 2 - p.z;
+                        if (dz > 0) dz /= subir;
+                        float q = MathF.Sqrt(dx * dx + dy * dy + dz * dz) / r;
+                        if (q < 1) { int i = Idx(x, y, z); campo[i] = Math.Max(campo[i], amount * (1 - q * q)); }
+                    }
+        }
+
+        /// <summary>Densidade crescida sem furo nem fervido (onde a bala "entra" na fumaça).</summary>
+        float Base(V3 p)
+        {
+            int ix = (int)(p.x / C) - x0, iy = (int)(p.y / C) - y0, iz = (int)(p.z / C) - z0;
+            if (ix < 0 || iy < 0 || iz < 0 || ix >= nx || iy >= ny || iz >= nz) return 0;
+            int i = Idx(ix, iy, iz), grown = (int)(filled * Ease(age / GROW));
+            return order[i] < 0 || order[i] > grown ? 0 : dens[i];
         }
 
         public void Clear(V3 p, float r, float amount)
@@ -213,7 +264,7 @@ namespace CSM.View
                 int i = Idx(x, y, z);
                 if (order[i] < 0 || order[i] > grown) continue;
                 float w = ((c & 1) != 0 ? ax : 1 - ax) * (((c >> 1) & 1) != 0 ? ay : 1 - ay) * (((c >> 2) & 1) != 0 ? az : 1 - az);
-                acc += w * dens[i] * (1 - Math.Min(1f, clear[i]));   // HE passa de 1: fica limpo um tempo antes de voltar
+                acc += w * dens[i] * (1 - Math.Min(1f, Math.Max(clear[i], tiro[i])));   // HE passa de 1: fica limpo um tempo antes de voltar
             }
             if (acc <= 0) return 0;
             // fervido: ruído 3D que se mexe devagar dá as bolotas e a borda viva

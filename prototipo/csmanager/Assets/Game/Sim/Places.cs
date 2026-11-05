@@ -134,6 +134,54 @@ namespace CSM.Sim
             System.Linq.Enumerable.Select(System.Linq.Enumerable.Where(typeof(Places).GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static),
                 f => f.FieldType == typeof(Lineup)), f => (Lineup)f.GetValue(null)));
 
+        // ---------------- banco de lineups aprendidas (repertório que cresce jogando)
+        /// <summary>Lineups que alguém acertou no olho e guardou (lugar + mira). Cada jogador sabe as que ELE aprendeu.</summary>
+        static readonly List<Lineup> bancoG = new List<Lineup>();
+        static readonly HashSet<Lineup> bancoSetG = new HashSet<Lineup>();
+        static readonly Dictionary<string, HashSet<Lineup>> sabeG = new Dictionary<string, HashSet<Lineup>>();
+        // headless determinístico (NavGrid.PorRound): o banco era um só pra todos os rounds paralelos (pelo NOME do jogador),
+        // então o que cada round sabia dependia de quais terminaram antes — no modo PorRound é da thread e zera a cada round
+        [System.ThreadStatic] static List<Lineup> bancoT; [System.ThreadStatic] static HashSet<Lineup> bancoSetT; [System.ThreadStatic] static Dictionary<string, HashSet<Lineup>> sabeT;
+        public static List<Lineup> BANCO => CSM.Map.NavGrid.PorRound ? (bancoT ??= new List<Lineup>()) : bancoG;
+        static HashSet<Lineup> bancoSet => CSM.Map.NavGrid.PorRound ? (bancoSetT ??= new HashSet<Lineup>()) : bancoSetG;
+        static Dictionary<string, HashSet<Lineup>> sabe => CSM.Map.NavGrid.PorRound ? (sabeT ??= new Dictionary<string, HashSet<Lineup>>()) : sabeG;
+        public static void NovoRound() { if (!CSM.Map.NavGrid.PorRound) return; bancoT?.Clear(); bancoSetT?.Clear(); sabeT?.Clear(); }
+        public static void ZeraDinamico() { lock (bancoG) { bancoG.Clear(); bancoSetG.Clear(); sabeG.Clear(); } bancoT?.Clear(); bancoSetT?.Clear(); sabeT?.Clear(); }
+        public static bool Treinada(Lineup l) => TREINADAS.Contains(l) || bancoSet.Contains(l);
+        public static bool DoBanco(Lineup l) => bancoSet.Contains(l);
+        public static bool Aprendeu(string quem, Lineup l) => sabe.TryGetValue(quem, out var h) && h.Contains(l);
+        /// <summary>Acertou no olho: vira lineup dele (se já existe uma igual no banco, ele passa a saber aquela).</summary>
+        public static void Aprende(string quem, string kind, V2 de, V2 alvo)
+        {
+            lock (BANCO)
+            {
+                Lineup l = null;
+                foreach (var x in BANCO) if (x.kind == kind && (x.from - de).Len < 12 && (x.to - alvo).Len < 16) { l = x; break; }
+                if (l == null)
+                {
+                    if (BANCO.Count >= 600) return;
+                    l = new Lineup($"{kind} aprendida em {Region(alvo)} (de {Region(de)})", kind, de, alvo);
+                    BANCO.Add(l); bancoSet.Add(l);
+                }
+                if (!sabe.TryGetValue(quem, out var h)) sabe[quem] = h = new HashSet<Lineup>();
+                h.Add(l);
+            }
+        }
+        /// <summary>Uma lineup que ESSE jogador sabe pra cair perto do alvo, saindo de perto de mim.</summary>
+        public static Lineup DoBanco(string quem, string kind, V2 alvo, V2 eu, float raioAlvo, float raioDe)
+        {
+            if (!sabe.TryGetValue(quem, out var h)) return null;
+            Lineup best = null; float bd = float.MaxValue;
+            lock (BANCO)
+                foreach (var l in h)
+                {
+                    if (l.kind != kind || (l.to - alvo).Len > raioAlvo) continue;
+                    float d = (l.from - eu).Len; if (d > raioDe) continue;
+                    float sc = d + 2 * (l.to - alvo).Len; if (sc < bd) { bd = sc; best = l; }
+                }
+            return best;
+        }
+
         /// <summary>Região do mapa onde está o ponto (pras calls do IGL).</summary>
         public static string Region(V2 p)
         {

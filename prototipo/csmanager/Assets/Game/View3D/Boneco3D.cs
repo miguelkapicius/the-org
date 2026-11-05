@@ -112,6 +112,7 @@ namespace CSM.View3D
             {
                 matCorpo = new Material(Shader.Find("CSM/Maquete")) { name = "Maquete boneco" };
                 matCorpo.SetFloat("_Smoothness", 0.42f); matCorpo.SetFloat("_Variacao", 0.03f); matCorpo.SetFloat("_Borda", 0.35f);
+                matCorpo.SetFloat("_SombraGorda", 0.006f);   // arma fina faz sombra que se vê
             }
             if (matBrilho == null) matBrilho = new Material(Shader.Find("CSM/Brilho")) { name = "Brilho boneco" };
         }
@@ -124,11 +125,49 @@ namespace CSM.View3D
         public float yawPernas;
         /// <summary>Esconde a arma da mão (morreu: a arma vira objeto solto caindo no chão).</summary>
         public bool semArma; HashSet<int> pecaArma;
+        /// <summary>Esconde a C4 da animação (desarmando: ele mexe na C4 plantada no chão, não numa segunda na mão).</summary>
+        public bool semC4; HashSet<int> pecaC4;
+        /// <summary>Esconde a granada de elipsoides da animação (o jogo põe o modelo do kit no lugar: GranadaNaMao).</summary>
+        public bool nadeKit; HashSet<int> pecaNade;
+        static readonly string[] NADE_PRE = { "sm_", "fl_", "mo_", "he_" };
+        static readonly string[] NADE_CORPO = { "sm_corpo", "fl_corpo", "mo_garrafa", "he_corpo" }, NADE_TOPO = { "sm_topo", "fl_topo", "mo_pano", "he_topo" };
+        int[] idxCorpo, idxTopo;
+
+        /// <summary>Granada na mão nesta pose (a de elipsoides, mesmo escondida): centro do corpo, pra onde aponta o topo
+        /// (mundo) e a altura dela no mundo. Tipo: 0 smoke, 1 flash, 2 molotov, 3 HE.</summary>
+        public bool GranadaNaMao(out Vector3 centro, out Vector3 cima, out float altura, out int tipo)
+        {
+            if (idxCorpo == null)
+            {
+                idxCorpo = new int[4]; idxTopo = new int[4];
+                for (int i = 0; i < 4; i++) { idxCorpo[i] = idxTopo[i] = -1; }
+                for (int k = 0; k < modelo.nomes.Length; k++)
+                {
+                    if (modelo.nomes[k].Length <= 2) continue;
+                    string n = modelo.nomes[k].Substring(2);
+                    for (int i = 0; i < 4; i++) { if (n == NADE_CORPO[i]) idxCorpo[i] = k; if (n == NADE_TOPO[i]) idxTopo[i] = k; }
+                }
+            }
+            for (int i = 0; i < 4; i++)
+            {
+                int c = idxCorpo[i], t = idxTopo[i];
+                if (c < 0 || t < 0 || dVis == null || !dVis[c] || semArma) continue;
+                centro = pecas[c].position; var d = pecas[t].position - centro;
+                cima = d.sqrMagnitude > 1e-10f ? d.normalized : Vector3.up;
+                var tam = Vector3.Scale(modelo.malhas[c].bounds.size, pecas[c].lossyScale);
+                altura = Mathf.Max(tam.x, Mathf.Max(tam.y, tam.z)); tipo = i;
+                return true;
+            }
+            centro = cima = default; altura = 0; tipo = -1; return false;
+        }
         /// <summary>Camada das pernas: com uma ação de tronco (recarga, tiro, sacar, granada) andando, as pernas tocam
         /// o passo dessa animação (fase pernaU) e o resto do corpo a ação.</summary>
         public string pernaAnim; public float pernaU;
         /// <summary>Desce o corpo de cima (agachado atirando/recarregando: a ação é de pé, as pernas agachadas).</summary>
         public float troncoY;
+        /// <summary>Agachar aos poucos (Agent.duck da Sim, suavizado): puxa a pose desenhada pra pose agachada com peso agachaW
+        /// (0 em pé, 1 embaixo). agachaSoPernas: só as pernas (atirando/recarregando parado, o tronco desce por troncoY).</summary>
+        public string agachaAnim; public float agachaW; public bool agachaSoPernas;
         /// <summary>Mistura parcial no corpo de cima (meio cego: um pouco da pose de cego por cima do que estiver fazendo).</summary>
         public string misturaAnim; public float misturaU, misturaW;
         /// <summary>Branco do cego (0..1), por cima do piscar do golpe.</summary>
@@ -152,16 +191,20 @@ namespace CSM.View3D
             b.pecas = new Transform[P]; b.rends = new Renderer[P];
             int camada = LayerMask.NameToLayer(CAMADA);
             var mpb = new MaterialPropertyBlock(); mpb.SetColor("_CorTime", time == "ct" ? COR_CT : COR_TR);
+            // peças que brilham (chama da molotov, clarão, luneta) também na camada do boneco: na do mapa elas entravam na
+            // profundidade e o que ficava atrás delas (garrafa, arma) virava silhueta "atrás da parede". Silhueta delas
+            // própria é transparente (alfa 0)
+            var mpbBrilho = new MaterialPropertyBlock(); mpbBrilho.SetColor("_CorTime", new Color(0, 0, 0, 0));
             for (int p = 0; p < P; p++)
             {
                 var pg = new GameObject(m.nomes[p]);
-                if (camada >= 0 && !m.brilho[p]) pg.layer = camada;
+                if (camada >= 0) pg.layer = camada;
                 pg.transform.SetParent(go.transform, false);
                 pg.AddComponent<MeshFilter>().sharedMesh = m.malhas[p];
                 var r = pg.AddComponent<MeshRenderer>();
                 r.sharedMaterial = m.brilho[p] ? matBrilho : matCorpo;
                 r.shadowCastingMode = m.brilho[p] ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
-                if (!m.brilho[p]) r.SetPropertyBlock(mpb);
+                r.SetPropertyBlock(m.brilho[p] ? mpbBrilho : mpb);
                 b.pecas[p] = pg.transform; b.rends[p] = r;
             }
             b.perna = new bool[P];
@@ -179,29 +222,87 @@ namespace CSM.View3D
 
         public bool Tem(string anim) => modelo.anims.ContainsKey(anim);
 
-        // ------------------------------------------------------------------ mira pra cima/baixo (aditiva)
-        /// <summary>Inclinação da mira em graus (+ = cima, até ±25) com a arma da vez: soma a diferença entre a pose
-        /// pitch_cima/baixo e a mira reta no corpo de cima, por cima de qualquer animação (andar, tiro, recarga).</summary>
-        public float pitch; public string armaPitch;
-        static readonly Dictionary<string, (Vector3[] t, Quaternion[] q)> deltas = new Dictionary<string, (Vector3[], Quaternion[])>();
-        (Vector3[] t, Quaternion[] q) Delta(string arma, bool cima)
+        // ------------------------------------------------------------------ mira pra cima/baixo em cadeia
+        // braços, arma, itens da mão e cabeça giram JUNTOS em volta do meio dos ombros (presos no tronco do quadro, então
+        // seguem agachar/inclinar). O delta por peça da pose pitch_* (cada peça girando em volta da origem do modelo)
+        // abria o cotovelo em qualquer pose que não fosse a mira reta: 9-17 cm na luneta da AWP, ~30 cm sacando/recarregando
+        // (usuário: "o antebraço e o braço se desjuntam"). Medido nos dados exportados: com a cadeia, ±60° abre no máximo
+        // ~1-2 cm em qualquer animação e a arma não entra na cabeça (a cabeça vai junto, a ocular fica no olho).
+        class Cadeia { public int tronco = -1; public Vector3 ombroL, ombroR; public bool[] gira; }
+        static readonly Dictionary<string, Cadeia> cadeias = new Dictionary<string, Cadeia>();
+        static readonly System.Text.RegularExpressions.Regex RX_MAO = new System.Text.RegularExpressions.Regex(
+            @"^((braco|ante|pulso|mao)[LR]$|sm_|fl_|mo_|he_|faca|pino|isq|chama|clarao|estrela|capsula|rastro|luneta|alca_arma)");
+        static readonly System.Text.RegularExpressions.Regex RX_FICA = new System.Text.RegularExpressions.Regex(@"(bomba|colete|tronco|gola|quadril)");
+
+        Cadeia MontarCadeia()
         {
-            string k = modelo.time + (cima ? "+" : "-") + arma;
-            if (deltas.TryGetValue(k, out var d)) return d;
-            d = (null, null);
-            if (modelo.anims.TryGetValue("mira_" + arma, out var b) && modelo.anims.TryGetValue((cima ? "pitch_cima_" : "pitch_baixo_") + arma, out var p))
+            if (cadeias.TryGetValue(modelo.time, out var c)) return c;
+            c = new Cadeia(); cadeias[modelo.time] = c;
+            int P = pecas.Length;
+            if (!modelo.anims.TryGetValue("mira_" + (modelo.time == "ct" ? "M4A4" : "AK47"), out var mira)) return c;
+            int Idx(string n) => Array.IndexOf(modelo.nomes, modelo.time + n);
+            c.tronco = Idx("tronco");
+            if (c.tronco < 0) return c;
+            Vector3 M(int p, Vector3 v) => mira.pos[p] + mira.rot[p] * Vector3.Scale(mira.esc[p], v);
+            Vector3 Local(int p, Vector3 w) { var e = mira.esc[p]; var l = Quaternion.Inverse(mira.rot[p]) * (w - mira.pos[p]); return new Vector3(l.x / e.x, l.y / e.y, l.z / e.z); }
+            // ombro = onde o braço encosta no tronco na mira (vértices mais próximos), guardado no espaço do tronco
+            Vector3 Encontro(int a, int b)
             {
-                int P = pecas.Length; d = (new Vector3[P], new Quaternion[P]);
-                for (int i = 0; i < P; i++)
-                {
-                    if (!b.vis[i] || !p.vis[i]) { d.q[i] = Quaternion.identity; continue; }
-                    var dq = p.rot[i] * Quaternion.Inverse(b.rot[i]);
-                    d.q[i] = dq; d.t[i] = p.pos[i] - dq * b.pos[i];
-                }
+                var va = modelo.malhas[a].vertices; var vb = modelo.malhas[b].vertices; float melhor = float.MaxValue; Vector3 r = default;
+                for (int i = 0; i < va.Length; i += 2) { var pa = M(a, va[i]); for (int j = 0; j < vb.Length; j += 2) { var pb = M(b, vb[j]); float d = (pa - pb).sqrMagnitude; if (d < melhor) { melhor = d; r = (pa + pb) * 0.5f; } } }
+                return r;
             }
-            deltas[k] = d;
-            return d;
+            int bl = Idx("bracoL"), br = Idx("bracoR");
+            if (bl < 0 || br < 0) { c.tronco = -1; return c; }
+            c.ombroL = Local(c.tronco, Encontro(bl, c.tronco)); c.ombroR = Local(c.tronco, Encontro(br, c.tronco));
+            var armas = Armas3D.DeArma(modelo);
+            c.gira = new bool[P];
+            for (int p = 0; p < P; p++)
+            {
+                string n = modelo.nomes[p].Substring(2);
+                if (perna[p] || RX_FICA.IsMatch(n)) continue;
+                // braço/mão, arma, granada/faca/itens da mão; e a cabeça (o que fica acima do pescoço na mira)
+                c.gira[p] = RX_MAO.IsMatch(n) || armas.Contains(p) || (mira.vis[p] && mira.pos[p].y > PESCOCO);
+            }
+            return c;
         }
+
+        /// <summary>Laboratório: a junta mais aberta da cadeia de cima (ombro-braço-antebraço-pulso-mão e pescoço), em unidades
+        /// do modelo, pelos vértices mais próximos de cada par na pose desenhada agora.</summary>
+        public float PiorJunta(out string qual)
+        {
+            string t = modelo.time; qual = "";
+            var pares = new List<(string, string)> { ("tronco", "cabeca") };
+            foreach (var sd in new[] { "L", "R" })
+            {
+                var seg = new List<string> { "tronco", "braco" + sd, "ante" + sd };
+                if (Array.IndexOf(modelo.nomes, t + "pulso" + sd) >= 0) seg.Add("pulso" + sd);
+                seg.Add("mao" + sd);
+                for (int i = 0; i + 1 < seg.Count; i++) pares.Add((seg[i], seg[i + 1]));
+            }
+            float pior = 0;
+            foreach (var (a, b) in pares)
+            {
+                int ia = Array.IndexOf(modelo.nomes, t + a), ib = Array.IndexOf(modelo.nomes, t + b);
+                if (ia < 0 || ib < 0 || !rends[ia].enabled || !rends[ib].enabled) continue;
+                var va = modelo.malhas[ia].vertices; var vb = modelo.malhas[ib].vertices; float m2 = float.MaxValue;
+                var ta = pecas[ia]; var tb = pecas[ib];
+                Vector3 W(Transform x, Vector3 v) => x.localPosition + x.localRotation * Vector3.Scale(x.localScale, v);
+                for (int i = 0; i < va.Length; i += 2) { var pa = W(ta, va[i]); for (int j = 0; j < vb.Length; j += 2) m2 = Mathf.Min(m2, (pa - W(tb, vb[j])).sqrMagnitude); }
+                float d = Mathf.Sqrt(m2); if (d > pior) { pior = d; qual = a + "-" + b; }
+            }
+            return pior;
+        }
+
+        /// <summary>Animações em que a mira inclina (as outras não estão apontando: sacar das costas, cego, granada...).</summary>
+        static bool InclinaMira(string anim) =>
+            !(anim.StartsWith("sacar") || anim.StartsWith("costas") || anim.StartsWith("cego") || anim.StartsWith("meio_cego") || anim.StartsWith("granada")
+              || anim.StartsWith("plantar") || anim.StartsWith("desarmar") || anim == "escada" || anim.StartsWith("morrer") || anim.StartsWith("comemorar")
+              || anim.StartsWith("lamentar") || anim.StartsWith("pegar"));
+
+        /// <summary>Inclinação da mira em graus (+ = cima, até ±60): gira a cadeia de cima (braços, arma, cabeça) em volta
+        /// dos ombros, por cima de qualquer animação que aponta (InclinaMira). armaPitch fica só pro replay.</summary>
+        public float pitch; public string armaPitch;
 
         // ------------------------------------------------------------------ anel do time, golpe e piscar
         MeshRenderer anel; static Mesh quad; static Material matAnel;
@@ -231,8 +332,14 @@ namespace CSM.View3D
         /// <summary>Anel do time no chão: some na escada e no ar (ficaria flutuando).</summary>
         public bool noChao = true;
 
-        /// <summary>Levou tiro: o tronco dá um tranco pra trás (força 0..1) e o corpo pisca branco.</summary>
-        public void Golpe(float forca) { golpeT = 0; golpeK = Mathf.Clamp01(forca); }
+        /// <summary>Levou tiro (força 0..1): tranco do lado de onde veio (sinal 1 = pela frente, joga pra trás; -1 = pelas
+        /// costas, joga pra frente). Na cabeça a cabeça dá um tranco forte no pescoço e o tronco só acompanha.</summary>
+        public void Golpe(float forca, bool cabeca = false, float sinal = 1)
+        {
+            golpeT = 0; golpeK = Mathf.Clamp01(forca * (cabeca ? 1.3f : 1f)); golpeCab = cabeca; golpeSinal = sinal >= 0 ? 1 : -1;
+        }
+        bool golpeCab; float golpeSinal = 1;
+        const float PESCOCO = 0.56f;   // altura do pescoço no espaço do modelo (o que fica acima é cabeça/capacete)
 
         /// <summary>Atirou: o coice passa pro corpo (ombro empurrado pra trás, peito sobe um tiquinho, um tremor de lado).
         /// No automático os tiros somam até um teto (o corpo "segura" a rajada) e soltam rápido quando para.</summary>
@@ -248,6 +355,21 @@ namespace CSM.View3D
         {
             for (int p = 0; p < pecas.Length; p++) if (modelo.nomes[p].EndsWith(sufixo)) return pecas[p];
             return null;
+        }
+
+        /// <summary>Ponta do cano da arma na mão (peça de nome exatamente <paramref name="arma"/>, visível): o ponto da caixa
+        /// dela mais à frente na direção <paramref name="dir"/> (horizontal), na altura do meio do cano.</summary>
+        public bool PontaDaArma(string arma, Vector3 dir, out Vector3 ponta)
+        {
+            dir.y = 0; dir = dir.sqrMagnitude > 1e-8f ? dir.normalized : transform.forward;
+            for (int p = 0; p < pecas.Length; p++)
+                if (rends[p].enabled && modelo.nomes[p] == arma)
+                {
+                    var b = rends[p].bounds;
+                    ponta = b.center + dir * (Mathf.Abs(b.extents.x * dir.x) + Mathf.Abs(b.extents.z * dir.z));
+                    return true;
+                }
+            ponta = default; return false;
         }
 
         /// <summary>Posição no mundo da peça visível cujo nome termina em <paramref name="sufixo"/> (ex.: "fogo0").</summary>
@@ -326,6 +448,17 @@ namespace CSM.View3D
             }
         }
 
+        /// <summary>Puxa a pose (o corpo todo ou só as pernas) pro 1º quadro da pose agachada com peso w.</summary>
+        void Agachar(Anim a, float w, bool soPernas)
+        {
+            int P = pecas.Length;
+            for (int p = 0; p < P; p++)
+            {
+                if ((soPernas && !perna[p]) || !dVis[p] || !a.vis[p]) continue;
+                dPos[p] = Vector3.Lerp(dPos[p], a.pos[p], w); dRot[p] = Quaternion.Slerp(dRot[p], a.rot[p], w); dEsc[p] = Vector3.Lerp(dEsc[p], a.esc[p], w);
+            }
+        }
+
         /// <summary>Só as pernas de outra animação (camada de baixo) por cima do que Amostrar pôs.</summary>
         void AmostrarPernas(Anim a, float u)
         {
@@ -365,6 +498,7 @@ namespace CSM.View3D
             fadeT += dt;
             Amostrar(a, u);
             if (pernaAnim != null && modelo.anims.TryGetValue(pernaAnim, out var ap)) AmostrarPernas(ap, pernaU);
+            if (agachaAnim != null && agachaW > 0.001f && modelo.anims.TryGetValue(agachaAnim, out var ag)) Agachar(ag, agachaW, agachaSoPernas);
             if (misturaAnim != null && misturaW > 0.01f && modelo.anims.TryGetValue(misturaAnim, out var am)) Misturar(am, misturaU, misturaW);
             // respirando parado (segurando ângulo não fica estátua): peito sobe e desce, ombro balança de leve
             respT += dt;
@@ -375,30 +509,52 @@ namespace CSM.View3D
             Quaternion giro = Quaternion.Euler(0, yawPernas, 0);
             golpeT += dt;
             float g = golpeT < 0.28f ? golpeK * Mathf.Sin(Mathf.PI * Mathf.Min(1, golpeT / 0.07f) * 0.5f) * Mathf.Pow(1 - golpeT / 0.28f, 2) : 0;
-            Quaternion tranco = Quaternion.Euler(-16f * g, 0, 0); var pivo = new Vector3(0, 0.36f, 0);
+            Quaternion tranco = Quaternion.Euler(-(golpeCab ? 7f : 16f) * g * golpeSinal, 0, 0); var pivo = new Vector3(0, 0.36f, 0);
+            Quaternion trancoCab = Quaternion.Euler(-38f * g * golpeSinal, 0, 0); var pivoCab = new Vector3(0, PESCOCO, 0);
             // coice no corpo: sobe rápido (15 ms) e volta em ~0,1 s; tronco gira pra trás no quadril, ombro recua
             recuoT += dt;
             float rc = recuoK * Mathf.Min(1, recuoT / 0.015f) * Mathf.Exp(-recuoT / 0.09f);
             Quaternion coice = Quaternion.Euler(-4.5f * rc, 2.2f * rc * recuoLado, 1.2f * rc * recuoLado);
             var pivoQ = new Vector3(0, 0.3f, 0); var recua = new Vector3(0, 0.004f, -0.014f) * rc;
-            float fl = Mathf.Max(golpeT < 0.16f ? golpeK * (1 - golpeT / 0.16f) * 0.85f : 0, brancoCego);
+            // levar tiro não pisca branco (usuário: só sangra); o golpe fica no tranco do corpo e no sangue
+            float fl = brancoCego;
             if (Mathf.Abs(fl - flash) > 0.02f || (fl == 0 && flash != 0)) { flash = fl; AtualizarCorpo(); }
-            float wp = Mathf.Clamp01(Mathf.Abs(pitch) / 60f);   // pitch_cima/baixo exportadas a 60°
-            (Vector3[] t, Quaternion[] q) dl = (null, null);
-            if (wp > 0.01f && armaPitch != null) dl = Delta(armaPitch, pitch > 0);
+            // mira inclinada: um giro só (pitch inteiro) da cadeia de cima em volta do meio dos ombros do tronco deste quadro
+            Cadeia cad = null; Quaternion qPitch = Quaternion.identity; Vector3 pivoOmbro = default;
+            if (Mathf.Abs(pitch) > 0.3f && InclinaMira(anim))
+            {
+                cad = MontarCadeia();
+                int tr = cad.tronco;
+                if (tr >= 0 && dVis[tr])
+                {
+                    Vector3 sL = dPos[tr] + dRot[tr] * Vector3.Scale(dEsc[tr], cad.ombroL), sR = dPos[tr] + dRot[tr] * Vector3.Scale(dEsc[tr], cad.ombroR);
+                    pivoOmbro = (sL + sR) * 0.5f;
+                    qPitch = Quaternion.AngleAxis(pitch, sL - sR);   // eixo pra esquerda: + levanta a frente (+Z) pro alto (+Y)
+                }
+                else cad = null;
+            }
             if (semArma && pecaArma == null) pecaArma = Armas3D.DeArma(modelo);
+            if (semC4 && pecaC4 == null)
+            {
+                pecaC4 = new HashSet<int>();
+                for (int k = 0; k < modelo.nomes.Length; k++) if (modelo.nomes[k].Length > 2 && modelo.nomes[k].Substring(2).StartsWith("bomba")) pecaC4.Add(k);
+            }
+            if (nadeKit && pecaNade == null)
+            {
+                pecaNade = new HashSet<int>();
+                for (int k = 0; k < modelo.nomes.Length; k++)
+                    if (modelo.nomes[k].Length > 2) foreach (var pre in NADE_PRE) if (modelo.nomes[k].Substring(2).StartsWith(pre)) pecaNade.Add(k);
+            }
             for (int p = 0; p < P; p++)
             {
-                bool vis = dVis[p] && !(semArma && pecaArma.Contains(p));
-                rends[p].enabled = vis;
+                bool vis = dVis[p] && !(semArma && pecaArma.Contains(p)) && !(semC4 && pecaC4.Contains(p));
+                // granada de elipsoides: continua posando (o modelo do kit vai pro lugar dela), só não desenha
+                rends[p].enabled = vis && !(nadeKit && pecaNade.Contains(p));
                 if (!vis) continue;
                 Vector3 pos = dPos[p], esc = dEsc[p]; Quaternion rot = dRot[p];
-                if (dl.q != null && !perna[p])
-                {
-                    var dq = Quaternion.Slerp(Quaternion.identity, dl.q[p], wp);
-                    pos = dq * pos + dl.t[p] * wp; rot = dq * rot;
-                }
+                if (cad != null && cad.gira[p]) { pos = pivoOmbro + qPitch * (pos - pivoOmbro); rot = qPitch * rot; }
                 if (perna[p] && yawPernas != 0) { pos = giro * pos; rot = giro * rot; }
+                if (g > 0.001f && golpeCab && pos.y > PESCOCO) { pos = pivoCab + trancoCab * (pos - pivoCab); rot = trancoCab * rot; }
                 if (g > 0.001f && !perna[p]) { pos = pivo + tranco * (pos - pivo); rot = tranco * rot; }
                 if (rc > 0.002f && !perna[p]) { pos = pivoQ + coice * (pos - pivoQ) + recua; rot = coice * rot; }
                 if (!perna[p])

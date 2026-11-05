@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 244 168">
+  <!-- P250. Proporção do CS2: ferrolho alto com a frente chanfrada, ESPORA pontuda saindo das costas, guarda-mato
+       redondo, punho curto e largo com a base de lábio. Risquinhos da casa. -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="244" height="168">
+      <rect width="244" height="168" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round" stroke-width="2">
+        <path d="M46 36 L46 58"/><path d="M53 36 L53 58"/><path d="M60 36 L60 58"/><path d="M67 36 L67 58"/>
+        <path d="M34 66.5 L222 66.5" stroke-width="2.4"/>
+        <path d="M44 151 L88 156" stroke-width="2.2"/>
+      </g>
+      <path d="M122 80 L156 80 Q159 80 159 83 L159 89 Q159 98 150 98 L128 98 Q121 98 121 91 Z" fill="#000"/>
+      <path d="M131 80 Q137 86 133 94" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M32 32 Q32 28 36 28 L214 28 L226 40 L226 67 L32 67 Z"/>
+    <path d="M38 24 L48 24 L48 28 L38 28 Z"/><path d="M210 24 L216 24 L216 28 L210 28 Z"/>
+    <path d="M34 66 L224 66 L224 78 L170 79 L112 78 Z"/>
+    <path d="M110 74 L166 74 L166 86 Q166 106 146 106 L122 106 Q110 106 110 96 Z"/>
+    <path d="M32 66 L114 70 L112 100 Q104 104 102 116 L95 153 Q94 161 86 161 L40 156 Q30 155 31 146 C34 126 37 110 40 98 C41 90 30 84 14 78 Q22 68 32 66 Z"/>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using CSM.Map;
 
@@ -46,13 +46,14 @@ namespace CSM.Sim
         {
             var n = new Match.Nade { l = new Places.Lineup("teste", kind, de, de) };
             Lanca(n, de, zChao, pl, 1f, 1f);
-            float tt = 0, parado = -1;
+            float tt = 0, parado = -1; ultToque = 99;
             while (tt < 7)
             {
                 float sp = MathF.Sqrt(n.vx * n.vx + n.vy * n.vy + n.vz * n.vz);
                 int k = Math.Max(1, (int)MathF.Ceiling(sp * Match.DT / 3f));
                 for (int s = 0; s < k; s++) Match.PassoNade(n, Match.DT / k);
                 tt += Match.DT;
+                if (n.tocouChao && ultToque > 90) ultToque = tt;
                 if (kind == "molotov" && n.tocouChao) return (n.P, n.z, tt, false);
                 if (kind == "molotov" && tt >= Match.FUSE_MOLOTOV) return (n.P, n.z, tt, true);
                 if (kind == "flash" && tt >= Match.FUSE_FLASH || kind == "he" && tt >= Match.FUSE_HE) return (n.P, n.z, tt, !n.noChao);
@@ -66,6 +67,9 @@ namespace CSM.Sim
             return (n.P, n.z, tt, !n.noChao);
         }
 
+        /// <summary>Quando a última Simula tocou o chão pela 1ª vez (99 = não tocou). Por thread.</summary>
+        [ThreadStatic] static float ultToque;
+
         /// <summary>Põe a granada na mão de quem joga: sai do olho, um pouco à frente.</summary>
         public static void Lanca(Match.Nade n, V2 de, float zChao, Plano pl, float ruidoMov, float ruidoPulo)
         {
@@ -78,15 +82,39 @@ namespace CSM.Sim
         /// <summary>Erro do plano: distância de onde estoura até o alvo (flash: o alvo é no ar, uns 40 acima).</summary>
         static float Erro(V2 de, float zChao, Plano pl, string kind, V2 alvo, float zAlvo)
         {
+            // HE no olho: a mão erra ~1-2°; vale a mira que estoura no chão perto dele mesmo errando um pouco (média de 3)
+            if (kind == "he" && !TeamBrain.EXP.Contains("heAlcanceVelho") && !TeamBrain.EXP.Contains("heSemFolga"))
+            {
+                var p1 = pl; p1.up -= 1.5f; var p2 = pl; p2.up += 1.5f;
+                return (Erro1(de, zChao, pl, kind, alvo, zAlvo) * 2 + Erro1(de, zChao, p1, kind, alvo, zAlvo) + Erro1(de, zChao, p2, kind, alvo, zAlvo)) / 4;
+            }
+            return Erro1(de, zChao, pl, kind, alvo, zAlvo);
+        }
+        static float Erro1(V2 de, float zChao, Plano pl, string kind, V2 alvo, float zAlvo)
+        {
             var r = Simula(de, zChao, pl, kind);
             float e = (r.p - alvo).Len;
             if (kind == "flash") e += 0.5f * MathF.Abs(r.z - (zAlvo + 40));
             if (kind == "molotov" && r.ar) e += 200;   // estourou no ar: não pega fogo
+            // molotov com folga: o erro da mão de quem joga no olho somava tempo e ela sumia no ar (12%)
+            if (kind == "molotov" && !r.ar && r.t > Match.FUSE_MOLOTOV - 0.45f && !TeamBrain.EXP.Contains("nadeFuseVelho")) e += 60 * (r.t - (Match.FUSE_MOLOTOV - 0.45f)) / 0.45f;
+            // HE estoura no chão (quica e explode), não lá no alto: 81% explodiam a 30+ acima do chão, longe do corpo de todos
+            if (kind == "he" && !TeamBrain.EXP.Contains("nadeFuseVelho")) e += 1.2f * MathF.Max(0, r.z - (zAlvo + 6));
+            // HE como pro: cai no chão com folga e quica/rola até o pé dele. Arco que só toca o chão no fim do pavio estoura no
+            // ar com qualquer erro de mão (32% das HE no ar) — prefere o arremesso baixo que chega cedo
+            if (kind == "he" && !TeamBrain.EXP.Contains("heAlcanceVelho")) e += 50f * MathX.Clamp((MathF.Min(ultToque, Match.FUSE_HE) - (Match.FUSE_HE - 0.45f)) / 0.45f, 0, 1);
             if (kind == "smoke") e += 0.5f * MathF.Max(0, MathF.Abs(r.z - zAlvo) - 6);   // parou em cima de outra coisa
             return e;
         }
 
-        static readonly ConcurrentDictionary<long, Plano> cache = new ConcurrentDictionary<long, Plano>();
+        static readonly ConcurrentDictionary<long, Plano> cacheG = new ConcurrentDictionary<long, Plano>();
+        // a chave é arredondada (célula de onde + alvo de 6 em 6) mas o plano sai da posição EXATA de quem pediu primeiro:
+        // dividido entre rounds paralelos, o round que chegava antes decidia o arremesso dos outros (headless não
+        // determinístico). No modo NavGrid.PorRound é da thread e zera a cada round.
+        [ThreadStatic] static ConcurrentDictionary<long, Plano> cacheT;
+        static ConcurrentDictionary<long, Plano> cache => NavGrid.PorRound ? (cacheT ??= new ConcurrentDictionary<long, Plano>()) : cacheG;
+        public static void NovoRound() { if (NavGrid.PorRound) cacheT?.Clear(); }
+        public static void ZeraDinamico() { cacheG.Clear(); cacheT?.Clear(); }
         /// <summary>
         /// Acha o arremesso que cai mais perto do alvo, daqui: o jeito (até <paramref name="maxTipo"/>: quem não conhece
         /// a lineup não faz run jump throw), a força e a inclinação; a direção é pro alvo (com um ajuste pequeno, pra

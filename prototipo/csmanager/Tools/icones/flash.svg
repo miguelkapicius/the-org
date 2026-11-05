@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 152">
+  <!-- flashbang (cilindro com furos, espoleta, colher e argola), de pé, branca chapada estilo HUD -->
+  <defs>
+    <mask id="cortes" maskUnits="userSpaceOnUse" x="0" y="0" width="84" height="152">
+      <rect width="84" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-width="2.4" stroke-linecap="round">
+        <path d="M22 60 L56 60"/>   <!-- tampa de cima -->
+        <path d="M22 134 L56 134"/> <!-- tampa de baixo -->
+        <path d="M22 97 L56 97" stroke-width="2"/>
+      </g>
+      <g fill="#000">
+        <!-- furos do corpo (2 fileiras de 3) -->
+        <rect x="26" y="67" width="6" height="22" rx="3"/><rect x="36" y="67" width="6" height="22" rx="3"/><rect x="46" y="67" width="6" height="22" rx="3"/>
+        <rect x="26" y="104" width="6" height="22" rx="3"/><rect x="36" y="104" width="6" height="22" rx="3"/><rect x="46" y="104" width="6" height="22" rx="3"/>
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#cortes)">
+    <!-- corpo -->
+    <rect x="18" y="54" width="42" height="90" rx="6"/>
+    <!-- pescoço e cabeça da espoleta -->
+    <rect x="28" y="44" width="22" height="12"/>
+    <rect x="24" y="28" width="30" height="17" rx="4"/>
+    <!-- colher: sai de cima da espoleta e desce colada no lado direito do corpo -->
+    <path d="M34 22 L58 22 Q70 22 70 34 L70 114 Q70 119 66 119 L64 119 L64 36 Q64 28 57 28 L34 28 Z"/>
+    <!-- pino e argola -->
+    <path d="M14 34 L26 34 L26 39 L14 39 Z"/>
+  </g>
+  <circle cx="11" cy="45" r="8.5" fill="none" stroke="#fff" stroke-width="4"/>
+</svg>

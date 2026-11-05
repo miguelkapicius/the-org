@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 152">
+  <!-- colete + capacete: capacete de lado (aba, borda) -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="160" height="152">
+      <rect width="160" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M18 96 Q80 88 142 96" stroke-width="2.4"/>   <!-- borda -->
+        <path d="M60 46 Q76 40 94 44" stroke-width="2"/>      <!-- costura -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M14 100 Q14 34 80 32 Q140 32 146 96 L152 104 Q154 110 148 110 L18 108 Q12 108 14 100 Z"/>
+  </g>
+  <path d="M40 108 Q44 128 62 130" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round"/>  <!-- jugular -->
+</svg>

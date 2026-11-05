@@ -20,7 +20,7 @@ namespace CSM.View3D
         public float enquadrar = 14f;          // altura do quadro em unidades Unity (boneco = 1)
         public Vector2 alvoJogo = new Vector2(837, 187);   // ponto do mapa no centro (x, y do jogo)
         [Header("Miniatura")]
-        public float abertura = 1.8f, focal = 300f;
+        public float abertura = 3.6f, focal = 300f;   // (era 1,8: usuário achou tudo sem nitidez)
         public float arredondado = 1.1f;
 
         public Camera cam; public Light sol; public Volume vol; public GameObject mapa;
@@ -38,9 +38,19 @@ namespace CSM.View3D
             // enfeites de fachada "pintados" viram objetos 3D (a pintura sai das voxels antes do borrão)
             var G = MapVoxels.Build();
             var enfeites = Fachada3D.Montar(G, matMapa, transform);
-            var ps = MalhaMapa.Gerar(Caixas3D.SemCaixas(G), arredondado, 100, linear);
+            Natureza3D.Plantar(Fachada3D.Plantas, transform);   // plantas do pack nos vasos que a fachada marcou
+            // enfeites miúdos (jarros, sacos, cestos, barris, tralhas de telhado, rodas da carroça) também saem do borrão
+            // (viravam "blobs") e entram como peça de quina viva
+            // o chafariz da base TR também sai do borrão e entra como modelo (Kenney, Chafariz3D)
+            var GM = Adornos3D.Limpar(Caixas3D.SemCaixas(Pilar3D.SemPilares(Chafariz3D.SemChafariz(G))));   // pilares também (Kenney, Pilar3D)
+            var ps = MalhaMapa.Gerar(GM, arredondado, 100, linear);
+            matMapa.SetTexture("_Topo", MalhaMapa.Topo(GM, linear)); matMapa.SetFloat("_UsarTopo", 1); matMapa.SetFloat("_Esc", MalhaMapa.ESC);
             mapa = MalhaMapa.Montar(ps, matMapa, transform);
             Caixas3D.Montar(matMapa, mapa.transform, linear);
+            Chafariz3D.Montar(matMapa, mapa.transform, linear);
+            Pilar3D.Montar(matMapa, mapa.transform, linear);
+            Adornos3D.Montar(matMapa, mapa.transform);
+            Packs3D.Montar(matMapa, mapa.transform, linear);   // barris, sacos e caixotes de pack (o Adornos3D marcou onde)
             enfeites.transform.SetParent(mapa.transform, true);
             msMalha = sw.Elapsed.TotalMilliseconds;
             if (matCor == null)
@@ -55,15 +65,15 @@ namespace CSM.View3D
             sol = go.AddComponent<Light>(); sol.type = LightType.Directional;
             var s = Iso.SUN; var paraSol = new Vector3(s.x, s.z, -s.y).normalized;
             sol.transform.rotation = Quaternion.LookRotation(-paraSol);
-            sol.color = new Color(1f, 0.93f, 0.80f); sol.intensity = 1.55f;
-            sol.shadows = LightShadows.Soft; sol.shadowStrength = 0.78f;
+            sol.color = new Color(1f, 0.93f, 0.80f); sol.intensity = 1.35f;
+            sol.shadows = LightShadows.Soft; sol.shadowStrength = 0.86f;
             sol.shadowBias = 0.02f; sol.shadowNormalBias = 0.25f;
 
             RenderSettings.ambientMode = AmbientMode.Trilight;
             RenderSettings.ambientSkyColor = new Color(0.58f, 0.70f, 0.86f);
             RenderSettings.ambientEquatorColor = new Color(0.78f, 0.66f, 0.52f);
             RenderSettings.ambientGroundColor = new Color(0.46f, 0.36f, 0.26f);
-            RenderSettings.ambientIntensity = 1f;
+            RenderSettings.ambientIntensity = 0.9f;
             RenderSettings.fog = false;
 
             if (cam == null) cam = Camera.main;
@@ -81,9 +91,10 @@ namespace CSM.View3D
             var p = ScriptableObject.CreateInstance<VolumeProfile>();
             var dof = p.Add<DepthOfField>(true); dof.mode.Override(DepthOfFieldMode.Bokeh);
             dof.focusDistance.Override(Distancia()); dof.focalLength.Override(focal); dof.aperture.Override(abertura);
-            var bl = p.Add<Bloom>(true); bl.threshold.Override(0.95f); bl.intensity.Override(0.55f); bl.scatter.Override(0.72f);
+            // bloom só no que brilha de verdade (clarão, fogo, laser): antes pegava a areia clara e lavava a imagem
+            var bl = p.Add<Bloom>(true); bl.threshold.Override(1.35f); bl.intensity.Override(0.22f); bl.scatter.Override(0.55f);
             var tm = p.Add<Tonemapping>(true); tm.mode.Override(TonemappingMode.Neutral);
-            var ca = p.Add<ColorAdjustments>(true); ca.saturation.Override(14f); ca.contrast.Override(8f); ca.postExposure.Override(0.15f);
+            var ca = p.Add<ColorAdjustments>(true); ca.saturation.Override(12f); ca.contrast.Override(18f); ca.postExposure.Override(-0.25f);   // menos claro, mais contraste
             var wb = p.Add<WhiteBalance>(true); wb.temperature.Override(6f);
             var vi = p.Add<Vignette>(true); vi.intensity.Override(0.22f); vi.smoothness.Override(0.5f);
             vol.sharedProfile = p;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using CSM.Map;
 
@@ -49,7 +49,22 @@ namespace CSM.Sim
             Zonas();
             foreach (var tm in new[] { Team.CT, Team.T }) Time(tm);
             foreach (var a in m.agents) { if (a.alive) Jogador(a); }
+            foreach (var a in m.agents) if (a.alive) Passagem(a);
             foreach (var a in m.agents) if (!a.alive && fogoDesde[a.id] >= 0) { if (a.killedByFire) m.Aud("morreu no fogo: vida ao entrar", fogoHp[a.id] <= 30 ? "até 30" : fogoHp[a.id] <= 60 ? "31-60" : "61+"); fogoDesde[a.id] = -1; fogoSaiu[a.id] = m.t; }
+        }
+
+        /// <summary>Parado em passagem estreita (porta/beco: folga ≤ 15) sem estar em combate: alvo fácil e trava o colega.</summary>
+        void Passagem(Agent a)
+        {
+            var b = a.brain;
+            if (a.Speed > 3 || b.target != null || b.action != null) return;
+            var (cx, cy) = NavGrid.CellOf(a.pos);
+            if (NavGrid.folga[cx, cy] > 15f) return;
+            string tipo = b.Segurando ? "segurando" : "sem posição";
+            m.Aud("parado em passagem estreita (0,25 s)", tipo + " · " + (b.fase ?? "?"));
+            foreach (var o in m.agents)
+                if (o != a && o.alive && o.team == a.team && (o.pos - a.pos).Len < 26 && o.brain.wantVel.Len > 20 && o.Speed < 6)
+                { m.Aud("travou o colega numa passagem estreita (0,25 s)", tipo + " · " + (b.fase ?? "?")); break; }
         }
 
         void Time(Team tm)
@@ -114,6 +129,7 @@ namespace CSM.Sim
         /// <summary>No fim do round: o porquê de cada decisão é dela mesma ou só repete a ordem?</summary>
         public void Fim()
         {
+            m.sus.Regua();
             if (m.reason == "tempo acabou")
                 m.Aud("round acabou no tempo", m.bombPlanted ? "bomb plantado" : m.bombDropped ? $"C4 no chão em {Places.Region(m.droppedBomb)}{(float.IsInfinity(NavGrid.PathLen(m.droppedBomb, Places.Plant('A'))) ? " (SEM CAMINHO)" : "")}" : m.Alive(Team.T) == 0 ? "sem TR" : "C4 com alguém: " + (System.Array.Find(m.agents.ToArray(), a => a.hasBomb)?.brain.order.name ?? "?"));
             if (m.reason == "tempo acabou")

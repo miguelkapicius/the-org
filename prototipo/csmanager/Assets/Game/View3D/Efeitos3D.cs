@@ -52,12 +52,23 @@ namespace CSM.View3D
         Vector3 Esfera(float r) { var v = new Vector3(R(-1, 1), R(-1, 1), R(-1, 1)); return v.normalized * r * Mathf.Sqrt(R(0, 1)); }
         Color L(Color c) => linear ? c.linear : c;
 
-        /// <summary>Piso (altura Unity) embaixo de um ponto Unity.</summary>
-        public static float Piso(Vector3 u)
+        /// <summary>Piso (altura Unity) embaixo de um ponto Unity: o mesmo topo que a granada usa (MapData.Top: piso +
+        /// cobertura onde anda, altura do bloco onde não anda, fora do mapa é parede). Antes a parede "automática" (solid 0)
+        /// e o caixote contavam como chão, e ragdoll/arma passavam por eles.</summary>
+        public static float Piso(Vector3 u) => MapData.Top(Mathf.FloorToInt(u.x / MalhaMapa.ESC), Mathf.FloorToInt(-u.z / MalhaMapa.ESC)) * MalhaMapa.ESC;
+
+        /// <summary>Caminho horizontal de "de" até "ate" na altura "alto" (Unity): até onde dá pra ir sem entrar em parede
+        /// (piso acima de "alto"), de meio em meio voxel — parede fina não é atravessada num passo grande.</summary>
+        public static Vector3 Varre(Vector3 de, Vector3 ate, float alto)
         {
-            int x = Mathf.Clamp((int)(u.x / MalhaMapa.ESC), 0, MapData.NX - 1), y = Mathf.Clamp((int)(-u.z / MalhaMapa.ESC), 0, MapData.NY - 1);
-            int z = MapData.walk[x, y] ? MapData.floor[x, y] : (MapData.solid[x, y] > 0 ? MapData.solid[x, y] : MapData.floor[x, y]);
-            return z * MalhaMapa.ESC;
+            float d = new Vector2(ate.x - de.x, ate.z - de.z).magnitude;
+            int n = Mathf.CeilToInt(d / (MalhaMapa.ESC * 0.5f));
+            for (int s = 1; s <= n; s++)
+            {
+                var p = Vector3.Lerp(de, ate, s / (float)n);
+                if (Piso(p) > alto) { var q = Vector3.Lerp(de, ate, (s - 1) / (float)n); q.y = ate.y; return q; }
+            }
+            return ate;
         }
 
         void Add(Vector3 p, Vector3 v, float vida, float s0, float s1, Color c0, Color c1, float grav = 0, float brilho = 0,
@@ -85,7 +96,8 @@ namespace CSM.View3D
         /// <summary>Tiro: clarão com luz no cano, fumacinha e cápsula ejetada pra direita.</summary>
         public void Tiro(Vector3 boca, Vector3 frente, Vector3 direita, bool pistola, bool awp)
         {
-            Luz(boca, new Color(1f, 0.78f, 0.45f), awp ? 9 : 6, awp ? 3.2f : 2.4f, 0.06f);
+            // luz do cano um pouco à frente da boca e fraca: com 6-9 colada no corpo o atirador estourava de branco a cada tiro
+            Luz(boca + frente * 0.12f, new Color(1f, 0.78f, 0.45f), awp ? 2.2f : 1.4f, awp ? 1.6f : 1.1f, 0.05f);
             for (int i = 0; i < 3; i++)
                 Add(boca + frente * 0.05f, frente * R(0.3f, 0.8f) + Esfera(0.25f) + Vector3.up * 0.2f, R(0.35f, 0.6f), 0.05f, 0.16f, new Color(0.9f, 0.88f, 0.85f, 0.55f), new Color(0.8f, 0.8f, 0.8f, 0f), -0.3f);
             var ej = boca - frente * (pistola ? 0.05f : 0.22f);
@@ -112,29 +124,37 @@ namespace CSM.View3D
             var volta = -dir.normalized; var vai = dir.normalized;
             if (acerto)
             {
-                int gotas = cabeca ? (protegido ? 3 : 10) : (protegido ? 2 : 6);
+                int gotas = cabeca ? (protegido ? 5 : 28) : (protegido ? 2 : 9);   // HS sem capacete: bem mais sangue (usuário)
                 float forca = protegido ? 0.6f : 1f;
                 // gotas: metade volta pro atirador, metade atravessa (saída), caem com gravidade
                 for (int i = 0; i < gotas; i++)
-                    Add(p, (i % 2 == 0 ? volta : vai) * R(0.4f, 1.3f) * forca + Esfera(0.7f) + Vector3.up * R(0.2f, 0.7f), R(0.3f, 0.5f), R(0.04f, 0.07f), 0.02f,
+                    // HS: o sangue sobe e abre pros lados (a câmera é de cima: na linha do tiro a própria cabeça escondia)
+                    Add(p, (i % 2 == 0 ? volta : vai) * R(0.4f, 1.3f) * forca + Esfera(cabeca && !protegido ? 1.1f : 0.7f) + Vector3.up * (cabeca && !protegido ? R(0.7f, 1.6f) : R(0.2f, 0.7f)), R(0.3f, 0.55f), R(0.04f, 0.075f), 0.02f,
                         SANGUE, new Color(SANGUE_ESC.r, SANGUE_ESC.g, SANGUE_ESC.b, 0.6f), 6f, 0, 1.2f);
                 // névoa vermelha (no capacete/colete bem menor)
-                int nevoa = protegido ? 1 : cabeca ? 4 : 2;
+                int nevoa = protegido ? 1 : cabeca ? 10 : 3;
                 for (int i = 0; i < nevoa; i++)
-                    Add(p + Esfera(0.04f), (vai * 0.5f + Esfera(0.4f)) * forca, R(0.25f, 0.4f), 0.06f, protegido ? 0.13f : cabeca ? 0.3f : 0.2f,
-                        new Color(SANGUE.r, SANGUE.g, SANGUE.b, 0.75f), new Color(SANGUE_ESC.r, SANGUE_ESC.g, SANGUE_ESC.b, 0f), -0.1f, 0, 3f);
+                    // borrifo curto e translúcido (grande e opaco virava uma "bola vermelha" em volta da cabeça)
+                    Add(p + Esfera(0.04f), (vai * 0.7f + Esfera(0.5f) + Vector3.up * (cabeca ? 0.5f : 0f)) * forca, R(0.18f, 0.3f), 0.05f, protegido ? 0.12f : cabeca ? 0.3f : 0.18f,
+                        new Color(SANGUE.r, SANGUE.g, SANGUE.b, cabeca ? 0.55f : 0.6f), new Color(SANGUE_ESC.r, SANGUE_ESC.g, SANGUE_ESC.b, 0f), -0.1f, 0, 3f);
+                if (cabeca && !protegido)
+                {   // HS sem capacete: jato saindo pelo outro lado da cabeça (lê de longe que foi na cabeça)
+                    for (int i = 0; i < 10; i++)
+                        Add(p + vai * 0.04f, (vai + Esfera(0.45f) + Vector3.up * 0.6f).normalized * R(1.6f, 2.8f), R(0.25f, 0.45f), R(0.035f, 0.06f), 0.015f,
+                            SANGUE, new Color(SANGUE_ESC.r, SANGUE_ESC.g, SANGUE_ESC.b, 0.7f), 7f, 0, 1.2f);
+                }
                 if (cabeca && protegido)
-                {   // capacete: faísca no metal e um clarãozinho
-                    Add(p, Vector3.zero, 0.07f, 0.06f, 0.16f, new Color(1, 0.95f, 0.8f, 1), new Color(1, 0.8f, 0.5f, 0), 0, 6);
-                    for (int i = 0; i < 8; i++)
-                        Add(p, (volta * 0.6f + Esfera(1f) + Vector3.up * 0.3f).normalized * R(1.8f, 3.4f), R(0.12f, 0.26f), 1, 0.5f, new Color(1f, 0.9f, 0.55f, 1), new Color(1f, 0.5f, 0.2f, 1), 8f, 5, 0.5f,
-                            Forma.Caixa, new Vector3(0.01f, 0.01f, 0.05f));
+                {   // capacete (CS2): faísca BRANCA no metal e um clarão rápido (usuário: "faísquinha branca")
+                    Add(p, Vector3.zero, 0.06f, 0.07f, 0.24f, new Color(1, 1, 1, 1), new Color(1, 0.95f, 0.85f, 0), 0, 7);
+                    for (int i = 0; i < 18; i++)
+                        Add(p, (volta * 0.6f + Esfera(1f) + Vector3.up * 0.3f).normalized * R(2.2f, 4.2f), R(0.14f, 0.3f), 1, 0.5f, new Color(1f, 1f, 0.97f, 1), new Color(1f, 0.85f, 0.6f, 1), 8f, 5, 0.5f,
+                            Forma.Caixa, new Vector3(0.014f, 0.014f, 0.08f));
                 }
                 else if (protegido)   // colete: pó do tecido
                     for (int i = 0; i < 3; i++)
                         Add(p, volta * R(0.2f, 0.5f) + Esfera(0.2f), R(0.3f, 0.5f), 0.04f, 0.12f, new Color(0.7f, 0.68f, 0.62f, 0.7f), new Color(0.7f, 0.68f, 0.62f, 0f), -0.1f);
-                else if (cabeca)      // HS sem capacete: clarão branco curto (o "tink" do acerto) pra ler de longe
-                    Add(p + Vector3.up * 0.05f, Vector3.up * 0.4f, 0.14f, 0.05f, 0.26f, new Color(1, 1, 0.9f, 1), new Color(1, 1, 1, 0), 0, 4);
+                // (o clarão branco da HS sem capacete saiu: usuário quer só sangue)
+                Respingo(p, vai, protegido, cabeca);
                 return;
             }
             for (int i = 0; i < 4; i++)
@@ -142,6 +162,84 @@ namespace CSM.View3D
             for (int i = 0; i < 4; i++)
                 Add(p, (volta + Esfera(0.9f)).normalized * R(1.5f, 3f), R(0.12f, 0.25f), 1, 0.6f, new Color(1f, 0.85f, 0.4f, 1), new Color(1f, 0.5f, 0.2f, 1), 8f, 4, 0.5f,
                     Forma.Caixa, new Vector3(0.012f, 0.012f, 0.05f));
+        }
+
+        // manchas de sangue no chão (Mancha.shader): poucas e pequenas, ficam um tempo e somem devagar
+        readonly List<(MeshRenderer r, float nasceu)> manchas = new List<(MeshRenderer, float)>();
+        Material matMancha; Mesh quadChao; int proxMancha;
+        const int MANCHAS = 60; const float MANCHA_FICA = 15f, MANCHA_SOME = 10f;
+
+        /// <summary>Levou tiro: manchas no chão atrás dele, no sentido da bala (HS 4-5, corpo 2-3, colete/capacete 1) e,
+        /// se tem parede logo atrás, uma mancha nela na altura do tiro (HS quase sempre). Perceptível, sem exagero.</summary>
+        void Respingo(Vector3 p, Vector3 vai, bool protegido, bool cabeca)
+        {
+            if (matMancha == null)
+            {
+                matMancha = new Material(Shader.Find("CSM/Mancha")) { name = "mancha de sangue" };
+                quadChao = new Mesh { name = "quad do chão" };
+                quadChao.SetVertices(new[] { new Vector3(-0.5f, 0, -0.5f), new Vector3(-0.5f, 0, 0.5f), new Vector3(0.5f, 0, 0.5f), new Vector3(0.5f, 0, -0.5f) });
+                quadChao.SetUVs(0, new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) });
+                quadChao.SetTriangles(new[] { 0, 1, 2, 0, 2, 3 }, 0); quadChao.RecalculateBounds();
+            }
+            vai.y = 0; vai = vai.sqrMagnitude > 1e-6f ? vai.normalized : Vector3.forward;
+            var lado = new Vector3(vai.z, 0, -vai.x);
+            float chao = Piso(p);
+            int n = protegido ? 1 : cabeca ? 4 + (R(0, 1) < 0.5f ? 1 : 0) : 2 + (R(0, 1) < 0.5f ? 1 : 0);
+            float longe = cabeca && !protegido ? 0.7f : 0.45f;
+            for (int i = 0; i < n; i++)
+            {
+                var q = p + vai * R(0.06f, longe) + lado * R(-0.12f, 0.12f);
+                float f = Piso(q);
+                if (Mathf.Abs(f - chao) > 0.04f) continue;
+                PorMancha(new Vector3(q.x, f + 0.004f, q.z), Quaternion.Euler(0, R(0, 360), 0),
+                          (i == 0 ? R(0.07f, 0.11f) : R(0.04f, 0.07f)) * (protegido ? 0.7f : cabeca ? 1.2f : 1f));
+            }
+            // parede atrás (no sentido da bala, até ~0,9): mancha em pé na altura do tiro
+            if (R(0, 1) < (protegido ? 0.2f : cabeca ? 0.85f : 0.5f))
+                for (float d = 0.05f; d < 0.9f; d += 0.02f)
+                {
+                    var q = p + vai * d;
+                    if (Piso(q) <= p.y - 0.03f) continue;
+                    var na = p + vai * (d - 0.015f);
+                    var rot = Quaternion.FromToRotation(Vector3.up, -vai) * Quaternion.Euler(0, R(0, 360), 0);
+                    PorMancha(new Vector3(na.x, Mathf.Max(chao + 0.05f, p.y + R(-0.12f, 0.04f)), na.z), rot, R(0.08f, 0.13f) * (cabeca ? 1.2f : 1f));
+                    break;
+                }
+        }
+
+        void PorMancha(Vector3 pos, Quaternion rot, float s)
+        {
+            {
+                MeshRenderer r;
+                if (manchas.Count < MANCHAS)
+                {
+                    var g = new GameObject("mancha"); g.transform.SetParent(raiz, false);
+                    g.AddComponent<MeshFilter>().sharedMesh = quadChao;
+                    r = g.AddComponent<MeshRenderer>(); r.sharedMaterial = matMancha;
+                    r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; r.receiveShadows = false;
+                    manchas.Add((r, tempo));
+                }
+                else { r = manchas[proxMancha].r; manchas[proxMancha] = (r, tempo); proxMancha = (proxMancha + 1) % MANCHAS; }
+                r.gameObject.SetActive(true);
+                r.transform.SetPositionAndRotation(pos, rot);
+                r.transform.localScale = new Vector3(s, 1, s * R(0.8f, 1.3f));
+                mpb.Clear(); mpb.SetColor("_BaseColor", new Color(0.42f, 0.03f, 0.04f, 0.85f)); mpb.SetFloat("_Semente", R(0, 100)); r.SetPropertyBlock(mpb);
+            }
+        }
+
+        /// <summary>Round novo: chão limpo.</summary>
+        public void LimparManchas() { foreach (var (r, _) in manchas) if (r) r.gameObject.SetActive(false); }
+
+        void SomeManchas()
+        {
+            for (int i = 0; i < manchas.Count; i++)
+            {
+                var (r, t0) = manchas[i]; if (!r || !r.gameObject.activeSelf) continue;
+                float idade = tempo - t0; if (idade < MANCHA_FICA) continue;
+                float a = 1 - (idade - MANCHA_FICA) / MANCHA_SOME;
+                if (a <= 0) { r.gameObject.SetActive(false); continue; }
+                r.GetPropertyBlock(mpb); mpb.SetColor("_BaseColor", new Color(0.42f, 0.03f, 0.04f, 0.85f * a)); r.SetPropertyBlock(mpb);
+            }
         }
 
         /// <summary>HE: bola de fogo, nuvem de fumaça subindo, anel de poeira no chão, faíscas e luz forte.</summary>
@@ -216,6 +314,75 @@ namespace CSM.View3D
                 var o = Esfera(raio); o.y = Mathf.Abs(o.y) * 0.2f;
                 Add(p + o, Vector3.up * R(0.8f, 1.6f) + Esfera(0.3f), R(0.7f, 1.3f), 0.08f, R(0.3f, 0.5f), new Color(0.95f, 0.95f, 0.97f, 0.7f), new Color(1, 1, 1, 0), -0.4f, 0, 1.6f);
             }
+        }
+
+        /// <summary>Smoke apagou a molotov: em cada chama que estava acesa sai uma fumacinha branca que chia (primeiro um
+        /// tufo baixo e rápido, depois sobe devagar e some), como a chama apagada do CS2.</summary>
+        public void ApagouFogo(FireArea f)
+        {
+            int n = f.Visible; if (n == 0) return;
+            int passo = Mathf.Max(1, n / 60);
+            // a fumaça escura que o fogo já tinha soltado vira vapor branco (senão fica uma nuvem suja onde ele estava)
+            Vector3 mn = Vector3.positiveInfinity, mx = Vector3.negativeInfinity;
+            for (int i = 0; i < n; i++)
+            {
+                var c = f.cells[i]; var q = MalhaMapa.ParaUnity(c.x * FireArea.C + 2, c.y * FireArea.C + 2, c.z);
+                mn = Vector3.Min(mn, q); mx = Vector3.Max(mx, q);
+            }
+            mn -= new Vector3(0.4f, 0.2f, 0.4f); mx += new Vector3(0.4f, 3f, 0.4f);
+            for (int i = 0; i < ps.Count; i++)
+            {
+                var p = ps[i];
+                if (p.solido || p.brilho > 0 || p.c0.r > 0.25f || p.p.x < mn.x || p.p.x > mx.x || p.p.y < mn.y || p.p.y > mx.y || p.p.z < mn.z || p.p.z > mx.z) continue;
+                p.c0 = L(new Color(0.95f, 0.95f, 0.96f, p.c0.a)); p.c1 = L(new Color(0.9f, 0.9f, 0.92f, 0)); p.brilho = 1;
+                ps[i] = p;
+            }
+            for (int i = 0; i < n; i += passo)
+            {
+                var c = f.cells[i];
+                var p = MalhaMapa.ParaUnity(c.x * FireArea.C + 2, c.y * FireArea.C + 2, c.z) + new Vector3(R(-0.08f, 0.08f), 0.04f, R(-0.08f, 0.08f));
+                // tufo: sai de lado rente ao chão
+                var lado = Esfera(1); lado.y = 0;
+                Add(p, lado * R(0.5f, 1.1f) + Vector3.up * R(0.2f, 0.5f), R(0.4f, 0.7f), 0.14f, R(0.4f, 0.55f), new Color(0.98f, 0.98f, 0.99f, 0.9f), new Color(0.95f, 0.95f, 0.96f, 0), -0.2f, 1f, 3f);
+                // fumacinha branca subindo e abrindo
+                Add(p + Vector3.up * 0.05f, Vector3.up * R(0.6f, 1.2f) + Esfera(0.2f), R(1.4f, 2.4f), 0.12f, R(0.5f, 0.8f), new Color(0.95f, 0.95f, 0.96f, 0.75f), new Color(0.88f, 0.88f, 0.9f, 0), -0.15f, 1f, 1.3f);
+            }
+        }
+
+        /// <summary>Rastro da granada voando: pontinhos na cor dela que somem rápido, um a cada ~1,5 cm do caminho.</summary>
+        public void RastroGranada(Vector3 de, Vector3 ate, Color cor)
+        {
+            float d = (ate - de).magnitude; int n = Mathf.Clamp(Mathf.CeilToInt(d / 0.015f), 1, 8);
+            for (int i = 0; i < n; i++)
+                Add(Vector3.Lerp(de, ate, (i + 1f) / n), Vector3.zero, 0.6f, 0.036f, 0.006f, new Color(cor.r, cor.g, cor.b, 0.85f), new Color(cor.r, cor.g, cor.b, 0), 0, 1f, 0);
+        }
+
+        /// <summary>Granada bateu no chão: poeirinha baixa em volta.</summary>
+        public void QuiqueChao(Vector3 p)
+        {
+            for (int i = 0; i < 6; i++)
+            {
+                var d = Esfera(1); d.y = 0;
+                Add(p + d * 0.02f, d.normalized * R(0.25f, 0.55f) + Vector3.up * R(0.05f, 0.2f), R(0.35f, 0.6f), 0.03f, R(0.07f, 0.11f), new Color(AREIA.r, AREIA.g, AREIA.b, 0.75f), new Color(AREIA.r, AREIA.g, AREIA.b, 0), 0, 0, 3.5f);
+            }
+        }
+
+        /// <summary>Granada bateu na parede: faisquinha e um pouco de reboco.</summary>
+        public void QuiqueParede(Vector3 p, Vector3 vel)
+        {
+            var volta = vel.sqrMagnitude > 1e-8f ? -vel.normalized : Vector3.up;
+            for (int i = 0; i < 4; i++)
+                Add(p, (volta + Esfera(0.8f)) * R(0.6f, 1.2f), R(0.1f, 0.18f), 0.012f, 0.004f, new Color(1f, 0.9f, 0.55f, 1), new Color(1f, 0.6f, 0.2f, 0), 2f, 3f, 1f);
+            for (int i = 0; i < 4; i++)
+                Add(p, (volta + Esfera(0.6f)) * R(0.2f, 0.5f), R(0.4f, 0.7f), 0.025f, R(0.06f, 0.09f), new Color(AREIA.r, AREIA.g, AREIA.b, 0.7f), new Color(AREIA.r, AREIA.g, AREIA.b, 0), 0, 0, 3f);
+        }
+
+        /// <summary>Bala saindo da smoke: um tufinho de fumaça arrastado na direção do tiro (a fumaça cede no furo).</summary>
+        public void TufoSmoke(Vector3 p, Vector3 dir)
+        {
+            var d = dir.sqrMagnitude > 1e-8f ? dir.normalized : Vector3.forward;
+            for (int i = 0; i < 4; i++)
+                Add(p + Esfera(0.05f), d * R(0.5f, 1.1f) + Esfera(0.15f), R(0.5f, 0.9f), 0.06f, R(0.18f, 0.28f), new Color(0.93f, 0.93f, 0.92f, 0.65f), new Color(0.9f, 0.9f, 0.9f, 0), 0, 1f, 2.5f);
         }
 
         /// <summary>Pisando na molotov: labaredinhas subindo das pernas.</summary>
@@ -332,6 +499,7 @@ namespace CSM.View3D
         public void Atualizar(float dt)
         {
             tempo += dt;
+            SomeManchas();
             for (int i = ps.Count - 1; i >= 0; i--)
             {
                 var p = ps[i];

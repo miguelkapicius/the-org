@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152">
+  <!-- sem luneta: retículo da luneta cortado por uma barra -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="152" height="152">
+      <rect width="152" height="152" fill="#fff"/>
+      <path d="M24 128 L128 24" stroke="#000" stroke-width="20" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="none" stroke="#fff" stroke-linecap="round" mask="url(#c)">
+    <circle cx="76" cy="76" r="54" stroke-width="10"/>
+    <path d="M76 22 L76 130" stroke-width="5"/><path d="M22 76 L130 76" stroke-width="5"/>
+  </g>
+  <path d="M30 122 L122 30" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+</svg>

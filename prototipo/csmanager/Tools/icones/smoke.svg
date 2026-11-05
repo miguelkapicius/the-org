@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 152">
+  <!-- smoke: lata alta com furos de saída em cima e embaixo, espoleta, colher e argola -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="84" height="152">
+      <rect width="84" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-width="2.2" stroke-linecap="round">
+        <path d="M22 72 L56 72"/><path d="M22 124 L56 124"/>
+      </g>
+      <g fill="#000">
+        <circle cx="26" cy="62" r="2.6"/><circle cx="35" cy="62" r="2.6"/><circle cx="44" cy="62" r="2.6"/><circle cx="53" cy="62" r="2.6"/>
+        <circle cx="26" cy="134" r="2.6"/><circle cx="35" cy="134" r="2.6"/><circle cx="44" cy="134" r="2.6"/><circle cx="53" cy="134" r="2.6"/>
+        <rect x="25" y="82" width="28" height="3" rx="1.5"/><rect x="25" y="90" width="20" height="3" rx="1.5"/>  <!-- etiqueta -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <rect x="18" y="52" width="42" height="92" rx="5"/>
+    <rect x="28" y="44" width="22" height="10"/>
+    <rect x="24" y="28" width="30" height="17" rx="4"/>
+    <path d="M34 22 L58 22 Q70 22 70 34 L70 112 Q70 117 66 117 L64 117 L64 36 Q64 28 57 28 L34 28 Z"/>
+    <path d="M14 34 L26 34 L26 39 L14 39 Z"/>
+  </g>
+  <circle cx="11" cy="45" r="8.5" fill="none" stroke="#fff" stroke-width="4"/>
+</svg>

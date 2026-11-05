@@ -11,7 +11,7 @@ namespace CSM.View3D
     /// </summary>
     public static class Armas3D
     {
-        public static readonly string[] ARMAS = { "AK47", "M4A4", "M4A1S", "AWP", "MP9", "MAC10", "USP", "Glock", "Deagle" };
+        public static readonly string[] ARMAS = { "AK47", "M4A4", "M4A1S", "AWP", "MP9", "MAC10", "USP", "Glock", "Deagle", "Tec9", "FiveSeven", "P250", "Galil", "Famas" };
         static readonly Dictionary<string, int[]> pecas = new Dictionary<string, int[]>();
         static readonly Dictionary<string, Texture2D> icones = new Dictionary<string, Texture2D>();
         static readonly Dictionary<string, HashSet<int>> deArma = new Dictionary<string, HashSet<int>>();
@@ -19,7 +19,9 @@ namespace CSM.View3D
         public static string DoJogo(string gunId) => gunId switch
         {
             "ak" => "AK47", "m4" => "M4A4", "m4s" => "M4A1S", "awp" => "AWP", "mp9" => "MP9", "mac10" => "MAC10",
-            "usp" => "USP", "glock" => "Glock", "deagle" => "Deagle", "faca" => "faca", _ => null
+            "usp" => "USP", "glock" => "Glock", "deagle" => "Deagle", "faca" => "faca",
+            "tec9" => "Tec9", "fiveseven" => "FiveSeven", "p250" => "P250", "galil" => "Galil", "famas" => "Famas",   // Meshy 2026-11-04
+            _ => null
         };
 
         /// <summary>Índices das peças da arma (ou "faca") no modelo do time.</summary>

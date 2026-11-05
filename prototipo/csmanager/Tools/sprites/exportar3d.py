@@ -157,9 +157,11 @@ ANIMS += [("awp_mirar", "awp_mirar", "AWP", 8, False, {}), ("awp_mirando", "awp_
           ("morrer_frente", "morrer_frente", padrao, 30, False, {}),
           ("plantar", "plantar", padrao, 60, False, {}), ("plantar_pe", "plantar_pe", padrao, 60, False, {}),
           ("desarmar", "desarmar", padrao, 30, True, {}), ("desarmar_pe", "desarmar_pe", padrao, 30, True, {})]
-for nd in ("smoke", "flash", "molotov", "he"):
-    ANIMS.append((f"granada_{nd}", "granada", padrao, 30, False, {"nade": nd}))
-ANIMS.append(("granada_fim", "granada_fim", padrao, 12, False, {}))   # continuação depois de soltar (o Sim solta em u = 1)
+# jeito do CS2 (força do Sim): por cima (botão esquerdo, nome sem sufixo), meia força ("_meio") e por baixo ("_baixo")
+for jt, suf in (("cima", ""), ("meio", "_meio"), ("baixo", "_baixo")):
+    for nd in ("smoke", "flash", "molotov", "he"):
+        ANIMS.append((f"granada_{nd}{suf}", "granada", padrao, 30, False, {"nade": nd, "jeito": jt}))
+    ANIMS.append((f"granada_fim{suf}", "granada_fim", padrao, 12, False, {"jeito": jt}))   # continuação depois de soltar (o Sim solta em u = 1)
 
 # só algumas animações (iterar rápido com o validar_anims.py): ANIM_FILTRO=regex; a mira de cada arma vai junto (referência)
 if os.environ.get("ANIM_FILTRO"):

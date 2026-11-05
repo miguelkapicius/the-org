@@ -1,0 +1,3 @@
+Fantasy Town Kit 2.0 (Kenney, www.kenney.nl), CC0. Baixado de https://kenney.nl/assets/fantasy-town-kit em 2026-11-03.
+fountain-round-detail.fbx (em View3D/Resources/Kenney): convertido do GLB com cor por vértice (pedra branca / água azul) por scripts/kenney_cor.py; o jogo pinta com a Paleta3D.
+pillar-stone.fbx (em View3D/Resources/Kenney): convertido do GLB com cor por vértice = brilho do atlas por scripts/kenney_pedra.py (cópia em kenney_pedra.py.txt); o jogo multiplica pela pedra da Paleta3D (Pilar3D).

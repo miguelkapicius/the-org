@@ -1,0 +1,31 @@
+# GLB do Kenney -> FBX com cor por vértice (pedra = branco, água = azul puro), lendo a cor do atlas no UV de cada face.
+# blender -b --python kenney_cor.py -- <entrada.glb> <saida.fbx>
+import bpy, sys, bmesh
+a = sys.argv[sys.argv.index("--") + 1:]; ent, sai = a[0], a[1]
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.gltf(filepath=ent)
+img = next((i for i in bpy.data.images if i.size[0] > 0), None)
+W, H = img.size; px = list(img.pixels)
+def cor(u, v):
+    x = min(W - 1, max(0, int((u % 1) * W))); y = min(H - 1, max(0, int((v % 1) * H))); k = (y * W + x) * 4
+    return px[k], px[k + 1], px[k + 2]
+agua = pedra = 0
+for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+    me = o.data; uv = me.uv_layers.active.data
+    ca = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    voto, amostra = {}, {}
+    def chave(p): return round(p.center.z, 3) if p.normal.z > 0.95 else None
+    for p in me.polygons:
+        us = [uv[l].uv for l in p.loop_indices]; u = sum(q.x for q in us) / len(us); v = sum(q.y for q in us) / len(us)
+        r, g, b = cor(u, v)
+        e_agua = g > r + 0.08 and b > r + 0.05
+        voto.setdefault(chave(p), []).append(e_agua); amostra[p.index] = e_agua
+    # superfície plana (olhando pra cima, mesma altura) decide junto: triângulo fino lia o atlas na borda e a água saía listrada
+    for p in me.polygons:
+        vs = voto.get(chave(p)); e_agua = (sum(vs) >= 0.25 * len(vs)) if vs is not None and p.normal.z > 0.95 else amostra[p.index]
+        c = (0.2, 0.45, 1.0, 1) if e_agua else (1, 1, 1, 1)
+        agua += e_agua; pedra += not e_agua
+        for l in p.loop_indices: ca.data[l].color = c
+print("faces agua", agua, "pedra", pedra)
+bpy.ops.export_scene.fbx(filepath=sai, use_selection=False, object_types={"MESH", "EMPTY"}, colors_type="SRGB", apply_unit_scale=True, bake_space_transform=False)
+print("ok", sai)

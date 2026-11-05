@@ -2,7 +2,8 @@
 // aparecendo. A luz é da smoke INTEIRA (normal de forma = do centro da smoke pra partícula, vinda no vértice), com só um
 // pouco da curvatura da própria partícula; borda sem contorno, comida por ruído fractal (fiapos de fumaça) que gira devagar;
 // base mais escura; fade onde encosta na parede/chão. Alfa por partícula na cor do vértice (densidade da simulação: some no
-// furo de bala e na bolha da HE). uv2.x = semente.
+// furo de bala e na bolha da HE). uv2.x = semente. Passe MarcaFumaca: só stencil (bit 2) onde a smoke cobre de verdade,
+// pra silhueta do boneco aparecer por cima dela (Silhueta.shader, passe SilhuetaFumaca).
 Shader "CSM/FumacaParticula"
 {
     Properties
@@ -70,6 +71,49 @@ Shader "CSM/FumacaParticula"
                 a *= saturate((cena - i.prof) / 0.25);
                 return half4(c * i.c.rgb, a * i.c.a);
             }
+            ENDHLSL
+        }
+        Pass
+        {
+            Name "MarcaFumaca"
+            Tags { "LightMode" = "SRPDefaultUnlit" }
+            ColorMask 0 ZWrite Off ZTest LEqual Cull Off
+            Stencil { Ref 2 WriteMask 2 Comp Always Pass Replace }
+            HLSLPROGRAM
+            #pragma target 3.5
+            #pragma vertex Vert
+            #pragma fragment FragMarca
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
+            CBUFFER_START(UnityPerMaterial)
+                half4 _CorLuz, _CorSombra;
+            CBUFFER_END
+            struct A { float4 p : POSITION; float3 n : NORMAL; float2 uv : TEXCOORD0; float2 uv2 : TEXCOORD1; half4 c : COLOR; };
+            struct V { float4 p : SV_POSITION; float2 uv : TEXCOORD0; float semente : TEXCOORD1; half4 c : COLOR; float4 s : TEXCOORD2; float prof : TEXCOORD3; float3 forma : TEXCOORD4; };
+            V Vert(A a)
+            {
+                V o; float3 w = TransformObjectToWorld(a.p.xyz);
+                o.p = TransformWorldToHClip(w); o.uv = a.uv; o.semente = a.uv2.x; o.c = a.c; o.forma = a.n;
+                o.s = ComputeScreenPos(o.p); o.prof = -TransformWorldToView(w).z;
+                return o;
+            }
+            float Hash1(float x) { return frac(sin(x * 127.1) * 43758.5453); }
+            float RuidoAng(float a, float s)
+            {
+                float x = a * 0.6366 + s * 13.0;
+                float i = floor(x), f = frac(x); f = f * f * (3 - 2 * f);
+                return lerp(Hash1(i + s * 7.0), Hash1(i + 1 + s * 7.0), f);
+            }
+            float Alfa(V i)
+            {
+                float2 q = i.uv * 2 - 1; float r = length(q);
+                float ang = atan2(q.y, q.x) + i.semente * 6.28;
+                float borda = 0.82 + 0.18 * RuidoAng(ang, i.semente);
+                float a = 1 - smoothstep(borda - 0.045, borda, r);
+                float cena = LinearEyeDepth(SampleSceneDepth(i.s.xy / i.s.w), _ZBufferParams);
+                return a * saturate((cena - i.prof) / 0.25) * i.c.a;
+            }
+            half4 FragMarca(V i) : SV_Target { clip(Alfa(i) - 0.45); return 0; }
             ENDHLSL
         }
     }

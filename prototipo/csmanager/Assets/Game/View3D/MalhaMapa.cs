@@ -230,6 +230,49 @@ namespace CSM.View3D
             return new Color(c.r * k, c.g * k, c.b * k, c.a);
         }
 
+        /// <summary>Mapa visto de cima pro shader (1 texel = 1 coluna de voxel): rgb = cor do topo (mesmo Tom do vértice),
+        /// a = altura da superfície de cima. O shader amostra com borda distorcida por ruído e só usa o texel da mesma
+        /// altura, então a mancha do chão sai com contorno orgânico na resolução do pixel em vez da escadinha do voxel.</summary>
+        public static Texture2D Topo(byte[] G, bool linear)
+        {
+            int NX = MapData.NX, NY = MapData.NY, NZ = MapVoxels.NZ;
+            var px = new Color[NX * NY];
+            var cima = new Vector3(0, 0, 1);
+            for (int x = 0; x < NX; x++)
+                for (int y = 0; y < NY; y++)
+                {
+                    int z = NZ - 1; while (z >= 0 && G[(x * NY + y) * NZ + z] == 0) z--;
+                    // textura: linha 0 = y 0 do jogo
+                    if (z < 0) { px[y * NX + x] = new Color(0, 0, 0, -99); continue; }
+                    int m = G[(x * NY + y) * NZ + z];
+                    var c = Tom(Paleta3D.Vertice(m, linear), m, x + 0.5f, y + 0.5f, z + 1, cima, linear);
+                    px[y * NX + x] = new Color(c.r, c.g, c.b, z + 1);
+                }
+            // marca (alfa + 512) o texel cujos 5x5 em volta têm a mesma altura e cor (diferença < 0,012, a mesma da votação do
+            // shader): lá o Maquete.shader pula as 16 leituras — mesmo resultado, bem mais barato (era ~8 ms de GPU em 1080p)
+            var liso = new bool[NX * NY];
+            for (int y = 2; y < NY - 2; y++)
+                for (int x = 2; x < NX - 2; x++)
+                {
+                    var c0 = px[y * NX + x]; if (c0.a < 0) continue;
+                    bool ok = true;
+                    for (int dy = -2; dy <= 2 && ok; dy++)
+                        for (int dx = -2; dx <= 2 && ok; dx++)
+                        {
+                            var c = px[(y + dy) * NX + x + dx];
+                            if (c.a != c0.a) { ok = false; break; }
+                            float r = c.r - c0.r, g = c.g - c0.g, b = c.b - c0.b;
+                            if (r * r + g * g + b * b > 0.012f * 0.012f) ok = false;
+                        }
+                    liso[y * NX + x] = ok;
+                }
+            int nl = 0; for (int i = 0; i < px.Length; i++) if (liso[i]) { px[i].a += 512; nl++; }
+            Debug.Log($"[MalhaMapa] topo: {nl * 100f / px.Length:0}% do chão liso (sem votação)");
+            var t = new Texture2D(NX, NY, TextureFormat.RGBAHalf, false, true) { name = "topo do mapa", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            t.SetPixels(px); t.Apply(false, true);
+            return t;
+        }
+
         /// <summary>Monta os GameObjects dos pedaços embaixo de pai (main thread).</summary>
         public static GameObject Montar(List<Pedaco> ps, Material mat, Transform pai = null)
         {

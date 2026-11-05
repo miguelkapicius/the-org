@@ -176,6 +176,45 @@ namespace CSM.Map
             for (int x = r.x0; x < r.x1; x++) for (int y = r.y0; y < r.y1; y++) coverH[x, y] = Math.Max(coverH[x, y], h);
         }
 
+        /// <summary>Em cima dessa cobertura dá pra ficar (borda e água do chafariz); a navegação soma às caixas/barris.</summary>
+        public static readonly bool[,] pisavel = new bool[NX, NY];
+        /// <summary>Altura fina da cobertura (onde > 0, a navegação usa esta no lugar do coverH inteiro): o pé bate no modelo 3D.</summary>
+        public static readonly float[,] coverFina = new float[NX, NY];
+        // perfil do chafariz medido no modelo 3D (Chafariz3D, diâmetro 33): raio a partir do centro -> altura acima do piso
+        public const float CHAF_TACA_R = 6.35f, CHAF_AGUA_R = 11.55f, CHAF_QUINA_R = 15.3f;   // fim da taça, da água, do topo plano da borda
+        public const float CHAF_TACA_H = 7.9f, CHAF_AGUA_H = 2.3f, CHAF_BORDA_H = 4.6f;   // (a quina arredondada do modelo, de CHAF_QUINA_R até a beira, conta como borda)
+
+        // experimento de mapa pela linha de comando (-exp): lido direto pra não depender da ordem de init do TeamBrain
+        public static bool Velho(string flag)
+        {
+            try { var a = Environment.GetCommandLineArgs(); int i = Array.IndexOf(a, "-exp"); return i >= 0 && i + 1 < a.Length && a[i + 1].Contains(flag); }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Chafariz redondo (como o do Mirage): borda de pedra pisável (+4,6, sobe pulando; a quina arredondada conta
+        /// como borda), água dentro da bacia pisável e mais baixa (+2,3, desce andando da borda) e a taça do meio como cobertura
+        /// baixa (+7,9, não sobe). Fora do círculo é chão. coverH (visão, tiro, granada) fica com o arredondado.
+        /// </summary>
+        static void Chafariz(int x0, int x1, int y0, int y1)
+        {
+            var r = SR(x0, x1, y0, y1);
+            covers.Add(new Cover { r = r, h = (int)MathF.Ceiling(CHAF_TACA_H), kind = "fountain" });
+            float cx = (r.x0 + r.x1) / 2f, cy = (r.y0 + r.y1) / 2f, R = (r.x1 - r.x0) / 2f;
+            for (int x = r.x0; x < r.x1; x++)
+                for (int y = r.y0; y < r.y1; y++)
+                {
+                    float d = MathF.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy));
+                    if (d > R) continue;
+                    // a quina arredondada (r > CHAF_QUINA_R) fica na altura da borda: com a queda até a beira ela virava rampa
+                    // e subia andando sem pulo; o boneco (raio 4) em cima dela tem o pé na parte plana de qualquer jeito
+                    float h = d <= CHAF_TACA_R ? CHAF_TACA_H : d <= CHAF_AGUA_R ? CHAF_AGUA_H : CHAF_BORDA_H;
+                    coverH[x, y] = Math.Max(coverH[x, y], Math.Max(1, (int)MathF.Round(h)));
+                    coverFina[x, y] = h;
+                    if (d > CHAF_TACA_R) pisavel[x, y] = true;
+                }
+        }
+
         /// <summary>Nicho de cenário: recuo fora do caminho, cheio de props (jarros, banca, plantas). Não estreita a rua.</summary>
         static void Nook(int x0, int x1, int y0, int y1, string kind)
         {
@@ -314,7 +353,8 @@ namespace CSM.Map
             Cov(102, 120, 484, 500, 8, "sacks");                                      // casarão, canto
             Cov(441, 455, 540, 556, 8, "sacks");                                      // topo do meio
             Cov(300, 314, 426, 440, 7, "baskets");                                    // curta
-            Cov(380, 406, 606, 632, 12, "fountain");                                // fonte no meio da base TR
+            if (Velho("chafarizVelho")) Cov(380, 406, 606, 632, 12, "fountain");   // (antigo: bloco quadrado de 12)
+            else Chafariz(380, 406, 606, 632);                                       // fonte no meio da base TR (redonda, sobe nela)
             Cov(440, 470, 20, 28, 10, "plants"); Cov(540, 570, 20, 28, 10, "jars"); // base CT e rua do CT, parede norte
             Cov(100, 130, 20, 28, 10, "jars");                                      // viela
             Cov(666, 676, 622, 634, 12, "barrel"); Cov(548, 570, 630, 638, 10, "plants"); // saída da rampa

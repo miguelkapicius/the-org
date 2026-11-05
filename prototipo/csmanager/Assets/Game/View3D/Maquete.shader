@@ -11,6 +11,10 @@ Shader "CSM/Maquete"
         _Borda ("Luz de borda", Range(0, 1)) = 0.18
         [Toggle] _UsarVertice ("Usar cor de vértice", Float) = 1
         _Flash ("Piscar branco", Range(0, 1)) = 0
+        [NoScaleOffset] _Topo ("Mapa visto de cima (rgb cor, a altura)", 2D) = "black" {}
+        [Toggle] _UsarTopo ("Usar mapa de cima no que olha pra cima", Float) = 0
+        _Esc ("Unidade Unity por unidade do jogo", Float) = 0.04
+        _SombraGorda ("Engorda só a sombra (unid. Unity)", Float) = 0
     }
     SubShader
     {
@@ -20,8 +24,10 @@ Shader "CSM/Maquete"
         #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
         CBUFFER_START(UnityPerMaterial)
             half4 _BaseColor;
-            half _Smoothness, _Variacao, _Borda, _UsarVertice, _Flash;
+            half _Smoothness, _Variacao, _Borda, _UsarVertice, _Flash, _UsarTopo;
+            float _Esc, _SombraGorda; float4 _Topo_TexelSize;
         CBUFFER_END
+        TEXTURE2D(_Topo);
 
         // ruído de valor 3D barato (variação de tom no mundo)
         float Hash3(float3 p) { p = frac(p * 0.3183099 + 0.1); p *= 17.0; return frac(p.x * p.y * p.z * (p.x + p.y + p.z)); }
@@ -76,7 +82,64 @@ Shader "CSM/Maquete"
                 float3 n = normalize(i.normalWS);
                 float3 v = GetWorldSpaceNormalizeViewDir(i.positionWS);
                 float rz = Ruido(i.positionWS * 1.7) * 0.6 + Ruido(i.positionWS * 5.3) * 0.4;
-                half3 albedo = i.color.rgb * (1.0 + (rz - 0.5) * 2.0 * _Variacao);
+                half3 base = i.color.rgb;
+                // chão/topo: cor do mapa de cima por pixel (a cor de vértice dá escadinha de voxel). Nos 4x4 texels em volta,
+                // peso gaussiano estreito (alisa o degrau do voxel e ainda guarda o detalhe de 1 voxel) e só os da MESMA altura (não puxa a cor da parede/telhado
+                // vizinho); cada cor soma o peso dos seus texels e ganha a maior -> borda nítida que segue a curva suave,
+                // não o degrau do voxel; transição de 1 pixel na fronteira. Mais um granulado fino.
+                if (_UsarTopo > 0.5 && n.y > 0.86)
+                {
+                    float3 g = float3(i.positionWS.x, -i.positionWS.z, i.positionWS.y) / _Esc;   // x, y, z do jogo
+                    float2 q = g.xy - 0.5;
+                    // 3x3 em volta do texel mais perto: os 7 que sobravam no 4x4 ficam a 1,5+ texel (peso gaussiano < 1%)
+                    int2 q0 = int2(floor(q + 0.5)), lim = int2(_Topo_TexelSize.zw) - 1;
+                    // texel marcado (alfa + 512, MalhaMapa.Topo): os 5x5 em volta têm a mesma altura e a mesma cor, então a
+                    // votação daria a própria cor dele (até 3/255 de diferença) — pula as leituras
+                    float4 s0 = LOAD_TEXTURE2D(_Topo, clamp(int2(floor(g.xy)), 0, lim));
+                    bool liso = s0.a > 256 && abs(s0.a - 512 - g.z) < 0.34;
+                    if (liso) base = lerp(base, s0.rgb, smoothstep(0.86, 0.97, n.y));
+                    float3 cor[4] = { base, base, base, base }; float peso[4] = { 0, 0, 0, 0 }; int nc = 0; float pesos = 0;
+                    if (!liso)
+                    {
+                    [unroll] for (int k = 0; k < 9; k++)
+                    {
+                        int2 o = int2(k % 3, k / 3) - 1;
+                        float2 d = q - float2(q0 + o);
+                        float4 s = LOAD_TEXTURE2D(_Topo, clamp(q0 + o, 0, lim));
+                        float wk = exp(-dot(d, d) / (2 * 0.5 * 0.5)) * saturate(1.5 - abs((s.a > 256 ? s.a - 512 : s.a) - g.z) * 1.5);
+                        if (wk < 1e-3) continue;
+                        pesos += wk;
+                        bool achou = false, novo = false;
+                        [unroll] for (int c = 0; c < 4; c++)
+                            if (!achou && c < nc && distance(cor[c] / peso[c], s.rgb) < 0.012) { cor[c] += s.rgb * wk; peso[c] += wk; achou = true; }
+                        [unroll] for (int c2 = 0; c2 < 4; c2++)
+                            if (!achou && c2 == nc) { cor[c2] = s.rgb * wk; peso[c2] = wk; achou = true; novo = true; }
+                        if (novo) nc++;
+                    }
+                    if (pesos > 1e-3 && nc > 0)
+                    {
+                        // 1ª e 2ª colocadas
+                        float p1 = -1, p2 = 0; float3 c1 = base, c2 = base;
+                        [unroll] for (int c = 0; c < 4; c++)
+                        {
+                            if (c >= nc) continue;
+                            if (peso[c] > p1) { p2 = max(p1, 0); c2 = c1; p1 = peso[c]; c1 = cor[c] / peso[c]; }
+                            else if (peso[c] > p2) { p2 = peso[c]; c2 = cor[c] / peso[c]; }
+                        }
+                        float3 f = c1;
+                        // placar da vencedora: 0,5 = empate (na fronteira) -> mistura meio a meio; ~1 pixel até a cor pura
+                        float sc = p1 / max(p1 + p2, 1e-5);
+                        float t = saturate((sc - 0.5) / max(fwidth(sc), 1e-4));
+                        if (p2 > 0) f = lerp(lerp(c2, c1, 0.5), c1, t);
+                        // peso total baixo = só tem texel de outra altura em volta (quina/rampa): fica a cor de vértice
+                        float tot = pesos / 1.57;   // soma do gaussiano cheio ~ 2*pi*0,5^2
+                        base = lerp(base, f, smoothstep(0.3, 0.7, tot) * smoothstep(0.86, 0.97, n.y));
+                    }
+                    }
+                    float grao = Ruido(g * 0.9) * 0.5 + Ruido(g * 2.3) * 0.5;
+                    base *= 1.0 + (grao - 0.5) * 0.08;
+                }
+                half3 albedo = base * (1.0 + (rz - 0.5) * 2.0 * _Variacao);
 
                 InputData d = (InputData)0;
                 d.positionWS = i.positionWS; d.normalWS = n; d.viewDirectionWS = v;
@@ -105,7 +168,7 @@ Shader "CSM/Maquete"
         {
             Name "ShadowCaster"
             Tags { "LightMode" = "ShadowCaster" }
-            ZWrite On ZTest LEqual ColorMask 0 Cull Back
+            ZWrite On ZTest LEqual ColorMask 0 Cull Off   // dos dois lados: peça fina (cano, vara, raio) não some da sombra
             HLSLPROGRAM
             #pragma target 3.5
             #pragma vertex Vert
@@ -118,13 +181,16 @@ Shader "CSM/Maquete"
             float4 Vert(Attributes v) : SV_POSITION
             {
                 UNITY_SETUP_INSTANCE_ID(v);
-                float3 p = TransformObjectToWorld(v.positionOS.xyz);
                 float3 n = TransformObjectToWorldNormal(v.normalOS);
+                float3 p = TransformObjectToWorld(v.positionOS.xyz);
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
                     float3 l = normalize(_LightPosition - p);
                 #else
                     float3 l = _LightDirection;
                 #endif
+                // boneco/arma: a sombra sai um tiquinho mais gorda que a peça (cano, alça, dedo têm 1-2 texels de sombra e
+                // sumiam no filtro macio). Só pro lado (perpendicular à luz): pra frente da luz a peça se sombrearia sozinha
+                p += (n - dot(n, l) * l) * _SombraGorda;
                 return ApplyShadowClamping(TransformWorldToHClip(ApplyShadowBias(p, n, l)));
             }
             half4 Frag() : SV_Target { return 0; }
