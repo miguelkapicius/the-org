@@ -545,6 +545,7 @@ namespace CSM.Headless
                 foreach (var l in m.log) Console.WriteLine(l);
                 return 0;
             }
+            if (Array.IndexOf(a, "-estilos") >= 0) return MedirEstilos.Rodar(int.Parse(Arg(a, "-estilos", "18")), seed0);
             if (Array.IndexOf(a, "-partidas") >= 0) return Partidas(int.Parse(Arg(a, "-partidas", "100")), seed0, Arg(a, "-modoA", ""), Arg(a, "-modoB", ""), Arg(a, "-saida", "adapta"));
             if (Array.IndexOf(a, "-treino") >= 0) return Treino(int.Parse(Arg(a, "-passos", "60")), n, seed0);
             var mt = new Metricas(); var trava = new object(); int feitos = 0;
