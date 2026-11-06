@@ -284,9 +284,10 @@
 
 /* escalação visual */
 .escala { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 18px; margin-bottom: 24px; }
-.escala-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.escala-topo { flex-direction: row; align-items: center; justify-content: space-between; min-height: 34px; }
 .escala-res { flex-direction: row; align-items: center; }
-.escala-res > .t { margin-right: 22px; }
+.escala-res > .t { margin-right: 18px; }
+.escala-forca { font-size: 26px; -unity-font-style: bold; }
 .chips-func { flex-direction: row; }
 .chip-f { padding: 4px 10px; border-radius: 4px; margin-left: 6px; background-color: rgba(255, 255, 255, 0.08); }
 .chip-f > .t { font-size: 12px; -unity-font-style: bold; color: var(--suave); }
@@ -306,7 +307,7 @@
 .slot-ovr { font-size: 22px; -unity-font-style: bold; }
 .slot-nome { font-size: 18px; -unity-font-style: bold; margin-top: 8px; }
 .banco-tit { margin: 18px 0 10px 0; }
-.dica-troca { font-size: 15px; color: var(--suave); margin-top: 16px; white-space: normal; }
+.dica-troca { font-size: 15px; -unity-font-style: bold; color: var(--suave); -unity-text-align: middle-right; flex-shrink: 1; }
 
 /* retratos (render 3D do boneco sobre um fundo colorido) */
 .retrato { border-radius: 3px; -unity-background-scale-mode: scale-to-fit; align-items: center; justify-content: center; }
@@ -614,3 +615,17 @@
 .btn-mini.perigo > .t { color: var(--vermelho); }
 .btn-mini.perigo > .ic { color: var(--vermelho); }
 .btn-mini.perigo.desligado > .t { color: #6b7396; }
+
+
+/* ======================================================================================================
+   Elenco enxuto (decisão 0023): estado em palavras, ação principal larga, ações secundárias só com ícone
+   ====================================================================================================== */
+.estado { flex-direction: row; flex-wrap: wrap; margin-bottom: 8px; }
+.estado > .selo { margin-right: 6px; margin-bottom: 4px; }
+.card-acoes > .btn-mini.grow { flex-grow: 1; }
+.btn-mini.destaque { background-color: var(--destaque); border-color: var(--destaque); }
+.btn-mini.destaque:hover { background-color: var(--destaque-claro); }
+.btn-mini.so-ic { width: 34px; padding: 5px 0; }
+.btn-mini.so-ic > .ic { margin-right: 0; }
+.btn-mini.so-ic > .t { display: none; }
+.card-acoes > .btn-mini.so-ic { margin-right: 0; margin-left: 6px; }

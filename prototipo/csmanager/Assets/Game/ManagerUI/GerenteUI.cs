@@ -724,38 +724,38 @@ namespace CSM.ManagerUI
             conteudo.Add(L("Reservas (" + reservas.Count + "/" + vagas + ")", "h2"));
             if (reservas.Count == 0) conteudo.Add(L("Sem reservas. Contrate no mercado: se alguém sair, o time fica incompleto.", "f15", "suave"));
             else CartoesElenco(reservas);
-            conteudo.Add(L("Os atributos são a leitura do que a IA do bot usa na partida. Cansaço acima de 35 reduz a habilidade; potencial é o teto de evolução.", "legenda"));
         }
 
         /// <summary>Força, chance de vitória e cobertura de funções do time titular.</summary>
         VisualElement ResumoEscalacao()
         {
+            // a conclusão em uma linha: força e chance; o resto só aparece se pedir atenção (decisão 0023)
             var card = E("escala");
             var topo = E("escala-topo");
-            topo.Add(L("Escalação", "f20", "negrito"));
             var res = E("escala-res");
-            res.Add(L("Força " + c.Forca, "f17", "negrito"));
+            var forca = L("Força " + c.Forca, "escala-forca"); forca.pickingMode = PickingMode.Position;
+            ComDica(forca, "Força do time titular: média do geral dos 5, com cansaço, moral e entrosamento.");
+            res.Add(forca);
             var adv = c.Adversario;
-            res.Add(L("Chance de vitória " + Pct(c.ChanceVitoria()) + (adv != null ? " contra " + adv.nome : ""), "f16", "suave"));
-            int ent = (int)c.EntrosamentoTime;
-            var le = L("Entrosamento " + ent, "f16", ent < 40 ? "laranja" : "suave");
-            le.pickingMode = PickingMode.Position;
-            ComDica(le, "Média do entrosamento dos titulares (0 a 100). Mais entrosado, mais os bots trocam o colega que morreu, e a força sobe até 2%. Sobe a cada semana jogando junto e com sessões coletivas; um contratado chega com pouco.");
-            res.Add(le);
+            res.Add(L(Pct(c.ChanceVitoria()) + " de chance" + (adv != null ? " contra " + adv.nome : ""), "f17", "suave"));
             topo.Add(res);
-            var chips = E("chips-func");
+
+            var alertas = E("chips-func");
             var faltando = c.FuncoesFaltando();
-            foreach (var f in FUNCOES_TIME)
+            int ent = (int)c.EntrosamentoTime;
+            const string DICA_ENT = "Entrosamento dos titulares (0 a 100). Mais entrosado, mais os bots trocam o colega que morreu, e a força sobe até 2%. Sobe a cada semana jogando junto e com sessões coletivas; um contratado chega com pouco.";
+            foreach (var f in faltando) { var chip = E("chip-f", "falta"); chip.Add(L("FALTA " + Fmt.FuncaoCurta(f))); ComDica(chip, "Nenhum titular na função " + Fmt.Funcao(f) + ". Escale alguém dessa função."); alertas.Add(chip); }
+            if (ent < 40) { var ce = E("chip-f", "falta"); ce.Add(L("POUCO ENTROSADO")); ComDica(ce, DICA_ENT); alertas.Add(ce); }
+            if (alertas.childCount == 0)
             {
-                var chip = E("chip-f", faltando.Contains(f) ? "falta" : "ok");
-                chip.Add(L(Fmt.FuncaoCurta(f)));
-                ComDica(chip, faltando.Contains(f) ? "Nenhum titular na função " + Fmt.Funcao(f) + "." : "Há um titular na função " + Fmt.Funcao(f) + ".");
-                chips.Add(chip);
+                var ok = E("chip-f", "ok"); ok.Add(L("FUNÇÕES COMPLETAS · ENTROSAMENTO " + ent));
+                ComDica(ok, "Há um titular em cada função (" + string.Join(", ", FUNCOES_TIME.Select(Fmt.Funcao)) + ").\n\n" + DICA_ENT);
+                alertas.Add(ok);
             }
-            topo.Add(chips);
+            topo.Add(alertas);
+            dicaTroca = L("", "dica-troca");   // a prévia da troca ocupa a linha dos alertas durante o hover (a tela não pula)
+            topo.Add(dicaTroca);
             card.Add(topo);
-            dicaTroca = L("", "dica-troca"); dicaTroca.style.marginTop = 0;
-            card.Add(dicaTroca);
             PreverTroca(null);
             return card;
         }
@@ -771,32 +771,56 @@ namespace CSM.ManagerUI
             }
         }
 
+        /// <summary>
+        /// Cartão do elenco, enxuto (decisão 0023): retrato com função e geral; nome; o ESTADO em palavras (em forma, cansado,
+        /// desmotivado...) em vez de barras de cansaço e moral; os 5 atributos que a IA usa; uma ação principal e duas de ícone.
+        /// Os números finos (cansaço, moral, potencial, salário) ficam na dica.
+        /// </summary>
         VisualElement CartaoElenco(Jogador j)
         {
             bool tit = c.Titular(j);
             var cj = E("card-j"); if (comparar.Contains(j)) cj.AddToClassList("comp");
             var midia = E("midia");
             midia.Add(Retrato(j.nome, "retrato-fill"));
-            var st = Selo(tit ? "TITULAR" : "RESERVA", tit ? "laranja" : null); st.AddToClassList("midia-selo"); midia.Add(st);
-            var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
+            var fn = Selo(Fmt.FuncaoCurta(j.funcao), null); fn.AddToClassList("midia-selo"); ComDica(fn, Fmt.Funcao(j.funcao)); midia.Add(fn);
+            var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); ComDica(ovr, COLS[0].dica); midia.Add(ovr);
             cj.Add(midia);
 
             var info = E("info");
-            var nome = E("linha-h"); var nm = NomeComTraco(j, "info-nome", true); nm.style.flexGrow = 1; nome.Add(nm);
-            nome.Add(L(Fmt.FuncaoCurta(j.funcao), "f13", "negrito", "suave")); info.Add(nome);
-            info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f13", "suave", "info-meta"));
-            info.Add(AtributoLinha("Mira", j.Mira)); info.Add(AtributoLinha("Reflexo", j.Reflexo)); info.Add(AtributoLinha("Spray", j.Spray));
-            info.Add(AtributoLinha("Utilitária", j.Utilitaria)); info.Add(AtributoLinha("Frio", j.SangueFrio));
-            info.Add(AtributoLinha("Moral", (int)j.moral));
-            if (j.mvps > 0 || j.jogadas.Count > 0) info.Add(Mvps(j, ""));
-            var fad = E("attr"); fad.Add(L("Cansaço", "attr-nome")); var bc = BarraCansaco(j.cansaco); bc.style.flexGrow = 1; fad.Add(bc); fad.Add(L(((int)j.cansaco).ToString(), "attr-num", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "t")); info.Add(fad);
-            var pot = L("Potencial " + j.potencial + " · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", j.potencial >= 85 ? "verde" : "suave"); pot.style.marginTop = 6; info.Add(pot);
+            info.Add(NomeComTraco(j, "info-nome", true));
+            var meta = L(j.idade + " anos · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", "suave", "info-meta");
+            meta.pickingMode = PickingMode.Position;
+            ComDica(meta, "Potencial " + j.potencial + " (o teto de evolução). Salário pago toda semana. Vende por " + Fmt.Dinheiro(j.Venda) + ".");
+            info.Add(meta);
+
+            // estado: a conclusão primeiro; o número na dica
+            var estado = E("estado");
+            int cs = (int)j.cansaco, mo = (int)j.moral;
+            var sc = Selo(cs >= 60 ? "EXAUSTO" : cs >= 35 ? "CANSADO" : "EM FORMA", cs >= 60 ? "vermelho" : cs >= 35 ? "laranja" : "verde");
+            ComDica(sc, "Cansaço " + cs + " de 100. Acima de 35 a habilidade na partida cai; descansa sem treino.");
+            estado.Add(sc);
+            if (mo < 45 || mo >= 75)
+            {
+                var sm = Selo(mo < Provisorio.MORAL_AVISO ? "DESMOTIVADO" : mo < 45 ? "MORAL BAIXA" : "MOTIVADO", mo < Provisorio.MORAL_AVISO ? "vermelho" : mo < 45 ? "laranja" : "verde");
+                ComDica(sm, "Moral " + mo + " de 100: sobe com vitórias e jogando de titular, cai com derrotas e no banco. Muda a habilidade de -4,5% a +3%.");
+                estado.Add(sm);
+            }
+            if (j.mvps > 0) { var sv = Selo("MVP " + j.mvps + "×", null); ComDica(sv, "Vezes que foi MVP de mapa pelo clube" + (j.jogadas.Count > 0 ? ".\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : ".")); estado.Add(sv); }
+            info.Add(estado);
+
+            for (int k = 1; k <= 5; k++)
+            {
+                var col = COLS[k];
+                var linha = AtributoLinha(k == 4 ? "Utilitária" : col.rot, col.chave(j));
+                linha.pickingMode = PickingMode.Position; ComDica(linha, col.dica);
+                info.Add(linha);
+            }
             cj.Add(info);
 
-            // ações à vista
+            // uma ação principal (largura toda) e duas de ícone, com a explicação na dica
             var ac = E("card-acoes");
             var jj = j;
-            var principal = BotaoMini(tit ? "Reserva" : "Escalar", () =>
+            var principal = BotaoMini(tit ? "Para a reserva" : "Escalar", () =>
             {
                 if (jj == null) return;
                 if (tit) c.MandarParaReserva(jj); else c.TornarTitular(jj);
@@ -804,10 +828,11 @@ namespace CSM.ManagerUI
             }, !tit, tit ? c.elenco.Count > Provisorio.TITULARES : true);
             principal.RegisterCallback<PointerEnterEvent>(_ => PreverTroca(jj));
             principal.RegisterCallback<PointerLeaveEvent>(_ => PreverTroca(null));
+            principal.AddToClassList("grow"); if (!tit) principal.AddToClassList("destaque");
             ac.Add(principal);
-            var cmpBtn = BotaoMini("", () => AlternarComparar(jj), comparar.Contains(j), true, "swap"); ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador"); ac.Add(cmpBtn);
-            var vender = BotaoMini("Vender", () => Vender(jj), false, c.elenco.Count > Provisorio.TITULARES, "tag"); vender.AddToClassList("perigo");
-            ComDica(vender, c.elenco.Count > Provisorio.TITULARES ? "Vende o jogador por " + Fmt.Dinheiro(j.Venda) + " (dá para desfazer logo depois)." : "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.");
+            var cmpBtn = BotaoMini("", () => AlternarComparar(jj), comparar.Contains(j), true, "swap"); cmpBtn.AddToClassList("so-ic"); ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador"); ac.Add(cmpBtn);
+            var vender = BotaoMini("", () => Vender(jj), false, c.elenco.Count > Provisorio.TITULARES, "tag"); vender.AddToClassList("perigo"); vender.AddToClassList("so-ic");
+            ComDica(vender, c.elenco.Count > Provisorio.TITULARES ? "Vender por " + Fmt.Dinheiro(j.Venda) + " (dá para desfazer logo depois)." : "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.");
             ac.Add(vender);
             cj.Add(ac);
             return cj;
@@ -817,14 +842,16 @@ namespace CSM.ManagerUI
         void PreverTroca(Jogador j)
         {
             if (dicaTroca == null) return;
-            if (j == null) { dicaTroca.text = "Passe o mouse em Escalar ou Tornar reserva para ver o efeito na força e na chance de vitória antes de confirmar."; return; }
+            dicaTroca.style.display = j == null ? DisplayStyle.None : DisplayStyle.Flex;   // a prévia só aparece quando o mouse está no botão
+            var alertas = dicaTroca.parent?.Q(null, "chips-func"); if (alertas != null) alertas.style.display = j == null ? DisplayStyle.Flex : DisplayStyle.None;
+            if (j == null) { dicaTroca.text = ""; return; }
             Jogador sai, entra;
             if (c.Titular(j)) { sai = j; entra = c.elenco.Skip(Provisorio.TITULARES).OrderByDescending(r => r.Overall).FirstOrDefault(); }
             else { entra = j; sai = c.Titulares.OrderBy(t => t.Overall).First(); }
             if (entra == null) { dicaTroca.text = "Não há reserva para entrar no lugar de " + j.nome + "."; return; }
             int depois = c.ForcaCom(entra, sai), dif = depois - c.Forca;
-            dicaTroca.text = entra.nome + " entra no lugar de " + sai.nome + ": força " + c.Forca + " → " + depois + " (" + (dif > 0 ? "+" : "") + dif + "), chance de vitória "
-                + Pct(c.ChanceVitoria()) + " → " + Pct(c.ChanceVitoria(depois)) + ".";
+            dicaTroca.text = entra.nome + " no lugar de " + sai.nome + ":  força " + c.Forca + " → " + depois + "  ·  chance " + Pct(c.ChanceVitoria()) + " → " + Pct(c.ChanceVitoria(depois));
+            dicaTroca.EnableInClassList("verde", dif > 0); dicaTroca.EnableInClassList("vermelho", dif < 0);
         }
 
         // ------------------------------------------------------------------ comparação
