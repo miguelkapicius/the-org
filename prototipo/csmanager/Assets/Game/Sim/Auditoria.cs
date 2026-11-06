@@ -15,6 +15,116 @@ namespace CSM.Sim
 
         public Auditoria(Match m) { this.m = m; }
 
+        /* bx: travessia de smoke (medição; só lê o estado — Sample das células é puro, sem rng/PathLen/Pixel) */
+        readonly float[] fumDesde = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 }, fumSaiuT = { -9, -9, -9, -9, -9, -9, -9, -9, -9, -9 };
+        readonly V2[] fumEntrou = new V2[10]; readonly bool[] fumInimiga = new bool[10], fumCruzou = new bool[10];
+        readonly List<(Agent a, float t, bool inimiga)> fumPend = new List<(Agent, float, bool)>();
+        int fumAbIdx;
+        /// <summary>Em que smoke o agente está (olho na fumaça das células &gt; 0,25), ou null.</summary>
+        CSM.View.SmokeVolume FumacaEm(Agent a)
+        {
+            var q = new CSM.View.V3(a.pos.x, a.pos.y, a.z + a.Eye);
+            foreach (var s in m.smokes) { if (s.age < 1.2f) continue; if (s.Sample(q, m.t) > 0.25f) return s; }
+            return null;
+        }
+        string FumFaixa(Agent v) => fumDesde[v.id] >= 0 ? "dentro" : m.t - fumSaiuT[v.id] <= 3f ? "saindo (até 3 s)" : null;
+        void Fumaca()
+        {
+            foreach (var a in m.agents)
+            {
+                if (!a.alive) continue;
+                var s = FumacaEm(a);
+                if (s != null && fumDesde[a.id] < 0)
+                {
+                    fumDesde[a.id] = m.t; fumEntrou[a.id] = a.pos;
+                    fumInimiga[a.id] = m.smokeDe.TryGetValue(s, out var dono) && dono != a.team;
+                    if (fumInimiga[a.id] && a.brain != null)
+                    {   /* bx: por onde se entra na smoke do inimigo (a decisão "smoke no caminho" só vale no andar de ordem) */
+                        string on = a.brain.order?.name ?? "-"; int ix = on.IndexOfAny(new[] { ':', '(', '—' }); if (ix > 0) on = on.Substring(0, ix).Trim();
+                        m.Aud("smoke: entrou na inimiga (fase)", (a.IsT ? "TR · " : "CT · ") + (a.brain.fase == "" ? "(sem fase)" : a.brain.fase));
+                        m.Aud("smoke: entrou na inimiga (ordem)", (a.IsT ? "TR · " : "CT · ") + on + (a.brain.DecidiuSmoke(s) is bool dz ? (dz ? " · decidiu atravessar" : " · decidiu esperar") : " · sem decisão"));
+                    }
+                }
+                else if (s == null && fumDesde[a.id] >= 0)
+                {
+                    bool cruzou = (a.pos - fumEntrou[a.id]).Len > 30;
+                    string lado = a.IsT ? "TR" : "CT", de = fumInimiga[a.id] ? "inimiga" : "do meu time";
+                    m.Aud("smoke: saiu da fumaça", lado + " · " + de + " · " + (cruzou ? "atravessou" : "entrou e voltou"));
+                    if (cruzou) { m.Ev("smoke: atravessou " + (fumInimiga[a.id] ? "inimiga" : "do time") + "/round"); fumPend.Add((a, m.t, fumInimiga[a.id])); }
+                    fumDesde[a.id] = -1; fumSaiuT[a.id] = m.t; fumCruzou[a.id] = cruzou;
+                }
+            }
+            /* abates novos: quem morre dentro/saindo da smoke e quem matou */
+            for (; fumAbIdx < m.abates.Count; fumAbIdx++)
+            {
+                var ab = m.abates[fumAbIdx];
+                if (ab.by == null || ab.aliado || ab.suicidio) continue;
+                string fv = FumFaixa(ab.v), fk = FumFaixa(ab.by);
+                if (fv != null)
+                {
+                    var k = ab.by.brain; bool parado = ab.by.Speed < ab.by.MaxSpeed * 0.2f;
+                    string quem = fk != null ? "matador também na smoke" : k.Segurando && parado ? "matador segurando parado" : parado ? "matador parado (sem posição)" : "matador andando";
+                    m.Aud("smoke: morreu na smoke", (ab.v.IsT ? "TR " : "CT ") + fv + " · " + quem);
+                    m.Ev("smoke: morreu dentro/saindo/round");
+                }
+                if (fk != null && fv == null) { m.Aud("smoke: quem saiu da smoke matou", (ab.by.IsT ? "TR " : "CT ") + fk); m.Ev("smoke: matou saindo/round"); }
+                if (ab.atravesSmoke) m.Ev("smoke: abate através da smoke/round");
+            }
+            /* resultado de cada travessia: os 4 s depois de sair */
+            for (int i = fumPend.Count - 1; i >= 0; i--)
+            {
+                var (a, t0, inim) = fumPend[i];
+                if (m.t - t0 < 4f && a.alive && !m.over) continue;
+                bool matou = false, morreu = !a.alive && a.diedAt <= t0 + 4f;
+                foreach (var ab in m.abates) if (ab.by == a && !ab.aliado && ab.t >= t0 - 0.5f && ab.t <= t0 + 4f) matou = true;
+                m.Aud("smoke: 4 s depois de atravessar", (a.IsT ? "TR" : "CT") + " · " + (inim ? "inimiga" : "do time") + " · " + (matou && morreu ? "trocou (matou e morreu)" : matou ? "matou" : morreu ? "morreu" : "nada"));
+                fumPend.RemoveAt(i);
+            }
+            foreach (var a in m.agents)
+                if (!a.alive && fumDesde[a.id] >= 0) { m.Aud("smoke: 4 s depois de atravessar", (a.IsT ? "TR" : "CT") + " · " + (fumInimiga[a.id] ? "inimiga" : "do time") + " · morreu DENTRO"); fumDesde[a.id] = -1; }
+        }
+
+        /// <summary>bx: inimigo no campo de visão com parte do corpo à vista (cabeça em cima, ombro, perna) e o raio único
+        /// da Sim (olho → olho do alvo) tapado. Pares com smoke na caixa ficam de fora (a auditoria não toca na smoke).</summary>
+        void VisaoCorpoAud()
+        {
+            foreach (var a in m.agents)
+            {
+                if (!a.alive || a.Blind(m.t)) continue;
+                foreach (var e in m.agents)
+                {
+                    if (!e.alive || e.team == a.team) continue;
+                    V2 d = e.pos - a.pos; float dl = d.Len; if (dl > 1400 || dl < 30) continue;
+                    float da = MathF.Abs(MathX.AngDiff(d.Atan2, a.aim));
+                    bool luneta = a.scoped && a.gunId == "awp";
+                    if (da > 55f * MathF.PI / 180 || luneta && da > 20f * MathF.PI / 180) continue;
+                    bool fum = false;
+                    foreach (var s in m.smokes) { var (mn, mx) = s.Bounds; if (MathF.Max(a.pos.x, e.pos.x) >= mn.x && MathF.Min(a.pos.x, e.pos.x) <= mx.x && MathF.Max(a.pos.y, e.pos.y) >= mn.y && MathF.Min(a.pos.y, e.pos.y) <= mx.y) fum = true; }
+                    if (fum) continue;
+                    if (MapData.LosWalk(a.pos, a.z + a.Eye - 18f, e.pos, e.z + e.Eye - 18f, 18f)) { m.Aud("visão: inimigo no campo de visão (0,25 s)", "vê pelo raio da Sim"); continue; }
+                    V2 lat = new V2(-d.y / dl, d.x / dl); float k = 1f - 0.28f * e.duck; string parte = null;
+                    foreach (var (h, l, nome) in new[] { (22.5f, 0f, "topo da cabeça"), (15f, 4f, "ombro/braço"), (15f, -4f, "ombro/braço"), (4f, 3f, "perna/pé"), (4f, -3f, "perna/pé") })
+                        if (MapData.LosWalk(a.pos, a.z + a.Eye, e.pos + lat * l, e.z + h * k, 0f)) { parte = nome; break; }
+                    if (parte == null && MapData.LosWalkTela(a.pos, a.z + a.Eye - 18f, e.pos, e.z + e.Eye - 18f, 18f)) parte = "só pela quina arredondada da tela";
+                    if (parte == null) continue;
+                    string faixa = dl < 300 ? "<300" : dl < 700 ? "300-700" : "700+";
+                    m.Aud("visão: inimigo no campo de visão (0,25 s)", "PARTE à vista, Sim não vê");
+                    m.Aud("visão: parte à vista que a Sim não vê", parte + " · " + faixa + (luneta ? " · AWP na luneta" : "") + (da < 3f * MathF.PI / 180 ? " · na mira" : ""));
+                    m.Aud("visão: onde (quem olha → alvo)", MapData.Callout(a.pos) + " → " + MapData.Callout(e.pos));
+                }
+            }
+        }
+
+        /// <summary>bx: corpo encostando no fogo com o centro fora (a Sim só queima o centro; a tela mostra o pé nas chamas).</summary>
+        void BordaFogo(Agent a)
+        {
+            if (m.fires.Count == 0) return;
+            bool centro = m.FireAt(a.pos); int toca = 0;
+            for (int k = 0; k < 8; k++) if (m.FireAt(a.pos + V2.Ang(k * 0.785f) * Match.FOLGA)) toca++;
+            if (centro) m.Aud("fogo: corpo x chamas (0,25 s)", "centro no fogo (queima)");
+            else if (toca > 0) m.Aud("fogo: corpo x chamas (0,25 s)", "só a borda do corpo no fogo (não queima)");
+        }
+
         /// <summary>Onde a mira bate: raio até a parede (até 800).</summary>
         static V2 Bate(Agent a) { V2 d = V2.Ang(a.aim); return a.pos + d * MapData.Raio(a.pos, a.z, d, 800, 18f); }
 
@@ -50,6 +160,9 @@ namespace CSM.Sim
             foreach (var tm in new[] { Team.CT, Team.T }) Time(tm);
             foreach (var a in m.agents) { if (a.alive) Jogador(a); }
             foreach (var a in m.agents) if (a.alive) Passagem(a);
+            Fumaca(); foreach (var a in m.agents) if (a.alive) BordaFogo(a);
+            VisaoCorpoAud();
+            foreach (var a in m.agents) a.brain.PreNadeAud();
             if (m.t < 20)
                 foreach (var a in m.agents)
                 {   /* exposição na linha longa cedo: algum inimigo com visão de mim a mais de 300 (medição: posição real) */

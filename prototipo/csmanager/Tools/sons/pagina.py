@@ -106,11 +106,19 @@ def comparacao(add):
     nomes_c4 = ['CS2: tom firme 4,2 kHz', 'CS2: dois tons', 'mais grave 3,2 kHz', 'piezo seco', 'suave e limpo', 'agudo digital']
     out = []
     nomes_ui = ['estalo seco', 'vidro', 'tecla de plástico', 'digital suave', 'madeira', 'metal leve']
-    for chave, rot, pref in (('ui', 'INTERFACE (botões): passa o mouse 3x, clica, passa e clica — o clique é o mesmo material do estalinho', 'ui_'),
+    nomes_c4h = ['mesma nota, só acelera', 'quinta acima', 'quarta acima', 'terça maior (acorde maior no apito)', 'oitava acima', 'mesma nota, apito subindo']
+    nomes_awp = ['nº 7 de antes (referência)', 'sem o "chak" sintético', 'sem nada sintético (estalo da gravação)',
+                 'sem sintético + estalo suave', 'sem sintético + mais soco', 'sem sintético + corpo mais longo', 'sem sintético e sem sub extra']
+    nomes_fe = ['atual', 'novo A', 'novo B', 'novo C (trava num clique só)', 'novo D']
+    for chave, rot, pref in (('awp', 'AWP RODADA 3 — TRIPLE KILL (sem ferrolho): em volta da 7, tirando o que é sintético', 'awp_r_'),
+                             ('awps', 'AWP RODADA 3: só o tiro', 'awp_rs_'),
+                             ('awpf', 'FERROLHO DA AWP: agora toca depois de CADA tiro, no tempo da mão na animação (tiro = referência)', 'awp_f_'),
+                             ('c4h', 'C4 HARMÔNICA: últimos 13 s — bip normal (o aprovado, não muda), bips dos 10 s e apito final terminando na explosão', 'c4h_'),
+                             ('ui', 'INTERFACE (botões): passa o mouse 3x, clica, passa e clica — o clique é o mesmo material do estalinho', 'ui_'),
                              ('mpsimples', 'MATCH POINT do zero: mesma voz e tratamento dos anúncios aprovados — 1-2 padrão, 3-4 empolgado', 'mpsimples_'),):
         bts = []
         for f in sorted(glob.glob(os.path.join(S, '_opcoes', pref + '[0-9]*.wav')), key=lambda f: int(f.rsplit('_', 1)[1][:-4])):
-            k = int(f.rsplit('_', 1)[1][:-4]); lab = f'{k + 1}' + (f' {nomes_c4[k]}' if chave.startswith('c4') else f' {nomes_ui[k]}' if chave == 'ui' else '')
+            k = int(f.rsplit('_', 1)[1][:-4]); lab = f'{k + 1}' + (f' {nomes_fe[k]}' if chave == 'awpf' else f' {nomes_awp[k]}' if chave in ('awp', 'awps') else f' {nomes_c4h[k]}' if chave == 'c4h' else f' {nomes_c4[k]}' if chave.startswith('c4') else f' {nomes_ui[k]}' if chave == 'ui' else '')
             add(f'cmp_{chave}_{k}', sf.read(f)[0], f'{rot} {lab}'); bts.append(dict(chave=f'cmp_{chave}_{k}', rotulo=lab))
         if bts: out.append(dict(chave=f'cmp_{chave}', rotulo=rot + ' (escolha)', versoes=bts))
     return out

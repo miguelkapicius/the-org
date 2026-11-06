@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 160">
+  <!-- Galil AR: coronha retrátil, caixa de AK com trilho em cima e alça de mira, guarda-mão com trilhos, massa alta, carregador curvo -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="160">
+      <rect width="512" height="160" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M22 52 L21 84" stroke-width="2.4"/>
+        <path d="M138 40 L138 74" stroke-width="2.6"/>
+        <path d="M282 38 L282 72" stroke-width="2.6"/>
+        <path d="M290 46 L374 46" stroke-width="2"/><path d="M290 62 L374 62" stroke-width="2"/>
+        <path d="M245 78 Q252 110 276 134" stroke-width="2.2"/>
+        <path d="M168 117 L190 119" stroke-width="2.2"/>
+        <path d="M492 51 L500 51" stroke-width="1.6"/><path d="M492 56 L500 56" stroke-width="1.6"/>
+      </g>
+      <g fill="#000">
+        <path d="M40 54 L84 51 L84 58 L42 63 Z"/>
+        <path d="M205 72 L229 72 Q231 72 231 75 L231 80 Q231 84 226 84 L211 84 Q205 84 205 79 Z"/>
+      </g>
+      <path d="M215 72 Q219 77 216 82" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M14 44 Q14 40 18 40 L96 42 L104 48 L104 62 L96 66 L20 86 Q14 87 14 82 Z"/>
+    <path d="M96 46 L140 46 L140 60 L96 60 Z"/>
+    <path d="M136 50 Q137 38 150 38 L284 38 L284 72 L136 72 Z"/>
+    <path d="M150 33 L280 33 L280 38 L150 38 Z"/>
+    <path d="M262 22 L276 22 L280 33 L258 33 Z"/>
+    <path d="M280 38 L374 38 Q380 38 380 44 L380 64 Q380 70 374 70 L280 72 Z"/>
+    <path d="M378 41 L414 41 L414 48 L378 48 Z"/>
+    <path d="M378 50 L492 50 L492 57 L378 57 Z"/>
+    <path d="M408 44 L432 44 L434 62 L408 62 Z"/>
+    <path d="M414 44 L414 24 Q414 20 418 20 L424 20 Q428 20 428 24 L428 44 Z"/>
+    <path d="M488 46.5 L502 46.5 Q505 46.5 505 50 L505 57 Q505 60.5 502 60.5 L488 60.5 Z"/>
+    <path d="M201 70 L233 70 L234 78 Q234 88 226 88 L210 88 Q201 88 201 80 Z"/>
+    <path d="M180 70 L206 70 L198 116 Q196 124 188 124 L170 122 Q163 121 165 114 Z"/>
+    <path d="M234 70 L270 70 Q278 104 302 132 L270 146 Q242 116 234 70 Z"/>
+    <path d="M262 50 L276 50 Q279 50 279 53 Q279 56 276 56 L262 56 Z"/>
+  </g>
+</svg>

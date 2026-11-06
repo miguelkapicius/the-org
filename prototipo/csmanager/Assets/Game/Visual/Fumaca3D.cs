@@ -168,7 +168,8 @@ namespace CSM.View3D
             }
         }
         // a bolota da simulação vira esfera deste tamanho (raio que aparece ~0,78 disso): mesmo tamanho dos lóbulos de antes
-        const float RAIO = 1.85f, ESCALA = 1.05f;
+        // as mesmas constantes que a Sim usa pra tapar a visão (SmokeVolume.SampleVis): o que se vê é o que bloqueia
+        const float RAIO = SmokeVolume.VIS_RAIO, ESCALA = SmokeVolume.VIS_ESCALA;
         float[] forca;
 
         /// <summary>Esfera macia (cheia até 55% do raio, some na borda) somada por máximo na fatia; p relativo ao canto.</summary>

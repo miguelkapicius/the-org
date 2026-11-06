@@ -11,7 +11,22 @@ namespace CSM.View3D
     {
         static readonly Color[] COR = new Color[64];
 
-        static Paleta3D()
+        static Paleta3D() => UsarVila();
+
+        /// <summary>Paleta da Brasa (2º mapa, clima da Inferno): pedra bege no chão, reboco ocre e creme, telha mais
+        /// queimada, madeira escura, verde-oliva. Ainda não é chamada no jogo: entra quando o MapData montar a Brasa.</summary>
+        public static void UsarBrasa()
+        {
+            UsarVila();
+            Set(1, 0xDCC7A0); Set(2, 0xCDB58C); Set(3, 0xB39A74); Set(14, 0xC8AE84); Set(18, 0xD6BF95);
+            Set(6, 0xEDD3A0); Set(7, 0xC99560); Set(8, 0xF6E4BE);
+            Set(50, 0xC4562E); Set(51, 0xA6452A);
+            Set(10, 0x9A6236); Set(11, 0x6E4325); Set(46, 0x8C5A33); Set(47, 0x6A4224);
+            Set(17, 0x7E9A4A); Set(5, 0xC8402F); Set(16, 0x5F7A4A);
+        }
+
+        /// <summary>Paleta da Vila (a de sempre).</summary>
+        public static void UsarVila()
         {
             for (int i = 1; i < 64; i++)
             {

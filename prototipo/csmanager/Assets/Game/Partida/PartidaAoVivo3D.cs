@@ -61,6 +61,7 @@ namespace CSM.View3D
         {
             Brain.Explicar = true;
             Diretor.Velho = System.Array.Exists(System.Environment.GetCommandLineArgs(), s => s == "-diretor_velho");   // A/B do diretor
+            Diretor.InicioVelho = System.Array.Exists(System.Environment.GetCommandLineArgs(), s => s == "-diretor_inicio_velho");   // A/B da leitura do round calmo
             cen = new GameObject("Cenário 3D").AddComponent<Cenario3D>();
             cen.cam = Camera.main;
             cen.Montar();
@@ -274,7 +275,7 @@ namespace CSM.View3D
             // round novo zera a agenda do bip: com a C4 explodindo, o round ia direto pro replay sem o Som3D ver a C4 "desarmada"
             // e a agenda ficava presa no último segundo: no round seguinte ela só bipava no fim (usuário, 2026-11-05)
             Som3D.C4(Vector3.zero, false, 0);
-            props.Clear(); if (c4 != null) c4.SetActive(false); tirosVistos.Clear(); fogosVistos.Clear(); fogosAcesos.Clear(); c4PlantadoVisto = false; c4PlantouEm = c4ExplodiuEm = -1; animSom.Clear(); arremesso.Clear(); centrosFogo.Clear(); Som3D.Fogos(centrosFogo); passoVisto.Clear(); ultHE = ultFlash = -1;
+            props.Clear(); if (c4 != null) c4.SetActive(false); tirosVistos.Clear(); fogosVistos.Clear(); fogosAcesos.Clear(); c4PlantadoVisto = false; c4PlantouEm = c4ExplodiuEm = c4DesarmouEm = -1; animSom.Clear(); arremesso.Clear(); centrosFogo.Clear(); Som3D.Fogos(centrosFogo); passoVisto.Clear(); ultHE = ultFlash = -1;
             foreach (var b in bonecos.Values) if (b) Apagar(b.gameObject);
             bonecos.Clear();
             foreach (var a in m.agents)

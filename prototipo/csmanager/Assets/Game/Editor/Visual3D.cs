@@ -819,6 +819,7 @@ namespace CSM.EditorTools
                 var A = CSM.Map.MapData.SITES["A"].Center; var c = new CSM.Sim.V2(A.x - 22 + Arg("-v3d_dx", 0), A.y + 18 + Arg("-v3d_dy", 0));
                 p.LabCamera(c, Arg("-v3d_zoom", 3.4f));
                 var arM = System.Environment.GetCommandLineArgs(); int qm = System.Array.IndexOf(arM, "-v3d_casos");
+                CSM.View3D.Ragdoll3D.EmbaloVelho = System.Array.IndexOf(arM, "-v3d_embalo_velho") >= 0;
                 p.LabMortes(c, Arg("-v3d_giro", 120), 0.3f, qm >= 0 && qm + 1 < arM.Length ? arM[qm + 1] : "0,1,2,3,4,5,6,7");
                 string dir = "Logs/visual3d/mortes";
                 if (Directory.Exists(dir)) Directory.Delete(dir, true);
@@ -1303,6 +1304,173 @@ namespace CSM.EditorTools
         public static void CapturarBatch()
         {
             try { Capturar(); EditorApplication.Exit(0); }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Tamanho da smoke: raio (unidades da Sim, média de 16 direções, na altura do olho) da smoke que os bots usam
+        /// (células, Sample) e da que a tela desenha (esferas do Fumaca3D) com vários RAIO/ESCALA. Smoke cheia no meio do A.
+        /// </summary>
+        public static void MedirTamanhoSmokeBatch()
+        {
+            try
+            {
+                var c = CSM.Map.MapData.SITES["A"].Center;
+                float z0 = CSM.Map.MapData.floor[(int)c.x, (int)c.y];
+                var s = new CSM.View.SmokeVolume(new CSM.View.V3(c.x, c.y, z0));
+                for (int i = 0; i < 60; i++) s.Update(0.05f);
+                float t = s.age, zOlho = z0 + 18;
+                float Raio(System.Func<CSM.View.V3, float> dens, float lim)
+                {
+                    float soma = 0;
+                    for (int k = 0; k < 16; k++)
+                    {
+                        float a = k * Mathf.PI / 8, ult = 0;
+                        for (float d = 0; d < 90; d += 0.5f)
+                            if (dens(new CSM.View.V3(c.x + Mathf.Cos(a) * d, c.y + Mathf.Sin(a) * d, zOlho)) >= lim) ult = d;
+                        soma += ult;
+                    }
+                    return soma / 16;
+                }
+                var centro = new CSM.View.V3(c.x, c.y, z0 + 4);
+                float Vis(CSM.View.V3 q0, float raio, float escala)
+                {
+                    float m = 0;
+                    foreach (var p in s.puffs)
+                    {
+                        float r = s.PuffR(p, t); if (r <= 0.3f) continue;
+                        var pc = s.PuffC(p, t);
+                        float d = s.Sample(pc, t);
+                        float alfa = Mathf.SmoothStep(0, 1, Mathf.Clamp01((d - 0.02f) / 0.14f)); if (alfa < 0.02f) continue;
+                        float qx = centro.x + (pc.x - centro.x) * escala, qy = centro.y + (pc.y - centro.y) * escala, qz = centro.z + (pc.z - centro.z) * escala;
+                        float R = r * raio * (0.7f + 0.7f * Mathf.Repeat(p.ph * 0.37f, 1f));
+                        float dd = Mathf.Sqrt((q0.x - qx) * (q0.x - qx) + (q0.y - qy) * (q0.y - qy) + (q0.z - qz) * (q0.z - qz));
+                        m = Mathf.Max(m, alfa * Mathf.Clamp01((1 - dd / R) / 0.45f));
+                    }
+                    return m;
+                }
+                foreach (float lim in new[] { 0.3f, 0.5f })
+                    Debug.Log($"[Visual3D] SMOKE bots (células) lim {lim}: raio {Raio(q => s.Sample(q, t), lim):0.0}");
+                foreach (var (ra, es) in new[] { (1.4f, 1.05f), (1.2f, 1.0f), (1.0f, 1.0f), (0.9f, 1.0f), (0.8f, 1.0f), (0.8f, 0.95f), (0.7f, 0.95f), (0.6f, 0.95f) })
+                    Debug.Log($"[Visual3D] SMOKE tela RAIO {ra} ESCALA {es}: raio lim 0.3 {Raio(q => Vis(q, ra, es), 0.3f):0.0}  lim 0.5 {Raio(q => Vis(q, ra, es), 0.5f):0.0}");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Kit da Brasa (2º mapa): os props de pack que vão vestir o mapa no clima da Inferno, mais amostras da paleta
+        /// (reboco, telha, madeira, veneziana), num estúdio com um boneco pra escala. Logs/visual3d/kit_brasa.png.
+        /// </summary>
+        public static void CapturarKitBrasaBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                var cg = new GameObject("Câmera 3D") { tag = "MainCamera" }; cg.AddComponent<Camera>();
+                var cen = new GameObject("Cenário 3D").AddComponent<CSM.View3D.Cenario3D>();
+                cen.Montar(); cen.cam.aspect = 16f / 9f;
+                cen.mapa.SetActive(false);
+                foreach (Transform f in cen.transform) if (f.name == "Arredores") f.gameObject.SetActive(false);
+                CSM.View3D.Paleta3D.UsarBrasa();
+                bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+                Color Pal(int m) => CSM.View3D.Paleta3D.Vertice(m, linear);
+                var sh = Shader.Find("CSM/Maquete");
+                Material Liso(Color c) { var m = new Material(sh); m.SetFloat("_UsarVertice", 0); m.SetColor("_BaseColor", c); return m; }
+                var chao = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                chao.transform.localScale = Vector3.one * 6; chao.GetComponent<MeshRenderer>().sharedMaterial = Liso(Pal(1));
+                var mv = new Material(sh) { name = "kit vértice" }; mv.SetFloat("_UsarTopo", 0); mv.SetFloat("_UsarVertice", 1);
+                const float E = CSM.View3D.MalhaMapa.ESC;
+                // (arquivo em Resources/Packs, altura alvo em unidades da Sim; negativo = largura alvo (coisa deitada), rótulo)
+                var kit = new (string arq, float alvo, string rot)[]
+                {
+                    // banana
+                    ("ksv_barrel", 13, "barris (carro do banana)"), ("ksv_barrel-open", 12, "barril aberto"), ("ksv_tree-log", -22, "toras"),
+                    ("ksv_resource-planks", -16, "tábuas (meio muro)"), ("kenney_fence-broken", 12, "cerca quebrada"), ("kenney_tree-crooked", 45, "cipreste"),
+                    // bomb B
+                    ("kgy_coffin", -22, "caixão"), ("kgy_coffin-old", -24, "caixão velho"), ("kenney_fountain-square-detail", -34, "fonte do B"),
+                    ("ksv_box-large", 14, "caixote grande (tripla)"), ("ksv_box", 9, "caixote (1ª caixa)"), ("kgy_hay-bale", 10, "fardo (cimento)"),
+                    // construção (igreja em ruína)
+                    ("kgy_stone-wall-damaged", 26, "muro quebrado"), ("kgy_column-large", 40, "coluna da igreja"), ("kgy_cross-column", 30, "cruz de pedra"),
+                    ("kgy_debris", 6, "entulho"), ("ksv_workbench", 12, "bancada de obra"), ("ksv_structure", 30, "andaime"),
+                    // meio e MF
+                    ("kenney_stall-bench", -22, "banco do meio"), ("kgy_lightpost-single", 34, "poste"), ("kgy_lantern-glass", 10, "lanterna"),
+                    ("ksv_bucket", 6, "balde"), ("kgy_urn-round", 10, "vaso de pedra"), ("ksv_resource-wood", 8, "lenha"),
+                    // A, arco e cemitério
+                    ("kenney_cart-high", 22, "carroça alta (curta)"), ("ksv_rock-sand-a", 8, "areia"), ("kenney_wall-arch", 26, "arco de pedra"),
+                    ("kgy_gravestone-cross", 14, "lápide (cemitério)"), ("kgy_iron-fence", 14, "grade do cemitério"), ("kgy_pine-crooked", 40, "oliveira"),
+                    // dentro de casa (tapete, apê, biblioteca)
+                    ("kenney_rugRectangle", -30, "tapete (no tapete)"), ("kenney_bedSingle", 10, "cama (apê)"), ("kenney_table", 12, "mesa (apê)"),
+                    ("kenney_chair", 14, "cadeira (apê)"), ("kenney_bookcaseOpen", 26, "estante (biblioteca)"), ("kenney_balcony-wall-fence", 14, "parapeito da varanda"),
+                };
+                var pai = new GameObject("Kit Brasa").transform; var fonte = CSM.View3D.UiKit.Fonte;
+                var eixo = new Vector3(1, 0, 1).normalized; var fundo = new Vector3(-1, 0, 1).normalized;
+                const int COLS = 6; const float PASSO = 1.75f, LINHA = 1.9f;
+                var rotulos = new System.Collections.Generic.List<Transform>(); int falta = 0;
+                int nl = (kit.Length + COLS - 1) / COLS + 1;
+                Vector3 Pos(int col, int lin) => eixo * ((col - (COLS - 1) / 2f) * PASSO) + fundo * (((nl - 1) / 2f - lin) * LINHA);
+                void Rotulo(Vector3 p, string t)
+                {
+                    var tg = new GameObject("rótulo"); tg.transform.SetParent(pai, false); tg.transform.position = p - fundo * 0.62f + Vector3.up * 0.02f;
+                    var tm = tg.AddComponent<TextMesh>(); tm.text = t; tm.font = fonte; tm.fontSize = 64; tm.characterSize = 0.03f;
+                    tm.anchor = TextAnchor.MiddleCenter; tm.color = new Color(0.25f, 0.18f, 0.12f);
+                    tg.GetComponent<MeshRenderer>().sharedMaterial = fonte.material; rotulos.Add(tg.transform);
+                }
+                Mesh Malha(string arq)
+                {
+                    var pf = Resources.Load<GameObject>("Packs/" + arq);
+                    if (pf == null) { Debug.LogWarning("[Visual3D] kit: faltou " + arq); falta++; return null; }
+                    var mfs = pf.GetComponentsInChildren<MeshFilter>(); var cis = new System.Collections.Generic.List<CombineInstance>(); var w2l = pf.transform.worldToLocalMatrix;
+                    foreach (var mf in mfs) cis.Add(new CombineInstance { mesh = mf.sharedMesh, transform = pf.transform.localToWorldMatrix * (w2l * mf.transform.localToWorldMatrix) });
+                    var me = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 }; me.CombineMeshes(cis.ToArray(), true, true);
+                    var cs = me.colors; if (cs == null || cs.Length != me.vertexCount) { cs = new Color[me.vertexCount]; for (int k = 0; k < cs.Length; k++) cs[k] = Color.white; }
+                    if (linear) for (int k = 0; k < cs.Length; k++) cs[k] = cs[k].linear;
+                    me.colors = cs; me.RecalculateBounds(); return me;
+                }
+                GameObject Por(Mesh me, string nome)
+                {
+                    var go = new GameObject(nome); go.transform.SetParent(pai, false);
+                    go.AddComponent<MeshFilter>().sharedMesh = me; go.AddComponent<MeshRenderer>().sharedMaterial = mv; return go;
+                }
+                for (int i = 0; i < kit.Length; i++)
+                {
+                    var me = Malha(kit[i].arq); if (me == null) continue;
+                    var b = me.bounds; var go = Por(me, kit[i].arq);
+                    float k2 = kit[i].alvo < 0 ? -kit[i].alvo * E / Mathf.Max(b.size.x, b.size.z) : kit[i].alvo * E / Mathf.Max(1e-4f, b.size.y);
+                    var giro = Quaternion.Euler(0, kit[i].arq.Contains("arch") ? 290 : 200, 0);
+                    go.transform.localScale = Vector3.one * k2; go.transform.rotation = giro;
+                    var p = Pos(i % COLS, i / COLS); go.transform.position = p - Vector3.up * (b.min.y * k2);
+                    if (kit[i].arq == "kenney_wall-arch")
+                    {   // o arco do Kenney vem em duas peças: os pés e o topo, que encaixa em cima
+                        var mt = Malha("kenney_wall-arch-top-detail");
+                        if (mt != null)
+                        {
+                            var gt = Por(mt, "topo do arco"); gt.transform.localScale = Vector3.one * k2; gt.transform.rotation = giro;
+                            gt.transform.position = go.transform.position + Vector3.up * ((b.max.y - mt.bounds.min.y) * k2);
+                        }
+                    }
+                    Rotulo(p, kit[i].rot);
+                }
+                // última fileira: a paleta em blocos (paredes, telha, madeira, veneziana) e um boneco pra escala
+                var amostras = new (int m, float h, string rot)[] { (6, 36, "reboco ocre"), (8, 36, "reboco creme"), (50, 14, "telha queimada"), (10, 20, "madeira escura"), (16, 20, "veneziana oliva") };
+                int lb = nl - 1;
+                for (int i = 0; i < amostras.Length; i++)
+                {
+                    var c = GameObject.CreatePrimitive(PrimitiveType.Cube); c.transform.SetParent(pai, false);
+                    c.transform.localScale = new Vector3(0.9f, amostras[i].h * E, 0.9f); c.transform.position = Pos(i, lb) + Vector3.up * amostras[i].h * E / 2;
+                    c.GetComponent<MeshRenderer>().sharedMaterial = Liso(Pal(amostras[i].m)); Rotulo(Pos(i, lb), amostras[i].rot);
+                }
+                var bo = CSM.View3D.Boneco3D.Criar("tr", pai); bo.transform.position = Pos(5, lb); bo.transform.rotation = Quaternion.Euler(0, 105, 0);
+                bo.Pose("mira_AK47", 0, 0); Rotulo(Pos(5, lb), "boneco (escala)");
+                cen.alvoJogo = new Vector2(0, 0); cen.enquadrar = Arg("-v3d_zoom", 11f); cen.Enquadrar();
+                cen.cam.transform.position -= Vector3.up * (CSM.Map.MapData.GZ * E);
+                foreach (var r in rotulos) r.rotation = cen.cam.transform.rotation;
+                Directory.CreateDirectory("Logs/visual3d");
+                Salvar(cen.cam, "Logs/visual3d/kit_brasa.png", 1920, 1080);
+                Debug.Log($"[Visual3D] kit da Brasa: {kit.Length - falta} props, {falta} faltando");
+                EditorApplication.Exit(falta == 0 ? 0 : 2);
+            }
             catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
 

@@ -570,9 +570,16 @@ namespace CSM.Map
             }
             // guardado por célula andável (não o mapa inteiro): metade da memória, cabe 3x mais destinos no cache
             long t0 = Medir ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+            bool memoOk = ex == null && MemoLigada;
+            if (memoOk && MemoPega(key, out var md, out _))
+            {   // o mesmo campo já foi calculado num round anterior (função pura do mapa): mesmo array, zero conta
+                Guarda(key, md);
+                System.Threading.Interlocked.Increment(ref Dijkstras); camposNoPasso++;
+                return md;
+            }
             var d = new float[cells.Count];
             for (int i = 0; i < d.Length; i++) d[i] = float.PositiveInfinity;
-            int src = idx[tx * NGY + ty];
+            int src = idx[tx * NGY + ty], popsCampo = 0;
             if (src >= 0)
             {
                 // heap binário em arrays (por thread, reaproveitado): a lista de tuplas era o gargalo do Dijkstra
@@ -581,6 +588,7 @@ namespace CSM.Map
                 d[src] = 0; hv[0] = src; hk[0] = 0; n = 1;
                 while (n > 0)
                 {
+                    popsCampo++;
                     int u = hv[0]; float du = hk[0];
                     int lv = hv[--n]; float lk = hk[n]; int i = 0;
                     while (true) { int c = 2 * i + 1; if (c >= n) break; if (c + 1 < n && hk[c + 1] < hk[c]) c++; if (hk[c] >= lk) break; hv[i] = hv[c]; hk[i] = hk[c]; i = c; }
@@ -601,12 +609,39 @@ namespace CSM.Map
                 }
             }
             Guarda(key, d);
+            if (memoOk && src >= 0) MemoGuarda(key, d, popsCampo);
             System.Threading.Interlocked.Increment(ref Dijkstras); camposNoPasso++;
             if (Medir) { msCampo += (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency; nCampo++; }
             if (QuemPede != null) lock (QuemPede) { var fr = new System.Diagnostics.StackTrace(1, false); string q = "D: "; for (int i = 0; i < Math.Min(3, fr.FrameCount); i++) q += (i > 0 ? " < " : "") + fr.GetFrame(i).GetMethod()?.Name; QuemPede.TryGetValue(q, out int c); QuemPede[q] = c + 1; if (QuemPedePasso != null) { QuemPedePasso.TryGetValue(q, out int cp); QuemPedePasso[q] = cp + 1; } }
             return d;
         }
         public static int Dijkstras;   // quantos campos de distância foram calculados (perfil)
+
+        // ---- memória de campos ENTRE rounds (só velocidade; o resultado é idêntico, conferido bit a bit) -------------
+        // O modo PorRound zera o cache a cada round (o que está pronto muda a decisão campo × A*), então o headless
+        // recalculava ~70 campos inteiros por round, ~25% do tempo. O campo da camada 0 é função pura do mapa: aqui ele
+        // fica guardado com o número de "pops" que custou, e o cache/fila do round seguem a MESMA contabilidade (o campo
+        // "fica pronto" no mesmo passo de antes, a fila gasta o mesmo orçamento) — só não refaz a conta.
+        static readonly bool memoDesligada = LinhaTem("memoCampoVelho");   // -exp memoCampoVelho desliga (pra conferir)
+        static bool MemoLigada => PorRound && !memoDesligada;   // só no headless determinístico (o jogo tem o cache dividido e persistente)
+        static bool LinhaTem(string flag) { try { var a = Environment.GetCommandLineArgs(); int i = Array.IndexOf(a, "-exp"); return i >= 0 && i + 1 < a.Length && a[i + 1].Contains(flag); } catch { return false; } }
+        public static int MEMO_MAX = 260; public static long memoAcertos, memoErros;
+        static readonly Dictionary<long, (float[] d, int pops)> memo = new Dictionary<long, (float[] d, int pops)>();
+        static readonly Queue<long> memoOrdem = new Queue<long>();
+        static bool MemoPega(long key, out float[] d, out int pops)
+        {
+            lock (memo) if (memo.TryGetValue(key, out var v)) { d = v.d; pops = v.pops; memoAcertos++; return true; }
+            System.Threading.Interlocked.Increment(ref memoErros); d = null; pops = 0; return false;
+        }
+        static void MemoGuarda(long key, float[] d, int pops)
+        {
+            lock (memo)
+            {
+                if (memo.ContainsKey(key)) return;
+                while (memo.Count >= MEMO_MAX && memoOrdem.Count > 0) memo.Remove(memoOrdem.Dequeue());
+                memo[key] = (d, pops); memoOrdem.Enqueue(key);
+            }
+        }
         // tira o mais antigo, um por vez (zerar 1200 campos de ~400 KB de uma vez era meio giga de lixo numa tacada:
         // pausa longa do coletor no jogo)
         static void Guarda(long key, float[] d)
@@ -615,7 +650,7 @@ namespace CSM.Map
         }
 
         // ---- campo calculado em pedaços (um pouco por passo do jogo) -------------------------------------------------
-        sealed class CampoEmCurso { public long key; public int layer; public float[] d; public int[] hv = new int[1 << 14]; public float[] hk = new float[1 << 14]; public int n; }
+        sealed class CampoEmCurso { public long key; public int layer; public float[] d; public int[] hv; public float[] hk; public int n; public int pops; public float[] memoD; public int restam; }
         [ThreadStatic] static List<CampoEmCurso> fila; [ThreadStatic] static HashSet<long> naFila;
         /// <summary>
         /// Tempo por passo do jogo pros campos na fila (ms): no .NET um campo fica pronto em 2-3 passos, no Mono (~37 ms o
@@ -640,9 +675,15 @@ namespace CSM.Map
             if (nf.Contains(key)) return;
             lock (cache) if (fixos.ContainsKey(key) || cache.ContainsKey(key)) return;
             int src = idx[tx * NGY + ty]; if (src < 0) return;
-            var c = new CampoEmCurso { key = key, layer = layer, d = new float[cells.Count] };
-            for (int i = 0; i < c.d.Length; i++) c.d[i] = float.PositiveInfinity;
-            c.d[src] = 0; c.hv[0] = src; c.hk[0] = 0; c.n = 1;
+            CampoEmCurso c;
+            if (ex == null && MemoLigada && MemoPega(key, out var md, out int mp))
+                c = new CampoEmCurso { key = key, layer = layer, memoD = md, restam = mp };   // já sabe o resultado: só "gasta" o orçamento igual
+            else
+            {
+                c = new CampoEmCurso { key = key, layer = layer, d = new float[cells.Count], hv = new int[1 << 14], hk = new float[1 << 14] };
+                for (int i = 0; i < c.d.Length; i++) c.d[i] = float.PositiveInfinity;
+                c.d[src] = 0; c.hv[0] = src; c.hk[0] = 0; c.n = 1;
+            }
             (fila ??= new List<CampoEmCurso>()).Add(c); nf.Add(key);
         }
         /// <summary>Avança os campos da fila até o orçamento do passo; o que termina vai pro cache.</summary>
@@ -663,11 +704,20 @@ namespace CSM.Map
             bool acabou = false; filaPops = 0;
             while (!acabou && f.Count > 0)
             {
-                var c = f[0]; var ex = layers[c.layer]; var d = c.d; int[] hv = c.hv; float[] hk = c.hk; int n = c.n;
+                var c = f[0];
+                if (c.memoD != null)
+                {   // campo memorizado: gasta o orçamento como a conta gastaria (mesmo passo de término, mesmo resto pros outros)
+                    int livre = FILA_POPS_POR_PASSO - filaPops;
+                    if (c.restam <= livre) { filaPops += c.restam; c.restam = 0; Guarda(c.key, c.memoD); f.RemoveAt(0); naFila.Remove(c.key); System.Threading.Interlocked.Increment(ref Dijkstras); if (Medir) nCampo++; }
+                    else { c.restam -= Math.Max(0, livre); filaPops = FILA_POPS_POR_PASSO + 1; acabou = true; }
+                    continue;
+                }
+                var ex = layers[c.layer]; var d = c.d; int[] hv = c.hv; float[] hk = c.hk; int n = c.n;
                 int conta = 0;
                 while (n > 0)
                 {
                     if (FilaPorTempo && !PorRound ? (++conta & 1023) == 0 && System.Diagnostics.Stopwatch.GetTimestamp() > fim : ++filaPops > FILA_POPS_POR_PASSO) { acabou = true; break; }
+                    c.pops++;
                     int u = hv[0]; float du = hk[0];
                     int lv = hv[--n]; float lk = hk[n]; int i = 0;
                     while (true) { int ch = 2 * i + 1; if (ch >= n) break; if (ch + 1 < n && hk[ch + 1] < hk[ch]) ch++; if (hk[ch] >= lk) break; hv[i] = hv[ch]; hk[i] = hk[ch]; i = ch; }
@@ -690,6 +740,7 @@ namespace CSM.Map
                 if (n == 0)
                 {   // pronto: entra no cache
                     Guarda(c.key, d); f.RemoveAt(0); naFila.Remove(c.key);
+                    if (ex == null && MemoLigada) MemoGuarda(c.key, d, c.pops);
                     System.Threading.Interlocked.Increment(ref Dijkstras); if (Medir) nCampo++;
                 }
             }

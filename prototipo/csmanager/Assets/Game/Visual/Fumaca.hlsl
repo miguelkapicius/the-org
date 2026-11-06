@@ -40,7 +40,8 @@ float FumBase(float3 g, int i)
 }
 
 // ruído de couve-flor (0..1), sobe devagar
-float FumRuido(float3 g) { return SAMPLE_TEXTURE3D_LOD(_FumRuido, sampler_FumRuido, g * (1.0 / 40.0) + float3(0, 0, -_FumT * 0.012), 0).r; }
+// (0,012 por segundo era ~0,5 do jogo/s: parecia parada; 0,025 sobe ~1/s, ainda calmo)
+float FumRuido(float3 g) { return SAMPLE_TEXTURE3D_LOD(_FumRuido, sampler_FumRuido, g * (1.0 / 40.0) + float3(0, 0, -_FumT * 0.025), 0).r; }
 
 // 1 = smoke, 0 = aberto (túnel de tiro / bolha da HE)
 float FumAberto(float3 g, float n)
@@ -101,7 +102,13 @@ float FumDens(float3 g, int i)
 {
     float b = FumBase(g, i);
     if (b < 0.02) return 0;
-    float n = FumRuido(g), nd = FumRuido(g * 2.7 + 31);
+    // movimento enquanto ativa (usuário: "a smoke ter um pouco de movimento"): um ruído grande e lento empurra o ponto
+    // numa direção que gira devagar (a borda revira, ±4 do jogo) e o fiapo fino escorre pro lado. Só a borda e a textura
+    // mexem: o miolo e o tamanho (o que a Sim usa pra tapar a visão, SmokeVolume.SampleVis) ficam iguais
+    float w = FumRuido(g * 0.4 + float3(0, 0, _FumT * 0.35)) - 0.5;
+    float ang = _FumT * 0.25;
+    float3 gw = g + w * float3(cos(ang), sin(ang), 0.6) * 8.0;
+    float n = FumRuido(gw), nd = FumRuido(gw * 2.7 + 31 + float3(_FumT * 0.9, _FumT * 0.5, 0));
     float d = b * FumAberto(g, n) + (n - 0.5) * 0.35;
     d -= nd * 0.5 * (1 - saturate(d * 1.15));
     return saturate((d - 0.26) / 0.42);

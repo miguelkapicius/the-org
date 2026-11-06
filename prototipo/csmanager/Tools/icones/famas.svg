@@ -1,30 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 160">
-  <!-- FAMAS (bullpup): alça de transporte comprida em cima, carregador ATRÁS do punho, guarda-mato da mão inteira, cano curto -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 199">
+  <!-- Famas: contorno tirado do NOSSO modelo 3D (EsportsPoc/Tools/autoral/armas_out/Famas, render de lado em ortográfica,
+       traçado automático) + risquinhos da casa à mão. Gerado por scratchpad icones3d/montar_galil.py em 2026-11-06. -->
   <defs>
-    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="470" height="160">
-      <rect width="470" height="160" fill="#fff"/>
-      <path d="M170 27 L326 27 L326 40 L164 40 Z" fill="#000"/>                <!-- vão da alça -->
-      <path d="M234 80 L286 80 L280 102 L238 104 Z" fill="#000"/>              <!-- vão do guarda-mato -->
-      <g stroke="#000" fill="none" stroke-linecap="round">
-        <path d="M22 50 L21 98" stroke-width="2.4"/>                            <!-- soleira -->
-        <path d="M150 88 L182 84" stroke-width="2"/>                            <!-- boca do carregador -->
-        <path d="M444 54 L444 60" stroke-width="1.6"/>
-      </g>
+    <mask id="famas_det" maskUnits="userSpaceOnUse" x="0" y="0" width="470" height="199">
+      <rect width="470" height="199" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round"><path d="M24.1 44.9 L24.1 112.0" stroke-width="2.0"/><path d="M37.1 112.0 L60.1 95.4 L100.4 95.4" stroke-width="2.0"/><path d="M95.7 57.0 L163.5 57.0" stroke-width="3.0"/><path d="M201.9 69.8 L373.8 69.8" stroke-width="2.2"/><path d="M121.8 101.1 L133.6 183.2" stroke-width="2.0"/><path d="M136.0 101.1 L146.9 181.3" stroke-width="2.0"/><circle cx="153.3" cy="82.2" r="2.0" fill="#000" stroke="none"/><circle cx="56.1" cy="48.5" r="1.5" fill="#000" stroke="none"/><circle cx="377.4" cy="31.9" r="1.5" fill="#000" stroke="none"/><circle cx="182.5" cy="48.5" r="1.8" fill="#000" stroke="none"/><circle cx="306.3" cy="80.5" r="1.6" fill="#000" stroke="none"/></g>
     </mask>
   </defs>
-  <g fill="#fff" mask="url(#c)">
-    <!-- corpo: coronha + caixa + guarda-mão numa peça -->
-    <path d="M14 54 Q14 46 22 46 L350 46 Q360 46 362 54 L364 66 Q364 72 356 72 L214 74 L140 94 L22 100 Q14 100 14 92 Z"/>
-    <!-- alça de transporte -->
-    <path d="M150 46 L160 22 Q162 17 168 17 L330 17 Q340 17 340 26 L340 46 Z"/>
-    <!-- cano e quebra-chamas -->
-    <path d="M360 54 L446 54 L446 61 L360 61 Z"/>
-    <path d="M440 50.5 L458 50.5 Q461 50.5 461 54 L461 61 Q461 64.5 458 64.5 L440 64.5 Z"/>
-    <!-- guarda-mato da mão inteira -->
-    <path d="M216 72 L294 72 Q302 72 300 80 L290 104 Q286 112 276 112 L232 112 Q218 112 222 100 Z"/>
-    <!-- carregador atrás do punho -->
-    <path d="M148 88 L184 82 L190 138 L160 146 Z"/>
-  </g>
-  <!-- punho dentro do guarda-mato (fica por cima do vão) -->
-  <path d="M244 74 L264 74 L258 110 L240 110 Z" fill="#fff"/>
+  <path fill="#fff" fill-rule="evenodd" mask="url(#famas_det)" d="M205.0 7.0 L375.0 15.1 L379.5 17.2 L382.6 20.3 L385.5 26.7 L385.2 59.9 L388.8 59.9 L389.5 62.7 L394.2 62.5 L394.5 64.6 L433.6 64.6 L434.8 62.7 L438.1 62.7 L438.8 63.7 L441.4 63.0 L441.9 63.9 L443.6 62.7 L448.8 63.4 L462.3 62.7 L463.0 76.5 L460.6 77.2 L438.6 76.2 L437.6 77.2 L434.5 77.2 L433.1 75.1 L394.2 75.1 L394.0 77.0 L389.5 76.7 L388.5 78.9 L379.3 77.9 L383.3 82.2 L369.8 90.9 L293.7 91.2 L261.9 148.1 L256.7 151.9 L230.4 160.2 L224.0 160.9 L212.4 157.8 L205.5 157.6 L188.6 150.9 L184.8 147.4 L184.6 136.7 L186.7 126.0 L192.7 112.0 L202.2 99.0 L202.6 93.1 L201.0 89.5 L197.7 86.9 L196.7 84.8 L183.9 83.6 L176.1 85.3 L169.7 88.6 L162.8 94.7 L158.8 101.9 L157.6 109.2 L152.1 109.2 L152.1 113.5 L151.2 110.9 L148.1 111.1 L149.0 127.9 L151.4 142.9 L162.1 178.9 L131.7 189.4 L121.3 191.7 L119.9 189.6 L112.3 163.0 L108.3 144.5 L106.1 127.7 L105.4 97.1 L101.9 97.1 L101.1 98.3 L90.0 98.5 L85.5 100.7 L84.3 107.3 L65.3 115.6 L63.4 114.7 L60.8 108.0 L36.6 116.1 L34.7 118.0 L15.1 118.9 L12.2 117.5 L10.3 102.3 L9.1 100.4 L10.1 95.2 L8.9 93.8 L8.9 91.4 L9.8 88.8 L8.4 85.7 L9.6 82.4 L8.2 80.7 L8.2 78.9 L9.4 76.5 L7.9 74.6 L8.7 69.6 L7.0 66.3 L8.2 64.1 L7.2 60.8 L12.2 41.9 L15.1 40.0 L19.3 40.0 L19.8 40.9 L60.4 40.9 L71.7 52.8 L76.5 52.8 L77.0 51.6 L86.7 51.6 L87.6 49.9 L160.9 49.9 L161.8 48.3 L167.8 49.0 L172.3 16.5 L174.9 11.3 L177.5 8.9 L182.7 7.2 Z M281.1 30.7 L282.5 31.9 L280.4 33.8 L278.8 38.1 L279.9 44.0 L285.2 47.8 L295.3 48.0 L296.5 49.4 L296.5 51.8 L310.1 51.6 L310.1 43.0 L313.1 42.1 L321.4 42.1 L323.6 43.3 L360.6 43.5 L361.0 45.9 L359.6 47.8 L361.5 48.0 L362.5 40.0 L361.7 32.6 L356.8 26.7 L350.4 24.3 L203.8 24.3 L198.6 26.4 L195.0 30.2 L193.1 35.9 L193.4 44.9 L194.3 47.5 L196.5 47.5 L196.7 52.8 L272.8 52.8 L274.2 37.6 L278.0 32.4 Z M351.3 49.9 L350.8 47.8 L324.8 47.8 L324.5 50.6 L321.2 51.6 L326.7 52.8 L327.6 51.3 L344.0 52.3 L348.2 51.8 Z M458.3 70.1 L449.0 69.4 L445.9 70.3 L453.3 71.0 Z M261.9 91.4 L263.1 98.3 L260.7 99.0 L258.1 90.9 L250.8 91.4 L245.6 99.2 L245.3 104.7 L247.2 109.0 L245.3 109.4 L242.2 107.1 L240.3 103.0 L239.6 98.1 L240.3 93.1 L237.7 91.2 L234.6 91.2 L231.8 97.6 L231.8 101.9 L233.9 108.0 L229.0 111.8 L227.1 116.8 L226.8 122.2 L222.8 126.3 L220.7 130.3 L220.2 137.7 L215.2 142.9 L213.8 146.0 L213.5 154.0 L223.7 156.6 L230.4 156.2 L254.1 147.9 L260.5 142.9 L278.5 109.7 L280.4 104.2 L279.5 99.5 L275.7 95.2 L271.2 93.6 L266.9 93.6 L264.8 90.9 Z"/>
 </svg>
