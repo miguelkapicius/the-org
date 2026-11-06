@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using CSM.Map;
 using static CSM.Map.MapData;
 
@@ -68,6 +69,8 @@ namespace CSM.Sim
             }
             /// <summary>Estilo de jogo do plano (decisão 0014), calculado dos dados em <see cref="Classificar"/>.</summary>
             public Categoria categoria;
+            /// <summary>Jogada a que o plano pertence (decisão 0022), com nome legível: "Rush A pela Rampa", "Setup 2-1-2 com avanço".</summary>
+            public string jogada;
             public string Nome => $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo}, {categoria})";
             public string Tipo => !tr ? "setup" : comprometeu >= 0 && comprometeu < 25 ? "rush" : comprometeu >= 0 && comprometeu < 50 ? "execução" : "default";
         }
@@ -104,7 +107,87 @@ namespace CSM.Sim
                 l.Add(p);
             }
             Classificar(l);
+            NomearJogadas(l);
             todos = l;
+        }
+
+        // ---------------------------------------------------------------- jogadas e playbook (decisão 0022)
+        /// <summary>Quanto uma jogada favorita do playbook pesa a mais na escolha do IGL. Provisório.</summary>
+        public const float PREFERENCIA_PLAYBOOK = 4f;
+        /// <summary>Jogadas com menos planos que isto não aparecem na tela do playbook (continuam no banco).</summary>
+        public const int PLANOS_MIN_JOGADA = 5;
+
+        // por onde o TR entra em cada bomb: a área de onde ele pisa no bomb vira o nome da rota (valem para a Vila)
+        static readonly Dictionary<string, string> ROTA_B = new Dictionary<string, string>
+        {
+            ["Casarao"] = "Casarão", ["Casarao_corredor"] = "Casarão", ["Rua_B"] = "Casarão", ["Topo_entrada"] = "Casarão",
+            ["Curta_sobe"] = "Curta", ["Meio"] = "Curta", ["Topo_meio"] = "Curta", ["Rato"] = "Curta", ["Esc_rato"] = "Curta",
+            ["Mercado"] = "Mercado", ["Viela"] = "Mercado",
+        };
+        static readonly Dictionary<string, string> ROTA_A = new Dictionary<string, string>
+        {
+            ["Rampa_baixo"] = "Rampa", ["Hall_palacio"] = "Rampa", ["Palacio_sala"] = "Palácio", ["Sacada_A"] = "Palácio",
+            ["Conector"] = "Conector", ["Conector_fim"] = "Conector", ["Meio"] = "Conector", ["Topo_meio"] = "Conector", ["Janelao"] = "Conector", ["Esc_plataforma"] = "Conector",
+        };
+        static string Pela(string rota) => (rota == "Rampa" || rota == "Curta" ? "pela " : "pelo ") + rota;
+
+        static string NomeJogada(Plano p)
+        {
+            if (p.tr)
+            {
+                var rotas = p.site == 'A' ? ROTA_A : ROTA_B; string bomb = p.site.ToString();
+                var vias = new Dictionary<string, int>();
+                foreach (var j in p.js)
+                {
+                    string ant = null;
+                    foreach (var ps in j.passos)
+                    {
+                        if (ps.area == bomb) { if (ant != null && rotas.TryGetValue(ant, out var rota)) vias[rota] = (vias.TryGetValue(rota, out var n) ? n : 0) + 1; break; }
+                        ant = ps.area;
+                    }
+                }
+                string tipo = p.comprometeu >= 0 && p.comprometeu < 25 ? "Rush" : p.comprometeu >= 0 && p.comprometeu < 50 ? "Execução" : "Default";
+                if (vias.Count == 0) return tipo + " " + bomb + " (sem entrar)";
+                var fortes = vias.Where(kv => kv.Value >= 2).Select(kv => kv.Key).OrderBy(x => x).ToList();
+                if (fortes.Count >= 2) return "Split " + bomb + " (" + fortes[0] + " + " + fortes[1] + ")";
+                return tipo + " " + bomb + " " + Pela(vias.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key).First().Key);
+            }
+            else
+            {
+                int a = 0, meio = 0, b = 0; bool avanco = false;
+                foreach (var j in p.js)
+                {
+                    float ta = 0, tm = 0, tb = 0;
+                    foreach (var ps in j.passos)
+                    {
+                        float d = MathF.Min(ps.ate, 25) - MathF.Max(ps.de, 15);
+                        if (d > 0) { if (ZONA_A.Contains(ps.area)) ta += d; else if (ZONA_B.Contains(ps.area)) tb += d; else tm += d; }
+                        if (ps.de < 20 && LADO_TR.Contains(ps.area)) avanco = true;
+                    }
+                    if (ta > tm && ta > tb) a++; else if (tb > tm && tb >= ta) b++; else meio++;
+                }
+                return "Setup " + a + "-" + meio + "-" + b + (avanco ? " com avanço" : "");
+            }
+        }
+
+        static void NomearJogadas(List<Plano> l) { foreach (var p in l) p.jogada = NomeJogada(p); }
+
+        /// <summary>Uma jogada para a tela do playbook: quantos planos, quanto o time pro venceu, o estilo mais comum e a força medida.</summary>
+        public class InfoJogada { public string nome; public bool tr; public int planos; public float vitoriaPro, forca; public Categoria estilo; }
+
+        static List<InfoJogada> jogadasTR, jogadasCT;
+        /// <summary>As jogadas de um lado com pelo menos PLANOS_MIN_JOGADA planos, da mais comum para a menos.</summary>
+        public static List<InfoJogada> Jogadas(bool tr)
+        {
+            ref var cache = ref (tr ? ref jogadasTR : ref jogadasCT);
+            if (cache != null) return cache;
+            cache = Todos.Where(p => p.tr == tr).GroupBy(p => p.jogada).Where(g => g.Count() >= PLANOS_MIN_JOGADA)
+                .Select(g => new InfoJogada
+                {
+                    nome = g.Key, tr = tr, planos = g.Count(), vitoriaPro = g.Count(p => p.ganhou) / (float)g.Count(),
+                    forca = g.Average(p => Forca(p.idx)), estilo = g.GroupBy(p => p.categoria).OrderByDescending(x => x.Count()).First().Key,
+                }).OrderByDescending(x => x.planos).ToList();
+            return cache;
         }
 
         // ---------------------------------------------------------------- estilos de jogo

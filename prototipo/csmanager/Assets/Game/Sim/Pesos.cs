@@ -57,6 +57,8 @@ namespace CSM.Sim
         public float estilo = 0;
         /// <summary>Estilo dos planos que o IGL prefere no banco de estratégias (decisão 0014). Equilibrada = sem preferência.</summary>
         public Estrategias.Categoria categoria = Estrategias.Categoria.Equilibrada;
+        /// <summary>Playbook do manager (decisão 0022): jogadas que o IGL prefere e que nunca escolhe. null = nenhuma.</summary>
+        public HashSet<string> favoritas, proibidas;
 
         public float Agr(float skillAggression) => MathX.Clamp(skillAggression * (1 + 0.6f * estilo), 0, 1.5f);
 

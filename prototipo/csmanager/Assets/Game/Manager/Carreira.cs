@@ -192,6 +192,8 @@ namespace CSM.Manager
         public Mundo mundo;
         public Serie serie;
         public Estilo estilo = Estilo.Equilibrada;       // a estratégia escolhida para a próxima partida
+        // playbook do manager (decisão 0022): jogadas favoritas e proibidas, por lado
+        public readonly List<string> favoritasTR = new List<string>(), proibidasTR = new List<string>(), favoritasCT = new List<string>(), proibidasCT = new List<string>();
         public int sessoesColetivas; public int estudoMapa = -1;   // plano do time na semana
         public readonly List<Scout> scouts = new List<Scout>();
         public readonly Dictionary<int, float> intel = new Dictionary<int, float>();   // semanas de estudo por time
@@ -811,6 +813,26 @@ namespace CSM.Manager
             }
         }
 
+        // ------------------------------------------------------------------------------------------ playbook (decisão 0022)
+        public const int VAGAS_PLAYBOOK_MAX = 5;
+        /// <summary>Vagas de favorita e de proibida por lado: 1 no nível 1 da Gaming House, +1 por nível, até 5.</summary>
+        public int VagasPlaybook => Math.Min(VAGAS_PLAYBOOK_MAX, nivelGH);
+
+        public enum MarcaJogada { Nenhuma, Favorita, Proibida }
+        public MarcaJogada Marca(string jogada, bool tr) =>
+            (tr ? favoritasTR : favoritasCT).Contains(jogada) ? MarcaJogada.Favorita : (tr ? proibidasTR : proibidasCT).Contains(jogada) ? MarcaJogada.Proibida : MarcaJogada.Nenhuma;
+
+        /// <summary>Marca uma jogada como favorita, proibida ou nenhuma. Devolve a mensagem de erro, ou null se deu certo.</summary>
+        public string MarcarJogada(string jogada, bool tr, MarcaJogada marca)
+        {
+            var fav = tr ? favoritasTR : favoritasCT; var proi = tr ? proibidasTR : proibidasCT;
+            if (marca == MarcaJogada.Favorita && !fav.Contains(jogada) && fav.Count >= VagasPlaybook) return "Sem vaga de favorita (" + VagasPlaybook + " no nível " + nivelGH + " da Gaming House). Desmarque outra ou suba a Gaming House.";
+            if (marca == MarcaJogada.Proibida && !proi.Contains(jogada) && proi.Count >= VagasPlaybook) return "Sem vaga de proibida (" + VagasPlaybook + " no nível " + nivelGH + " da Gaming House). Desmarque outra ou suba a Gaming House.";
+            fav.Remove(jogada); proi.Remove(jogada);
+            if (marca == MarcaJogada.Favorita) fav.Add(jogada); else if (marca == MarcaJogada.Proibida) proi.Add(jogada);
+            return null;
+        }
+
         int Aff(Equipe e, int m) => e.afinidade[m];
 
         /// <summary>Quanto o clube sabe da afinidade do adversário com um mapa (sem informação nível 2, assume neutro).</summary>
@@ -871,7 +893,10 @@ namespace CSM.Manager
         public CSM.Sim.Partida MontarPartida(int seedPartida)
         {
             var adv = Adversario; int mapa = serie != null ? Math.Max(0, serie.MapaAtual) : 0;
-            var pt = new CSM.Sim.Partida(seedPartida, Estilos.Pesos(estilo), Estilos.Pesos(adv != null ? adv.estilo : Estilo.Equilibrada));
+            var pesosA = Estilos.Pesos(estilo);
+            if (favoritasTR.Count + favoritasCT.Count > 0) pesosA.favoritas = new HashSet<string>(favoritasTR.Concat(favoritasCT));
+            if (proibidasTR.Count + proibidasCT.Count > 0) pesosA.proibidas = new HashSet<string>(proibidasTR.Concat(proibidasCT));
+            var pt = new CSM.Sim.Partida(seedPartida, pesosA, Estilos.Pesos(adv != null ? adv.estilo : Estilo.Equilibrada));
             pt.A.nome = clube;
             var vagas = pt.A.js;
             var livres = Titulares.ToList();

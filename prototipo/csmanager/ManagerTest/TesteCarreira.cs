@@ -328,6 +328,29 @@ class TesteCarreira
             Ok(cl.Retrospectos.Count > 5 && cl.Rivais.Count <= Rivalidades.MAX_RIVAIS, "o clube enfrenta vários adversários e tem no máximo " + Rivalidades.MAX_RIVAIS + " rivais");
         }
 
+        // ---------- playbook (decisão 0022)
+        Console.WriteLine("------ playbook ------");
+        {
+            var jt = Estrategias.Jogadas(true); var jc = Estrategias.Jogadas(false);
+            Console.WriteLine("  ataque: " + jt.Count + " jogadas (" + string.Join(", ", jt.Take(4).Select(x => x.nome + " " + x.planos)) + ")");
+            Console.WriteLine("  defesa: " + jc.Count + " jogadas (" + string.Join(", ", jc.Take(4).Select(x => x.nome + " " + x.planos)) + ")");
+            Ok(jt.Count >= 10 && jc.Count >= 10 && jt.All(x => x.planos >= Estrategias.PLANOS_MIN_JOGADA), "o banco vira pelo menos 10 jogadas legíveis por lado");
+            Ok(Estrategias.Todos.All(p => !string.IsNullOrEmpty(p.jogada)) && !jt.Any(x => x.nome.Contains("Rampa + Palácio")), "todo plano tem jogada e o Split não se repete em outra ordem");
+            var cp2 = Carreira.Nova(51);
+            string f1 = jt[0].nome, f2 = jt[1].nome, p1 = jc[0].nome;
+            Ok(cp2.VagasPlaybook == 1 && cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Favorita) == null && cp2.MarcarJogada(f2, true, Carreira.MarcaJogada.Favorita) != null, "nível 1 da Gaming House: 1 favorita por lado");
+            Ok(cp2.MarcarJogada(p1, false, Carreira.MarcaJogada.Proibida) == null && cp2.Marca(p1, false) == Carreira.MarcaJogada.Proibida, "proibir uma jogada da defesa");
+            Ok(cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Proibida) == null && cp2.favoritasTR.Count == 0 && cp2.Marca(f1, true) == Carreira.MarcaJogada.Proibida, "trocar de favorita para proibida libera a vaga");
+            cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Favorita);
+            var ptp2 = cp2.MontarPartida(3);
+            Ok(ptp2.A.pesos.favoritas != null && ptp2.A.pesos.favoritas.Contains(f1) && ptp2.A.pesos.proibidas.Contains(p1) && ptp2.B.pesos.favoritas == null, "o playbook vai para os pesos do seu time, não do adversário");
+            var pd = ptp2.A.pesos.favoritas; ptp2.PedirTimeout(ptp2.A, Estilos.Pesos(Estilo.Agressiva), "Agressiva", true, 1, 3, 0.1f);
+            Ok(ptp2.A.pesos.favoritas == pd && ptp2.A.pesos.categoria == Estrategias.Categoria.Agressiva, "o timeout muda o estilo e mantém o playbook");
+            var opt3 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cl3 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cp2), opt3), opt3));
+            Ok(cl3.favoritasTR.SequenceEqual(cp2.favoritasTR) && cl3.proibidasCT.SequenceEqual(cp2.proibidasCT), "o playbook volta igual do salvamento");
+        }
+
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");
         Environment.Exit(falhas == 0 ? 0 : 1);
     }

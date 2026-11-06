@@ -59,7 +59,7 @@ namespace CSM.Sim
         {
             if (acabou || t.timeouts <= 0) return false;
             t.timeouts--;
-            if (funcionou) { t.pesos = novos; t.focoRounds = roundsFoco; t.foco = foco; }
+            if (funcionou) { if (t.pesos != null && novos != null) { novos.favoritas = t.pesos.favoritas; novos.proibidas = t.pesos.proibidas; } t.pesos = novos; t.focoRounds = roundsFoco; t.foco = foco; }   // o playbook continua depois do timeout
             timeoutsPedidos.Add(new PedidoTimeout { round = r, time = t, estilo = estilo, funcionou = funcionou, chance = chance });
             Log($"TIMEOUT {t.nome} (round {r + 1}): {estilo}, chance {chance:P0} — {(funcionou ? "o time absorveu" : "não absorveu")}");
             return true;

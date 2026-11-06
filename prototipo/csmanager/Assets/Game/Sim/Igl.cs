@@ -375,12 +375,14 @@ namespace CSM.Sim
             var L = m.leitura[(int)team];
             float lado = L != null && L.Adapta ? L.intencao.lado : 0;
             if (tr && L != null && L.Adapta && EXP.Contains("bxIglCrencaLigado")) lado = L.LadoCrenca();   /* bx: lado pela crença contínua (CT visto + não ser previsível) */
-            var w = new float[cands.Count];
+            var w = new float[cands.Count]; var wSem = new float[cands.Count];
             for (int i = 0; i < cands.Count; i++)
             {
                 var p = cands[i]; float f = (EXP.Contains("forcaIgual") ? 1f : Estrategias.Forca(p.idx)) * (p.ganhou ? 1.15f : 0.9f);
                 // estilo escolhido pelo manager (decisão 0014): prefere os planos daquele estilo, sem proibir os outros
                 if (P.categoria != Estrategias.Categoria.Equilibrada && p.categoria == P.categoria && !EXP.Contains("semEstiloBanco")) f *= Estrategias.PREFERENCIA_ESTILO;
+                // playbook do manager (decisão 0022): favorita pesa mais; proibida sai (fica em wSem, para o caso de proibir tudo)
+                if (P.favoritas != null && P.favoritas.Contains(p.jogada)) f *= Estrategias.PREFERENCIA_PLAYBOOK;
                 if (L != null)
                 {
                     if (L.bancoUsados.Contains(p.idx)) f *= 0.25f;
@@ -393,8 +395,11 @@ namespace CSM.Sim
                     for (int k = 0; k < 5; k++) { var z = p.ZonaEntre(k, 15, 25); if (z == "A") nA++; else if (z == "B") nB++; }
                     f *= MathF.Exp(0.3f * lado * (nA - nB));
                 }
-                w[i] = f;
+                wSem[i] = f;
+                w[i] = P.proibidas != null && P.proibidas.Contains(p.jogada) ? 0f : f;
             }
+            float somaW = 0; foreach (var x in w) somaW += x;
+            if (somaW <= 0) w = wSem;   // proibiu tudo o que cabe nesta compra: o IGL ignora as proibições neste round
             estr = cands[rng.Weighted(w)];
             L?.bancoUsados.Add(estr.idx);
             plan = "banco " + estr.Tipo;
