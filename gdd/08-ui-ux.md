@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020
 
 _Telas, HUD e fluxo de navegação._
 
@@ -26,7 +26,7 @@ _Telas, HUD e fluxo de navegação._
 | Pré-partida | Tela cheia de cada mapa: os dois times frente a frente (brasão redondo, força, os 5 jogadores), a **chance de vencer o mapa**, os **bonecos 3D do jogo** nas laterais e a barra de ações: **Assistir mapa** (lima), **Pular mapa**, **Pular série**, voltar, estratégia |
 | Gaming House | Os 5 níveis, o que cada um libera, custo e manutenção, e o botão de subir (decisão 0016) |
 | Finanças | Saldo, fluxo semanal (patrocínio, salários, manutenção, parcelas), **empréstimo** (pegar e quitar), campeonatos disputados e extrato; aviso do prazo de falência (decisão 0015) |
-| Pós-partida | Resultado do mapa e da série, campeonato e prêmio quando acaba; **desempenho de cada jogador** (abates, mortes, K/D, HS %, dano por round, primeiro abate). Na partida assistida os números vêm da simulação; na pulada são **estimados** e avisados como tal |
+| Pós-partida | Resultado do mapa e da série, campeonato e prêmio quando acaba; **desempenho de cada jogador** (abates, mortes, K/D, HS %, dano por round, primeiro abate). Na partida assistida os números vêm da simulação; na pulada são **estimados** e avisados como tal. **Jogada da partida** (só na assistida: o lance de maior nota, dizendo se foi do seu time ou do adversário), selo **MVP** no melhor do mapa e **MVP da série** no último mapa (decisão 0020) |
 
 **Direção visual da interface do manager** (referências dos autores: apps modernos de interface escura e a tela de pré-partida de um jogo de futebol): tema escuro, cartões bem arredondados com borda fina, barra lateral com contadores, tabelas só com linhas finas, e a cor lima reservada à ação principal e à aba escolhida. Uma segunda referência (menus de um jogo de futebol: cartões brancos grandes com ilustração, selo de contagem no canto, botão lima, abas lima) inspira o **hub** do painel. Laranja é o nosso time e azul o adversário, como na partida. É uma interface **visual, de cartões**, não uma planilha densa. Os retratos dos jogadores são o render 3D do boneco do jogo; hoje todos usam o **mesmo** modelo (a aparência por jogador é pergunta de arte). Ainda não há brasões: o protótipo usa a inicial. O visual de referência está em `prototipo/mockup-ui/` (HTML/CSS, só para aprovar o desenho) e é implementado em USS na Unity (decisão 0011).
 

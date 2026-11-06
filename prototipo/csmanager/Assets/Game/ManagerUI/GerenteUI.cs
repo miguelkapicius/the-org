@@ -585,6 +585,16 @@ namespace CSM.ManagerUI
             return l;
         }
 
+        /// <summary>"MVP 3× (1 de série)", com as últimas jogadas da partida dele ao passar o mouse (decisão 0020).</summary>
+        static VisualElement Mvps(Jogador j, string antes)
+        {
+            var l = L(antes + "MVP " + j.mvps + "×" + (j.mvpsSerie > 0 ? " (" + j.mvpsSerie + " de série)" : ""), "f14", j.mvps > 0 ? "verde" : "suave");
+            l.pickingMode = PickingMode.Position;
+            ComDica(l, "Vezes que foi MVP de mapa" + (j.mvpsSerie > 0 ? " e de série" : "") + " pelo clube." +
+                       (j.jogadas.Count > 0 ? "\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : "\n\nAinda sem jogada da partida (só conta a partida assistida)."));
+            return l;
+        }
+
         VisualElement CartaoJogador(Jogador j)
         {
             var cj = E("card-j");
@@ -596,6 +606,7 @@ namespace CSM.ManagerUI
             info.Add(NomeComTraco(j, "info-nome", true));
             info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave", "info-meta"));
             info.Add(AtributoLinha("Moral", (int)j.moral));
+            if (j.mvps > 0 || j.jogadas.Count > 0) info.Add(Mvps(j, ""));
             info.Add(AtributoLinha("Mira", j.Mira));
             info.Add(AtributoLinha("Reflexo", j.Reflexo));
             info.Add(AtributoLinha("Spray", j.Spray));
@@ -639,6 +650,18 @@ namespace CSM.ManagerUI
                 if (fim != null) conteudo.Add(L("Campeonato encerrado: " + Fmt.Ordinal(fim.posicao) + " lugar, prêmio " + Fmt.Dinheiro(fim.premio) + ".", "f17", "negrito", "verde"));
             }
 
+            // melhores momentos (decisão 0020)
+            conteudo.Add(L("Jogada da partida", "h2"));
+            if (r.jogada != null)
+            {
+                var jg = E("linha-h"); jg.style.alignItems = Align.Center;
+                jg.Add(Selo(r.jogadaNossa ? "DO SEU TIME" : "DO ADVERSÁRIO", r.jogadaNossa ? "verde" : "vermelho"));
+                var tj = L(r.jogada, "f18", "negrito"); tj.style.marginLeft = 12; tj.style.whiteSpace = WhiteSpace.Normal; tj.style.flexShrink = 1; jg.Add(tj);
+                conteudo.Add(jg);
+            }
+            else conteudo.Add(L(r.assistida ? "Nenhum abate marcante nesta partida." : "O mapa foi pulado: só a partida assistida tem jogada da partida.", "f15", "suave"));
+            if (r.mvpSerie != null) { var mvs = L("MVP da série: " + r.mvpSerie, "f17", "negrito", "verde"); mvs.style.marginTop = 10; conteudo.Add(mvs); }
+
             conteudo.Add(L("Desempenho dos jogadores", "h2"));
             if (r.estimado) conteudo.Add(L("Números estimados: o mapa foi pulado, então não houve simulação. Assista para ver o desempenho real.", "nota-estimada"));
             var melhor = r.Melhor;
@@ -656,7 +679,7 @@ namespace CSM.ManagerUI
                 nomes.Add(L(d.nome, "f17", "negrito"));
                 nomes.Add(L(Fmt.Funcao(d.funcao), "f14", "suave"));
                 pessoa.Add(nomes);
-                if (d == melhor) { var s = Selo("MELHOR", "verde"); s.style.marginLeft = 12; pessoa.Add(s); }
+                if (d == melhor) { var s = Selo("MVP", "verde"); s.style.marginLeft = 12; ComDica(s, "MVP do mapa: a melhor nota de desempenho (abates, mortes e dano por round)."); pessoa.Add(s); }
                 linha.Add(Celula("c-j", pessoa).WithClass("largo"));
                 linha.Add(Celula("c-n", L(d.k.ToString(), "negrito")));
                 linha.Add(Celula("c-n", L(d.d.ToString())));
@@ -904,6 +927,7 @@ namespace CSM.ManagerUI
                 var meta = E(); meta.style.flexDirection = FlexDirection.Row;
                 meta.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
                 if (doElenco) meta.Add(Moral(j, " · "));
+                if (doElenco && (j.mvps > 0 || j.jogadas.Count > 0)) meta.Add(Mvps(j, " · "));
                 nomes.Add(meta);
                 pessoa.Add(nomes);
                 r.Add(Celula("c-j", pessoa));

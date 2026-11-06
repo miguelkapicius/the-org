@@ -54,3 +54,5 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Melhores momentos | Lances-chave de um round ou partida, mostrados em replay na transmissão e no pós-partida. | highlights | 08-ui-ux |
 | Rivalidade | Adversário com histórico marcante contra o clube (finais, eliminações, sequências). | clássico | 11-ideias |
 | Modo resumo | Forma de assistir só os rounds decisivos de uma partida e pular o resto. | modo rápido | 11-ideias |
+| Jogada da partida | O lance de maior nota de uma partida assistida (abates de um jogador, com destaque para clutch, multi-kill, AWP, na cabeça...). | jogada do jogo, play of the game | 08-ui-ux |
+| MVP | O jogador do clube com a melhor nota de desempenho num mapa (MVP do mapa) ou na soma dos mapas de uma série (MVP da série). | craque do jogo, melhor em campo | 08-ui-ux |

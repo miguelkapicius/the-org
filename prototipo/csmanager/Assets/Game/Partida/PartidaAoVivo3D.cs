@@ -424,6 +424,7 @@ namespace CSM.View3D
                 var r = new Rect(W / 2 - 190, H / 2 - 60, 380, 120);
                 GUI.Box(r, GUIContent.none, sCaixa);
                 GUI.Label(new Rect(r.x + 12, r.y + 10, r.width - 24, 50), $"<b>{(venceu ? "Vitória" : "Derrota")}</b>  {pt.A.nome} {pt.A.placar} x {pt.B.placar} {pt.B.nome}", sTxt);
+                if (pt.jogada != null) GUI.Label(new Rect(r.x + 12, r.y + 32, r.width - 24, 34), $"<b>Jogada da partida:</b> {pt.jogada.Descricao}", sTxt);   // decisão 0020
                 if (GUI.Button(new Rect(r.x + 12, r.y + 66, r.width - 24, 40), "Voltar ao manager", sBotao))
                 {
                     // números reais de cada jogador, vindos da simulação (viram a tela de pós-partida)
@@ -433,7 +434,7 @@ namespace CSM.View3D
                         var pj = pt.A.js[jj];
                         desempenho.Add(new CSM.Manager.Desempenho { nome = pj.nome, funcao = pj.roleT, k = pj.k, d = pj.d, hs = pj.hs, dano = pj.dano, fk = pj.fk, rounds = Mathf.Max(1, pj.rounds) });
                     }
-                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true, desempenho);
+                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true, desempenho, pt.jogada);
                     CSM.ManagerUI.Salvamento.Salvar(carreira);
                     UnityEngine.SceneManagement.SceneManager.LoadScene("Manager");
                     return;

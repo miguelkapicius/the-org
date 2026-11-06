@@ -53,6 +53,8 @@ namespace CSM.Manager
         public int mapasNaSemana;                   // partidas jogadas nesta semana (alimenta o cansaço)
         public Traco traco;                         // personalidade (decisão 0019): no mercado só se vê com scout, como o potencial
         public float moral = Provisorio.MORAL_INICIAL, entrosamento = Provisorio.ENTROSAMENTO_INICIAL;   // 0..100
+        public int mvps, mvpsSerie;                 // vezes que foi MVP de mapa e de série no clube (decisão 0020)
+        public List<string> jogadas = new List<string>();   // últimas jogadas da partida dele, a mais nova primeiro
 
         public static readonly string[] NOMES = { "Mira", "Reflexo", "Spray", "Utilitária", "Sangue-frio" };
         static readonly float[] PIOR = { 1.4f, 0.30f, 0.5f, 0.4f, 0.4f }, MELHOR = { 0.5f, 0.15f, 0.95f, 0.95f, 0.95f };

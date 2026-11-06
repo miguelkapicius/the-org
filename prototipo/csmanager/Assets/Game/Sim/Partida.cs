@@ -48,6 +48,9 @@ namespace CSM.Sim
         public class PedidoTimeout { public int round; public Time time; public string estilo; public bool funcionou; public float chance; }
         public readonly List<PedidoTimeout> timeoutsPedidos = new List<PedidoTimeout>();
 
+        /// <summary>A jogada da partida (decisão 0020): o lance de maior nota de todos os rounds, dos dois times. null = sem abate.</summary>
+        public Destaques.Lance jogada;
+
         /// <summary>
         /// O manager pediu um timeout. Gasta um; se <paramref name="funcionou"/> (a regra da chance fica no manager), o time passa a
         /// jogar com <paramref name="novos"/> e ganha foco. Vale a partir do próximo round (os pesos entram no Preparar).
@@ -516,6 +519,11 @@ namespace CSM.Sim
         {
             bool tWin = m.winner == "TR";
             foreach (var j in A.js.Concat(B.js)) j.morreuPrimeiro = m.firstDeath != null && m.firstDeath.name == j.nome;   // traço Esquentado
+            foreach (var l in Destaques.DoRound(m))
+            {
+                l.round = r; l.time = l.tr ? tAtual : ctAtual;
+                if (jogada == null || l.nota > jogada.nota) jogada = l;
+            }
             var ganhou = tWin ? tAtual : ctAtual; var perdeu = tWin ? ctAtual : tAtual;
             ganhou.placar++; ultimo = ganhou;
             // leitura: cada time anota o próprio plano (e se deu certo) e o que viu do adversário
