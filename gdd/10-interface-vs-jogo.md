@@ -21,7 +21,7 @@ Levantamento feito no código de `prototipo/csmanager` em 2026-11-06. Caminhos d
 2. ~~A estratégia muda menos do que a descrição promete.~~ **Resolvido (item E2, decisão 0017):** os planos de round do banco foram classificados nos 5 estilos e o IGL prefere os do estilo escolhido. Falta medir o ciclo de contra (item E3).
 3. **Os adversários não têm jogadores de verdade.** São um número de força copiado nos 5 bonecos; "jogador de destaque" do scout é sorteado (itens J3 e S2).
 4. **A partida pulada não é calibrada com a simulação** e nunca dá 13 x 12 nem prorrogação (item P1).
-5. **Timeout não existe** no código (item E5), embora o GDD conte com ele como a intervenção do manager.
+5. ~~Timeout não existe.~~ **Resolvido (item E5, decisão 0018):** 3 timeouts na partida assistida, com chance de funcionar.
 
 ## 1. Mapas
 
@@ -64,7 +64,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | E2 | "Execuções rápidas: decide o bomb cedo"; "Controle de mapa: só executa tarde" | Cada plano de round do banco tem um estilo, calculado dos dados (`Sim/Estrategias.cs`, `Classificar`), e o IGL dá peso 6 aos planos do estilo do time (`Sim/Igl.cs`, `EscolherDoBanco`). Medido (18 partidas por estilo): os rounds com plano do estilo subiram de 16–37 % para 50–74 % no TR e de 10–38 % para 47–78 % no CT; o plant médio vai de 54 s (Execuções rápidas) a 69 s (Defensiva). Detalhes em `02-mecanicas.md` | ✅ (CT agressivo ainda não aumenta as trocas cedo; ver 02) |
 | E3 | Ciclo de contra (Agressiva perde para Defensiva, que perde para Execuções rápidas, que perde para Controle de mapa, que perde para Agressiva); o contra certo dá bônus | O bônus é um número fixo: ±2 % na habilidade (`Provisorio.ESTRATEGIA_CONTRA`). O ciclo foi escrito à mão, não saiu da simulação | 🟡 |
 | E4 | Estilo do adversário (revelado pelo scout) | Sorteado na criação do mundo e fixo para sempre; o adversário nunca troca de estilo nem se adapta ao nosso | 🟡 |
-| E5 | — (GDD: 3 timeouts por partida, o manager escolhe o estilo) | Não há código de timeout. A intenção está só no comentário de `Sim/Pesos.cs` | ❌ |
+| E5 | Timeout na transmissão: botão e tecla T, painel com a chance e os 5 estilos (decisão 0018) | Regra em `Manager/Timeouts.cs`, efeito em `Sim/Partida.cs` (`PedirTimeout`), painel em `Partida/PartidaAoVivo3D.Timeout.cs`. Testado sem a Unity: estilo e foco aplicados certo nos rounds seguintes; 4º timeout recusado. O adversário ainda não pede timeout | ✅ |
 | E6 | — (pergunta aberta: compras padrão do time) | A compra é toda decidida pela simulação (`Sim/Partida.cs`) | ❌ (depende de decisão) |
 
 **Para a interface corresponder:**

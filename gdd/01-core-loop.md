@@ -1,6 +1,6 @@
 # Core loop
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014, 0018
 
 _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 
@@ -15,6 +15,7 @@ Durante a partida, o jogador **assiste**: troca de câmera entre jogadores, vê 
   - **A chance depende de:** atributos dos jogadores, nível da Gaming House e momento da partida.
   - **O que pode mudar:** o estilo do time, por exemplo ficar **mais agressivo** ou **mais defensivo**. **O manager escolhe** o estilo durante o timeout.
   - **Peso de cada fator:** a definir no balanceamento. É a **única** intervenção durante a partida; fora isso, ele só assiste.
+  - **No protótipo (decisão 0018, proposta do agente):** os estilos são os mesmos 5 da estratégia; a transmissão pausa enquanto o manager escolhe e mostra a chance antes (base 50 %, sangue-frio dos titulares ±15 %, +5 % por nível da Gaming House, +4 % por round perdido em sequência até +12 %, -10 % se vence por 4 ou mais; entre 20 % e 90 %). Se funciona, o time joga no novo estilo a partir do próximo round e ganha foco (+10 % de sangue-frio por 3 rounds); se não, o timeout é gasto e nada muda. Tecla **T** ou botão "Timeout" na transmissão.
 
 ### Pular partida (decisão 0008)
 
@@ -50,6 +51,5 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 ## Perguntas em aberto
 
 - Balanceamento: quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar?
-- Quais estilos o manager pode escolher além de agressivo e defensivo?
 - Quanto dura uma partida assistida? (MR12? MR15? rounds mais curtos?)
 - Balancear o calendário: quantos campeonatos por temporada em cada circuito, premiações e pontos do ranking (valores provisórios da decisão 0012).

@@ -22,6 +22,8 @@ namespace CSM.Sim
         public float composure = 0.8f;      // erra menos no clutch / sob pressão
         public float utilitaria = 0.8f;     // execução de granada: sabe o pixel, mas quanto acerta (0..1)
 
+        public Skill Copia() => (Skill)MemberwiseClone();
+
         /// <summary>
         /// Estilo de jogador pela função (arquétipos do cenário pro): entry agressivo que abre (tipo apEX), AWPer calmo e
         /// preciso (tipo FalleN), lurker paciente, suporte da utilitária, IGL que pensa pelo time (mira um pouco pior),

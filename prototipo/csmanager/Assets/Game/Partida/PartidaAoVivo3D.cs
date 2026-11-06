@@ -14,7 +14,7 @@ namespace CSM.View3D
     /// A partida ao vivo no visual de maquete: a MESMA simulação da PartidaAoVivo (2D), desenhada em 3D — bonecos do
     /// Blender (Boneco3D) com a escolha de animação (câmera e passo em Transmissao), smoke por volume (Fumaca3D), fogo do
     /// molotov, rastro de tiro, granada voando, armas no chão e C4. Câmera segue a ação como no 2D (Transmissao.Mirar).
-    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, Esc câmera automática, roda do mouse = zoom.
+    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, T timeout, Esc câmera automática, roda do mouse = zoom.
     /// </summary>
     public partial class PartidaAoVivo3D : MonoBehaviour
     {
@@ -368,6 +368,8 @@ namespace CSM.View3D
 
         void Teclado()
         {
+            if (Input.GetKeyDown(KeyCode.T)) AbrirTimeout();
+            if (timeoutAberto) return;   // escolhendo o timeout: a partida fica parada
             if (Input.GetKeyDown(KeyCode.Space)) pausado = !pausado && !acabou;
             if (Input.GetKeyDown(KeyCode.Alpha1)) velocidade = 1; if (Input.GetKeyDown(KeyCode.Alpha2)) velocidade = 2;
             if (Input.GetKeyDown(KeyCode.Alpha3)) velocidade = 4; if (Input.GetKeyDown(KeyCode.Alpha4)) velocidade = 8;
@@ -410,6 +412,10 @@ namespace CSM.View3D
             x = 14; y += 26;
             if (B("Próximo round", 96)) PulaRound();
             if (B(painel ? "Sem pensamento" : "Pensamento (P)", 110)) painel = !painel;
+            x = 14; y += 26;
+            if (pt.A.timeouts > 0 && !acabou) { if (B($"Timeout (T) · {pt.A.timeouts}", 110)) AbrirTimeout(); }
+            else GUI.Label(new Rect(x, y, 160, 22), "Sem timeouts", sTxt);
+            TimeoutGUI(W, H);
             // partida vinda do manager: no fim, fecha a partida da carreira (prêmio, salários) e volta ao painel do clube
             var carreira = CSM.Manager.Carreira.Atual;
             if (acabou && carreira != null && carreira.emPartida)
