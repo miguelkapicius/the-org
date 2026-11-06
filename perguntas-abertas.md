@@ -44,7 +44,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 5. Para depois
 
-- [ ] Quais estilos o manager pode escolher no timeout além de agressivo e defensivo? → `gdd/01-core-loop.md`
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
 - [ ] O que transforma um adversário em rival (número de confrontos, finais, eliminações)? → `gdd/11-ideias.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
@@ -52,6 +51,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 6. Validar sugestões do agente
 
-- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) e **0017** (estratégia escolhe os planos de round pelo estilo): confirmar os detalhes marcados como proposta do agente.
+- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) e **0018** (timeout do manager): confirmar os detalhes marcados como proposta do agente.
 
 - [ ] Revisar os trechos marcados **[Sugestão]** no GDD (principalmente `00-visao.md` e `02-mecanicas.md`): confirmar (tirar a marca) ou apagar.

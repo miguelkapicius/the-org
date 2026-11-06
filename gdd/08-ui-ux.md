@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018
 
 _Telas, HUD e fluxo de navegação._
 
@@ -49,6 +49,7 @@ HUD da partida no estilo **transmissão competitiva** (decisão 0002):
 - vida dos companheiros de time;
 - minimapa;
 - **[Sugestão]** placar, tempo do round, dinheiro de cada jogador, arma equipada, killfeed.
+- **[Sugestão]** **Timeout** (decisão 0018): botão "Timeout (T)" com quantos restam; abre um painel que pausa a partida, mostra a chance de o time absorver (e de onde ela vem) e os 5 estilos com a descrição; o resultado aparece num aviso no alto da tela por alguns segundos.
 
 ## Feedback ao jogador
 

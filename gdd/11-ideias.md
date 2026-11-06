@@ -1,6 +1,6 @@
 # Ideias de features (backlog)
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0013, 0014, 0016, 0017
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0013, 0014, 0016, 0017, 0018
 
 _Banco de ideias para deixar o jogo mais envolvente ("só mais uma semana"). Nada aqui é decisão: cada ideia vira decisão em `decisoes/` antes de ser implementada. Ideias do agente, priorizadas pelo autor em 2026-11-06._
 
@@ -26,7 +26,7 @@ Três camadas, cada uma com uma razão para continuar jogando:
 
 | # | Ideia | O que é | Por que vale | Liga com | Depende de |
 |---|---|---|---|---|---|
-| 1 | **Timeout de verdade** | O manager pede um timeout (3 por partida); a transmissão pausa, ele escolhe o estilo e o time muda na hora, com chance de funcionar | É a única intervenção na partida (decisão 0001) e ainda não existe (item E5 de `10-interface-vs-jogo.md`). Agora o estilo muda os planos de round, então o efeito é real | `01-core-loop.md` (timeout), decisões 0014 e 0017 | Pergunta aberta: estilos além de agressivo e defensivo; pesos da chance de funcionar |
+| 1 | **Timeout de verdade** — ✅ primeira versão feita (decisão 0018, `01-core-loop.md`) | O manager pede um timeout (3 por partida); a transmissão pausa, ele escolhe o estilo e o time muda na hora, com chance de funcionar | É a única intervenção na partida (decisão 0001) e ainda não existe (item E5 de `10-interface-vs-jogo.md`). Agora o estilo muda os planos de round, então o efeito é real | `01-core-loop.md` (timeout), decisões 0014 e 0017 | Pesos da chance de funcionar (balanceamento). Falta: timeout do adversário |
 | 2 | **Jogadores com personalidade** | **Traços** (ex.: clutch, tilta depois de morrer cedo, líder, estrela vaidosa), **moral** e **entrosamento** entre duplas que muda a simulação (ex.: velocidade do trade kill) | Cria histórias ("ele sempre aparece no Major") e decisões de elenco além do número geral | `02-mecanicas.md` (atributos), `03-progressao.md`, sessões coletivas da Gaming House (hoje só dão preparo, item T2) | Pergunta aberta: quais atributos o jogador tem. Moral ainda não tem regra no GDD |
 | 3 | **Melhores momentos no pós-partida** | Eleger a jogada da partida e o MVP da série a partir do replay de melhores momentos que a transmissão já tem; guardar no histórico do jogador | Reforça "assistir é o prêmio" e alimenta as histórias da ideia 4 | `08-ui-ux.md` (pós-partida), `Partida/PartidaAoVivo3D.Replay.cs` | Só a partida assistida tem lances; a pulada não |
 | 4 | **Rivalidades e notícias com memória** | O painel de notícias passa a contar a história do clube: revanche de finais, sequências contra um rival, jovem que virou destaque | Dá significado aos resultados no médio e longo prazo | Notícias do painel do clube (`08-ui-ux.md`), histórico de partidas salvo | Regra do que vira rivalidade (número de confrontos? finais?) |
