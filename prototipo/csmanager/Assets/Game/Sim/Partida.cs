@@ -32,7 +32,38 @@ namespace CSM.Sim
             public int k, d, hs, dano, fk, rounds, guardou;
             public Role Role(bool t) => t ? roleT : roleCT;
         }
-        public class Time { public string nome; public Jogador[] js; public int placar, nivelPerda; public Pesos pesos; public readonly Leitura leitura = new Leitura(); }
+        public class Time
+        {
+            public string nome; public Jogador[] js; public int placar, nivelPerda; public Pesos pesos; public readonly Leitura leitura = new Leitura();
+            /// <summary>Timeouts que ainda pode pedir (decisão 0018) e o foco que um timeout que funcionou deu: +foco no sangue-frio por focoRounds rounds.</summary>
+            public int timeouts = TIMEOUTS, focoRounds; public float foco;
+        }
+
+        // ---------------------------------------------------------------- timeout (decisão 0018)
+        public const int TIMEOUTS = 3;
+        public class PedidoTimeout { public int round; public Time time; public string estilo; public bool funcionou; public float chance; }
+        public readonly List<PedidoTimeout> timeoutsPedidos = new List<PedidoTimeout>();
+
+        /// <summary>
+        /// O manager pediu um timeout. Gasta um; se <paramref name="funcionou"/> (a regra da chance fica no manager), o time passa a
+        /// jogar com <paramref name="novos"/> e ganha foco. Vale a partir do próximo round (os pesos entram no Preparar).
+        /// </summary>
+        public bool PedirTimeout(Time t, Pesos novos, string estilo, bool funcionou, float chance, int roundsFoco, float foco)
+        {
+            if (acabou || t.timeouts <= 0) return false;
+            t.timeouts--;
+            if (funcionou) { t.pesos = novos; t.focoRounds = roundsFoco; t.foco = foco; }
+            timeoutsPedidos.Add(new PedidoTimeout { round = r, time = t, estilo = estilo, funcionou = funcionou, chance = chance });
+            Log($"TIMEOUT {t.nome} (round {r + 1}): {estilo}, chance {chance:P0} — {(funcionou ? "o time absorveu" : "não absorveu")}");
+            return true;
+        }
+
+        /// <summary>A habilidade que o jogador leva para o round: a dele, com o foco do timeout somado ao sangue-frio enquanto durar.</summary>
+        static Skill SkillDoRound(Time t, Jogador j)
+        {
+            if (t.focoRounds <= 0) return j.skill;
+            var s = j.skill.Copia(); s.composure = MathX.Clamp(s.composure * (1 + t.foco), 0, 1); return s;
+        }
 
         public class Info
         {
@@ -111,7 +142,8 @@ namespace CSM.Sim
             if (!TeamBrain.EXP.Contains("dropTeleporte")) EntregasEmCampo(setup);
             var aperto = new float[2]; aperto[(int)Team.T] = Aperto(tAtual, ctAtual); aperto[(int)Team.CT] = Aperto(ctAtual, tAtual);
             var m = new Match(seed * 1000 + r, tAtual.pesos?.Clone(), ctAtual.pesos?.Clone(), setup, new[] { compraTAtual, compraCTAtual }, aperto, SemLeitura ? null : tAtual.leitura, SemLeitura ? null : ctAtual.leitura);
-            for (int i = 0; i < 10; i++) m.agents[i].skill = (i < 5 ? tAtual : ctAtual).js[i % 5].skill;
+            for (int i = 0; i < 10; i++) { var tm = i < 5 ? tAtual : ctAtual; m.agents[i].skill = SkillDoRound(tm, tm.js[i % 5]); }
+            foreach (var tm in new[] { A, B }) if (tm.focoRounds > 0) tm.focoRounds--;   // o foco do timeout vale por rounds
             m.semAmanha[(int)Team.T] = SemAmanha(ctAtual); m.semAmanha[(int)Team.CT] = SemAmanha(tAtual);
             AgendaCompras(m, antesInv);
             // arrependeu da compra (CS2: vende de volta na base, no tempo de compra, pelo preço cheio): quem comprou no
