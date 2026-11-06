@@ -36,6 +36,7 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Mapa jogável | Mapa do pool que tem geometria 3D e os dados da IA, e por isso pode ser assistido. Hoje só um. | mapa 3D (ambíguo) | 10-interface-vs-jogo |
 | Afinidade | O quanto um time domina um mapa (0 a 100); entra na habilidade na partida. | domínio | 02-mecanicas |
 | Estratégia | Conjunto de ajustes de estilo da IA do time (agressiva, defensiva, execuções rápidas...) escolhido na pré-partida. | tática, plano de jogo | 02-mecanicas |
+| Plano de round | Um round pro gravado no banco da IA (rotas e tempos dos 5 jogadores) que o IGL segue. Cada plano tem um dos 5 estilos da estratégia. | tática, play | 02-mecanicas |
 | Treino | Plano semanal que o manager define para cada jogador (foco e frequência). Evolui atributos e gera preparo e cansaço. | prática | 02-mecanicas |
 | Preparo | Bônus temporário de habilidade nas partidas que vem do treino recente. | buff | 02-mecanicas |
 | Cansaço | Desgaste dos jogadores por treino e partidas; acima de um limite reduz a habilidade. | fadiga, stamina | 02-mecanicas |

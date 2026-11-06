@@ -1,6 +1,6 @@
 # Interface × jogo: o que a interface promete e o jogo ainda não faz
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0008, 0011, 0013, 0014, 0016
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0008, 0011, 0013, 0014, 0016, 0017
 
 _Lista de trabalho. A interface do manager (decisão 0011) já mostra mapas, estratégias, funções, scouts e outras coisas que a partida ainda não tem de verdade. Este arquivo diz o que é real, o que é aproximado e o que só existe na tela, e o que precisa ser feito no jogo para a interface corresponder._
 
@@ -18,7 +18,7 @@ Levantamento feito no código de `prototipo/csmanager` em 2026-11-06. Caminhos d
 ## Resumo: o que mais pesa
 
 1. **Só existe um mapa jogável.** O veto e a afinidade usam 7 mapas, mas toda partida assistida roda no mesmo mapa (seção 1). Fazer um segundo mapa exige primeiro tirar o mapa "fixo no código" (item M1).
-2. **A estratégia muda menos do que a descrição promete.** Os presets mexem em pesos da IA, mas o plano de cada round do TR vem do banco de estratégias, que ignora o preset (item E2). Precisa medir antes de prometer na tela.
+2. ~~A estratégia muda menos do que a descrição promete.~~ **Resolvido (item E2, decisão 0017):** os planos de round do banco foram classificados nos 5 estilos e o IGL prefere os do estilo escolhido. Falta medir o ciclo de contra (item E3).
 3. **Os adversários não têm jogadores de verdade.** São um número de força copiado nos 5 bonecos; "jogador de destaque" do scout é sorteado (itens J3 e S2).
 4. **A partida pulada não é calibrada com a simulação** e nunca dá 13 x 12 nem prorrogação (item P1).
 5. **Timeout não existe** no código (item E5), embora o GDD conte com ele como a intervenção do manager.
@@ -41,7 +41,8 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | Planta, alturas, áreas com nome | `Map/MapData.cs` (estática) | À mão, da planta aprovada |
 | Navegação | `Map/NavGrid.cs`, `Map/NavCheck.cs`, `Map/MapCheck.cs` | Gerada da planta |
 | Lugares táticos (posições do CT, reunião do TR, lineups de granada, spots de plant e pós-plant) | `Sim/Places.cs`, `Map/Spots.cs` | À mão |
-| Banco de estratégias (rotas dos 5 por round) | `Sim/EstrategiasDados.cs` | Convertido de rounds pro de **Mirage** (`Tools/estrategias/converter.py`), com as regiões da Vila |
+| Banco de estratégias (rotas dos 5 por round) | `Sim/EstrategiasDados.cs` | Convertido de rounds pro de **Mirage** (`Tools/estrategias/converter.py`), com as regiões da Vila. Precisa ter planos de **todos os 5 estilos** (decisão 0017) |
+| Áreas da classificação por estilo (lado do TR, disputadas, meio, bombs) | `Sim/Estrategias.cs` (`LADO_TR`, `DISPUTADAS`...) | Medidas nos dados da Vila |
 | Força medida de cada estratégia | `Sim/EstrategiasForca.cs` | Medida rodando a simulação sem gráficos |
 | Onde cada time costuma estar / de onde o inimigo aparece | `Sim/rotas.bin`, `Sim/aparece.bin`, `Sim/posicoes.txt` | Aprendidos rodando muitos rounds (`Editor/MatchCli.cs`) |
 | Pesos da IA | `Sim/pesos.txt` | Treinados nesta geometria; reavaliar em cada mapa novo |
@@ -60,7 +61,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | # | O que a interface mostra | O que o jogo faz hoje | Status |
 |---|---|---|---|
 | E1 | 5 presets na preparação da série: Equilibrada, Agressiva, Defensiva, Execuções rápidas, Controle de mapa, cada um com descrição (`Mundo.cs`, `Estilos.Descricao`) | O preset vira pesos da IA (`Estilos.Pesos`) e entra na partida dos dois times (`MontarPartida`) | ✅ chega à IA |
-| E2 | "Execuções rápidas: decide o bomb cedo"; "Controle de mapa: só executa tarde" | Na maior parte dos rounds do TR o IGL pega um plano do **banco de estratégias** (`Sim/Igl.cs`, `EscolherDoBanco`). A escolha pesa força, compra e leitura, mas **não olha o preset**. Nos planos do banco a hora de entrar vem do próprio plano gravado; `tExec`, `tFake` e `tExecDefault` só valem fora do banco ou como reserva. O que muda sempre é a agressão individual (`estilo`, `quieto`, `avancar`) e a agressão do CT | 🟡 não medido |
+| E2 | "Execuções rápidas: decide o bomb cedo"; "Controle de mapa: só executa tarde" | Cada plano de round do banco tem um estilo, calculado dos dados (`Sim/Estrategias.cs`, `Classificar`), e o IGL dá peso 6 aos planos do estilo do time (`Sim/Igl.cs`, `EscolherDoBanco`). Medido (18 partidas por estilo): os rounds com plano do estilo subiram de 16–37 % para 50–74 % no TR e de 10–38 % para 47–78 % no CT; o plant médio vai de 54 s (Execuções rápidas) a 69 s (Defensiva). Detalhes em `02-mecanicas.md` | ✅ (CT agressivo ainda não aumenta as trocas cedo; ver 02) |
 | E3 | Ciclo de contra (Agressiva perde para Defensiva, que perde para Execuções rápidas, que perde para Controle de mapa, que perde para Agressiva); o contra certo dá bônus | O bônus é um número fixo: ±2 % na habilidade (`Provisorio.ESTRATEGIA_CONTRA`). O ciclo foi escrito à mão, não saiu da simulação | 🟡 |
 | E4 | Estilo do adversário (revelado pelo scout) | Sorteado na criação do mundo e fixo para sempre; o adversário nunca troca de estilo nem se adapta ao nosso | 🟡 |
 | E5 | — (GDD: 3 timeouts por partida, o manager escolhe o estilo) | Não há código de timeout. A intenção está só no comentário de `Sim/Pesos.cs` | ❌ |
@@ -68,8 +69,8 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 
 **Para a interface corresponder:**
 
-- Medir com `MatchCli` (sem gráficos, muitos rounds) o que cada preset muda: hora do plant, duelos nos primeiros 20 s, rounds com rush, vitórias por lado. Se a diferença não aparecer, fazer o banco de estratégias respeitar o preset (por exemplo, pesar planos rápidos ou lentos conforme o estilo).
-- Medir se o ciclo de contra acontece na simulação. Se não acontecer, trocar o ciclo pelo que a simulação mostrar, ou ajustar os pesos até acontecer, e só então tirar o bônus fixo.
+- ~~Fazer o banco de estratégias respeitar o preset.~~ Feito (decisão 0017). Para medir de novo: `Headless -estilos` (ver `prototipo/csmanager/README.md`).
+- Medir se o ciclo de contra acontece na simulação (dá para estender o `Headless -estilos` para B com outros estilos). Se não acontecer, trocar o ciclo pelo que a simulação mostrar, ou ajustar os pesos até acontecer, e só então tirar o bônus fixo.
 - Adversário com estilo por mapa ou que muda entre campeonatos (pede regra no GDD).
 
 ## 3. Jogadores, funções e adversários
