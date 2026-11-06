@@ -248,6 +248,32 @@ namespace CSM.Manager
             CriarTemporada();
         }
 
+        // ------------------------------------------------------------------ datas (o calendário mensal da interface)
+        /// <summary>O ano do calendário em que cada temporada acontece (a carreira começa em 2027).</summary>
+        public static int AnoDaTemporada(int temporada) => 2027 + temporada - 1;
+
+        /// <summary>A segunda-feira que abre a semana 1 da temporada: a primeira segunda do ano. A temporada tem 52 semanas.</summary>
+        public static DateTime InicioTemporada(int temporada)
+        {
+            var d = new DateTime(AnoDaTemporada(temporada), 1, 1);
+            while (d.DayOfWeek != DayOfWeek.Monday) d = d.AddDays(1);
+            return d;
+        }
+
+        /// <summary>A data de um dia da semana (0 = segunda ... 6 = domingo) de uma semana da temporada.</summary>
+        public static DateTime DataDe(int temporada, int semana, int diaDaSemana) => InicioTemporada(temporada).AddDays((semana - 1) * 7 + diaDaSemana);
+
+        /// <summary>Em que dia da semana cai a série de um campeonato: ligas jogam na quarta; os outros campeonatos, de quinta a sábado.</summary>
+        public static int DiaDaSemanaDaSerie(Formato formato, int diaDaRodada) => formato == Formato.Liga ? 2 : Math.Min(6, 3 + diaDaRodada);
+
+        /// <summary>A que semana (1..52) e dia da semana (0..6) pertence uma data da temporada; false se cai fora dela.</summary>
+        public static bool SemanaDeData(int temporada, DateTime data, out int semana, out int diaDaSemana)
+        {
+            int d = (data.Date - InicioTemporada(temporada)).Days;
+            semana = d / 7 + 1; diaDaSemana = d % 7;
+            return d >= 0 && semana <= SEMANAS_POR_TEMPORADA;
+        }
+
         // ------------------------------------------------------------------ próximo compromisso
         /// <summary>O próximo confronto pendente do clube, o mais cedo por data; ou o próximo campeonato do clube que ainda não começou.</summary>
         public (Campeonato camp, Confronto confronto, int semana) ProximoCompromisso()
