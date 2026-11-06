@@ -172,8 +172,15 @@ namespace CSM.Sim
 
         static void NomearJogadas(List<Plano> l) { foreach (var p in l) p.jogada = NomeJogada(p); }
 
-        /// <summary>Uma jogada para a tela do playbook: quantos planos, quanto o time pro venceu, o estilo mais comum e a força medida.</summary>
-        public class InfoJogada { public string nome; public bool tr; public int planos; public float vitoriaPro, forca; public Categoria estilo; }
+        /// <summary>Uma jogada para a tela do playbook: quantos planos, quanto o time pro venceu, o estilo mais comum, a força medida,
+        /// os planos do mais típico para o menos (o 1º é o exemplo desenhado no mapa) e os pontos fortes e fracos.</summary>
+        public class InfoJogada
+        {
+            public string nome; public bool tr; public int planos; public float vitoriaPro, forca; public Categoria estilo;
+            public float horaEntrada, mortesCedo;           // médias dos planos (hora de entrar no bomb só no TR)
+            public List<Plano> exemplos = new List<Plano>();
+            public List<string> fortes = new List<string>(), fracos = new List<string>();
+        }
 
         static List<InfoJogada> jogadasTR, jogadasCT;
         /// <summary>As jogadas de um lado com pelo menos PLANOS_MIN_JOGADA planos, da mais comum para a menos.</summary>
@@ -186,8 +193,155 @@ namespace CSM.Sim
                 {
                     nome = g.Key, tr = tr, planos = g.Count(), vitoriaPro = g.Count(p => p.ganhou) / (float)g.Count(),
                     forca = g.Average(p => Forca(p.idx)), estilo = g.GroupBy(p => p.categoria).OrderByDescending(x => x.Count()).First().Key,
+                    horaEntrada = tr ? g.Average(p => p.HoraDeEntrar(72)) : 0, mortesCedo = g.Average(p => Mortes(p, 25)),
+                    exemplos = PorTipicidade(g.ToList()),
                 }).OrderByDescending(x => x.planos).ToList();
+            foreach (var j in cache) PontosFortesEFracos(j);
             return cache;
+        }
+
+        /// <summary>Planos do mais típico (o que mais se parece com os outros do grupo, pelas áreas por onde passam) para o menos.</summary>
+        static List<Plano> PorTipicidade(List<Plano> g)
+        {
+            var conj = g.Select(p => new HashSet<string>(p.js.SelectMany(j => j.passos).Where(s => s.de < RotaAte(p)).Select(s => s.area))).ToList();
+            var nota = new float[g.Count];
+            for (int i = 0; i < g.Count; i++)
+                for (int k = 0; k < g.Count; k++)
+                    if (i != k) { int inter = conj[i].Count(conj[k].Contains); int uni = conj[i].Count + conj[k].Count - inter; nota[i] += uni == 0 ? 0 : inter / (float)uni; }
+            return Enumerable.Range(0, g.Count).OrderByDescending(i => nota[i]).ThenByDescending(i => Forca(g[i].idx)).Select(i => g[i]).ToList();
+        }
+
+        /// <summary>Pontos fortes e fracos de uma jogada, pelo que os dados dizem (provisório: regras simples, a validar).</summary>
+        static void PontosFortesEFracos(InfoJogada j)
+        {
+            var f = j.fortes; var w = j.fracos;
+            if (j.tr)
+            {
+                bool split = j.nome.StartsWith("Split"), semEntrar = j.nome.Contains("sem entrar");
+                if (split) { f.Add("Divide a atenção do CT entre duas entradas ao mesmo tempo."); w.Add("Depende de os dois grupos chegarem juntos: se um atrasar, o outro entra sozinho."); }
+                if (semEntrar) { f.Add("Toma o mapa e espera o erro; o CT não sabe para onde o time vai."); w.Add("Muitas vezes nem chega a entrar: o relógio acaba antes."); }
+                else if (j.horaEntrada <= 25) { f.Add("Entra cedo (por volta de " + (int)j.horaEntrada + " s): pega a defesa ainda se arrumando e sem informação."); w.Add("Contra uma defesa empilhada naquele bomb, morre na entrada."); }
+                else if (j.horaEntrada <= 55) { f.Add("Dá tempo de usar granadas e entrar todo mundo junto (por volta de " + (int)j.horaEntrada + " s)."); w.Add("O CT tem tempo de ler o lado e rodar antes da entrada."); }
+                else { f.Add("Junta informação antes de decidir (entra por volta de " + (int)j.horaEntrada + " s)."); w.Add("Sobra pouco relógio se a entrada falhar."); }
+            }
+            else
+            {
+                int[] n = j.nome.Split(' ')[1].Split('-').Select(int.Parse).ToArray();   // "Setup a-m-b"
+                int a = n[0], meio = n[1], b = n[2];
+                if (j.nome.Contains("avanço")) { f.Add("Alguém avança cedo: pega informação e pode abrir o round com um abate."); w.Add("Quem avança pode morrer sozinho e deixar um buraco na defesa."); }
+                if (Math.Max(a, b) >= 3) { string forte = a >= 3 ? "A" : "B", fraco = a >= 3 ? "B" : "A"; f.Add("Bomb " + forte + " muito bem defendido (" + Math.Max(a, b) + " jogadores)."); w.Add("O bomb " + fraco + " fica com pouca gente: depende da rotação a tempo."); }
+                else if (meio >= 2) { f.Add("Controla o meio e roda rápido para os dois bombs."); w.Add("Os bombs começam com pouca gente contra uma execução rápida."); }
+                else { f.Add("Cobre os dois bombs e o meio de forma equilibrada."); w.Add("Nenhum bomb fica forte contra uma execução com os 5."); }
+            }
+            int pct = (int)Math.Round(j.vitoriaPro * 100);
+            if (j.vitoriaPro >= 0.55f) f.Add("O time profissional venceu " + pct + "% dos rounds com ela."); else if (j.vitoriaPro <= 0.45f) w.Add("O time profissional venceu só " + pct + "% dos rounds com ela.");
+            if (j.forca >= 1.05f) f.Add("Rende acima da média na nossa simulação (força " + j.forca.ToString("0.00", CultureInfo.InvariantCulture) + ")."); else if (j.forca <= 0.95f) w.Add("Rende abaixo da média na nossa simulação (força " + j.forca.ToString("0.00", CultureInfo.InvariantCulture) + ").");
+            if (j.mortesCedo >= 1f) w.Add("Costuma perder jogador antes dos 25 s."); else if (j.mortesCedo <= 0.25f) f.Add("Quase nunca perde jogador antes dos 25 s.");
+        }
+
+        // ---------------------------------------------------------------- desenho da jogada (playbook)
+        static readonly Dictionary<string, V2> centroSimples = new Dictionary<string, V2>();
+        /// <summary>Meio de uma área pelas células andáveis dela (sem a navegação: serve para desenhar fora da partida).</summary>
+        public static V2 CentroDaArea(string area)
+        {
+            lock (trava)
+            {
+                if (centroSimples.TryGetValue(area, out var v)) return v;
+                double sx = 0, sy = 0; int n = 0;
+                var spawn = area == "TR" ? SPAWN_T : area == "CT" ? SPAWN_CT : null;   // as bases não são áreas desenhadas: o meio de onde nascem
+                if (spawn != null && spawn.Length > 0) { foreach (var q in spawn) { sx += q.x; sy += q.y; } v = new V2((float)(sx / spawn.Length), (float)(sy / spawn.Length)); centroSimples[area] = v; return v; }
+                foreach (var s in areas)
+                {
+                    if (s.name != area) continue;
+                    for (int x = Math.Max(0, s.box.x0); x < Math.Min(NX, s.box.x1); x += 3)
+                        for (int y = Math.Max(0, s.box.y0); y < Math.Min(NY, s.box.y1); y += 3)
+                            if (s.has(x, y) && walk[x, y] && AreaAt(x, y) == area) { sx += x; sy += y; n++; }
+                }
+                v = n > 0 ? new V2((float)(sx / n), (float)(sy / n)) : V2.Zero;
+                centroSimples[area] = v; return v;
+            }
+        }
+
+        /// <summary>A rota do jogador k em palavras: "base TR → entrada do topo → casarão → bomb B".</summary>
+        public static string ResumoRota(Plano p, int k)
+        {
+            float ate = RotaAte(p); var nomes = new List<string> { Callout(p.tr ? "TR" : "CT") };
+            foreach (var s in p.js[k].passos) { if (s.de > ate) break; string n = Callout(s.area); if (nomes[nomes.Count - 1] != n) nomes.Add(n); }
+            if (p.js[k].morreu > 0 && p.js[k].morreu <= ate) nomes.Add("morre");
+            return string.Join(" → ", nomes);
+        }
+
+        /// <summary>Até quando a rota é desenhada: TR até o plant (ou a entrada + 20 s, sem plant); CT até os 30 s.</summary>
+        public static float RotaAte(Plano p) => !p.tr ? 30 : p.plant > 0 ? p.plant : Math.Min(p.HoraDeEntrar(72) + 20, 90);
+
+        /// <summary>A rota do jogador k num plano, para desenhar: os meios das áreas por onde ele passa, em ordem. TR até um pouco depois
+        /// de entrar no bomb; CT até os 30 s. <paramref name="morreu"/>: morreu nesse trecho (o desenho marca um X no fim).</summary>
+        public static List<V2> Rota(Plano p, int k, out bool morreu)
+        {
+            float ate = RotaAte(p);
+            var pts = new List<V2>(); string ult = null;
+            V2? antes = CentroDaArea(p.tr ? "TR" : "CT"); pts.Add(antes.Value);   // toda rota sai da base do lado
+            foreach (var s in p.js[k].passos)
+            {
+                if (s.de > ate) break;
+                if (s.area == ult) continue;
+                var c = CentroDaArea(s.area); if (c.x == 0 && c.y == 0) continue;
+                // de uma área para a seguinte pelo chão (as áreas da rota nem sempre são vizinhas: em linha reta o traço cortava paredes)
+                if (antes.HasValue) { var cam = Caminho(antes.Value, c); for (int i = 1; i < cam.Count; i++) pts.Add(cam[i]); }
+                else pts.Add(c);
+                antes = c; ult = s.area;
+            }
+            morreu = p.js[k].morreu > 0 && p.js[k].morreu <= ate;
+            return pts;
+        }
+
+        // caminho mais curto pelo chão numa grade grossa (CEL unidades), só para desenhar: busca em largura com 8 vizinhos
+        const int CEL = 6;
+        static bool[,] chaoGrosso;
+        static readonly Dictionary<(int, int, int, int), List<V2>> caminhos = new Dictionary<(int, int, int, int), List<V2>>();
+        static List<V2> Caminho(V2 a, V2 b)
+        {
+            int gw = NX / CEL, gh = NY / CEL;
+            lock (trava)
+            {
+                if (chaoGrosso == null)
+                {
+                    chaoGrosso = new bool[gw, gh];
+                    for (int x = 0; x < gw; x++) for (int y = 0; y < gh; y++) { int ux = x * CEL + CEL / 2, uy = y * CEL + CEL / 2; chaoGrosso[x, y] = InMap(ux, uy) && (walk[ux, uy] || pisavel[ux, uy]); }
+                }
+                (int, int) Cel(V2 v) => (Math.Clamp((int)(v.x / CEL), 0, gw - 1), Math.Clamp((int)(v.y / CEL), 0, gh - 1));
+                (int, int) Perto((int x, int y) c)
+                {   // a célula andável mais perto (o meio da área pode cair numa caixa)
+                    for (int r = 0; r < 12; r++) for (int dx = -r; dx <= r; dx++) for (int dy = -r; dy <= r; dy++) { int x = c.x + dx, y = c.y + dy; if (x >= 0 && y >= 0 && x < gw && y < gh && chaoGrosso[x, y]) return (x, y); }
+                    return c;
+                }
+                var (ax, ay) = Perto(Cel(a)); var (bx, by) = Perto(Cel(b));
+                if (caminhos.TryGetValue((ax, ay, bx, by), out var pronto)) return pronto;
+                var de = new int[gw, gh]; for (int x = 0; x < gw; x++) for (int y = 0; y < gh; y++) de[x, y] = -1;
+                var fila = new Queue<(int, int)>(); fila.Enqueue((ax, ay)); de[ax, ay] = ay * gw + ax;
+                while (fila.Count > 0)
+                {
+                    var (x, y) = fila.Dequeue(); if (x == bx && y == by) break;
+                    for (int dx = -1; dx <= 1; dx++) for (int dy = -1; dy <= 1; dy++)
+                    {
+                        int nx = x + dx, ny = y + dy;
+                        if ((dx == 0 && dy == 0) || nx < 0 || ny < 0 || nx >= gw || ny >= gh || de[nx, ny] >= 0 || !chaoGrosso[nx, ny]) continue;
+                        if (dx != 0 && dy != 0 && (!chaoGrosso[x + dx, y] || !chaoGrosso[x, y + dy])) continue;   // não corta quina de parede
+                        de[nx, ny] = y * gw + x; fila.Enqueue((nx, ny));
+                    }
+                }
+                var res = new List<V2>();
+                if (de[bx, by] < 0) { res.Add(a); res.Add(b); }   // sem caminho: reta
+                else
+                {
+                    var cels = new List<(int, int)>(); int cx = bx, cy = by;
+                    while (true) { cels.Add((cx, cy)); if (cx == ax && cy == ay) break; int pai = de[cx, cy]; cx = pai % gw; cy = pai / gw; }
+                    cels.Reverse();
+                    for (int i = 0; i < cels.Count; i++) if (i == 0 || i == cels.Count - 1 || i % 3 == 0) res.Add(new V2(cels[i].Item1 * CEL + CEL / 2f, cels[i].Item2 * CEL + CEL / 2f));
+                }
+                caminhos[(ax, ay, bx, by)] = res;
+                return res;
+            }
         }
 
         // ---------------------------------------------------------------- estilos de jogo

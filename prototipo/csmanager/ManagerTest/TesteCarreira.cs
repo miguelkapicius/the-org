@@ -349,6 +349,18 @@ class TesteCarreira
             var opt3 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
             var cl3 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cp2), opt3), opt3));
             Ok(cl3.favoritasTR.SequenceEqual(cp2.favoritasTR) && cl3.proibidasCT.SequenceEqual(cp2.proibidasCT), "o playbook volta igual do salvamento");
+            // desenho da jogada: rotas pelo chão, saindo da base; pontos fortes e fracos
+            bool rotasOk = true; int pontos = 0;
+            foreach (var jg in jt.Concat(jc))
+                for (int k = 0; k < 5; k++)
+                {
+                    var rota = Estrategias.Rota(jg.exemplos[0], k, out _); pontos += rota.Count;
+                    var basePt = Estrategias.CentroDaArea(jg.tr ? "TR" : "CT");
+                    if (rota.Count == 0 || (rota[0] - basePt).Len > 1 || rota.Any(q => q.x < 0 || q.y < 0 || q.x > CSM.Map.MapData.NX || q.y > CSM.Map.MapData.NY)) rotasOk = false;
+                }
+            Ok(rotasOk && pontos > 1000, "toda jogada tem as 5 rotas saindo da base e dentro do mapa (" + pontos + " pontos)");
+            Ok(jt.Concat(jc).All(x => x.fortes.Count > 0 && x.fracos.Count > 0), "toda jogada tem pelo menos um ponto forte e um fraco");
+            Ok(Estrategias.ResumoRota(jt[0].exemplos[0], 0).StartsWith("base TR →"), "o resumo da rota começa na base: " + Estrategias.ResumoRota(jt[0].exemplos[0], 0));
         }
 
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");

@@ -13,6 +13,8 @@ namespace CSM.ManagerUI
     /// não escolhe). As vagas crescem com o nível da Gaming House.</summary>
     public partial class GerenteUI
     {
+        string jogadaAberta; int exemploAberto;   // a jogada com o desenho aberto e qual dos planos dela está desenhado
+
         void TelaPlaybook()
         {
             conteudo.Add(L("O IGL escolhe a cada round uma jogada de um banco de rounds de times profissionais, preferindo o estilo da estratégia. Aqui você marca as jogadas que ele deve preferir (favoritas, peso " +
@@ -41,8 +43,12 @@ namespace CSM.ManagerUI
             {
                 var jj = j; var marca = c.Marca(j.nome, tr);
                 var r = E("tr");
+                bool aberta = jogadaAberta == j.nome;
                 var nome = E("linha-h"); nome.style.alignItems = Align.Center;
-                nome.Add(L(j.nome, "f16", "negrito"));
+                nome.Add(new Icone(aberta ? "down" : "chev", 14));
+                var ln = L(j.nome, "f16", "negrito"); ln.style.marginLeft = 6; nome.Add(ln);
+                Clicavel(nome, () => { jogadaAberta = aberta ? null : jj.nome; exemploAberto = 0; Mostrar(); });
+                ComDica(nome, "Clique para ver a jogada desenhada no mapa e os pontos fortes e fracos.");
                 if (marca == Carreira.MarcaJogada.Favorita) { var s = Selo("FAVORITA", "verde"); s.style.marginLeft = 8; nome.Add(s); }
                 else if (marca == Carreira.MarcaJogada.Proibida) { var s = Selo("PROIBIDA", "vermelho"); s.style.marginLeft = 8; nome.Add(s); }
                 r.Add(Celula("c-j", nome).WithClass("largo"));
@@ -55,8 +61,47 @@ namespace CSM.ManagerUI
                 acoes.Add(BotaoMini("Proibir", () => Marcar(jj.nome, tr, marca == Carreira.MarcaJogada.Proibida ? Carreira.MarcaJogada.Nenhuma : Carreira.MarcaJogada.Proibida), marca == Carreira.MarcaJogada.Proibida));
                 r.Add(Celula("c-j", acoes));
                 tab.Add(r);
+                if (aberta) tab.Add(DetalheJogada(j));
             }
             conteudo.Add(tab);
+        }
+
+        /// <summary>A jogada desenhada no mapa (um dos planos dela, do mais típico para o menos) e os pontos fortes e fracos.</summary>
+        VisualElement DetalheJogada(Estrategias.InfoJogada j)
+        {
+            var plano = j.exemplos[exemploAberto % j.exemplos.Count];
+            var det = E("cartao"); det.style.flexDirection = FlexDirection.Row; det.style.marginTop = 8; det.style.marginBottom = 18; det.style.alignItems = Align.FlexStart;
+            det.Add(new PlantaJogada(plano));
+            var lado = E(); lado.style.marginLeft = 22; lado.style.flexGrow = 1; lado.style.flexShrink = 1;
+            lado.Add(L(j.nome, "f20", "negrito"));
+            lado.Add(L("Exemplo " + (exemploAberto % j.exemplos.Count + 1) + " de " + j.exemplos.Count + ": um round de time profissional (" + (plano.ganhou ? "venceu" : "perdeu") + "). " +
+                       (j.tr ? "Rotas da base até o plant." : "Onde cada um vai nos primeiros 30 s."), "f14", "suave", "quebra"));
+            var legenda = E(); legenda.style.marginTop = 10;
+            for (int k = 0; k < 5; k++)
+            {
+                var lin = E(); lin.style.flexDirection = FlexDirection.Row; lin.style.alignItems = Align.FlexStart; lin.style.marginTop = 4;
+                var bola = E(); bola.style.width = 12; bola.style.height = 12; bola.style.marginTop = 3; bola.style.marginRight = 8; bola.style.flexShrink = 0;
+                bola.style.borderTopLeftRadius = bola.style.borderTopRightRadius = bola.style.borderBottomLeftRadius = bola.style.borderBottomRightRadius = 6;
+                bola.style.backgroundColor = PlantaJogada.CORES[k];
+                lin.Add(bola);
+                var t = L(Estrategias.ResumoRota(plano, k), "f14", "quebra"); t.style.flexShrink = 1; lin.Add(t);
+                legenda.Add(lin);
+            }
+            lado.Add(legenda);
+            void Lista(string titulo, List<string> itens, string cor)
+            {
+                var h = L(titulo, "f16", "negrito", cor); h.style.marginTop = 14; lado.Add(h);
+                if (itens.Count == 0) { lado.Add(L("Nada que se destaque nos dados.", "f14", "suave")); return; }
+                foreach (var it in itens) { var l = L("• " + it, "f14", "quebra"); l.style.marginTop = 3; lado.Add(l); }
+            }
+            Lista("Pontos fortes", j.fortes, "verde");
+            Lista("Pontos fracos", j.fracos, "vermelho");
+            var bt = E("linha-h"); bt.style.marginTop = 14;
+            if (j.exemplos.Count > 1) { var b1 = BotaoMini("Outro exemplo", () => { exemploAberto++; Mostrar(); }); b1.style.marginRight = 8; bt.Add(b1); }
+            bt.Add(BotaoMini("Fechar", () => { jogadaAberta = null; Mostrar(); }));
+            lado.Add(bt);
+            det.Add(lado);
+            return det;
         }
 
         void Marcar(string jogada, bool tr, Carreira.MarcaJogada m)
