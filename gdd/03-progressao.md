@@ -15,7 +15,8 @@ Existem **duas economias** diferentes:
 
 - Dinheiro do round.
 - Dinheiro do clube.
-- **[Sugestão]** Reputação/prestígio do time, moral dos jogadores, fãs.
+- Moral e entrosamento dos jogadores (decisão 0019, regras em `02-mecanicas.md`).
+- **[Sugestão]** Reputação/prestígio do time, fãs.
 
 ## Fontes e sumidouros
 

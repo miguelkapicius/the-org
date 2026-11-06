@@ -1,0 +1,264 @@
+<title>Arsenal Sonoro da Vila</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ficha de armeiro — uma faixa por arma (forma de onda + botões de som + régua + nota), depois "mundo". */
+:root {
+  --papel: #e7ebe8; --painel: #f5f7f5; --tinta: #1b2320; --suave: #5c6863; --linha: #c9d1cd;
+  --latao: #9a6a12; --latao-claro: #e9d3a3; --tr: #b07a22; --ct: #3f6a8e;
+  --ok: #2f7d4f; --ok-fundo: #d8eadf; --ruim: #b23a2e; --ruim-fundo: #f3d9d5;
+  --onda: #8c9a94; --onda-viva: var(--latao);
+  --f-titulo: "Barlow Condensed", "Arial Narrow", sans-serif; --f-texto: "Barlow", "Segoe UI", sans-serif; --f-dado: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --papel: #121715; --painel: #1a211e; --tinta: #e2e8e4; --suave: #93a19a; --linha: #2c3632;
+  --latao: #d9a441; --latao-claro: #3b3020; --tr: #d49a3c; --ct: #6f9cc4;
+  --ok: #5fbf84; --ok-fundo: #1c3326; --ruim: #e47767; --ruim-fundo: #3a201c; --onda: #56635d; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --papel: #121715; --painel: #1a211e; --tinta: #e2e8e4; --suave: #93a19a; --linha: #2c3632;
+  --latao: #d9a441; --latao-claro: #3b3020; --tr: #d49a3c; --ct: #6f9cc4;
+  --ok: #5fbf84; --ok-fundo: #1c3326; --ruim: #e47767; --ruim-fundo: #3a201c; --onda: #56635d; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--papel); color: var(--tinta); font: 400 15px/1.5 var(--f-texto);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 64px }
+main { max-width: 1040px; margin: 0 auto; display: grid; gap: 40px }
+h1, h2, h3 { font-family: var(--f-titulo); font-weight: 700; letter-spacing: .01em; margin: 0; text-wrap: balance }
+h1 { font-size: clamp(34px, 6vw, 54px); line-height: .95; text-transform: uppercase }
+h2 { font-size: 26px; text-transform: uppercase; letter-spacing: .04em }
+.rotulo { font: 600 12px/1 var(--f-texto); letter-spacing: .12em; text-transform: uppercase; color: var(--suave) }
+.cabeca { display: grid; gap: 12px }
+.cabeca p { margin: 0; max-width: 64ch; color: var(--suave) }
+.dado { font-family: var(--f-dado); font-variant-numeric: tabular-nums; font-size: 12.5px }
+
+/* forma de onda */
+.onda { position: relative; height: 64px; border-radius: 6px; background: var(--painel); border: 1px solid var(--linha); overflow: hidden; cursor: pointer }
+.onda svg { position: absolute; inset: 0; width: 100%; height: 100% }
+.onda rect { fill: var(--onda) }
+.onda .vivo { position: absolute; inset: 0; clip-path: inset(0 100% 0 0) }
+.onda .vivo rect { fill: var(--onda-viva) }
+.onda .legenda { position: absolute; left: 10px; top: 6px; font: 500 12px var(--f-dado); color: var(--suave); pointer-events: none }
+.onda .tempo { position: absolute; right: 10px; top: 6px; font: 500 12px var(--f-dado); color: var(--suave) }
+.onda:focus-visible, button:focus-visible, textarea:focus-visible { outline: 2px solid var(--latao); outline-offset: 2px }
+
+/* lance */
+.lance { display: grid; gap: 10px; padding: 18px; background: var(--painel); border: 1px solid var(--linha); border-radius: 10px }
+.lance .onda { height: 110px; background: var(--papel) }
+.lance p { margin: 0; color: var(--suave); font-size: 14px }
+
+/* armas */
+.armas { display: grid; gap: 0; border-top: 2px solid var(--tinta) }
+.arma { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; padding: 22px 0; border-bottom: 1px solid var(--linha) }
+.nomearma { display: grid; gap: 6px; align-content: start }
+.nomearma h3 { font-size: 30px; line-height: 1 }
+.lado { justify-self: start; font: 600 11px/1 var(--f-texto); letter-spacing: .1em; text-transform: uppercase; padding: 4px 7px; border-radius: 3px; color: var(--papel); background: var(--suave) }
+.lado.TR { background: var(--tr) } .lado.CT { background: var(--ct) }
+.corpo { display: grid; gap: 10px; min-width: 0 }
+.botoes { display: flex; flex-wrap: wrap; gap: 6px }
+button { font: 500 13.5px/1 var(--f-texto); color: var(--tinta); background: var(--painel); border: 1px solid var(--linha); border-radius: 5px; padding: 8px 11px; cursor: pointer }
+button:hover { border-color: var(--latao) }
+button.tocando { background: var(--latao); border-color: var(--latao); color: var(--papel) }
+.regua { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.chip { font: 600 12px/1 var(--f-texto); padding: 5px 8px; border-radius: 3px }
+.chip.ok { color: var(--ok); background: var(--ok-fundo) }
+.novo { justify-self: start; font: 600 11px/1 var(--f-texto); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 3px; color: var(--papel); background: var(--latao) } .chip.ruim { color: var(--ruim); background: var(--ruim-fundo) }
+details { font-size: 13px; color: var(--suave) }
+details summary { cursor: pointer; font-weight: 500 }
+table { border-collapse: collapse; margin-top: 8px }
+td, th { padding: 3px 12px 3px 0; text-align: left; font-family: var(--f-dado); font-size: 12px; font-variant-numeric: tabular-nums }
+th { font-family: var(--f-texto); font-weight: 600; color: var(--suave) }
+.tabela { overflow-x: auto }
+
+/* nota */
+.nota { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start }
+.nota textarea { flex: 1 1 260px; min-width: 0; min-height: 36px; resize: vertical; font: 400 14px/1.4 var(--f-texto); color: var(--tinta); background: var(--painel); border: 1px solid var(--linha); border-radius: 5px; padding: 8px 10px }
+.nota button.ok.on { background: var(--ok); border-color: var(--ok); color: var(--papel) }
+.nota button.ruim.on { background: var(--ruim); border-color: var(--ruim); color: var(--papel) }
+.salvo { font-size: 12px; color: var(--suave); align-self: center }
+
+/* mundo */
+.mundo { display: grid; gap: 28px }
+.grupo { display: grid; gap: 12px }
+.itens { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px }
+.item { display: grid; gap: 8px; min-width: 0 }
+.item .titulo { font-weight: 600 }
+.explica { margin: 0; max-width: 70ch; color: var(--suave) }
+footer { color: var(--suave); font-size: 13px; max-width: 70ch }
+@media (max-width: 680px) { .arma { grid-template-columns: 1fr; gap: 10px } .nomearma { grid-template-columns: auto auto; justify-content: start; align-items: center; gap: 10px } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+<main>
+  <header class="cabeca">
+    <span class="rotulo">CS Manager · som das armas · versão 13 (híbrido ElevenLabs)</span>
+    <h1>Arsenal Sonoro da Vila</h1>
+    <p>O corpo dos sons agora vem de gravações geradas na ElevenLabs. O nosso tratamento soma o sub-grave, a cauda curta do ambiente da Vila, a compressão e o volume nivelado, e corta o eco que a IA coloca a mais. O CS2 continua só de régua. Nada passou da cauda que o CS tem. Os sons que você aprovou continuam iguais. Marque o que está bom e o que refazer.</p>
+  </header>
+
+  <section class="grupo" id="cmp-sec">
+    <span class="rotulo">Escolha</span>
+    <h2>Bala por material, torcida e smoke de longe</h2>
+    <p class="explica">Como no CS, a bala que não acerta ninguém soa diferente em cada material. A pedra já tem som; faltavam madeira, terra e metal. A torcida reage a clutch e ace, como num campeonato. A smoke de longe é a mesma smoke que você aprovou, ouvida do outro lado do mapa. Escreva os números que ficam (pode ser mais de um por item, eles se revezam).</p>
+    <div class="itens" id="comparar"></div>
+  </section>
+
+  <section class="lance" id="lance-sec">
+    <span class="rotulo">Comece por aqui</span>
+    <h2>Lance de round</h2>
+    <p>TR entra de AK, um CT responde de M4 atrás da parede (abafado), a AWP estala do outro lado do mapa, Glock e M4A1-S fecham.</p>
+    <div class="onda" data-som="lance" tabindex="0" role="button" aria-label="Tocar lance de round"></div>
+    <div class="nota" data-item="lance"></div>
+  </section>
+
+  <section class="grupo">
+    <h2>Armas</h2>
+    <div class="armas" id="armas"></div>
+  </section>
+
+  <section class="mundo" id="mundo"></section>
+
+  <footer>
+    "Distâncias" toca o mesmo tiro a 150, 700, 1500 e 2400 unidades do CS, com as curvas de volume do próprio CS2: perto some aos poucos e a camada distante entra a partir de 800. No jogo o ouvido fica no ponto que a câmera da transmissão olha.
+  </footer>
+</main>
+
+<script>
+const D = /*__DADOS__*/null;
+const $ = (s, el = document) => el.querySelector(s);
+let atual = null, atualEl = null, raf = 0;
+
+function desenha(el, chave) {
+  const s = D.sons[chave]; if (!s) return;
+  el.dataset.atual = chave;
+  const n = s.picos.length, w = 100 / n;
+  let barras = '', vivas = '';
+  s.picos.forEach((p, i) => { const h = Math.max(1.5, p * 92); const r = `<rect x="${(i * w + w * 0.15).toFixed(2)}" y="${(50 - h / 2).toFixed(2)}" width="${(w * 0.7).toFixed(2)}" height="${h.toFixed(2)}"/>`; barras += r; vivas += r; });
+  const svg = b => `<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${b}</svg>`;
+  el.innerHTML = svg(barras) + `<div class="vivo">${svg(vivas)}</div>` +
+    `<span class="legenda"></span><span class="tempo">${s.dur.toFixed(1)} s</span>`;
+  $('.legenda', el).textContent = s.rotulo;
+}
+
+function tocar(chave, el, botao) {
+  if (atual) { atual.pause(); atual = null; }
+  document.querySelectorAll('button.tocando').forEach(b => b.classList.remove('tocando'));
+  cancelAnimationFrame(raf);
+  if (atualEl) { const v = $('.vivo', atualEl); if (v) v.style.clipPath = 'inset(0 100% 0 0)'; }
+  if (atualEl === el && el.dataset.atual === chave && el.dataset.tocando === '1') { el.dataset.tocando = '0'; return; }
+  const s = D.sons[chave]; if (!s) return;
+  if (el.dataset.atual !== chave) desenha(el, chave);
+  const a = new Audio(s.src); atual = a; atualEl = el; el.dataset.tocando = '1';
+  if (botao) botao.classList.add('tocando');
+  const viva = $('.vivo', el);
+  const passo = () => { if (atual !== a) return; const u = Math.min(1, a.currentTime / (a.duration || s.dur)); viva.style.clipPath = `inset(0 ${(100 - u * 100).toFixed(1)}% 0 0)`; raf = requestAnimationFrame(passo); };
+  a.onended = () => { el.dataset.tocando = '0'; if (botao) botao.classList.remove('tocando'); viva.style.clipPath = 'inset(0 0 0 0)'; };
+  a.play().then(() => { raf = requestAnimationFrame(passo); }).catch(() => {});
+}
+
+function ligarOnda(el) {
+  desenha(el, el.dataset.som);
+  const vai = () => tocar(el.dataset.atual || el.dataset.som, el, null);
+  el.addEventListener('click', vai);
+  el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); vai(); } });
+}
+
+function chipsRegua(r) {
+  const nomes = { perto: 'perto', distante: 'distante' };
+  let chips = '', linhas = '';
+  for (const t of ['perto', 'distante']) {
+    const x = r[t]; if (!x) continue;
+    chips += `<span class="chip ${x.ok ? 'ok' : 'ruim'}">${nomes[t]} ${x.ok ? 'passa' : 'reprova'}</span>`;
+    linhas += `<tr><td>${nomes[t]}</td><td>${x.d20[0]} / ${x.d20[1]}</td><td>${x.d40[0]} / ${x.d40[1]}</td><td>${x.brilho[0]} / ${x.brilho[1]}</td><td>${x.ataque[0]} / ${x.ataque[1]}</td><td>${x.bandas[0].join(' ')}<br>${x.bandas[1].join(' ')}</td></tr>`;
+  }
+  return `<div class="regua"><span class="rotulo">régua CS2</span>${chips}</div>
+    <details><summary>números (nosso / CS2)</summary><div class="tabela"><table>
+    <tr><th></th><th>−20 dB (s)</th><th>−40 dB (s)</th><th>brilho (Hz)</th><th>ataque (ms)</th><th>sub · grave · médio · agudo · ar</th></tr>${linhas}</table></div></details>`;
+}
+
+function montarArmas() {
+  const box = $('#armas');
+  for (const a of D.armas) {
+    const id = a.id, el = document.createElement('article'); el.className = 'arma';
+    const btn = (k, t) => `<button type="button" data-som="${id}/${k}">${t}</button>`;
+    el.innerHTML = `<div class="nomearma"><h3>${a.nome}</h3><span class="lado ${a.lado}">${a.lado}</span><span class="dado">${Math.round(a.rpm)} tiros/min</span></div>
+      <div class="corpo"><div class="onda" data-som="${id}/tiro_0" tabindex="0" role="button" aria-label="Tocar ${a.nome}"></div>
+      <div class="botoes">${btn('tiro_0', 'Tiro 1')}${btn('tiro_1', 'Tiro 2')}${btn('tiro_2', 'Tiro 3')}${btn('tiro_3', 'Tiro 4')}${btn('rajada', id === 'awp' ? 'Tiro com eco' : 'Rajada')}${btn('distancias', 'Distâncias')}${btn('distante', 'Só distante')}${btn('recarga', 'Recarga')}${btn('sacar', 'Sacar')}${D.sons[id + '/luneta'] ? btn('luneta', 'Luneta') : ''}</div>
+      ${chipsRegua(a.regua)}<div class="nota" data-item="arma_${id}"></div></div>`;
+    box.appendChild(el);
+    const onda = $('.onda', el); ligarOnda(onda);
+    el.querySelectorAll('.botoes button').forEach(b => b.addEventListener('click', () => tocar(b.dataset.som, onda, b)));
+  }
+}
+
+function montarMundo() {
+  const box = $('#mundo'); const grupos = {};
+  for (const m of D.mundo) (grupos[m.grupo] ||= []).push(m);
+  for (const [g, itens] of Object.entries(grupos)) {
+    const sec = document.createElement('section'); sec.className = 'grupo';
+    sec.innerHTML = `<h2>${g}</h2><div class="itens"></div>`;
+    for (const m of itens) {
+      const it = document.createElement('div'); it.className = 'item';
+      it.innerHTML = `<span class="titulo"></span><div class="onda" data-som="${m.chave}" tabindex="0" role="button"></div><div class="nota" data-item="${m.chave.replace(/\//g, '_')}"></div>`;
+      $('.titulo', it).textContent = m.rotulo; $('.onda', it).setAttribute('aria-label', 'Tocar ' + m.rotulo);
+      $('.itens', sec).appendChild(it); ligarOnda($('.onda', it));
+    }
+    box.appendChild(sec);
+  }
+}
+
+// notas: coleção "notas" do db, um documento por item (aprovado / refazer + texto)
+function marcarNovos() {
+  for (const k of (D.novos || [])) {
+    const c = document.querySelector(`.nota[data-item="${k}"]`); if (!c) continue;
+    const s = document.createElement('span'); s.className = 'novo'; s.textContent = 'novo, ouça de novo';
+    c.parentElement.insertBefore(s, c);
+  }
+}
+
+async function notas() {
+  const caixas = [...document.querySelectorAll('.nota')];
+  for (const c of caixas) {
+    c.innerHTML = `<button type="button" class="ok" disabled>Aprovado</button><button type="button" class="ruim" disabled>Refazer</button>` +
+      `<textarea rows="1" placeholder="O que mudar? Qual número ficou melhor?" disabled></textarea><span class="salvo"></span>`;
+    c.querySelector('textarea').id = 'nota_' + c.dataset.item;
+  }
+  let db = null;
+  try { db = await (window.claude?.use ? window.claude.use('db') : null); } catch (e) { db = null; }
+  if (!db) { caixas.forEach(c => { $('.salvo', c).textContent = 'notas indisponíveis aqui'; }); return; }
+  const col = db.collection('notas');
+  const estado = {};
+  const pinta = c => { const s = estado['v2_' + c.dataset.item] || {}; $('button.ok', c).classList.toggle('on', s.estado === 'ok'); $('button.ruim', c).classList.toggle('on', s.estado === 'refazer');
+    const ta = $('textarea', c); if (document.activeElement !== ta) ta.value = s.texto || ''; };
+  const salvar = async (c, campos) => {
+    const k = 'v2_' + c.dataset.item; estado[k] = { ...(estado[k] || {}), ...campos };
+    try { await col.doc(k).set({ ...estado[k], quando: Date.now() }); $('.salvo', c).textContent = 'salvo'; }
+    catch (e) { $('.salvo', c).textContent = 'não salvou: sem permissão'; }
+  };
+  for (const c of caixas) {
+    c.querySelectorAll('button, textarea').forEach(e => e.disabled = false);
+    $('button.ok', c).onclick = () => { salvar(c, { estado: (estado['v2_' + c.dataset.item] || {}).estado === 'ok' ? '' : 'ok' }); pinta(c); };
+    $('button.ruim', c).onclick = () => { salvar(c, { estado: (estado['v2_' + c.dataset.item] || {}).estado === 'refazer' ? '' : 'refazer' }); pinta(c); };
+    let tm = 0; $('textarea', c).addEventListener('input', e => { clearTimeout(tm); $('.salvo', c).textContent = '…'; tm = setTimeout(() => salvar(c, { texto: e.target.value }), 800); });
+  }
+  const espera = setTimeout(() => caixas.forEach(c => { if (!$('.salvo', c).textContent) $('.salvo', c).textContent = 'carregando notas…'; }), 10000);
+  col.onSnapshot(snap => { clearTimeout(espera); snap.docs.forEach(d => { estado[d.id] = d.data(); }); caixas.forEach(pinta); },
+    () => { clearTimeout(espera); caixas.forEach(c => { $('.salvo', c).textContent = 'notas indisponíveis'; }); });
+}
+
+function montarComparacao() {
+  const box = $('#comparar'); if (!D.comparar || !D.comparar.length) { $('#cmp-sec').hidden = true; return; }
+  for (const c of D.comparar) {
+    const it = document.createElement('div'); it.className = 'item';
+    it.innerHTML = `<span class="titulo"></span><div class="onda" data-som="${c.versoes[0].chave}" tabindex="0" role="button"></div>
+      <div class="botoes">${c.versoes.map(v => `<button type="button" data-som="${v.chave}"></button>`).join('')}</div>
+      <div class="nota" data-item="${c.chave}"></div>`;
+    $('.titulo', it).textContent = c.rotulo; $('.onda', it).setAttribute('aria-label', 'Tocar ' + c.rotulo);
+    it.querySelectorAll('.botoes button').forEach((b, i) => { b.textContent = c.versoes[i].rotulo; });
+    box.appendChild(it); const onda = $('.onda', it); ligarOnda(onda);
+    it.querySelectorAll('.botoes button').forEach(b => b.addEventListener('click', () => tocar(b.dataset.som, onda, b)));
+  }
+}
+montarComparacao();
+ligarOnda($('#lance-sec .onda'));
+montarArmas(); montarMundo(); marcarNovos(); notas();
+</script>

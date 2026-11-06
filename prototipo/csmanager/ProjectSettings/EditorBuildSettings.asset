@@ -6,9 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Manager.unity
+    guid: 45631d3acd6434ce58c57335c774548e
+  - enabled: 1
     path: Assets/Scenes/Partida3D.unity
     guid: 4f9bdd981d9010d499262684d02dfe43
-  - enabled: 1
-    path: Assets/Scenes/Partida.unity
-    guid: 3721a8a27ab37f341a742f9314449638
   m_configObjects: {}

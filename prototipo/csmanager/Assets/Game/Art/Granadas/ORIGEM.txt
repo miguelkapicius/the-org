@@ -1,0 +1,4 @@
+Granadas do kit do EsportsPoc (D:\unity\EsportsPoc\Tools\blender\grenades): geometria feita do zero a partir das
+medidas do CS2 (bounds, perfil e cor média); nada da Valve foi copiado. Detalhes no README.md de lá.
+
+DefuseKit.fbx: kit de desarme do mesmo kit (EsportsPoc Tools/blender/wk_designs.py defuse_kit(): caixas feitas no Blender — bolsa oliva, aba cáqui, alicate de cabo laranja); nada da Valve.

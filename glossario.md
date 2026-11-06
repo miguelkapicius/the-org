@@ -32,8 +32,11 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Circuito | Grupo de campeonatos de um mesmo nível: Amador, Pro ou Elite. | tier, divisão | 01-core-loop |
 | Ranking | Lista dos 48 times por pontos de colocação em campeonatos; decide o circuito do clube. | classificação | 01-core-loop |
 | Veto | Fase antes da série em que os times banem e escolhem mapas. | pick/ban | 08-ui-ux |
+| Pool de mapas | Os 7 mapas que podem entrar no veto de uma série. | map pool | 08-ui-ux |
+| Mapa jogável | Mapa do pool que tem geometria 3D e os dados da IA, e por isso pode ser assistido. Hoje só um. | mapa 3D (ambíguo) | 10-interface-vs-jogo |
 | Afinidade | O quanto um time domina um mapa (0 a 100); entra na habilidade na partida. | domínio | 02-mecanicas |
 | Estratégia | Conjunto de ajustes de estilo da IA do time (agressiva, defensiva, execuções rápidas...) escolhido na pré-partida. | tática, plano de jogo | 02-mecanicas |
+| Plano de round | Um round pro gravado no banco da IA (rotas e tempos dos 5 jogadores) que o IGL segue. Cada plano tem um dos 5 estilos da estratégia. | tática, play | 02-mecanicas |
 | Treino | Plano semanal que o manager define para cada jogador (foco e frequência). Evolui atributos e gera preparo e cansaço. | prática | 02-mecanicas |
 | Preparo | Bônus temporário de habilidade nas partidas que vem do treino recente. | buff | 02-mecanicas |
 | Cansaço | Desgaste dos jogadores por treino e partidas; acima de um limite reduz a habilidade. | fadiga, stamina | 02-mecanicas |
@@ -43,3 +46,17 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
+| Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
+| Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
+| Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |
+| Entrosamento | O quanto dois jogadores do elenco jogam bem juntos; muda a simulação (ex.: trade kill). | química, sinergia | 11-ideias |
+| Playbook | Escolhas do manager, por mapa e por lado, de jogadas favoritas e proibidas que o IGL respeita. | livro de jogadas | 02-mecanicas |
+| Jogada | Grupo de planos de round parecidos, com nome legível ("Rush A pela Rampa", "Setup 2-1-2"); é o que o manager marca no playbook. | tática, play | 02-mecanicas |
+| Melhores momentos | Lances-chave de um round ou partida, mostrados em replay na transmissão e no pós-partida. | highlights | 08-ui-ux |
+| Rivalidade | Histórico marcante contra um adversário, medido em pontos por série (finais, eliminações, sequências). Os 3 de mais pontos (com 10 ou mais) são os rivais do clube. | — | 01-core-loop |
+| Arquirrival | O rival com mais pontos de rivalidade. | — | 01-core-loop |
+| Clássico | Série contra um rival: a moral muda o dobro e vencer rende bônus de patrocínio. | derby | 01-core-loop |
+| Retrospecto | Séries e mapas vencidos e perdidos contra um adversário, a sequência atual e a última eliminação. | head-to-head, H2H | 01-core-loop |
+| Modo resumo | Forma de assistir só os rounds decisivos de uma partida e pular o resto. | modo rápido | 11-ideias |
+| Jogada da partida | O lance de maior nota de uma partida assistida (abates de um jogador, com destaque para clutch, multi-kill, AWP, na cabeça...). | jogada do jogo, play of the game | 08-ui-ux |
+| MVP | O jogador do clube com a melhor nota de desempenho num mapa (MVP do mapa) ou na soma dos mapas de uma série (MVP da série). | craque do jogo, melhor em campo | 08-ui-ux |

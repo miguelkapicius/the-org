@@ -1,0 +1,20 @@
+# FBX do kit de armas do EsportsPoc (1 material de atlas) -> mesma malha com cor por vértice lida do atlas no UV de cada face
+# blender -b --python atlas_cor.py -- <entrada.fbx> <atlas.png> <saida.fbx>
+import bpy, sys
+a = sys.argv[sys.argv.index("--") + 1:]; ent, atlas, sai = a
+bpy.ops.wm.read_factory_settings(use_empty=True)
+bpy.ops.import_scene.fbx(filepath=ent)
+img = bpy.data.images.load(atlas); W, H = img.size; px = img.pixels[:]
+n = 0
+for o in [o for o in bpy.data.objects if o.type == "MESH"]:
+    me = o.data; uv = me.uv_layers.active.data
+    ca = me.color_attributes.new("Col", "BYTE_COLOR", "CORNER")
+    for p in me.polygons:
+        us = [uv[l].uv for l in p.loop_indices]; u = sum(q.x for q in us) / len(us); v = sum(q.y for q in us) / len(us)
+        x = min(W - 1, max(0, int((u % 1) * W))); y = min(H - 1, max(0, int((v % 1) * H))); k = (y * W + x) * 4
+        c = (px[k], px[k + 1], px[k + 2], 1)
+        for l in p.loop_indices: ca.data[l].color = c
+        n += 1
+print("faces", n)
+bpy.ops.export_scene.fbx(filepath=sai, colors_type="SRGB", add_leaf_bones=False)
+print("ok", sai)

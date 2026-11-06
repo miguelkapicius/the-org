@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace CSM.Sim
@@ -27,7 +27,19 @@ namespace CSM.Sim
     public class Rng
     {
         readonly Random r;
-        public Rng(int seed) { r = new Random(seed); }
+        public Rng(int seed) { r = new Random(HASH ? Mistura(seed) : seed); }
+        /* O Random do .NET com semente vizinha (seed*31+id, round+1) dá sequências quase em linha: o 1º sorteio dos 10 bots
+           num round saía 0,72 0,25 0,77 0,29 0,81... (passo fixo). As "decisões aleatórias" dos bots ficavam correlacionadas e um
+           sorteio a mais em um deles mudava a média do jogo (o pezinho com chance 0 subia a nota de erros +0,2). Embaralha a
+           semente (SplitMix32) pra cada gerador ser independente. PADRÃO desde 2026-11-05; -exp rngLegadoVelho volta ao antigo */
+        static readonly bool HASH = LeHash();
+        static bool LeHash() { try { var a = Environment.GetCommandLineArgs(); int i = Array.IndexOf(a, "-exp"); return !(i >= 0 && i + 1 < a.Length && a[i + 1].Contains("rngLegadoVelho")); } catch { return true; } }
+        static int Mistura(int x)
+        {
+            uint z = unchecked((uint)x + 0x9E3779B9u);
+            z = (z ^ (z >> 16)) * 0x85EBCA6Bu; z = (z ^ (z >> 13)) * 0xC2B2AE35u; z ^= z >> 16;
+            return (int)(z & 0x7FFFFFFF);
+        }
         public float Rand() => (float)r.NextDouble();
         public float Uniform(float a, float b) => a + (b - a) * (float)r.NextDouble();
         public V2 Uniform2(float a, float b) => new V2(Uniform(a, b), Uniform(a, b));

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 152 152">
+  <!-- no ar: seta pra cima saindo de um arco de pulo, com riscos de movimento -->
+  <g fill="#fff">
+    <path d="M76 14 L112 56 L88 56 L88 92 L64 92 L64 56 L40 56 Z"/>
+  </g>
+  <g fill="none" stroke="#fff" stroke-linecap="round">
+    <path d="M22 132 Q76 96 130 132" stroke-width="8"/>
+    <path d="M28 104 L44 112" stroke-width="5"/><path d="M124 104 L108 112" stroke-width="5"/>
+  </g>
+</svg>

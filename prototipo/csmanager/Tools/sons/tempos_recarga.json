@@ -1,0 +1,170 @@
+{
+ "ak": {
+  "tr": {
+   "sai": 0.156,
+   "entra": 0.672,
+   "quadros": 65
+  },
+  "ct": {
+   "sai": 0.156,
+   "entra": 0.672,
+   "quadros": 65
+  }
+ },
+ "m4": {
+  "tr": {
+   "sai": 0.157,
+   "entra": 0.663,
+   "quadros": 84
+  },
+  "ct": {
+   "sai": 0.157,
+   "entra": 0.663,
+   "quadros": 84
+  }
+ },
+ "m4s": {
+  "tr": {
+   "sai": 0.157,
+   "entra": 0.663,
+   "quadros": 84
+  },
+  "ct": {
+   "sai": 0.157,
+   "entra": 0.663,
+   "quadros": 84
+  }
+ },
+ "awp": {
+  "tr": {
+   "sai": 0.152,
+   "entra": 0.667,
+   "quadros": 100
+  },
+  "ct": {
+   "sai": 0.152,
+   "entra": 0.667,
+   "quadros": 100
+  }
+ },
+ "mp9": {
+  "tr": {
+   "sai": 0.161,
+   "entra": 0.661,
+   "quadros": 57
+  },
+  "ct": {
+   "sai": 0.161,
+   "entra": 0.661,
+   "quadros": 57
+  }
+ },
+ "mac10": {
+  "tr": {
+   "sai": 0.159,
+   "entra": 0.667,
+   "quadros": 70
+  },
+  "ct": {
+   "sai": 0.159,
+   "entra": 0.667,
+   "quadros": 70
+  }
+ },
+ "usp": {
+  "tr": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  },
+  "ct": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  }
+ },
+ "glock": {
+  "tr": {
+   "sai": 0.164,
+   "entra": 0.672,
+   "quadros": 62
+  },
+  "ct": {
+   "sai": 0.164,
+   "entra": 0.672,
+   "quadros": 62
+  }
+ },
+ "deagle": {
+  "tr": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  },
+  "ct": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  }
+ },
+ "tec9": {
+  "tr": {
+   "sai": 0.156,
+   "entra": 0.672,
+   "quadros": 65
+  },
+  "ct": {
+   "sai": 0.156,
+   "entra": 0.672,
+   "quadros": 65
+  }
+ },
+ "fiveseven": {
+  "tr": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  },
+  "ct": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  }
+ },
+ "p250": {
+  "tr": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  },
+  "ct": {
+   "sai": 0.172,
+   "entra": 0.672,
+   "quadros": 59
+  }
+ },
+ "galil": {
+  "tr": {
+   "sai": 0.15,
+   "entra": 0.662,
+   "quadros": 81
+  },
+  "ct": {
+   "sai": 0.15,
+   "entra": 0.662,
+   "quadros": 81
+  }
+ },
+ "famas": {
+  "tr": {
+   "sai": 0.159,
+   "entra": 0.659,
+   "quadros": 89
+  },
+  "ct": {
+   "sai": 0.159,
+   "entra": 0.659,
+   "quadros": 89
+  }
+ }
+}

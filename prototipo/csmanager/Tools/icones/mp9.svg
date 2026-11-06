@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 152">
+  <!-- MP9: coronha de arame, caixa com trilho, carregador dentro do punho, empunhadura da frente -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="300" height="152">
+      <rect width="300" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M100 38 L100 66" stroke-width="2.4"/>
+        <path d="M104 52 L226 52" stroke-width="2"/>
+        <path d="M126 112 L150 114" stroke-width="2.2"/>    <!-- base do punho / topo do carregador -->
+      </g>
+      <g fill="#000">
+        <path d="M24 46 L86 44 L86 52 L28 62 Z"/>           <!-- vão da coronha de arame -->
+        <path d="M156 68 L190 68 Q194 68 194 72 L194 84 Q194 90 188 90 L162 90 Q156 90 156 84 Z"/>  <!-- guarda-mato grande -->
+      </g>
+      <path d="M166 68 Q171 74 167 80" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M14 42 Q14 38 18 38 L98 40 L98 56 L22 72 Q14 74 14 68 Z"/>
+    <path d="M98 38 L230 38 L230 66 L98 66 Z"/>
+    <path d="M104 33 L224 33 L224 38 L104 38 Z"/>
+    <path d="M228 45 L264 45 L264 54 L228 54 Z"/>
+    <path d="M262 43 L274 43 Q277 43 277 46 L277 53 Q277 56 274 56 L262 56 Z"/>
+    <!-- guarda-mato + empunhadura da frente numa peça -->
+    <path d="M150 64 L214 64 L210 104 Q209 110 203 110 L198 110 Q193 110 194 104 L196 90 L156 92 Z"/>
+    <!-- punho com o carregador saindo por baixo -->
+    <path d="M122 64 L152 64 L148 114 L124 112 Z"/>
+    <path d="M126 112 L148 114 L146 140 L126 138 Z"/>
+  </g>
+</svg>

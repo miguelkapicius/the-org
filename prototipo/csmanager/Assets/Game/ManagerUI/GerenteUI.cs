@@ -27,7 +27,7 @@ namespace CSM.ManagerUI
         public int seed = 7;
         public const string CENA_PARTIDA = "Partida3D";
 
-        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Serie, PreMatch, PosPartida }
+        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Playbook, Serie, PreMatch, PosPartida }
         Aba aba = Aba.Painel, abaAnterior = Aba.Painel;
         Carreira c;
         VisualElement tela, janela, conteudo, toastEl, dicaEl;
@@ -151,6 +151,7 @@ namespace CSM.ManagerUI
                 case KeyCode.Alpha6: Ir(Aba.Financas); break;
                 case KeyCode.Alpha7: Ir(Aba.GamingHouse); break;
                 case KeyCode.Alpha8: Ir(Aba.Scouts); break;
+                case KeyCode.Alpha9: Ir(Aba.Playbook); break;
                 case KeyCode.Escape:
                     if (aba == Aba.PreMatch) Ir(Aba.Serie);
                     else if (aba == Aba.Serie || aba == Aba.PosPartida) Ir(Aba.Painel);
@@ -226,6 +227,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: titulo = "Gaming House"; sub = "Cada nível libera vantagens: treino, scouts, recuperação, patrocínio (decisão 0016)."; break;
                 case Aba.Financas: titulo = "Finanças"; sub = "Salários e manutenção saem toda semana; prêmios e patrocínio entram."; break;
                 case Aba.Scouts: titulo = "Scouts"; sub = "Descubra como o adversário joga e quem vale a pena contratar."; break;
+                case Aba.Playbook: titulo = "Playbook"; sub = "As jogadas que o seu time prefere e as que ele nunca faz (decisão 0022)."; break;
                 case Aba.Serie: titulo = "Preparar série"; sub = c.serie != null ? c.serie.camp.nome + " · " + Fmt.Rotulo(c.serie.camp.nome, c.serie.conf.rotulo) : ""; break;
                 case Aba.PosPartida: { var r = resumoAberto ?? c.naoVisto; titulo = "Pós-partida"; sub = r != null ? r.campeonato + " · " + r.mapa + " · contra " + r.adversario : ""; break; }
                 default: titulo = "Painel do clube"; sub = "Semana " + c.Semana + " · temporada " + c.Temporada + " · " + c.clube; break;
@@ -245,6 +247,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: TelaGamingHouse(); break;
                 case Aba.Financas: TelaFinancas(); break;
                 case Aba.Scouts: TelaScouts(); break;
+                case Aba.Playbook: TelaPlaybook(); break;
                 case Aba.Serie: TelaSerie(); break;
                 case Aba.PosPartida: TelaPosPartida(); break;
                 default: TelaPainel(); break;
@@ -276,6 +279,8 @@ namespace CSM.ManagerUI
             Item(nav, "Finanças", "dollar", Aba.Financas, null);
             Item(nav, "Gaming House", "house", Aba.GamingHouse, c.nivelGH.ToString());
             Item(nav, "Scouts", "eye", Aba.Scouts, c.scouts.Count > 0 ? c.scouts.Count.ToString() : null);
+            int nPlay = c.favoritasTR.Count + c.favoritasCT.Count + c.proibidasTR.Count + c.proibidasCT.Count;
+            Item(nav, "Playbook", "tag", Aba.Playbook, nPlay > 0 ? nPlay.ToString() : null);
 
             // o próximo passo do jogo: jogar a série marcada ou avançar o tempo
             var prox = E("proxima");
@@ -310,7 +315,7 @@ namespace CSM.ManagerUI
                 aba = Aba.Painel; Mostrar(); Toast("Carreira nova começada.");
             });
             m.Add(nova);
-            m.Add(L("Salva sozinho. Teclas 1 a 8 trocam de tela. Valores provisórios (protótipo).", "f13", "apagado", "quebra", "rodape"));
+            m.Add(L("Salva sozinho. Teclas 1 a 9 trocam de tela. Valores provisórios (protótipo).", "f13", "apagado", "quebra", "rodape"));
             return m;
         }
 
@@ -419,6 +424,24 @@ namespace CSM.ManagerUI
             if (c.diario.Count == 0) diario.Add(L("Nada por enquanto.", "f15", "suave"));
             foreach (var d in c.diario.Take(5)) { var l = E("diario-linha"); l.Add(L(d, "suave")); diario.Add(l); }
             conteudo.Add(diario);
+
+            // rivalidades (decisão 0021)
+            var rivais = c.Rivais;
+            if (rivais.Count > 0)
+            {
+                conteudo.Add(L("Rivalidades", "h2"));
+                var caixaR = E("diario");
+                for (int i = 0; i < Math.Min(5, rivais.Count); i++)
+                {
+                    var rv = rivais[i];
+                    var l = E("diario-linha"); l.style.flexDirection = FlexDirection.Row; l.style.alignItems = Align.Center;
+                    if (i == 0) { var sa = Selo("ARQUIRRIVAL", "laranja"); sa.style.marginRight = 8; l.Add(sa); }
+                    l.Add(L(rv.adversario, "f16", "negrito"));
+                    var t = L(" · " + rv.Texto + (rv.sequencia >= 2 ? " · " + rv.sequencia + " vitórias seguidas" : rv.sequencia <= -2 ? " · " + (-rv.sequencia) + " derrotas seguidas" : ""), "suave");
+                    l.Add(t); caixaR.Add(l);
+                }
+                conteudo.Add(caixaR);
+            }
 
             conteudo.Add(L("Elenco", "h2"));
             conteudo.Add(Abas(FILTROS_ELENCO, filtroPainel, i => { filtroPainel = i; Mostrar(); }));
@@ -548,6 +571,42 @@ namespace CSM.ManagerUI
             }
         }
 
+        /// <summary>Selo do traço de personalidade (decisão 0019), com a explicação ao passar o mouse. null = sem traço ou não visível.</summary>
+        static VisualElement SeloTraco(Jogador j, bool visivel)
+        {
+            if (!visivel || j.traco == Traco.Nenhum) return null;
+            var s = Selo(Tracos.Nome(j.traco).ToUpperInvariant(), null); ComDica(s, Tracos.Descricao(j.traco)); return s;
+        }
+
+        /// <summary>Nome do jogador com o selo do traço ao lado.</summary>
+        static VisualElement NomeComTraco(Jogador j, string classe, bool veTraco)
+        {
+            var l = E(); l.style.flexDirection = FlexDirection.Row; l.style.alignItems = Align.Center;
+            l.Add(classe == "f17" ? L(j.nome, classe, "negrito") : L(j.nome, classe));
+            var s = SeloTraco(j, veTraco); if (s != null) { s.style.marginLeft = 8; l.Add(s); }
+            return l;
+        }
+
+        /// <summary>"moral 65", em laranja abaixo de 45 e vermelho abaixo de 30, com a explicação.</summary>
+        static VisualElement Moral(Jogador j, string antes)
+        {
+            int m = (int)j.moral;
+            var l = L(antes + "moral " + m, "f14", m < Provisorio.MORAL_AVISO ? "vermelho" : m < 45 ? "laranja" : "suave");
+            l.pickingMode = PickingMode.Position;   // o texto ignora o mouse por padrão: sem isso a dica não abre
+            ComDica(l, "Moral (0 a 100): sobe com vitórias e jogando de titular, cai com derrotas e no banco. Muda a habilidade na partida de -4,5% (0) a +3% (100); neutra em 60.");
+            return l;
+        }
+
+        /// <summary>"MVP 3× (1 de série)", com as últimas jogadas da partida dele ao passar o mouse (decisão 0020).</summary>
+        static VisualElement Mvps(Jogador j, string antes)
+        {
+            var l = L(antes + "MVP " + j.mvps + "×" + (j.mvpsSerie > 0 ? " (" + j.mvpsSerie + " de série)" : ""), "f14", j.mvps > 0 ? "verde" : "suave");
+            l.pickingMode = PickingMode.Position;
+            ComDica(l, "Vezes que foi MVP de mapa" + (j.mvpsSerie > 0 ? " e de série" : "") + " pelo clube." +
+                       (j.jogadas.Count > 0 ? "\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : "\n\nAinda sem jogada da partida (só conta a partida assistida)."));
+            return l;
+        }
+
         VisualElement CartaoJogador(Jogador j)
         {
             var cj = E("card-j");
@@ -556,8 +615,10 @@ namespace CSM.ManagerUI
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
             cj.Add(midia);
             var info = E("info");
-            info.Add(L(j.nome, "info-nome"));
+            info.Add(NomeComTraco(j, "info-nome", true));
             info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave", "info-meta"));
+            info.Add(AtributoLinha("Moral", (int)j.moral));
+            if (j.mvps > 0 || j.jogadas.Count > 0) info.Add(Mvps(j, ""));
             info.Add(AtributoLinha("Mira", j.Mira));
             info.Add(AtributoLinha("Reflexo", j.Reflexo));
             info.Add(AtributoLinha("Spray", j.Spray));
@@ -601,6 +662,18 @@ namespace CSM.ManagerUI
                 if (fim != null) conteudo.Add(L("Campeonato encerrado: " + Fmt.Ordinal(fim.posicao) + " lugar, prêmio " + Fmt.Dinheiro(fim.premio) + ".", "f17", "negrito", "verde"));
             }
 
+            // melhores momentos (decisão 0020)
+            conteudo.Add(L("Jogada da partida", "h2"));
+            if (r.jogada != null)
+            {
+                var jg = E("linha-h"); jg.style.alignItems = Align.Center;
+                jg.Add(Selo(r.jogadaNossa ? "DO SEU TIME" : "DO ADVERSÁRIO", r.jogadaNossa ? "verde" : "vermelho"));
+                var tj = L(r.jogada, "f18", "negrito"); tj.style.marginLeft = 12; tj.style.whiteSpace = WhiteSpace.Normal; tj.style.flexShrink = 1; jg.Add(tj);
+                conteudo.Add(jg);
+            }
+            else conteudo.Add(L(r.assistida ? "Nenhum abate marcante nesta partida." : "O mapa foi pulado: só a partida assistida tem jogada da partida.", "f15", "suave"));
+            if (r.mvpSerie != null) { var mvs = L("MVP da série: " + r.mvpSerie, "f17", "negrito", "verde"); mvs.style.marginTop = 10; conteudo.Add(mvs); }
+
             conteudo.Add(L("Desempenho dos jogadores", "h2"));
             if (r.estimado) conteudo.Add(L("Números estimados: o mapa foi pulado, então não houve simulação. Assista para ver o desempenho real.", "nota-estimada"));
             var melhor = r.Melhor;
@@ -618,7 +691,7 @@ namespace CSM.ManagerUI
                 nomes.Add(L(d.nome, "f17", "negrito"));
                 nomes.Add(L(Fmt.Funcao(d.funcao), "f14", "suave"));
                 pessoa.Add(nomes);
-                if (d == melhor) { var s = Selo("MELHOR", "verde"); s.style.marginLeft = 12; pessoa.Add(s); }
+                if (d == melhor) { var s = Selo("MVP", "verde"); s.style.marginLeft = 12; ComDica(s, "MVP do mapa: a melhor nota de desempenho (abates, mortes e dano por round)."); pessoa.Add(s); }
                 linha.Add(Celula("c-j", pessoa).WithClass("largo"));
                 linha.Add(Celula("c-n", L(d.k.ToString(), "negrito")));
                 linha.Add(Celula("c-n", L(d.d.ToString())));
@@ -678,6 +751,11 @@ namespace CSM.ManagerUI
             res.Add(L("Força " + c.Forca, "f17", "negrito"));
             var adv = c.Adversario;
             res.Add(L("Chance de vitória " + Pct(c.ChanceVitoria()) + (adv != null ? " contra " + adv.nome : ""), "f16", "suave"));
+            int ent = (int)c.EntrosamentoTime;
+            var le = L("Entrosamento " + ent, "f16", ent < 40 ? "laranja" : "suave");
+            le.pickingMode = PickingMode.Position;
+            ComDica(le, "Média do entrosamento dos titulares (0 a 100). Mais entrosado, mais os bots trocam o colega que morreu, e a força sobe até 2%. Sobe a cada semana jogando junto e com sessões coletivas; um contratado chega com pouco.");
+            res.Add(le);
             topo.Add(res);
             var chips = E("chips-func");
             var faltando = c.FuncoesFaltando();
@@ -718,11 +796,13 @@ namespace CSM.ManagerUI
             cj.Add(midia);
 
             var info = E("info");
-            var nome = E("linha-h"); var nm = L(j.nome, "info-nome"); nm.style.flexGrow = 1; nome.Add(nm);
+            var nome = E("linha-h"); var nm = NomeComTraco(j, "info-nome", true); nm.style.flexGrow = 1; nome.Add(nm);
             nome.Add(L(Fmt.FuncaoCurta(j.funcao), "f13", "negrito", "suave")); info.Add(nome);
             info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f13", "suave", "info-meta"));
             info.Add(AtributoLinha("Mira", j.Mira)); info.Add(AtributoLinha("Reflexo", j.Reflexo)); info.Add(AtributoLinha("Spray", j.Spray));
             info.Add(AtributoLinha("Utilitária", j.Utilitaria)); info.Add(AtributoLinha("Frio", j.SangueFrio));
+            info.Add(AtributoLinha("Moral", (int)j.moral));
+            if (j.mvps > 0 || j.jogadas.Count > 0) info.Add(Mvps(j, ""));
             var fad = E("attr"); fad.Add(L("Cansaço", "attr-nome")); var bc = BarraCansaco(j.cansaco); bc.style.flexGrow = 1; fad.Add(bc); fad.Add(L(((int)j.cansaco).ToString(), "attr-num", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "t")); info.Add(fad);
             var pot = L("Potencial " + j.potencial + " · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", j.potencial >= 85 ? "verde" : "suave"); pot.style.marginTop = 6; info.Add(pot);
             cj.Add(info);
@@ -858,8 +938,13 @@ namespace CSM.ManagerUI
                 var pessoa = E("linha-h");
                 pessoa.Add(Avatar(j.nome));
                 var nomes = E("pessoa-txt");
-                nomes.Add(L(j.nome, "f17", "negrito"));
-                nomes.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
+                bool doElenco = c.elenco.Contains(j);
+                nomes.Add(NomeComTraco(j, "f17", j.potencialRevelado || doElenco));
+                var meta = E(); meta.style.flexDirection = FlexDirection.Row;
+                meta.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
+                if (doElenco) meta.Add(Moral(j, " · "));
+                if (doElenco && (j.mvps > 0 || j.jogadas.Count > 0)) meta.Add(Mvps(j, " · "));
+                nomes.Add(meta);
                 pessoa.Add(nomes);
                 r.Add(Celula("c-j", pessoa));
                 r.Add(Celula("c-g", L(j.Overall.ToString(), "geral", ClasseNota(j.Overall))));

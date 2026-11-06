@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 356 166">
+  <!-- USP-S com silenciador. Proporção do CS2: ferrolho grosso, cão saindo pra trás, punho curto e mais fino com as
+       costas curvas e a base quase reta, guarda-mato redondo. Risquinhos da casa. -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="356" height="166">
+      <rect width="356" height="166" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round" stroke-width="2">
+        <path d="M52 41 L52 58"/><path d="M58 41 L58 58"/><path d="M64 41 L64 58"/><path d="M70 41 L70 58"/>
+        <path d="M42 63.5 L196 63.5" stroke-width="2.4"/>
+        <path d="M210 38 L210 60" stroke-width="2.4"/>                               <!-- encaixe do silenciador -->
+        <path d="M44 146 L84 148" stroke-width="2.2"/>
+      </g>
+      <path d="M114 76 L144 76 Q146 76 146 79 L146 86 Q146 95 136 95 L120 95 Q113 95 113 88 Z" fill="#000"/>
+      <path d="M123 76 Q129 82 125 90" stroke="#fff" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M24 44 Q22 40 26 39 L40 38 L42 54 L30 56 Q26 56 26 52 Z"/>                                        <!-- cão -->
+    <path d="M38 38 Q38 33 43 33 L200 33 L200 64 L38 64 Z"/>                                                   <!-- ferrolho -->
+    <path d="M44 29 L54 29 L54 33 L44 33 Z"/><path d="M192 29 L198 29 L198 33 L192 33 Z"/>
+    <path d="M40 63 L198 63 L196 73 L152 74 L108 72 Z"/>                                                      <!-- armação -->
+    <path d="M106 70 L152 70 L152 82 Q152 102 130 102 L118 102 Q106 102 106 90 Z"/>                             <!-- guarda-mato -->
+    <path d="M36 63 L108 66 L106 86 Q99 94 97 106 L91 146 Q90 154 82 154 L44 152 Q35 151 36 142 C38 124 41 106 44 92 C46 82 43 74 36 68 Z"/>
+    <path d="M198 36 L340 36 Q346 36 346 42 L346 56 Q346 62 340 62 L198 62 Z"/>                                <!-- silenciador -->
+  </g>
+</svg>

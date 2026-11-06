@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -28,6 +28,7 @@ namespace CSM.Sim
             new Alvo("TR vence %", 42, 49, 2),            // real 45,6 (Mirage 44)
             new Alvo("tempo acabou %", 4, 9, 1.5f),       // real 6,6
             new Alvo("plant %", 43, 53, 1),               // real 49,7 (Mirage 46)
+            new Alvo("retake geral (CT ganha depois do plant) %", 30, 35, 1),   // real ~30-35 (todo plant; o "CT ganha retake" abaixo é só o recorte 2+ CT e CT >= TR)
             new Alvo("1º abate (s)", 33, 44, 2),          // real 38
             new Alvo("HS % (rifle)", 46, 56, 1),          // real 51
             new Alvo("1º abate é do CT %", 55, 65, 1),    // real 60
@@ -156,6 +157,7 @@ namespace CSM.Sim
         public Dictionary<string, float> Valores() => new Dictionary<string, float>
         {
             ["TR vence %"] = Pct(trWins, rounds),
+            ["retake geral (CT ganha depois do plant) %"] = Pct(ev.Where(k => k.Key.StartsWith("PLANT com") && k.Key.EndsWith("CT venceu")).Sum(k => k.Value), ev.Where(k => k.Key.StartsWith("PLANT com") && !k.Key.EndsWith("CT venceu")).Sum(k => k.Value)),
             ["mira no contato, mediana (°)"] = contatosTiro.Count > 0 ? contatosTiro.OrderBy(x => x).ElementAt(contatosTiro.Count / 2) : 99,
             ["  mira <2° % todos os avistamentos / real 45"] = contatos.Count > 0 ? 100f * contatos.Count(c => c.flick < 2) / contatos.Count : 0,
             ["  mira >8° % todos os avistamentos / real 16"] = contatos.Count > 0 ? 100f * contatos.Count(c => c.flick > 8) / contatos.Count : 0,
@@ -256,7 +258,7 @@ namespace CSM.Sim
             int mp = miraPor.Values.Sum(c => c.parede), mt = miraPor.Values.Sum(c => c.total);
             sb.AppendLine("  EVENTOS (% rounds = uma vez por round; senão por round):");
             foreach (var kv in ev.Where(k => k.Key.StartsWith("FIM ") || k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       CONTA {kv.Key,-44} {kv.Value}");
-            foreach (var kv in ev.Where(k => !k.Key.StartsWith("AUD ") && !k.Key.StartsWith("FIM ") && !k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       {kv.Key,-44} {(kv.Key.EndsWith("% rounds") ? Pct(kv.Value, rounds) : kv.Value / (float)Math.Max(1, rounds)),7:0.0}");
+            foreach (var kv in ev.Where(k => !k.Key.StartsWith("AUD ") && !k.Key.StartsWith("FIM ") && !k.Key.StartsWith("PLANT com")).OrderBy(k => k.Key)) sb.AppendLine($"       {kv.Key,-44} {(kv.Key.EndsWith("% rounds") ? Pct(kv.Value, rounds) : kv.Value / (float)Math.Max(1, rounds)),7:0.00}");
             sb.AppendLine($"  MIRA COLADA NA PAREDE (<90, fora de duelo): {Pct(mp, mt):0.0}% do tempo");
             foreach (var kv in miraPor.OrderByDescending(k => k.Value.parede).Take(8))
                 sb.AppendLine($"       {kv.Key,-32} {Pct(kv.Value.parede, kv.Value.total),5:0}% de {Pct(kv.Value.total, mt),4:0}% do tempo");
@@ -274,7 +276,8 @@ namespace CSM.Sim
             {
                 int tot = g.Sum(a => a.n);
                 sb.AppendLine($"    {g.Key} ({tot})");
-                foreach (var a in g.OrderByDescending(a => a.n).Take(9)) sb.AppendLine($"       {a.i,-46} {Pct(a.n, tot),5:0.0}%");
+                bool porPonto = g.Key.StartsWith("pezinho") || g.Key == "destravou: lugar" || g.Key.StartsWith("sem caminho") || g.Key.StartsWith("nota de erros:");   /* por ponto: lista tudo, com a contagem (pra somar fora) */
+                foreach (var a in g.OrderByDescending(a => a.n).Take(porPonto ? 80 : 9)) sb.AppendLine($"       {a.i,-46} {Pct(a.n, tot),5:0.0}%" + (porPonto ? $"  n={a.n}" : ""));
             }
             var abs = acertos.Where(a => a.matou).ToList();
             void Tabela(string nome, Func<Match.Acerto, string> matador, Func<Match.Acerto, string> vitima, int minimo)

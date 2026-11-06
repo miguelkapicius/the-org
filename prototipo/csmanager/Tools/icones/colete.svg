@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130 152">
+  <!-- colete (kevlar): frente com gola em V, cavas, placas -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="130" height="152">
+      <rect width="130" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round" stroke-width="2.2">
+        <path d="M65 60 L65 138"/>             <!-- fecho -->
+        <path d="M30 96 L58 96"/><path d="M72 96 L100 96"/>   <!-- placas -->
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M34 16 L50 16 Q54 40 65 56 Q76 40 80 16 L96 16 L98 40 Q100 56 114 62 L114 136 Q114 142 108 142 L22 142 Q16 142 16 136 L16 62 Q30 56 32 40 Z"/>
+  </g>
+</svg>

@@ -1,0 +1,11 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+body{margin:0;background:#1f1b18;color:#fff4e2;font:600 13px "Segoe UI",sans-serif;padding:20px;display:flex;flex-wrap:wrap;gap:22px 34px;align-items:flex-end;width:1560px}
+figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+figcaption{opacity:.5}
+</style></head><body>
+<script>
+const p = new URLSearchParams(location.search);
+const itens = (p.get('i') || 'ak47,m4a4,m4a1s,awp,mp9,mac10,usp,glock,deagle,faca').split(',');
+const h = +(p.get('h') || 110);
+for (const n of itens) document.write(`<figure><img src="${n}.svg" style="height:${h}px"><figcaption>${n}</figcaption></figure>`);
+</script></body></html>

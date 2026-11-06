@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using CSM.Sim;
 using static CSM.Map.MapData;
@@ -31,6 +31,7 @@ namespace CSM.Map
                 if ((x + y) % 2 != 0) continue;
                 float z0 = NavGrid.z[x, y];
                 Kind? k = null;
+                if (NavGrid.soBoost[x, y]) continue;   /* topo de pilha (pezinho): não é lugar de rotina */
                 if (NavGrid.onTop[x, y]) k = Kind.EmCima;
                 else
                 {

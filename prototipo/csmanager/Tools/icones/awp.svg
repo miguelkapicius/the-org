@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 152">
+  <!-- AWP: coronha com buraco do polegar, luneta grande, ferrolho, cano grosso comprido com freio de boca -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="600" height="152">
+      <rect width="600" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M21 52 L20 110" stroke-width="2.4"/>              <!-- soleira -->
+        <path d="M200 46 L200 76" stroke-width="2.4"/>             <!-- coronha | caixa -->
+        <path d="M206 23 L206 39" stroke-width="2"/>               <!-- ocular -->
+        <path d="M322 21 L322 41" stroke-width="2"/>               <!-- objetiva -->
+        <path d="M262 24 L262 32" stroke-width="2"/>               <!-- torre de ajuste -->
+        <path d="M304 55 L380 55" stroke-width="2"/>               <!-- fuste -->
+        <path d="M60 64 L168 56" stroke-width="2"/>                <!-- apoio de rosto -->
+      </g>
+      <g fill="#000">
+        <path d="M120 72 Q122 66 130 66 L166 64 Q174 64 172 72 L166 90 Q164 96 156 96 L136 98 Q122 98 120 88 Z"/>  <!-- buraco do polegar -->
+        <path d="M214 80 L238 80 Q240 80 240 83 L240 88 Q240 92 235 92 L220 92 Q214 92 214 87 Z"/>                 <!-- guarda-mato -->
+        <path d="M580 49 L590 49 L590 50.5 L580 50.5 Z"/><path d="M580 53.5 L590 53.5 L590 55 L580 55 Z"/>          <!-- freio -->
+      </g>
+      <path d="M223 80 Q227 85 224 90" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- coronha (thumbhole) inteira: soleira alta, pente de rosto, punho que desce -->
+    <path d="M14 52 Q14 46 20 46 L200 44 L202 78 L178 80 L176 104 Q174 112 166 112 L144 110 Q132 108 124 100 L22 112 Q14 113 14 106 Z"/>
+    <!-- caixa da culatra -->
+    <path d="M198 44 L306 44 L306 76 L198 78 Z"/>
+    <!-- carregador -->
+    <path d="M252 76 L284 76 L282 94 L254 94 Z"/>
+    <!-- guarda-mato -->
+    <path d="M210 76 L244 76 L244 88 Q244 96 236 96 L218 96 Q210 96 210 88 Z"/>
+    <!-- ferrolho: haste e bola -->
+    <path d="M286 58 L292 58 L298 70 L292 72 Z"/>
+    <circle cx="297" cy="74" r="5"/>
+    <!-- montagens + luneta (ocular, tubo, objetiva) -->
+    <path d="M222 36 L232 36 L232 44 L222 44 Z"/><path d="M290 36 L300 36 L300 44 L290 44 Z"/>
+    <path d="M190 22 Q190 18 194 18 L210 21 L210 41 L194 44 Q190 44 190 40 Z"/>
+    <path d="M208 25 L320 25 L320 37 L208 37 Z"/>
+    <path d="M254 18 L270 18 L270 25 L254 25 Z"/>
+    <path d="M318 21 L350 15 Q354 14 354 18 L354 44 Q354 48 350 47 L318 41 Z"/>
+    <!-- fuste -->
+    <path d="M304 46 L386 48 Q392 48 391 54 L388 64 Q387 68 382 68 L304 74 Z"/>
+    <!-- cano grosso e freio de boca -->
+    <path d="M386 48 L576 48.5 L576 57 L386 58 Z"/>
+    <path d="M574 45.5 L592 45.5 Q596 45.5 596 49 L596 56 Q596 59.5 592 59.5 L574 59.5 Z"/>
+  </g>
+</svg>

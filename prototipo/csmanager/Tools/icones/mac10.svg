@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 230 152">
+  <!-- MAC-10: caixa quadrada, coronha de arame recolhida, punho com carregador, alça na frente, cano rosqueado -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="230" height="152">
+      <rect width="230" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M44 50 L168 50" stroke-width="2"/>        <!-- tampa da caixa -->
+        <path d="M74 116 L98 118" stroke-width="2.2"/>     <!-- base do punho -->
+        <path d="M188 44 L188 56" stroke-width="1.8"/><path d="M194 44 L194 56" stroke-width="1.8"/><path d="M200 44 L200 56" stroke-width="1.8"/>
+      </g>
+      <g fill="#000">
+        <path d="M104 72 L126 72 Q128 72 128 75 L128 82 Q128 86 124 86 L108 86 Q104 86 104 82 Z"/>  <!-- guarda-mato -->
+        <path d="M152 72 L166 72 L166 80 Q166 84 162 84 L156 84 Q152 84 152 80 Z"/>                  <!-- vão da alça -->
+      </g>
+      <path d="M113 72 Q117 77 114 82" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- coronha de arame recolhida: duas hastes e a soleira -->
+    <path d="M10 36 Q10 33 13 33 L18 33 L18 70 L13 70 Q10 70 10 67 Z"/>
+    <path d="M16 38 L44 38 L44 43 L16 43 Z"/><path d="M16 60 L44 60 L44 65 L16 65 Z"/>
+    <!-- caixa -->
+    <path d="M40 38 Q40 34 44 34 L170 34 Q174 34 174 38 L174 72 L40 72 Z"/>
+    <!-- alavanca em cima -->
+    <path d="M118 28 L132 28 Q134 28 134 30 L134 34 L118 34 Z"/>
+    <!-- cano rosqueado -->
+    <path d="M172 42 L206 42 L206 58 L172 58 Z"/>
+    <!-- guarda-mato -->
+    <path d="M100 68 L132 68 L132 82 Q132 90 124 90 L108 90 Q100 90 100 82 Z"/>
+    <!-- alça da frente -->
+    <path d="M148 68 L170 68 L170 82 Q170 88 164 88 L154 88 Q148 88 148 82 Z"/>
+    <!-- punho com carregador comprido -->
+    <path d="M70 68 L100 68 L98 118 L72 116 Z"/>
+    <path d="M74 116 L98 118 L96 144 L76 142 Z"/>
+  </g>
+</svg>

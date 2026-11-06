@@ -13,6 +13,14 @@ namespace CSM.Sim
     {
         public const float SPEEDUP = 0.9f;   // multiplica recarga e intervalo de tiro
 
+        /// <summary>Nome de exibição da arma (HUD, killfeed, jogada da partida).</summary>
+        public static string Nome(string g) => g switch
+        {
+            "ak" => "AK-47", "m4" => "M4A4", "m4s" => "M4A1-S", "awp" => "AWP", "mp9" => "MP9", "mac10" => "MAC-10",
+            "usp" => "USP-S", "glock" => "Glock-18", "deagle" => "Desert Eagle", "faca" => "faca",
+            "tec9" => "Tec-9", "fiveseven" => "Five-SeveN", "p250" => "P250", "galil" => "Galil AR", "famas" => "FAMAS", _ => g?.ToUpper() ?? "",
+        };
+
         public class Stat
         {
             public string id, name;
@@ -34,7 +42,7 @@ namespace CSM.Sim
         {
             ["ak"] = new Stat { id = "ak", name = "AK-47", rpmCs2 = 600f, reloadCs2 = 2.4f, mag = 30, reserveMags = 3, price = 2700,
                 spread = 0.0006f, inStand = 0.00641f, inCrouch = 0.00481f, inFire = 0.0078f, inMove = 0.17506f, recStand = 0.368f, recCrouch = 0.305f, recStandFin = 0.506f, recCrouchFin = 0.42f, recoil = 30, recoilVar = 70 },
-            ["m4"] = new Stat { id = "m4", name = "M4A4", rpmCs2 = 666.67f, reloadCs2 = 3.1f, mag = 30, reserveMags = 4, price = 3100,
+            ["m4"] = new Stat { id = "m4", name = "M4A4", rpmCs2 = 666.67f, reloadCs2 = 3.1f, mag = 30, reserveMags = 4, price = 2900,   // weapons.vdata (2026): 2900
                 spread = 0.0006f, inStand = 0.0049f, inCrouch = 0.0041f, inFire = 0.007f, inMove = 0.13788f, recStand = 0.339f, recCrouch = 0.242f, recStandFin = 0.466f, recCrouchFin = 0.333f, recoil = 23, recoilVar = 70 },
             ["m4s"] = new Stat { id = "m4s", name = "M4A1-S", rpmCs2 = 600f, reloadCs2 = 3.1f, mag = 20, reserveMags = 3, price = 2900,
                 spread = 0.0006f, inStand = 0.0049f, inCrouch = 0.0041f, inFire = 0.012f, inMove = 0.09288f, recStand = 0.339f, recCrouch = 0.242f, recStandFin = 0.466f, recCrouchFin = 0.333f, recoil = 25, recoilVar = 65, hsMult = 3.475f },
@@ -49,10 +57,22 @@ namespace CSM.Sim
             ["glock"] = new Stat { id = "glock", name = "Glock-18", rpmCs2 = 400f, reloadCs2 = 2.3f, mag = 20, reserveMags = 3, price = 200,
                 spread = 0.002f, inStand = 0.0056f, inCrouch = 0.0042f, inFire = 0.056f, inMove = 0.01f, recStand = 0.2f, recCrouch = 0.2f, recStandFin = 0.33f, recCrouchFin = 0.33f, recoil = 18, recoilVar = 20, transIni = 0 },
             // pistolas de eco (weapons.vdata do CS2): a Deagle mata com um na cabeça mesmo de capacete (o eco que dá certo)
-            ["deagle"] = new Stat { id = "deagle", name = "Desert Eagle", rpmCs2 = 266.67f, reloadCs2 = 2.2f, mag = 7, reserveMags = 5, price = 700,
+            ["deagle"] = new Stat { id = "deagle", name = "Desert Eagle", rpmCs2 = 266.67f, reloadCs2 = 2.2f, mag = 7, reserveMags = 3, price = 700,
                 spread = 0.002f, inStand = 0.0042f, inCrouch = 0.00218f, inFire = 0.07223f, inMove = 0.0481f, recStand = 0.8112f, recCrouch = 0.45f, recStandFin = 0.8112f, recCrouchFin = 0.45f, recoil = 48.2f, recoilVar = 18, hsMult = 3.9f, transIni = 0, transFim = 3 },
-            ["p250"] = new Stat { id = "p250", name = "P250", rpmCs2 = 400f, reloadCs2 = 2.2f, mag = 13, reserveMags = 2, price = 300,
+            ["p250"] = new Stat { id = "p250", name = "P250", rpmCs2 = 400f, reloadCs2 = 2.2f, mag = 13, reserveMags = 3, price = 300,
                 spread = 0.002f, inStand = 0.0091f, inCrouch = 0.00683f, inFire = 0.05245f, inMove = 0.02f, recStand = 0.345f, recCrouch = 0.288f, recStandFin = 0.345f, recCrouchFin = 0.288f, recoil = 26, recoilVar = 3, transIni = 0 },
+            // armas novas (pedido do Gabriel, nov/2026). Preço, dano, penetração, cadência, pente, recarga e velocidade: csdb.gg;
+            // spread, imprecisão (parado/agachado/tiro/andando) e recuperação (em pé/agachado/final): weapons.vdata do CS2, 1º
+            // valor de cada array (sessão dos bots, 04/11). Só recoil e recoilVar seguem do csdb.gg. FAMAS: $1.950 (Premier S2,
+            // jan/2025, com melhora de precisão); a rajada não existe aqui.
+            ["tec9"] = new Stat { id = "tec9", name = "Tec-9", rpmCs2 = 500f, reloadCs2 = 2.42f, mag = 18, reserveMags = 3, price = 500,
+                spread = 0.002f, inStand = 0.0049f, inCrouch = 0.00368f, inFire = 0.045f, inMove = 0.00381f, recStand = 0.391f, recCrouch = 0.315f, recStandFin = 0.391f, recCrouchFin = 0.315f, recoil = 23, recoilVar = 60, transIni = 0 },   // inMove 0,00381: é o do weapons.vdata (a Tec-9 é a pistola de andar atirando)
+            ["fiveseven"] = new Stat { id = "fiveseven", name = "Five-SeveN", rpmCs2 = 400f, reloadCs2 = 2.2f, mag = 20, reserveMags = 2, price = 500,
+                spread = 0.002f, inStand = 0.0091f, inCrouch = 0.00683f, inFire = 0.025f, inMove = 0.04f, recStand = 0.2f, recCrouch = 0.2f, recStandFin = 0.5f, recCrouchFin = 0.5f, recoil = 25, recoilVar = 5, transIni = 0 },
+            ["galil"] = new Stat { id = "galil", name = "Galil AR", rpmCs2 = 666.67f, reloadCs2 = 3.0f, mag = 35, reserveMags = 4, price = 1800,
+                spread = 0.0006f, inStand = 0.00877f, inCrouch = 0.00658f, inFire = 0.007f, inMove = 0.12356f, recStand = 0.3f, recCrouch = 0.15f, recStandFin = 0.5f, recCrouchFin = 0.47f, recoil = 21, recoilVar = 70 },
+            ["famas"] = new Stat { id = "famas", name = "FAMAS", rpmCs2 = 666.67f, reloadCs2 = 3.3f, mag = 25, reserveMags = 4, price = 1950,
+                spread = 0.0006f, inStand = 0.00759f, inCrouch = 0.0055f, inFire = 0.00605f, inMove = 0.09934f, recStand = 0.25f, recCrouch = 0.12f, recStandFin = 0.5f, recCrouchFin = 0.48f, recoil = 20, recoilVar = 60 },
         };
 
         /// <summary>
@@ -62,9 +82,9 @@ namespace CSM.Sim
         /// </summary>
         public static float Forca(string g) => g switch
         {
-            "ak" => 10f, "m4s" => 9.3f, "m4" => 9f, "awp" => 9.5f, "mp9" => 6f, "mac10" => 5.5f, "deagle" => 4.5f, "p250" => 3.6f, "usp" => 3.3f, "glock" => 3f, _ => 0f,
+            "ak" => 10f, "m4s" => 9.3f, "m4" => 9f, "awp" => 9.5f, "famas" => 7.8f, "galil" => 7.6f, "mp9" => 6f, "mac10" => 5.5f, "deagle" => 4.5f, "tec9" => 3.8f, "fiveseven" => 3.7f, "p250" => 3.6f, "usp" => 3.3f, "glock" => 3f, _ => 0f,
         };
-        public static bool Pistola(string g) => g == "usp" || g == "glock" || g == "deagle" || g == "p250";
+        public static bool Pistola(string g) => g == "usp" || g == "glock" || g == "deagle" || g == "p250" || g == "tec9" || g == "fiveseven";
 
         /// <summary>Estado da arma na mão: munição, recarga (bloqueia o tiro até acabar) e cadência.</summary>
         public class Gun

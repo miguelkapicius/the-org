@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 152">
+  <!-- AK-47, de lado (cano pra direita), silhueta branca chapada estilo HUD; detalhes = recortes (máscara).
+       Versão FINA aprovada pelo usuário (2026-11-04); a versão gorda foi rejeitada. -->
+  <defs>
+    <mask id="cortes" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="152">
+      <rect width="512" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <!-- separação coronha | caixa da culatra -->
+        <path d="M150 38 L150 74" stroke-width="3"/>
+        <!-- chapa da soleira -->
+        <path d="M22 56 L21 101" stroke-width="2.5"/>
+        <!-- tampa da caixa (dust cover) -->
+        <path d="M158 47.5 L276 47.5" stroke-width="2.2"/>
+        <!-- seletor comprido do AK -->
+        <path d="M196 56 L252 53.5" stroke-width="2.6"/>
+        <!-- caixa | guarda-mão de baixo e de cima -->
+        <path d="M292 47 L292 72" stroke-width="2.6"/>
+        <path d="M300 48.5 L372 48.5" stroke-width="2.2"/>
+        <!-- guarda-mão: fim -->
+        <path d="M371 49 L369 66" stroke-width="2.4"/>
+        <!-- carregador: nervura e base -->
+        <path d="M245 76 Q252 108 276 134" stroke-width="2.2"/>
+        <path d="M266 140 L297 132" stroke-width="2.4"/>
+        <!-- empunhadura: base -->
+        <path d="M168 117 L190 119" stroke-width="2.2"/>
+      </g>
+      <!-- furo do guarda-mato (com o gatilho dentro) -->
+      <path d="M205 72 L229 72 Q231 72 231 75 L231 80 Q231 84 226 84 L211 84 Q205 84 205 79 Z" fill="#000"/>
+      <path d="M215 72 Q219 77 216 82" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#cortes)">
+    <!-- coronha de madeira: cai pra trás (topo desce até a soleira) e o pescoço afina perto da caixa -->
+    <path d="M152 40 L18 53 Q12 54 12 59 L12 99 Q12 104 18 103 L118 82 Q138 76 152 74 Z"/>
+    <!-- caixa da culatra com a traseira da tampa arredondada -->
+    <path d="M150 46 Q151 38 160 38 L280 38 L280 72 L150 72 Z"/>
+    <!-- bloco da alça de mira (traseira) -->
+    <path d="M272 39 L276 32 L300 33 L302 40 Z"/>
+    <!-- guarda-mão de cima (cobre o tubo de gás) e tubo de gás até o bloco -->
+    <path d="M290 37 L374 38 Q378 38 378 42 L378 47 L290 48 Z"/>
+    <path d="M376 40 L416 40 L416 47 L376 47 Z"/>
+    <!-- bloco de gás inclinado -->
+    <path d="M410 37 L424 37 L428 58 L410 58 Z"/>
+    <!-- guarda-mão de baixo (madeira), afina na frente -->
+    <path d="M280 47 L372 49 Q376 49 375 54 L372 65 Q371 68 367 68 L280 72 Z"/>
+    <!-- cano -->
+    <path d="M372 49.5 L494 49.5 L494 56 L372 56 Z"/>
+    <!-- vareta de limpeza embaixo do cano -->
+    <path d="M374 58.5 L466 58.5 L466 61 L374 61 Z"/>
+    <!-- massa de mira (base + poste com orelhas) -->
+    <path d="M452 46 L474 46 L476 62 L452 62 Z"/>
+    <path d="M460 46 L460 31 Q460 29 462 29 L467 29 Q469 29 469 31 L469 46 Z"/>
+    <!-- quebra-chamas -->
+    <path d="M486 47.5 L500 47.5 Q502 47.5 502 50 L502 55.5 Q502 58 500 58 L486 58 Z"/>
+    <!-- guarda-mato -->
+    <path d="M201 70 L233 70 L234 78 Q234 88 226 88 L210 88 Q201 88 201 80 Z"/>
+    <!-- empunhadura inclinada pra trás -->
+    <path d="M180 70 L206 70 L198 116 Q196 124 188 124 L170 122 Q163 121 165 114 Z"/>
+    <!-- carregador banana: curva pra frente -->
+    <path d="M234 70 L268 70 Q276 104 304 132 L270 146 Q240 114 234 70 Z"/>
+    <!-- alavanca de manejo (lado direito) -->
+    <path d="M268 50 L284 50 Q287 50 287 53 Q287 56 284 56 L268 56 Z"/>
+  </g>
+</svg>

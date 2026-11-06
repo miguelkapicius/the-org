@@ -51,6 +51,10 @@ namespace CSM.Manager
         public int foco = -1, sessoes;              // plano de treino da semana: atributo em foco (-1 = descanso) e quantas sessões
         public float[] inicioTemporada = new float[5];   // valor dos atributos no começo da temporada (para mostrar a evolução)
         public int mapasNaSemana;                   // partidas jogadas nesta semana (alimenta o cansaço)
+        public Traco traco;                         // personalidade (decisão 0019): no mercado só se vê com scout, como o potencial
+        public float moral = Provisorio.MORAL_INICIAL, entrosamento = Provisorio.ENTROSAMENTO_INICIAL;   // 0..100
+        public int mvps, mvpsSerie;                 // vezes que foi MVP de mapa e de série no clube (decisão 0020)
+        public List<string> jogadas = new List<string>();   // últimas jogadas da partida dele, a mais nova primeiro
 
         public static readonly string[] NOMES = { "Mira", "Reflexo", "Spray", "Utilitária", "Sangue-frio" };
         static readonly float[] PIOR = { 1.4f, 0.30f, 0.5f, 0.4f, 0.4f }, MELHOR = { 0.5f, 0.15f, 0.95f, 0.95f, 0.95f };
@@ -92,5 +96,26 @@ namespace CSM.Manager
         public int Venda => Preco / 2;
 
         public static string NomeAtrib(int a) => NOMES[a];
+    }
+
+    /// <summary>Nome e explicação dos traços de personalidade (decisão 0019), para a interface.</summary>
+    public static class Tracos
+    {
+        public static string Nome(Traco t) => t switch
+        {
+            Traco.Decisivo => "Decisivo", Traco.Esquentado => "Esquentado", Traco.Lider => "Líder", Traco.Estrela => "Estrela",
+            Traco.Pistoleiro => "Pistoleiro", Traco.Embalado => "Embalado", _ => "",
+        };
+
+        public static string Descricao(Traco t) => t switch
+        {
+            Traco.Decisivo => "Cresce quando o round decide: +15% de sangue-frio em match point, último round do half e prorrogação.",
+            Traco.Esquentado => "Perde a cabeça: no round depois de morrer primeiro, mira 8% pior e joga mais agressivo.",
+            Traco.Lider => "Puxa o time: escalado, dá +5% de sangue-frio aos outros 4 titulares.",
+            Traco.Estrela => "Mira 6% melhor sempre, mas joga para si (troca menos os colegas) e não aceita o banco: a moral cai o dobro como reserva.",
+            Traco.Pistoleiro => "Especialista de pistola: +12% de mira e reflexo nos rounds de pistol.",
+            Traco.Embalado => "Cresce com a sequência: +6% de reflexo quando o time venceu os 3 últimos rounds.",
+            _ => "Sem traço marcante.",
+        };
     }
 }

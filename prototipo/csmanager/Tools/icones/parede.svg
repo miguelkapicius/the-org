@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 152">
+  <!-- através da parede: muro de tijolo e o rastro da bala atravessando -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="170" height="152">
+      <rect width="170" height="152" fill="#fff"/>
+      <g stroke="#000" stroke-width="3" stroke-linecap="square">
+        <path d="M62 44 L108 44"/><path d="M62 74 L108 74"/><path d="M62 104 L108 104"/>
+        <path d="M85 14 L85 44"/><path d="M74 44 L74 74"/><path d="M96 44 L96 74"/><path d="M85 74 L85 104"/><path d="M74 104 L74 138"/><path d="M96 104 L96 138"/>
+      </g>
+      <path d="M50 76 L120 76" stroke="#000" stroke-width="18"/>
+    </mask>
+  </defs>
+  <rect x="62" y="14" width="46" height="124" fill="#fff" mask="url(#c)"/>
+  <g stroke="#fff" stroke-linecap="round">
+    <path d="M8 76 L52 76" stroke-width="5"/><path d="M118 76 L148 76" stroke-width="5"/>
+  </g>
+  <path d="M146 68 L164 76 L146 84 Z" fill="#fff"/>
+</svg>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 124 152">
+  <!-- C4 (referência: ícone de arma da C4 no CS2): só o aparelho, de frente. Corpo com visor e teclado 3x4,
+       fio saindo de cima e descendo pela esquerda, sem os tijolos embaixo. Estilo da casa: branco chapado com recortes finos. -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="124" height="152">
+      <rect width="124" height="152" fill="#fff"/>
+      <g fill="#000">
+        <rect x="46" y="30" width="54" height="18" rx="2"/>
+        <rect x="50" y="60" width="11" height="9" rx="1.5"/><rect x="67" y="60" width="11" height="9" rx="1.5"/><rect x="84" y="60" width="11" height="9" rx="1.5"/>
+        <rect x="50" y="76" width="11" height="9" rx="1.5"/><rect x="67" y="76" width="11" height="9" rx="1.5"/><rect x="84" y="76" width="11" height="9" rx="1.5"/>
+        <rect x="50" y="92" width="11" height="9" rx="1.5"/><rect x="67" y="92" width="11" height="9" rx="1.5"/><rect x="84" y="92" width="11" height="9" rx="1.5"/>
+        <rect x="50" y="108" width="11" height="9" rx="1.5"/><rect x="67" y="108" width="11" height="9" rx="1.5"/><rect x="84" y="108" width="11" height="9" rx="1.5"/>
+      </g>
+      <path d="M53 39 L62 39 M69 39 L78 39 M85 39 L94 39" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>  <!-- dígitos -->
+      <path d="M40 130 L106 130" stroke="#000" stroke-width="2.2"/>                                                   <!-- tampa de baixo -->
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M34 26 Q34 18 42 18 L104 18 Q112 18 112 26 L112 136 Q112 144 104 144 L42 144 Q34 144 34 136 Z"/>
+    <rect x="28" y="40" width="8" height="34" rx="2"/>                                                                <!-- trava lateral -->
+  </g>
+  <path d="M46 18 L46 12 Q46 6 38 6 L22 6 Q12 6 12 16 L12 96 Q12 104 20 104 L30 104" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>

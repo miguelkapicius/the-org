@@ -12,6 +12,8 @@
 | 07 | [Áudio](07-audio.md) | rascunho | — |
 | 08 | [UI / UX](08-ui-ux.md) | rascunho | miguelkapicius |
 | 09 | [Técnico](09-tecnico.md) | rascunho | — |
+| 10 | [Interface × jogo](10-interface-vs-jogo.md) | rascunho | miguelkapicius |
+| 11 | [Ideias de features](11-ideias.md) | rascunho | miguelkapicius |
 
 Mantenha esta tabela sincronizada com o cabeçalho de cada arquivo.
 Comece pela **Visão**: os pilares guiam todas as outras seções.

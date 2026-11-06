@@ -1,7 +1,7 @@
 # Bonecos 3D pro visual de maquete (Unity): os MESMOS agentes do agentes.py (peças, armas autorais, poses
 # procedurais), mas em vez de renderizar sprite grava a malha de cada peça (cor por vértice) e, por animação, a matriz
 # de cada peça em cada quadro (30 qps, duração real do CS2 x 0,9). O Unity monta o boneco com uma peça por Transform e
-# toca as matrizes interpolando (Assets/Game/View3D/Boneco3D.cs).
+# toca as matrizes interpolando (Assets/Game/Visual/Boneco3D.cs).
 #   blender -b --factory-startup --python exportar3d.py -- <saida> <ct|tr>
 # Saída: <saida>/boneco_<time>.json (cabeçalho) + boneco_<time>.bin (float32: malhas e quadros).
 # Coordenadas gravadas como no Blender (X frente, Y esquerda, Z cima); a troca pro Unity é no C#.
@@ -157,9 +157,11 @@ ANIMS += [("awp_mirar", "awp_mirar", "AWP", 8, False, {}), ("awp_mirando", "awp_
           ("morrer_frente", "morrer_frente", padrao, 30, False, {}),
           ("plantar", "plantar", padrao, 60, False, {}), ("plantar_pe", "plantar_pe", padrao, 60, False, {}),
           ("desarmar", "desarmar", padrao, 30, True, {}), ("desarmar_pe", "desarmar_pe", padrao, 30, True, {})]
-for nd in ("smoke", "flash", "molotov", "he"):
-    ANIMS.append((f"granada_{nd}", "granada", padrao, 30, False, {"nade": nd}))
-ANIMS.append(("granada_fim", "granada_fim", padrao, 12, False, {}))   # continuação depois de soltar (o Sim solta em u = 1)
+# jeito do CS2 (força do Sim): por cima (botão esquerdo, nome sem sufixo), meia força ("_meio") e por baixo ("_baixo")
+for jt, suf in (("cima", ""), ("meio", "_meio"), ("baixo", "_baixo")):
+    for nd in ("smoke", "flash", "molotov", "he"):
+        ANIMS.append((f"granada_{nd}{suf}", "granada", padrao, 30, False, {"nade": nd, "jeito": jt}))
+    ANIMS.append((f"granada_fim{suf}", "granada_fim", padrao, 12, False, {"jeito": jt}))   # continuação depois de soltar (o Sim solta em u = 1)
 
 # só algumas animações (iterar rápido com o validar_anims.py): ANIM_FILTRO=regex; a mira de cada arma vai junto (referência)
 if os.environ.get("ANIM_FILTRO"):

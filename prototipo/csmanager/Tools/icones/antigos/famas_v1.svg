@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 470 160">
+  <!-- FAMAS (bullpup): alça de transporte comprida em cima, carregador ATRÁS do punho, guarda-mato da mão inteira, cano curto -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="470" height="160">
+      <rect width="470" height="160" fill="#fff"/>
+      <path d="M170 27 L326 27 L326 40 L164 40 Z" fill="#000"/>                <!-- vão da alça -->
+      <path d="M234 80 L286 80 L280 102 L238 104 Z" fill="#000"/>              <!-- vão do guarda-mato -->
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <path d="M22 50 L21 98" stroke-width="2.4"/>                            <!-- soleira -->
+        <path d="M150 88 L182 84" stroke-width="2"/>                            <!-- boca do carregador -->
+        <path d="M444 54 L444 60" stroke-width="1.6"/>
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <!-- corpo: coronha + caixa + guarda-mão numa peça -->
+    <path d="M14 54 Q14 46 22 46 L350 46 Q360 46 362 54 L364 66 Q364 72 356 72 L214 74 L140 94 L22 100 Q14 100 14 92 Z"/>
+    <!-- alça de transporte -->
+    <path d="M150 46 L160 22 Q162 17 168 17 L330 17 Q340 17 340 26 L340 46 Z"/>
+    <!-- cano e quebra-chamas -->
+    <path d="M360 54 L446 54 L446 61 L360 61 Z"/>
+    <path d="M440 50.5 L458 50.5 Q461 50.5 461 54 L461 61 Q461 64.5 458 64.5 L440 64.5 Z"/>
+    <!-- guarda-mato da mão inteira -->
+    <path d="M216 72 L294 72 Q302 72 300 80 L290 104 Q286 112 276 112 L232 112 Q218 112 222 100 Z"/>
+    <!-- carregador atrás do punho -->
+    <path d="M148 88 L184 82 L190 138 L160 146 Z"/>
+  </g>
+  <!-- punho dentro do guarda-mato (fica por cima do vão) -->
+  <path d="M244 74 L264 74 L258 110 L240 110 Z" fill="#fff"/>
+</svg>

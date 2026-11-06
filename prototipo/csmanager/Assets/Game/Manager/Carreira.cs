@@ -35,6 +35,15 @@ namespace CSM.Manager
         public const float CANSACO_LIMIAR = 35f, CANSACO_MAX_PENALIDADE = 0.12f;   // acima do limiar, até -12% em 100 de cansaço
         public const float AFINIDADE_MAX = 0.03f, ESTRATEGIA_CONTRA = 0.02f;       // efeito de afinidade e de contra-estratégia
         public static readonly int[] INTEL_SEMANAS = { 1, 3, 6 };   // semanas de estudo para os níveis 1, 2 e 3 de informação
+
+        // personalidade (decisão 0019)
+        public const float CHANCE_TRACO = 0.5f;                     // metade dos jogadores tem um traço
+        public const float MORAL_INICIAL = 65f, MORAL_CONTRATADO = 70f, MORAL_NEUTRA = 60f;
+        public const float MORAL_VITORIA = 3f, MORAL_DERROTA = 3f, MORAL_TITULAR_SEMANA = 1f, MORAL_RESERVA_SEMANA = 2f, MORAL_AVISO = 30f;
+        public const float MORAL_MAX_BONUS = 0.03f, MORAL_POR_PONTO = MORAL_MAX_BONUS / 40f;   // +3% em 100, -4,5% em 0, neutra em 60
+        public const float ENTROSAMENTO_INICIAL = 60f, ENTROSAMENTO_CONTRATADO = 20f;
+        public const float ENTROSAMENTO_TITULAR = 5f, ENTROSAMENTO_RESERVA = 1f, ENTROSAMENTO_COLETIVA = 3f, ENTROSAMENTO_ESTRELA = 15f;
+        public const float ENTROSAMENTO_FORCA = 0.02f;              // ±2% na força (partida pulada) entre 0 e 100
     }
 
     public static class Fmt
@@ -93,6 +102,10 @@ namespace CSM.Manager
         public string Placar => meus + " x " + deles;
         public string PlacarSerie => serieMeus + " x " + serieDeles;
         public Desempenho Melhor => desempenho.Count == 0 ? null : desempenho.OrderByDescending(x => x.Nota).First();
+        /// <summary>Jogada da partida (decisão 0020): a descrição do lance de maior nota; null na partida pulada. jogadaNossa: foi de um jogador do clube.</summary>
+        public string jogada; public bool jogadaNossa;
+        /// <summary>MVP da série (só no último mapa dela).</summary>
+        public string mvpSerie;
     }
 
     /// <summary>Um aviso do painel: o que merece atenção agora e para onde ir resolver.</summary>
@@ -179,6 +192,8 @@ namespace CSM.Manager
         public Mundo mundo;
         public Serie serie;
         public Estilo estilo = Estilo.Equilibrada;       // a estratégia escolhida para a próxima partida
+        // playbook do manager (decisão 0022): jogadas favoritas e proibidas, por lado
+        public readonly List<string> favoritasTR = new List<string>(), proibidasTR = new List<string>(), favoritasCT = new List<string>(), proibidasCT = new List<string>();
         public int sessoesColetivas; public int estudoMapa = -1;   // plano do time na semana
         public readonly List<Scout> scouts = new List<Scout>();
         public readonly Dictionary<int, float> intel = new Dictionary<int, float>();   // semanas de estudo por time
@@ -215,6 +230,7 @@ namespace CSM.Manager
             {
                 var j = new Jogador { nome = nome, idade = 21 + c.rng.Next(0, 8), funcao = role, skill = new Skill() };
                 c.DefinirPotencial(j, 8, 18);
+                c.SortearTraco(j);
                 c.elenco.Add(j);
             }
             for (int i = 0; i < 2; i++) c.elenco.Add(c.Gerar(0.35f, 0.65f));   // duas reservas, um pouco abaixo
@@ -242,6 +258,11 @@ namespace CSM.Manager
             j.potencial = Math.Min(97, j.Overall + folga);
         }
 
+        void SortearTraco(Jogador j)
+        {
+            j.traco = rng.NextDouble() < Provisorio.CHANCE_TRACO ? (Traco)rng.Next(1, 7) : Traco.Nenhum;
+        }
+
         void GuardarInicio(Jogador j) { for (int a = 0; a < 5; a++) j.inicioTemporada[a] = j.Valor(a); }
 
         /// <summary>Jogador novo com qualidade entre qMin e qMax (0..1); os atributos variam um pouco em volta.</summary>
@@ -258,6 +279,7 @@ namespace CSM.Manager
             };
             var j = new Jogador { nome = NomeLivre(), idade = 17 + rng.Next(0, 15), funcao = FUNCOES[rng.Next(FUNCOES.Length)], skill = sk };
             DefinirPotencial(j, 3, 24);
+            SortearTraco(j);
             GuardarInicio(j);
             return j;
         }
@@ -355,8 +377,13 @@ namespace CSM.Manager
             float cansaco = Math.Max(0f, (j.cansaco - Provisorio.CANSACO_LIMIAR) / (100f - Provisorio.CANSACO_LIMIAR)) * Provisorio.CANSACO_MAX_PENALIDADE;
             float afin = mapa >= 0 ? (mundo.Clube.afinidade[mapa] - 50f) / 50f * Provisorio.AFINIDADE_MAX : 0f;
             float rel = adv != null ? Estilos.Relacao(estilo, adv.estilo) * Provisorio.ESTRATEGIA_CONTRA : 0f;
-            return 1f + preparo - cansaco + afin + rel;
+            float moral = (j.moral - Provisorio.MORAL_NEUTRA) * Provisorio.MORAL_POR_PONTO;
+            float entros = (EntrosamentoTime - 50f) / 50f * Provisorio.ENTROSAMENTO_FORCA;
+            return 1f + preparo - cansaco + afin + rel + moral + entros;
         }
+
+        /// <summary>Entrosamento do time (decisão 0019): a média dos titulares, 0..100.</summary>
+        public float EntrosamentoTime => elenco.Count == 0 ? 50f : Titulares.Average(j => j.entrosamento);
 
         public float ForcaEfetiva(int mapa = -1, Equipe adv = null) => elenco.Count == 0 ? 0 : Titulares.Average(j => j.OverallEfetivo(MultEfetivo(j, mapa, adv)));
 
@@ -443,6 +470,9 @@ namespace CSM.Manager
                 var fraco = QuemSaiPara(r);
                 if (fraco != null) { A(Aviso.Nivel.Dica, r.nome + " (reserva, " + r.Overall + ") é melhor que o titular " + fraco.nome + " (" + fraco.Overall + ").", "Ajustar escalação", "elenco"); break; }
             }
+            foreach (var j in elenco.Where(j => j.moral < Provisorio.MORAL_AVISO).Take(2))
+                A(Aviso.Nivel.Atencao, j.nome + " está desmotivado (moral " + (int)j.moral + "): rende menos na partida." + (Titular(j) ? "" : " Reserva há muito tempo perde ânimo."), "Ver elenco", "elenco");
+            if (EntrosamentoTime < 40) A(Aviso.Nivel.Dica, "Time pouco entrosado (" + (int)EntrosamentoTime + "): os bots trocam menos os colegas. Mantenha os titulares e faça sessões coletivas.", "Ver treino", "treino");
             if (nivelGH >= 2 && elenco.All(j => j.sessoes == 0)) A(Aviso.Nivel.Dica, "Ninguém está treinando: os atributos só mudam pela idade.", "Ver treino", "treino");
             if (scouts.Any(s => s.tipo == 0)) A(Aviso.Nivel.Dica, "Há scout sem tarefa: estude o próximo adversário ou procure talentos no mercado.", "Ver scouts", "scouts");
             if (elenco.Count <= Provisorio.TITULARES) A(Aviso.Nivel.Dica, "Sem reservas: se alguém sair, o time fica incompleto.", "Ver mercado", "mercado");
@@ -467,6 +497,7 @@ namespace CSM.Manager
             ultimaVenda = null;
             Lanca("Contratação de " + j.nome, -j.Preco);
             mercado.Remove(j); j.potencialRevelado = true; elenco.Add(j); GuardarInicio(j);
+            j.moral = Provisorio.MORAL_CONTRATADO; j.entrosamento = Provisorio.ENTROSAMENTO_CONTRATADO;
             return null;
         }
 
@@ -600,6 +631,16 @@ namespace CSM.Manager
                     for (int a = 0; a < 5; a++) j.Definir(a, j.Valor(a) - (j.idade - 27) * (a == (int)Atrib.Reflexo ? 0.012f : 0.006f));
                 }
                 j.preparo = preparo; j.cansaco = cansaco; j.mapasNaSemana = 0;
+            }
+            // moral e entrosamento (decisão 0019): titular joga e se integra; reserva perde ânimo
+            var tit = new HashSet<Jogador>(Titulares);
+            float coletivas = MaxColetivas > 0 ? Math.Min(sessoesColetivas, MaxColetivas) : 0;
+            foreach (var j in elenco)
+            {
+                bool t = tit.Contains(j);
+                float queda = Provisorio.MORAL_RESERVA_SEMANA * (j.traco == Traco.Estrela ? 2f : 1f);
+                j.moral = Math.Clamp(j.moral + (t ? Provisorio.MORAL_TITULAR_SEMANA : -queda), 0f, 100f);
+                j.entrosamento = Math.Clamp(j.entrosamento + (t ? Provisorio.ENTROSAMENTO_TITULAR + coletivas * Provisorio.ENTROSAMENTO_COLETIVA : Provisorio.ENTROSAMENTO_RESERVA), 0f, 100f);
             }
             // estudo de mapa: o time ganha afinidade com o mapa escolhido e perde um pouco com os outros
             if (estudoMapa >= 0 && GH.estudoMapa)
@@ -737,7 +778,59 @@ namespace CSM.Manager
             int primeiro = mundo.PosicaoRanking(0) <= mundo.PosicaoRanking(p.adv.id) ? 0 : 1;   // o melhor colocado veta primeiro
             serie = new Serie { camp = p.camp, conf = p.conf, adv = p.adv, veto = new Veto(p.conf.md, primeiro) };
             AvancarVetoIA();
+            NoticiaAntesDaSerie(p.adv);
             return serie;
+        }
+
+        // ------------------------------------------------------------------------------------------ rivalidades (decisão 0021)
+        public const float CLASSICO_MORAL = 2f;   // no clássico a moral muda o dobro
+        public const int MARCO_MVP_1 = 5, MARCO_MVP_2 = 10, MARCO_MVP_3 = 20, IDADE_REVELACAO = 21;
+
+        /// <summary>Retrospecto contra cada adversário já enfrentado, do mais rival para o menos.</summary>
+        public List<Retrospecto> Retrospectos => Rivalidades.Todos(historico);
+        public Retrospecto Contra(string adv) => Retrospectos.FirstOrDefault(x => x.adversario == adv) ?? new Retrospecto { adversario = adv };
+        public List<Retrospecto> Rivais => Retrospectos.Where(x => x.Rival).ToList();
+        public bool Classico(Equipe adv) => adv != null && Contra(adv.nome).Rival;
+
+        void NoticiaAntesDaSerie(Equipe adv)
+        {
+            var rt = Contra(adv.nome);
+            if (rt.Rival) Anotar("Clássico contra " + adv.nome + ": " + rt.Texto + ". A moral pesa o dobro nesta série.");
+            else if (rt.ultimaEliminacao != null) Anotar("Revanche: " + adv.nome + " eliminou o clube na " + rt.ultimaEliminacao + ".");
+        }
+
+        void NoticiasDepoisDaSerie(Retrospecto antes, Retrospecto depois, Resultado r, bool classico)
+        {
+            string adv = r.adversario;
+            if (!antes.Rival && depois.Rival) Anotar(adv + " virou rival do clube (" + depois.Texto + ").");
+            if (r.venceuSerie && depois.sequencia >= 3) Anotar(depois.sequencia + "ª série seguida vencida contra " + adv + ".");
+            if (r.venceuSerie && antes.sequencia <= -2) Anotar("Fim do tabu: primeira série vencida contra " + adv + " depois de " + (-antes.sequencia) + " derrotas seguidas.");
+            if (!r.venceuSerie && Rivalidades.Eliminado(r)) Anotar(adv + " eliminou o clube na " + Rivalidades.Fase(r) + " da " + r.campeonato + ".");
+            if (classico && r.venceuSerie)
+            {
+                Lanca("Bônus de clássico (patrocinadores)", PatrocinioPorSemana);
+                Anotar("Vitória no clássico contra " + adv + ": os patrocinadores pagam " + Fmt.Dinheiro(PatrocinioPorSemana) + " de bônus.");
+            }
+        }
+
+        // ------------------------------------------------------------------------------------------ playbook (decisão 0022)
+        public const int VAGAS_PLAYBOOK_MAX = 5;
+        /// <summary>Vagas de favorita e de proibida por lado: 1 no nível 1 da Gaming House, +1 por nível, até 5.</summary>
+        public int VagasPlaybook => Math.Min(VAGAS_PLAYBOOK_MAX, nivelGH);
+
+        public enum MarcaJogada { Nenhuma, Favorita, Proibida }
+        public MarcaJogada Marca(string jogada, bool tr) =>
+            (tr ? favoritasTR : favoritasCT).Contains(jogada) ? MarcaJogada.Favorita : (tr ? proibidasTR : proibidasCT).Contains(jogada) ? MarcaJogada.Proibida : MarcaJogada.Nenhuma;
+
+        /// <summary>Marca uma jogada como favorita, proibida ou nenhuma. Devolve a mensagem de erro, ou null se deu certo.</summary>
+        public string MarcarJogada(string jogada, bool tr, MarcaJogada marca)
+        {
+            var fav = tr ? favoritasTR : favoritasCT; var proi = tr ? proibidasTR : proibidasCT;
+            if (marca == MarcaJogada.Favorita && !fav.Contains(jogada) && fav.Count >= VagasPlaybook) return "Sem vaga de favorita (" + VagasPlaybook + " no nível " + nivelGH + " da Gaming House). Desmarque outra ou suba a Gaming House.";
+            if (marca == MarcaJogada.Proibida && !proi.Contains(jogada) && proi.Count >= VagasPlaybook) return "Sem vaga de proibida (" + VagasPlaybook + " no nível " + nivelGH + " da Gaming House). Desmarque outra ou suba a Gaming House.";
+            fav.Remove(jogada); proi.Remove(jogada);
+            if (marca == MarcaJogada.Favorita) fav.Add(jogada); else if (marca == MarcaJogada.Proibida) proi.Add(jogada);
+            return null;
         }
 
         int Aff(Equipe e, int m) => e.afinidade[m];
@@ -800,7 +893,10 @@ namespace CSM.Manager
         public CSM.Sim.Partida MontarPartida(int seedPartida)
         {
             var adv = Adversario; int mapa = serie != null ? Math.Max(0, serie.MapaAtual) : 0;
-            var pt = new CSM.Sim.Partida(seedPartida, Estilos.Pesos(estilo), Estilos.Pesos(adv != null ? adv.estilo : Estilo.Equilibrada));
+            var pesosA = Estilos.Pesos(estilo);
+            if (favoritasTR.Count + favoritasCT.Count > 0) pesosA.favoritas = new HashSet<string>(favoritasTR.Concat(favoritasCT));
+            if (proibidasTR.Count + proibidasCT.Count > 0) pesosA.proibidas = new HashSet<string>(proibidasTR.Concat(proibidasCT));
+            var pt = new CSM.Sim.Partida(seedPartida, pesosA, Estilos.Pesos(adv != null ? adv.estilo : Estilo.Equilibrada));
             pt.A.nome = clube;
             var vagas = pt.A.js;
             var livres = Titulares.ToList();
@@ -812,7 +908,14 @@ namespace CSM.Manager
             }
             for (int v = 0; v < vagas.Length; v++)
                 if (porVaga[v] == null) { porVaga[v] = livres[0]; livres.RemoveAt(0); }
-            for (int v = 0; v < vagas.Length; v++) { vagas[v].nome = porVaga[v].nome; vagas[v].skill = porVaga[v].SkillEfetiva(MultEfetivo(porVaga[v], mapa, adv)); }
+            for (int v = 0; v < vagas.Length; v++)
+            {
+                var j = porVaga[v];
+                vagas[v].nome = j.nome; vagas[v].traco = j.traco;
+                vagas[v].skill = j.SkillEfetiva(MultEfetivo(j, mapa, adv));
+                float e = EntrosamentoTime - (j.traco == Traco.Estrela ? Provisorio.ENTROSAMENTO_ESTRELA : 0f);
+                vagas[v].skill.entrosamento = Math.Clamp(e / 100f, 0f, 1f);
+            }
             if (adv != null)
             {
                 pt.B.nome = adv.nome;
@@ -877,7 +980,9 @@ namespace CSM.Manager
 
         /// <summary>Fecha o mapa atual da série: guarda o resultado, cansa e dá experiência aos jogadores, e (se a série acabou) leva o
         /// resultado ao campeonato. <paramref name="desempenho"/>: os números reais da simulação (assistida); null = estimar.</summary>
-        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida, List<Desempenho> desempenho = null)
+        public const int JOGADAS_GUARDADAS = 5;   // últimas jogadas da partida no histórico de cada jogador (decisão 0020)
+
+        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida, List<Desempenho> desempenho = null, Destaques.Lance jogada = null)
         {
             ultimaVenda = null;
             if (serie == null) PrepararSerie();
@@ -891,13 +996,38 @@ namespace CSM.Manager
                 saldoAntes = dinheiro, forcaMinha = Forca, forcaDeles = adv != null ? adv.Forca : 0,
                 estimado = desempenho == null, desempenho = desempenho ?? Estimar(venceu, meus + deles),
             };
+            // clássico (decisão 0021): contra um rival a moral muda o dobro; o retrospecto de antes serve para as notícias
+            var antes = adv != null ? Contra(adv.nome) : null;
+            bool classico = antes != null && antes.Rival;
+            float pesoMoral = classico ? CLASSICO_MORAL : 1f;
             // quem jogou fica cansado e ganha um pouco de experiência (jovens aprendem mais)
             foreach (var j in Titulares)
             {
                 j.mapasNaSemana++;
+                j.moral = Math.Clamp(j.moral + pesoMoral * (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA), 0f, 100f);
                 if (j.idade <= 28) { int a = rng.Next(5); if (j.Valor(a) < j.potencial) j.Definir(a, j.Valor(a) + 0.08f * FatorIdade(j.idade)); }
             }
             var af = mundo.Clube.afinidade; af[mapa] = Math.Min(95, af[mapa] + 1);   // jogar no mapa dá afinidade
+
+            // melhores momentos (decisão 0020): MVP do mapa e jogada da partida entram no histórico do jogador e nas notícias
+            var mvp = r.Melhor; var jm = mvp != null ? elenco.FirstOrDefault(j => j.nome == mvp.nome) : null;
+            if (jm != null)
+            {
+                jm.mvps++;
+                if (jm.mvps == MARCO_MVP_1 || jm.mvps == MARCO_MVP_2 || jm.mvps == MARCO_MVP_3) Anotar(jm.nome + " chega a " + jm.mvps + " MVPs de mapa pelo clube.");
+            }
+            if (jogada != null)
+            {
+                r.jogada = jogada.Descricao;
+                var autor = Titulares.FirstOrDefault(j => j.nome == jogada.jogador);
+                r.jogadaNossa = autor != null;
+                if (autor != null)
+                {
+                    autor.jogadas.Insert(0, "Semana " + Semana + " contra " + r.adversario + ": " + jogada.Descricao);
+                    while (autor.jogadas.Count > JOGADAS_GUARDADAS) autor.jogadas.RemoveAt(autor.jogadas.Count - 1);
+                    Anotar("Jogada da partida contra " + r.adversario + ": " + jogada.Descricao + ".");
+                }
+            }
 
             if (s != null)
             {
@@ -907,6 +1037,16 @@ namespace CSM.Manager
                 if (s.Encerrada)
                 {
                     r.serieEncerrada = true; r.venceuSerie = s.MinhasVit > s.DelesVit;
+                    // MVP da série: quem somou a maior nota nos mapas dela (os anteriores estão no começo do histórico)
+                    var mapasSerie = historico.Take(s.resultados.Count - 1).Append(r);
+                    var ms = mapasSerie.SelectMany(x => x.desempenho).GroupBy(x => x.nome).OrderByDescending(g => g.Sum(x => x.Nota)).FirstOrDefault();
+                    var jms = ms != null ? elenco.FirstOrDefault(j => j.nome == ms.Key) : null;
+                    if (jms != null)
+                    {
+                        r.mvpSerie = jms.nome; jms.mvpsSerie++;
+                        if (jms.idade <= IDADE_REVELACAO) Anotar("Revelação: " + jms.nome + ", " + jms.idade + " anos, é o MVP da série contra " + r.adversario + ".");
+                        else if (s.Md > 1) Anotar("MVP da série contra " + r.adversario + ": " + jms.nome + ".");
+                    }
                     bool souA = s.conf.a == 0;
                     s.camp.RegistrarClube(s.conf, souA ? s.MinhasVit : s.DelesVit, souA ? s.DelesVit : s.MinhasVit);
                     var fim = new ResumoSemana();
@@ -918,6 +1058,7 @@ namespace CSM.Manager
             }
             emPartida = false; pendente = null;
             historico.Insert(0, r); naoVisto = r;
+            if (r.serieEncerrada && antes != null) NoticiasDepoisDaSerie(antes, Contra(r.adversario), r, classico);
             return r;
         }
     }

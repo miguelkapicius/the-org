@@ -26,6 +26,12 @@ namespace CSM.ManagerUI
             esq.Add(L(s.camp.nome.ToUpperInvariant(), "compromisso-tit"));
             esq.Add(L(c.clube + " contra " + adv.nome, "compromisso-nome"));
             esq.Add(L(Fmt.Rotulo(s.camp.nome, s.conf.rotulo) + " · " + Fmt.Serie(s.Md) + " (melhor de " + s.Md + ") · ranking #" + c.mundo.PosicaoRanking(adv.id) + " · " + Mundo.NomeCircuito(adv.circuito), "compromisso-sub"));
+            // retrospecto e clássico (decisão 0021)
+            var rt = c.Contra(adv.nome);
+            var linhaRt = E(); linhaRt.style.flexDirection = FlexDirection.Row; linhaRt.style.alignItems = Align.Center; linhaRt.style.marginTop = 6;
+            if (rt.Rival) { var sc = Selo("CLÁSSICO", "laranja"); sc.style.marginRight = 8; ComDica(sc, "Rival do clube: a moral dos titulares muda o dobro nesta série, e vencê-la rende um bônus de patrocínio."); linhaRt.Add(sc); }
+            linhaRt.Add(L("Retrospecto: " + rt.Texto + (rt.ultimaEliminacao != null ? " · eliminou o clube na " + rt.ultimaEliminacao : ""), "f14", "suave"));
+            esq.Add(linhaRt);
             hero.Add(esq);
             var dir = E(); dir.style.alignItems = Align.FlexEnd;
             dir.Add(L(intel >= 1 ? "Joga " + Estilos.Nome(adv.estilo).ToLowerInvariant() : "Estilo desconhecido", "f17", "negrito", intel >= 1 ? "azul" : "apagado"));

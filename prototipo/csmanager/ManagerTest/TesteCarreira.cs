@@ -176,6 +176,12 @@ class TesteCarreira
             var pa = cs.Proximo(); var pb = cl.Proximo();
             Ok(pa.camp?.id == pb.camp?.id && pa.conf?.a == pb.conf?.a && pa.conf?.b == pb.conf?.b && pa.semana == pb.semana, "o próximo compromisso do clube é o mesmo");
             Ok((cs.serie == null) == (cl.serie == null) && (cs.serie == null || (cl.serie.resultados.Count == cs.serie.resultados.Count && cl.serie.mapas.SequenceEqual(cs.serie.mapas) && cl.serie.veto.Completo == cs.serie.veto.Completo)), "a série em andamento (veto e mapas jogados) volta igual");
+            Ok(cl.elenco.Select(j => (int)j.traco + "|" + (int)j.moral + "|" + (int)j.entrosamento).SequenceEqual(cs.elenco.Select(j => (int)j.traco + "|" + (int)j.moral + "|" + (int)j.entrosamento)), "traço, moral e entrosamento voltam iguais do salvamento");
+            {   // salvamento de antes da decisão 0019: sem os campos novos, o jogador volta com os valores iniciais (não com moral 0)
+                var dv = SalvamentoDados.Para(cs); foreach (var jd in dv.elenco) { jd.temPersonalidade = false; jd.moral = 0; jd.entrosamento = 0; jd.traco = 3; }
+                var cv = SalvamentoDados.De(dv);
+                Ok(cv.elenco.All(j => j.moral == Provisorio.MORAL_INICIAL && j.entrosamento == Provisorio.ENTROSAMENTO_INICIAL && j.traco == Traco.Nenhum), "salvamento antigo: moral e entrosamento iniciais, sem traço");
+            }
             Ok(cl.historico.Count == cs.historico.Count && cl.titulos.Count == cs.titulos.Count, "histórico e campeonatos disputados iguais");
             // a carreira carregada continua jogável, inclusive virando de temporada
             int t0 = cl.Temporada; int gg = 0; while (cl.Temporada == t0 && !cl.Falido && gg++ < 200) { while (cl.TemJogoAgora && gg++ < 2000) cl.PularSerie(); if (cl.PodeAvancar) cl.AvancarSemana(); }
@@ -227,6 +233,146 @@ class TesteCarreira
             Ok(ida, "data → (semana, dia) e (semana, dia) → data são inversas nas 364 datas da temporada");
             Ok(!Mundo.SemanaDeData(1, ini.AddDays(-1), out _, out _) && !Mundo.SemanaDeData(1, ini.AddDays(364), out _, out _), "datas fora da temporada são recusadas");
             Ok(Mundo.DiaDaSemanaDaSerie(Formato.Liga, 0) == 2 && Mundo.DiaDaSemanaDaSerie(Formato.MataMata, 0) == 3 && Mundo.DiaDaSemanaDaSerie(Formato.MataMata, 2) == 5, "ligas na quarta; campeonatos de quinta a sábado");
+        }
+
+        // ---------- personalidade (decisão 0019): traços, moral e entrosamento
+        Console.WriteLine("------ personalidade ------");
+        {
+            var cp = Carreira.Nova(21);
+            var todos = Enumerable.Range(0, 30).Select(k => Carreira.Nova(100 + k)).SelectMany(x => x.elenco.Concat(x.mercado)).ToList();
+            float comTraco = todos.Count(j => j.traco != Traco.Nenhum) / (float)todos.Count;
+            Ok(comTraco > 0.4f && comTraco < 0.6f, "cerca de metade dos jogadores tem traço (" + (int)(comTraco * 100) + "%)");
+            Ok(Enum.GetValues(typeof(Traco)).Cast<Traco>().Where(t => t != Traco.Nenhum).All(t => todos.Any(j => j.traco == t)), "todos os 6 traços aparecem");
+
+            // moral: vitória sobe, derrota desce; reserva perde ânimo na semana (Estrela o dobro)
+            var tit = cp.Titulares.First(); float m0 = tit.moral;
+            cp.Registrar(true, 13, 7, false); Ok(tit.moral == m0 + Provisorio.MORAL_VITORIA, "vitória: +" + Provisorio.MORAL_VITORIA + " de moral para os titulares");
+            cp.Registrar(false, 7, 13, false); Ok(tit.moral == m0, "derrota: -" + Provisorio.MORAL_DERROTA);
+            var res = cp.elenco.Skip(Provisorio.TITULARES).First(); res.traco = Traco.Nenhum; float r0 = res.moral, e0 = res.entrosamento, et0 = tit.entrosamento;
+            Avanca(cp);
+            Ok(res.moral == r0 - Provisorio.MORAL_RESERVA_SEMANA && res.entrosamento == e0 + Provisorio.ENTROSAMENTO_RESERVA, "semana: reserva perde moral e quase não ganha entrosamento");
+            Ok(tit.entrosamento > et0, "semana: titular ganha entrosamento");
+            float multAntes = cp.MultEfetivo(tit); tit.moral = 100; float multAlta = cp.MultEfetivo(tit); tit.moral = 0; float multBaixa = cp.MultEfetivo(tit);
+            Ok(multAlta > multAntes && multBaixa < multAntes, "moral muda a habilidade que vai para a partida");
+            var contratado = cp.mercado[0]; cp.dinheiro = 9000000; Ok(cp.Contratar(contratado) == null && contratado.entrosamento == Provisorio.ENTROSAMENTO_CONTRATADO && contratado.moral == Provisorio.MORAL_CONTRATADO, "contratado chega motivado e pouco entrosado");
+
+            // na simulação: entrosamento chega aos bots; traços valem nas situações certas
+            var ptp = cp.MontarPartida(5);
+            Ok(ptp.A.js.All(j => Math.Abs(j.skill.entrosamento - Math.Clamp((cp.EntrosamentoTime - (j.traco == Traco.Estrela ? Provisorio.ENTROSAMENTO_ESTRELA : 0)) / 100f, 0, 1)) < 1e-4f), "o entrosamento do time vai para os bots (Estrela com menos)");
+            var pt2 = new Partida(7);
+            foreach (var j in pt2.A.js) j.traco = Traco.Nenhum;
+            pt2.A.js[0].traco = Traco.Pistoleiro; pt2.A.js[1].traco = Traco.Lider;
+            float miraP0 = pt2.A.js[0].skill.aimSigma, frio2 = pt2.A.js[2].skill.composure, frio1 = pt2.A.js[1].skill.composure;
+            var m = pt2.Preparar();
+            Agent Ag(int k) => m.agents.First(x => x.name == pt2.A.js[k].nome);
+            Ok(Ag(0).skill.aimSigma < miraP0, "Pistoleiro mira melhor no round de pistol");
+            Ok(Ag(2).skill.composure > frio2 && Math.Abs(Ag(1).skill.composure - frio1) < 1e-6f, "Líder dá sangue-frio aos outros 4, não a ele mesmo");
+            Ok(pt2.A.js[0].skill.aimSigma == miraP0, "o traço não muda o atributo guardado do jogador, só o do round");
+        }
+
+        // ---------- melhores momentos (decisão 0020): jogada da partida e MVP
+        Console.WriteLine("------ melhores momentos ------");
+        {
+            var cm = Carreira.Nova(31);
+            var ptm = cm.MontarPartida(11); ptm.Jogar();
+            Ok(ptm.jogada != null && ptm.jogada.nota > 0 && !string.IsNullOrEmpty(ptm.jogada.Descricao), "a partida simulada elege uma jogada da partida");
+            Console.WriteLine("  jogada: " + ptm.jogada?.Descricao + " (nota " + ptm.jogada?.nota + ")");
+            Ok(ptm.jogada.Descricao.Contains("round " + (ptm.jogada.round + 1)) && (ptm.jogada.time == ptm.A || ptm.jogada.time == ptm.B), "a jogada diz o round e o time");
+            var desemp = ptm.A.js.Select(j => new Desempenho { nome = j.nome, funcao = j.roleT, k = j.k, d = j.d, hs = j.hs, dano = j.dano, fk = j.fk, rounds = Math.Max(1, j.rounds) }).ToList();
+            int mvpsAntes = cm.elenco.Sum(j => j.mvps);
+            var rr = cm.Registrar(ptm.vencedor == ptm.A, ptm.A.placar, ptm.B.placar, true, desemp, ptm.jogada);
+            Ok(cm.elenco.Sum(j => j.mvps) == mvpsAntes + 1 && cm.elenco.First(j => j.nome == rr.Melhor.nome).mvps >= 1, "o MVP do mapa entra no histórico do jogador");
+            bool nossa = ptm.jogada.time == ptm.A;
+            Ok(rr.jogada == ptm.jogada.Descricao && rr.jogadaNossa == nossa, "o resultado guarda a jogada e de quem foi (" + (nossa ? "nossa" : "do adversário") + ")");
+            if (nossa) Ok(cm.elenco.First(j => j.nome == ptm.jogada.jogador).jogadas.Count == 1 && cm.diario.Any(d => d.Contains("Jogada da partida")), "jogada nossa vai para o histórico do jogador e para as notícias");
+            // série inteira pulada: o último mapa tem MVP da série
+            var cs2 = Carreira.Nova(32); int g = 0; Resultado ult = null;
+            while (g++ < 60 && (ult == null || !ult.serieEncerrada)) { if (cs2.TemJogoAgora) ult = cs2.PularMapa(); else cs2.AvancarSemana(); }
+            Ok(ult != null && ult.serieEncerrada && ult.mvpSerie != null && cs2.elenco.Any(j => j.mvpsSerie == 1), "fim de série: MVP da série eleito (" + ult?.mvpSerie + ")");
+            Ok(ult.jogada == null, "partida pulada não tem jogada da partida");
+            // salvamento
+            var opt2 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cl2 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cm), opt2), opt2));
+            Ok(cl2.elenco.Select(j => j.mvps + "|" + j.mvpsSerie + "|" + string.Join("/", j.jogadas)).SequenceEqual(cm.elenco.Select(j => j.mvps + "|" + j.mvpsSerie + "|" + string.Join("/", j.jogadas))), "MVPs e jogadas voltam iguais do salvamento");
+            Ok(cl2.historico[0].jogada == cm.historico[0].jogada && cl2.historico[0].jogadaNossa == cm.historico[0].jogadaNossa, "a jogada do resultado volta igual do salvamento");
+        }
+
+        // ---------- rivalidades (decisão 0021)
+        Console.WriteLine("------ rivalidades ------");
+        {
+            Resultado Serie(string adv, string camp, string fase, bool venceu, int md, int meus, int deles) => new Resultado
+            { adversario = adv, campeonato = camp, rotulo = camp + " · " + fase, serieEncerrada = true, venceuSerie = venceu, venceu = venceu, serieMd = md, serieMeus = meus, serieDeles = deles };
+            var hist = new List<Resultado>   // mais recente primeiro
+            {
+                Serie("TITAS", "Copa Sul", "Final", false, 3, 1, 2),        // 0,5 + 4 (final) + 3 (eliminado) + 1 (até o fim) = 8,5
+                Serie("TITAS", "Liga", "rodada 2", true, 1, 1, 0),          // 0,5
+                Serie("TITAS", "Copa Norte", "Semifinal", true, 3, 2, 0),   // 0,5 + 2 (mata-mata) = 2,5
+                Serie("LOBOS", "Major de Outono", "rodada 1 (0-0)", true, 1, 1, 0),   // 0,5 + 2 (Major) = 2,5
+            };
+            var rts = Rivalidades.Todos(hist);
+            var tit = rts.First(x => x.adversario == "TITAS"); var lob = rts.First(x => x.adversario == "LOBOS");
+            Ok(tit.pontos == 11.5f && tit.Rival && tit.series == 3 && tit.vitorias == 2 && tit.derrotas == 1, "final perdida no 3º mapa + semifinal + liga = 11,5 pontos: rival (" + tit.pontos + ")");
+            Ok(lob.pontos == 2.5f && !lob.Rival, "uma série de Major sem mata-mata não faz rival (" + lob.pontos + ")");
+            Ok(tit.ultimaEliminacao == "Final da Copa Sul" && tit.sequencia == -1, "lembra a última eliminação e a sequência");
+            {   // no máximo 3 rivais, mesmo com muitos times acima do limite
+                var muitos = new List<Resultado>();
+                foreach (var n in new[] { "A1", "A2", "A3", "A4", "A5" }) { muitos.Add(Serie(n, "Copa", "Final", false, 3, 1, 2)); muitos.Add(Serie(n, "Copa B", "Final", false, 3, 1, 2)); }
+                Ok(Rivalidades.Todos(muitos).Count(x => x.Rival) == Rivalidades.MAX_RIVAIS, "no máximo " + Rivalidades.MAX_RIVAIS + " rivais ao mesmo tempo");
+            }
+            Ok(rts[0].adversario == "TITAS", "o arquirrival vem primeiro");
+
+            // clássico: contra um rival a moral muda o dobro
+            var cr = Carreira.Nova(41); int g2 = 0;
+            while (!cr.TemJogoAgora && g2++ < 20) cr.AvancarSemana();
+            var se = cr.PrepararSerie();
+            cr.historico.Add(Serie(se.adv.nome, "Copa Antiga", "Final", false, 3, 1, 2));
+            cr.historico.Add(Serie(se.adv.nome, "Copa Mais Antiga", "Semifinal", false, 3, 0, 2));
+            Ok(cr.Classico(se.adv), "o próximo adversário virou rival depois de duas eliminações");
+            foreach (var j in cr.Titulares) j.moral = 50;
+            var rm = cr.PularMapa();
+            Ok(cr.historico.Contains(rm) && cr.Titulares.Where(j => cr.elenco.Contains(j)).All(j => Math.Abs(j.moral - 50) == Provisorio.MORAL_VITORIA * Carreira.CLASSICO_MORAL), "no clássico a moral muda o dobro (" + (rm.venceu ? "vitória" : "derrota") + ")");
+
+            // carreira de duas temporadas pulando tudo: aparecem rivais e notícias com memória
+            var cl = Carreira.Nova(42); int semanasR = 0;
+            while (cl.Temporada < 3 && semanasR++ < 200) { int gg = 0; while (cl.TemJogoAgora && gg++ < 50) cl.PularSerie(); cl.AvancarSemana(); }
+            Console.WriteLine("  em 2 temporadas: " + cl.Retrospectos.Count + " adversários, " + cl.Rivais.Count + " rival(is): " + string.Join("; ", cl.Rivais.Take(3).Select(r => r.adversario + " " + r.pontos + " pts")));
+            foreach (var n in cl.diario.Where(d => d.Contains("rival") || d.Contains("Revanche") || d.Contains("Clássico") || d.Contains("tabu") || d.Contains("seguida") || d.Contains("eliminou") || d.Contains("MVPs")).Take(6)) Console.WriteLine("    " + n);
+            Ok(cl.Retrospectos.Count > 5 && cl.Rivais.Count <= Rivalidades.MAX_RIVAIS, "o clube enfrenta vários adversários e tem no máximo " + Rivalidades.MAX_RIVAIS + " rivais");
+        }
+
+        // ---------- playbook (decisão 0022)
+        Console.WriteLine("------ playbook ------");
+        {
+            var jt = Estrategias.Jogadas(true); var jc = Estrategias.Jogadas(false);
+            Console.WriteLine("  ataque: " + jt.Count + " jogadas (" + string.Join(", ", jt.Take(4).Select(x => x.nome + " " + x.planos)) + ")");
+            Console.WriteLine("  defesa: " + jc.Count + " jogadas (" + string.Join(", ", jc.Take(4).Select(x => x.nome + " " + x.planos)) + ")");
+            Ok(jt.Count >= 10 && jc.Count >= 10 && jt.All(x => x.planos >= Estrategias.PLANOS_MIN_JOGADA), "o banco vira pelo menos 10 jogadas legíveis por lado");
+            Ok(Estrategias.Todos.All(p => !string.IsNullOrEmpty(p.jogada)) && !jt.Any(x => x.nome.Contains("Rampa + Palácio")), "todo plano tem jogada e o Split não se repete em outra ordem");
+            var cp2 = Carreira.Nova(51);
+            string f1 = jt[0].nome, f2 = jt[1].nome, p1 = jc[0].nome;
+            Ok(cp2.VagasPlaybook == 1 && cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Favorita) == null && cp2.MarcarJogada(f2, true, Carreira.MarcaJogada.Favorita) != null, "nível 1 da Gaming House: 1 favorita por lado");
+            Ok(cp2.MarcarJogada(p1, false, Carreira.MarcaJogada.Proibida) == null && cp2.Marca(p1, false) == Carreira.MarcaJogada.Proibida, "proibir uma jogada da defesa");
+            Ok(cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Proibida) == null && cp2.favoritasTR.Count == 0 && cp2.Marca(f1, true) == Carreira.MarcaJogada.Proibida, "trocar de favorita para proibida libera a vaga");
+            cp2.MarcarJogada(f1, true, Carreira.MarcaJogada.Favorita);
+            var ptp2 = cp2.MontarPartida(3);
+            Ok(ptp2.A.pesos.favoritas != null && ptp2.A.pesos.favoritas.Contains(f1) && ptp2.A.pesos.proibidas.Contains(p1) && ptp2.B.pesos.favoritas == null, "o playbook vai para os pesos do seu time, não do adversário");
+            var pd = ptp2.A.pesos.favoritas; ptp2.PedirTimeout(ptp2.A, Estilos.Pesos(Estilo.Agressiva), "Agressiva", true, 1, 3, 0.1f);
+            Ok(ptp2.A.pesos.favoritas == pd && ptp2.A.pesos.categoria == Estrategias.Categoria.Agressiva, "o timeout muda o estilo e mantém o playbook");
+            var opt3 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cl3 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cp2), opt3), opt3));
+            Ok(cl3.favoritasTR.SequenceEqual(cp2.favoritasTR) && cl3.proibidasCT.SequenceEqual(cp2.proibidasCT), "o playbook volta igual do salvamento");
+            // desenho da jogada: rotas pelo chão, saindo da base; pontos fortes e fracos
+            bool rotasOk = true; int pontos = 0;
+            foreach (var jg in jt.Concat(jc))
+                for (int k = 0; k < 5; k++)
+                {
+                    var rota = Estrategias.Rota(jg.exemplos[0], k, out _); pontos += rota.Count;
+                    var basePt = Estrategias.CentroDaArea(jg.tr ? "TR" : "CT");
+                    if (rota.Count == 0 || (rota[0] - basePt).Len > 1 || rota.Any(q => q.x < 0 || q.y < 0 || q.x > CSM.Map.MapData.NX || q.y > CSM.Map.MapData.NY)) rotasOk = false;
+                }
+            Ok(rotasOk && pontos > 1000, "toda jogada tem as 5 rotas saindo da base e dentro do mapa (" + pontos + " pontos)");
+            Ok(jt.Concat(jc).All(x => x.fortes.Count > 0 && x.fracos.Count > 0), "toda jogada tem pelo menos um ponto forte e um fraco");
+            Ok(Estrategias.ResumoRota(jt[0].exemplos[0], 0).StartsWith("base TR →"), "o resumo da rota começa na base: " + Estrategias.ResumoRota(jt[0].exemplos[0], 0));
         }
 
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");

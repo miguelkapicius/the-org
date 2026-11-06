@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 152">
+  <!-- incendiária do CT: lata com ombro chanfrado e nervuras, espoleta, colher e argola -->
+  <defs>
+    <mask id="c" maskUnits="userSpaceOnUse" x="0" y="0" width="84" height="152">
+      <rect width="84" height="152" fill="#fff"/>
+      <g stroke="#000" fill="none" stroke-width="2.2" stroke-linecap="round">
+        <path d="M22 78 L56 78"/><path d="M22 96 L56 96"/><path d="M22 114 L56 114"/><path d="M22 132 L56 132"/>
+      </g>
+    </mask>
+  </defs>
+  <g fill="#fff" mask="url(#c)">
+    <path d="M18 68 L26 58 L52 58 L60 68 L60 140 Q60 144 56 144 L22 144 Q18 144 18 140 Z"/>
+    <rect x="29" y="46" width="20" height="13"/>
+    <rect x="24" y="30" width="30" height="17" rx="4"/>
+    <path d="M34 24 L58 24 Q70 24 70 36 L70 112 Q70 117 66 117 L64 117 L64 38 Q64 30 57 30 L34 30 Z"/>
+    <path d="M14 36 L26 36 L26 41 L14 41 Z"/>
+  </g>
+  <circle cx="11" cy="47" r="8.5" fill="none" stroke="#fff" stroke-width="4"/>
+</svg>
