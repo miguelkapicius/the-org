@@ -46,3 +46,11 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
+| Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
+| Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
+| Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |
+| Entrosamento | O quanto dois jogadores do elenco jogam bem juntos; muda a simulação (ex.: trade kill). | química, sinergia | 11-ideias |
+| Playbook | Escolhas do manager, por mapa, de planos de round favoritos e proibidos que o IGL respeita. | livro de jogadas | 11-ideias |
+| Melhores momentos | Lances-chave de um round ou partida, mostrados em replay na transmissão e no pós-partida. | highlights | 08-ui-ux |
+| Rivalidade | Adversário com histórico marcante contra o clube (finais, eliminações, sequências). | clássico | 11-ideias |
+| Modo resumo | Forma de assistir só os rounds decisivos de uma partida e pular o resto. | modo rápido | 11-ideias |
