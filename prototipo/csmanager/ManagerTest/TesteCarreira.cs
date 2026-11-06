@@ -258,6 +258,33 @@ class TesteCarreira
             Ok(pt2.A.js[0].skill.aimSigma == miraP0, "o traço não muda o atributo guardado do jogador, só o do round");
         }
 
+        // ---------- melhores momentos (decisão 0020): jogada da partida e MVP
+        Console.WriteLine("------ melhores momentos ------");
+        {
+            var cm = Carreira.Nova(31);
+            var ptm = cm.MontarPartida(11); ptm.Jogar();
+            Ok(ptm.jogada != null && ptm.jogada.nota > 0 && !string.IsNullOrEmpty(ptm.jogada.Descricao), "a partida simulada elege uma jogada da partida");
+            Console.WriteLine("  jogada: " + ptm.jogada?.Descricao + " (nota " + ptm.jogada?.nota + ")");
+            Ok(ptm.jogada.Descricao.Contains("round " + (ptm.jogada.round + 1)) && (ptm.jogada.time == ptm.A || ptm.jogada.time == ptm.B), "a jogada diz o round e o time");
+            var desemp = ptm.A.js.Select(j => new Desempenho { nome = j.nome, funcao = j.roleT, k = j.k, d = j.d, hs = j.hs, dano = j.dano, fk = j.fk, rounds = Math.Max(1, j.rounds) }).ToList();
+            int mvpsAntes = cm.elenco.Sum(j => j.mvps);
+            var rr = cm.Registrar(ptm.vencedor == ptm.A, ptm.A.placar, ptm.B.placar, true, desemp, ptm.jogada);
+            Ok(cm.elenco.Sum(j => j.mvps) == mvpsAntes + 1 && cm.elenco.First(j => j.nome == rr.Melhor.nome).mvps >= 1, "o MVP do mapa entra no histórico do jogador");
+            bool nossa = ptm.jogada.time == ptm.A;
+            Ok(rr.jogada == ptm.jogada.Descricao && rr.jogadaNossa == nossa, "o resultado guarda a jogada e de quem foi (" + (nossa ? "nossa" : "do adversário") + ")");
+            if (nossa) Ok(cm.elenco.First(j => j.nome == ptm.jogada.jogador).jogadas.Count == 1 && cm.diario.Any(d => d.Contains("Jogada da partida")), "jogada nossa vai para o histórico do jogador e para as notícias");
+            // série inteira pulada: o último mapa tem MVP da série
+            var cs2 = Carreira.Nova(32); int g = 0; Resultado ult = null;
+            while (g++ < 60 && (ult == null || !ult.serieEncerrada)) { if (cs2.TemJogoAgora) ult = cs2.PularMapa(); else cs2.AvancarSemana(); }
+            Ok(ult != null && ult.serieEncerrada && ult.mvpSerie != null && cs2.elenco.Any(j => j.mvpsSerie == 1), "fim de série: MVP da série eleito (" + ult?.mvpSerie + ")");
+            Ok(ult.jogada == null, "partida pulada não tem jogada da partida");
+            // salvamento
+            var opt2 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cl2 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cm), opt2), opt2));
+            Ok(cl2.elenco.Select(j => j.mvps + "|" + j.mvpsSerie + "|" + string.Join("/", j.jogadas)).SequenceEqual(cm.elenco.Select(j => j.mvps + "|" + j.mvpsSerie + "|" + string.Join("/", j.jogadas))), "MVPs e jogadas voltam iguais do salvamento");
+            Ok(cl2.historico[0].jogada == cm.historico[0].jogada && cl2.historico[0].jogadaNossa == cm.historico[0].jogadaNossa, "a jogada do resultado volta igual do salvamento");
+        }
+
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");
         Environment.Exit(falhas == 0 ? 0 : 1);
     }

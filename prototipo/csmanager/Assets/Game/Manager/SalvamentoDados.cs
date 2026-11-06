@@ -13,7 +13,8 @@ namespace CSM.Manager
 
     [Serializable] public class SkillD { public float reaction, aimSigma, flick, spray, crosshair, pitchErr, aggression, composure, utilitaria; }
     [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio;
-        public bool temPersonalidade; public int traco; public float moral, entrosamento; }   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
+        public bool temPersonalidade; public int traco; public float moral, entrosamento;
+        public int mvps, mvpsSerie; public List<string> jogadas = new List<string>(); }   // decisão 0020   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
     [Serializable] public class LancD { public int semana, valor; public string descricao; }
     [Serializable] public class DesempD { public string nome; public int funcao, k, d, hs, dano, fk, rounds; }
     [Serializable] public class MapaSerieD { public string mapa; public int meus, deles; }
@@ -22,6 +23,7 @@ namespace CSM.Manager
     {
         public int numPartida, semana, meus, deles, saldoAntes, forcaMinha, forcaDeles, serieMeus, serieDeles, serieMd;
         public string adversario, campeonato, rotulo, mapa; public bool venceu, assistida, estimado, serieEncerrada, venceuSerie;
+        public string jogada, mvpSerie; public bool jogadaNossa;   // decisão 0020
         public List<DesempD> desempenho = new List<DesempD>(); public List<MapaSerieD> mapasDaSerie = new List<MapaSerieD>();
     }
     [Serializable] public class TituloD { public string nome; public int posicao, times, premio, semana; public float pontos; }
@@ -59,11 +61,13 @@ namespace CSM.Manager
         static SkillD Para(Skill s) => new SkillD { reaction = s.reaction, aimSigma = s.aimSigma, flick = s.flick, spray = s.spray, crosshair = s.crosshair, pitchErr = s.pitchErr, aggression = s.aggression, composure = s.composure, utilitaria = s.utilitaria };
         static Skill De(SkillD d) => new Skill { reaction = d.reaction, aimSigma = d.aimSigma, flick = d.flick, spray = d.spray, crosshair = d.crosshair, pitchErr = d.pitchErr, aggression = d.aggression, composure = d.composure, utilitaria = d.utilitaria };
         static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone(),
-            temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento };
+            temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento,
+            mvps = j.mvps, mvpsSerie = j.mvpsSerie, jogadas = j.jogadas.ToList() };
         static Jogador De(JogadorD d)
         {
             var j = new Jogador { nome = d.nome, idade = d.idade, funcao = (Role)d.funcao, potencial = d.potencial, foco = d.foco, sessoes = d.sessoes, potencialRevelado = d.revelado, cansaco = d.cansaco, preparo = d.preparo, skill = De(d.skill), inicioTemporada = d.inicio != null && d.inicio.Length == 5 ? (float[])d.inicio.Clone() : new float[5] };
             if (d.temPersonalidade) { j.traco = (Traco)d.traco; j.moral = d.moral; j.entrosamento = d.entrosamento; }   // antes da 0019: valores iniciais, sem traço
+            j.mvps = d.mvps; j.mvpsSerie = d.mvpsSerie; if (d.jogadas != null) j.jogadas.AddRange(d.jogadas);
             return j;
         }
 
@@ -80,6 +84,7 @@ namespace CSM.Manager
             {
                 numPartida = r.numPartida, semana = r.semana, meus = r.meus, deles = r.deles, saldoAntes = r.saldoAntes, forcaMinha = r.forcaMinha, forcaDeles = r.forcaDeles, serieMeus = r.serieMeus, serieDeles = r.serieDeles, serieMd = r.serieMd,
                 adversario = r.adversario, campeonato = r.campeonato, rotulo = r.rotulo, mapa = r.mapa, venceu = r.venceu, assistida = r.assistida, estimado = r.estimado, serieEncerrada = r.serieEncerrada, venceuSerie = r.venceuSerie,
+                jogada = r.jogada, jogadaNossa = r.jogadaNossa, mvpSerie = r.mvpSerie,
                 desempenho = r.desempenho.Select(p => new DesempD { nome = p.nome, funcao = (int)p.funcao, k = p.k, d = p.d, hs = p.hs, dano = p.dano, fk = p.fk, rounds = p.rounds }).ToList(),
                 mapasDaSerie = r.mapasDaSerie.Select(m => new MapaSerieD { mapa = m.mapa, meus = m.meus, deles = m.deles }).ToList(),
             }).ToList();
@@ -124,6 +129,7 @@ namespace CSM.Manager
             {
                 numPartida = r.numPartida, semana = r.semana, meus = r.meus, deles = r.deles, saldoAntes = r.saldoAntes, forcaMinha = r.forcaMinha, forcaDeles = r.forcaDeles, serieMeus = r.serieMeus, serieDeles = r.serieDeles, serieMd = r.serieMd,
                 adversario = r.adversario, campeonato = r.campeonato, rotulo = r.rotulo, mapa = r.mapa, venceu = r.venceu, assistida = r.assistida, estimado = r.estimado, serieEncerrada = r.serieEncerrada, venceuSerie = r.venceuSerie,
+                jogada = string.IsNullOrEmpty(r.jogada) ? null : r.jogada, jogadaNossa = r.jogadaNossa, mvpSerie = string.IsNullOrEmpty(r.mvpSerie) ? null : r.mvpSerie,
                 desempenho = r.desempenho.Select(p => new Desempenho { nome = p.nome, funcao = (Role)p.funcao, k = p.k, d = p.d, hs = p.hs, dano = p.dano, fk = p.fk, rounds = p.rounds }).ToList(),
                 mapasDaSerie = r.mapasDaSerie.Select(m => (m.mapa, m.meus, m.deles)).ToList(),
             }));

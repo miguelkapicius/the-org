@@ -102,6 +102,10 @@ namespace CSM.Manager
         public string Placar => meus + " x " + deles;
         public string PlacarSerie => serieMeus + " x " + serieDeles;
         public Desempenho Melhor => desempenho.Count == 0 ? null : desempenho.OrderByDescending(x => x.Nota).First();
+        /// <summary>Jogada da partida (decisão 0020): a descrição do lance de maior nota; null na partida pulada. jogadaNossa: foi de um jogador do clube.</summary>
+        public string jogada; public bool jogadaNossa;
+        /// <summary>MVP da série (só no último mapa dela).</summary>
+        public string mvpSerie;
     }
 
     /// <summary>Um aviso do painel: o que merece atenção agora e para onde ir resolver.</summary>
@@ -919,7 +923,9 @@ namespace CSM.Manager
 
         /// <summary>Fecha o mapa atual da série: guarda o resultado, cansa e dá experiência aos jogadores, e (se a série acabou) leva o
         /// resultado ao campeonato. <paramref name="desempenho"/>: os números reais da simulação (assistida); null = estimar.</summary>
-        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida, List<Desempenho> desempenho = null)
+        public const int JOGADAS_GUARDADAS = 5;   // últimas jogadas da partida no histórico de cada jogador (decisão 0020)
+
+        public Resultado Registrar(bool venceu, int meus, int deles, bool assistida, List<Desempenho> desempenho = null, Destaques.Lance jogada = null)
         {
             ultimaVenda = null;
             if (serie == null) PrepararSerie();
@@ -942,6 +948,22 @@ namespace CSM.Manager
             }
             var af = mundo.Clube.afinidade; af[mapa] = Math.Min(95, af[mapa] + 1);   // jogar no mapa dá afinidade
 
+            // melhores momentos (decisão 0020): MVP do mapa e jogada da partida entram no histórico do jogador e nas notícias
+            var mvp = r.Melhor; var jm = mvp != null ? elenco.FirstOrDefault(j => j.nome == mvp.nome) : null;
+            if (jm != null) jm.mvps++;
+            if (jogada != null)
+            {
+                r.jogada = jogada.Descricao;
+                var autor = Titulares.FirstOrDefault(j => j.nome == jogada.jogador);
+                r.jogadaNossa = autor != null;
+                if (autor != null)
+                {
+                    autor.jogadas.Insert(0, "Semana " + Semana + " contra " + r.adversario + ": " + jogada.Descricao);
+                    while (autor.jogadas.Count > JOGADAS_GUARDADAS) autor.jogadas.RemoveAt(autor.jogadas.Count - 1);
+                    Anotar("Jogada da partida contra " + r.adversario + ": " + jogada.Descricao + ".");
+                }
+            }
+
             if (s != null)
             {
                 s.resultados.Add((meus, deles));
@@ -950,6 +972,11 @@ namespace CSM.Manager
                 if (s.Encerrada)
                 {
                     r.serieEncerrada = true; r.venceuSerie = s.MinhasVit > s.DelesVit;
+                    // MVP da série: quem somou a maior nota nos mapas dela (os anteriores estão no começo do histórico)
+                    var mapasSerie = historico.Take(s.resultados.Count - 1).Append(r);
+                    var ms = mapasSerie.SelectMany(x => x.desempenho).GroupBy(x => x.nome).OrderByDescending(g => g.Sum(x => x.Nota)).FirstOrDefault();
+                    var jms = ms != null ? elenco.FirstOrDefault(j => j.nome == ms.Key) : null;
+                    if (jms != null) { r.mvpSerie = jms.nome; jms.mvpsSerie++; if (s.Md > 1) Anotar("MVP da série contra " + r.adversario + ": " + jms.nome + "."); }
                     bool souA = s.conf.a == 0;
                     s.camp.RegistrarClube(s.conf, souA ? s.MinhasVit : s.DelesVit, souA ? s.DelesVit : s.MinhasVit);
                     var fim = new ResumoSemana();

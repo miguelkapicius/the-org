@@ -90,6 +90,8 @@ namespace CSM.Sim
         public bool bombPlanted, bombDropped, defuserActive, exploded, defused;
         public V2 bombPos, droppedBomb; public float bombZ, plantedAt; public char planSite = 'A'; Agent planter, defuser;
         public string winner, reason; public bool over;
+        /// <summary>Instante em que o round foi decidido (-1 = ainda não). Depois dele vem o pós-round (salvar arma, caçar o save).</summary>
+        public float fimEm = -1;
         public Agent firstKill, firstDeath; public float firstKillT = -1, firstSightT = -1;
         public readonly Pesos[] pesos = new Pesos[2];
         public readonly HashSet<string> utilUsada = new HashSet<string>();   // lineups que o time já gastou neste round
@@ -1871,6 +1873,6 @@ namespace CSM.Sim
         }
 
         readonly Dictionary<int, (float t, string faixa)> aTrocar = new Dictionary<int, (float, string)>();
-        void End(Team w, string why) { if (Auditar) { foreach (var (ba, bp, bt) in audBoost) { string lado = ba.IsT ? "TR" : "CT"; int k = 0; foreach (var ab in abates) if (ab.by == ba && ab.t >= bt && !ab.aliado && ab.v.team != ba.team) k++; Aud("pezinho por ponto: round", bp + " · " + lado + " · " + (ba.team == w ? "ganhou" : "perdeu")); Aud("pezinho por ponto: abates depois de subir", bp + " · " + lado + " · " + (k >= 2 ? "2+" : k.ToString()) + (ba.alive ? "" : " · morreu")); } audBoost.Clear(); foreach (var kv in aTrocar) Aud("troca: colega mais perto quando caiu", kv.Value.faixa + " · não"); aTrocar.Clear(); } foreach (var a in agents) a.vivoNoFim = a.alive; over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; sus.Fim(why); Ev("FIM " + why + (bombPlanted ? " (plantado)" : " (sem plant)")); if (bombPlanted) { Ev($"PLANT com {ctVivosNoPlant} CT"); if (w == Team.CT) Ev($"PLANT com {ctVivosNoPlant} CT e CT venceu"); } Log($"FIM: {winner} ganhou — {why}"); }
+        void End(Team w, string why) { if (Auditar) { foreach (var (ba, bp, bt) in audBoost) { string lado = ba.IsT ? "TR" : "CT"; int k = 0; foreach (var ab in abates) if (ab.by == ba && ab.t >= bt && !ab.aliado && ab.v.team != ba.team) k++; Aud("pezinho por ponto: round", bp + " · " + lado + " · " + (ba.team == w ? "ganhou" : "perdeu")); Aud("pezinho por ponto: abates depois de subir", bp + " · " + lado + " · " + (k >= 2 ? "2+" : k.ToString()) + (ba.alive ? "" : " · morreu")); } audBoost.Clear(); foreach (var kv in aTrocar) Aud("troca: colega mais perto quando caiu", kv.Value.faixa + " · não"); aTrocar.Clear(); } foreach (var a in agents) a.vivoNoFim = a.alive; fimEm = t; over = true; winner = w == Team.T ? "TR" : "CT"; reason = why; sus.Fim(why); Ev("FIM " + why + (bombPlanted ? " (plantado)" : " (sem plant)")); if (bombPlanted) { Ev($"PLANT com {ctVivosNoPlant} CT"); if (w == Team.CT) Ev($"PLANT com {ctVivosNoPlant} CT e CT venceu"); } Log($"FIM: {winner} ganhou — {why}"); }
     }
 }

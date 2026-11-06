@@ -77,18 +77,11 @@ namespace CSM.View3D
                 bool valido = ab.by != null && ab.by != ab.v && !ab.aliado;
                 int vivosMatador = !valido ? 0 : ab.by.IsT ? vT : vC;
                 if (ab.v.IsT) vT--; else vC--;
-                float nt = 4;
-                if (valido)
-                {
-                    nt = 10;
-                    if (ab.hs) nt += 3; if (ab.semLuneta) nt += 6; if (ab.atravesSmoke) nt += 4; if (ab.parede) nt += 6;
-                    if (ab.noAr) nt += 5; if (ab.cegoQuemMatou) nt += 5; if (ab.arma == "awp") nt += 5;
-                    if (vivosMatador == 1) nt += 8;   // clutch
-                    if (k == 0) nt += 6;              // abertura: a primeira kill do round
-                }
-                if (cur == null || ab.t - cur.tAbate > 3.5f) { cur = new Lance { de = ab.t - 1.8f }; lances.Add(cur); deQuem.Clear(); }
+                if (cur == null || ab.t - cur.tAbate > Destaques.JANELA) { cur = new Lance { de = ab.t - 1.8f }; lances.Add(cur); deQuem.Clear(); }
                 int n = 0;
-                if (valido) { deQuem[ab.by] = n = (deQuem.TryGetValue(ab.by, out var q) ? q : 0) + 1; if (n > 1) nt += 8; cur.valido = true; cur.multi = Mathf.Max(cur.multi, n); }
+                if (valido) { deQuem[ab.by] = n = (deQuem.TryGetValue(ab.by, out var q) ? q : 0) + 1; cur.valido = true; cur.multi = Mathf.Max(cur.multi, n); }
+                // a mesma nota da jogada da partida (Sim/Destaques, decisão 0020): k == 0 é a abertura do round, vivosMatador == 1 o clutch
+                float nt = Destaques.NotaAbate(ab, valido, k == 0, valido && vivosMatador == 1, n);
                 cur.tAbate = ab.t; cur.ate = ab.t + 0.7f; cur.nota += nt;
                 cur.matou = valido ? m.agents.IndexOf(ab.by) : -1; cur.morreu = m.agents.IndexOf(ab.v);
                 cur.legenda = LegendaAbate(ab, n, valido && k == 0 && n == 1, valido && vivosMatador == 1);

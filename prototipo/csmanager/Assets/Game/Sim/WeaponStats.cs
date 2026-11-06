@@ -13,6 +13,14 @@ namespace CSM.Sim
     {
         public const float SPEEDUP = 0.9f;   // multiplica recarga e intervalo de tiro
 
+        /// <summary>Nome de exibição da arma (HUD, killfeed, jogada da partida).</summary>
+        public static string Nome(string g) => g switch
+        {
+            "ak" => "AK-47", "m4" => "M4A4", "m4s" => "M4A1-S", "awp" => "AWP", "mp9" => "MP9", "mac10" => "MAC-10",
+            "usp" => "USP-S", "glock" => "Glock-18", "deagle" => "Desert Eagle", "faca" => "faca",
+            "tec9" => "Tec-9", "fiveseven" => "Five-SeveN", "p250" => "P250", "galil" => "Galil AR", "famas" => "FAMAS", _ => g?.ToUpper() ?? "",
+        };
+
         public class Stat
         {
             public string id, name;
