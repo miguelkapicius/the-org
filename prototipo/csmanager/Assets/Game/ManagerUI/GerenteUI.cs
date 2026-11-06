@@ -431,6 +431,24 @@ namespace CSM.ManagerUI
             foreach (var d in c.diario.Take(5)) { var l = E("diario-linha"); l.Add(L(d, "suave")); diario.Add(l); }
             conteudo.Add(diario);
 
+            // rivalidades (decisão 0021)
+            var rivais = c.Rivais;
+            if (rivais.Count > 0)
+            {
+                conteudo.Add(L("Rivalidades", "h2"));
+                var caixaR = E("diario");
+                for (int i = 0; i < Math.Min(5, rivais.Count); i++)
+                {
+                    var rv = rivais[i];
+                    var l = E("diario-linha"); l.style.flexDirection = FlexDirection.Row; l.style.alignItems = Align.Center;
+                    if (i == 0) { var sa = Selo("ARQUIRRIVAL", "laranja"); sa.style.marginRight = 8; l.Add(sa); }
+                    l.Add(L(rv.adversario, "f16", "negrito"));
+                    var t = L(" · " + rv.Texto + (rv.sequencia >= 2 ? " · " + rv.sequencia + " vitórias seguidas" : rv.sequencia <= -2 ? " · " + (-rv.sequencia) + " derrotas seguidas" : ""), "suave");
+                    l.Add(t); caixaR.Add(l);
+                }
+                conteudo.Add(caixaR);
+            }
+
             conteudo.Add(L("Elenco", "h2"));
             conteudo.Add(Abas(FILTROS_ELENCO, filtroPainel, i => { filtroPainel = i; Mostrar(); }));
             var todos = c.elenco.ToList();
