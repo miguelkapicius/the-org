@@ -97,14 +97,11 @@ namespace CSM.ManagerUI
                 rtCaptura = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
                 ps.targetTexture = rtCaptura;
             }
-#if UNITY_EDITOR
-            // se o projeto tiver um tema de runtime, usa (o visual não depende dele: tudo está no Manager.uss)
-            foreach (var g in UnityEditor.AssetDatabase.FindAssets("t:ThemeStyleSheet"))
-            {
-                var t = UnityEditor.AssetDatabase.LoadAssetAtPath<ThemeStyleSheet>(UnityEditor.AssetDatabase.GUIDToAssetPath(g));
-                if (t != null) { ps.themeStyleSheet = t; break; }
-            }
-#endif
+            // O tema de runtime vem de Resources (e não do AssetDatabase, que só existe no Editor): sem ele o PanelSettings
+            // criado em código nasce sem tema no build ("No Theme Style Sheet set to PanelSettings") e a interface colapsa.
+            var tema = Resources.Load<ThemeStyleSheet>("ManagerUI/TemaRuntime");
+            if (tema != null) ps.themeStyleSheet = tema;
+            else Debug.LogError("Falta Assets/Resources/ManagerUI/TemaRuntime.tss: sem tema a interface do manager não renderiza direito no build.");
             var doc = gameObject.AddComponent<UIDocument>();
             doc.panelSettings = ps;
             yield return null;   // o UIDocument cria a raiz no quadro seguinte
