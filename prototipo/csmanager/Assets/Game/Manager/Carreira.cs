@@ -35,6 +35,15 @@ namespace CSM.Manager
         public const float CANSACO_LIMIAR = 35f, CANSACO_MAX_PENALIDADE = 0.12f;   // acima do limiar, até -12% em 100 de cansaço
         public const float AFINIDADE_MAX = 0.03f, ESTRATEGIA_CONTRA = 0.02f;       // efeito de afinidade e de contra-estratégia
         public static readonly int[] INTEL_SEMANAS = { 1, 3, 6 };   // semanas de estudo para os níveis 1, 2 e 3 de informação
+
+        // personalidade (decisão 0019)
+        public const float CHANCE_TRACO = 0.5f;                     // metade dos jogadores tem um traço
+        public const float MORAL_INICIAL = 65f, MORAL_CONTRATADO = 70f, MORAL_NEUTRA = 60f;
+        public const float MORAL_VITORIA = 3f, MORAL_DERROTA = 3f, MORAL_TITULAR_SEMANA = 1f, MORAL_RESERVA_SEMANA = 2f, MORAL_AVISO = 30f;
+        public const float MORAL_MAX_BONUS = 0.03f, MORAL_POR_PONTO = MORAL_MAX_BONUS / 40f;   // +3% em 100, -4,5% em 0, neutra em 60
+        public const float ENTROSAMENTO_INICIAL = 60f, ENTROSAMENTO_CONTRATADO = 20f;
+        public const float ENTROSAMENTO_TITULAR = 5f, ENTROSAMENTO_RESERVA = 1f, ENTROSAMENTO_COLETIVA = 3f, ENTROSAMENTO_ESTRELA = 15f;
+        public const float ENTROSAMENTO_FORCA = 0.02f;              // ±2% na força (partida pulada) entre 0 e 100
     }
 
     public static class Fmt
@@ -215,6 +224,7 @@ namespace CSM.Manager
             {
                 var j = new Jogador { nome = nome, idade = 21 + c.rng.Next(0, 8), funcao = role, skill = new Skill() };
                 c.DefinirPotencial(j, 8, 18);
+                c.SortearTraco(j);
                 c.elenco.Add(j);
             }
             for (int i = 0; i < 2; i++) c.elenco.Add(c.Gerar(0.35f, 0.65f));   // duas reservas, um pouco abaixo
@@ -242,6 +252,11 @@ namespace CSM.Manager
             j.potencial = Math.Min(97, j.Overall + folga);
         }
 
+        void SortearTraco(Jogador j)
+        {
+            j.traco = rng.NextDouble() < Provisorio.CHANCE_TRACO ? (Traco)rng.Next(1, 7) : Traco.Nenhum;
+        }
+
         void GuardarInicio(Jogador j) { for (int a = 0; a < 5; a++) j.inicioTemporada[a] = j.Valor(a); }
 
         /// <summary>Jogador novo com qualidade entre qMin e qMax (0..1); os atributos variam um pouco em volta.</summary>
@@ -258,6 +273,7 @@ namespace CSM.Manager
             };
             var j = new Jogador { nome = NomeLivre(), idade = 17 + rng.Next(0, 15), funcao = FUNCOES[rng.Next(FUNCOES.Length)], skill = sk };
             DefinirPotencial(j, 3, 24);
+            SortearTraco(j);
             GuardarInicio(j);
             return j;
         }
@@ -355,8 +371,13 @@ namespace CSM.Manager
             float cansaco = Math.Max(0f, (j.cansaco - Provisorio.CANSACO_LIMIAR) / (100f - Provisorio.CANSACO_LIMIAR)) * Provisorio.CANSACO_MAX_PENALIDADE;
             float afin = mapa >= 0 ? (mundo.Clube.afinidade[mapa] - 50f) / 50f * Provisorio.AFINIDADE_MAX : 0f;
             float rel = adv != null ? Estilos.Relacao(estilo, adv.estilo) * Provisorio.ESTRATEGIA_CONTRA : 0f;
-            return 1f + preparo - cansaco + afin + rel;
+            float moral = (j.moral - Provisorio.MORAL_NEUTRA) * Provisorio.MORAL_POR_PONTO;
+            float entros = (EntrosamentoTime - 50f) / 50f * Provisorio.ENTROSAMENTO_FORCA;
+            return 1f + preparo - cansaco + afin + rel + moral + entros;
         }
+
+        /// <summary>Entrosamento do time (decisão 0019): a média dos titulares, 0..100.</summary>
+        public float EntrosamentoTime => elenco.Count == 0 ? 50f : Titulares.Average(j => j.entrosamento);
 
         public float ForcaEfetiva(int mapa = -1, Equipe adv = null) => elenco.Count == 0 ? 0 : Titulares.Average(j => j.OverallEfetivo(MultEfetivo(j, mapa, adv)));
 
@@ -443,6 +464,9 @@ namespace CSM.Manager
                 var fraco = QuemSaiPara(r);
                 if (fraco != null) { A(Aviso.Nivel.Dica, r.nome + " (reserva, " + r.Overall + ") é melhor que o titular " + fraco.nome + " (" + fraco.Overall + ").", "Ajustar escalação", "elenco"); break; }
             }
+            foreach (var j in elenco.Where(j => j.moral < Provisorio.MORAL_AVISO).Take(2))
+                A(Aviso.Nivel.Atencao, j.nome + " está desmotivado (moral " + (int)j.moral + "): rende menos na partida." + (Titular(j) ? "" : " Reserva há muito tempo perde ânimo."), "Ver elenco", "elenco");
+            if (EntrosamentoTime < 40) A(Aviso.Nivel.Dica, "Time pouco entrosado (" + (int)EntrosamentoTime + "): os bots trocam menos os colegas. Mantenha os titulares e faça sessões coletivas.", "Ver treino", "treino");
             if (nivelGH >= 2 && elenco.All(j => j.sessoes == 0)) A(Aviso.Nivel.Dica, "Ninguém está treinando: os atributos só mudam pela idade.", "Ver treino", "treino");
             if (scouts.Any(s => s.tipo == 0)) A(Aviso.Nivel.Dica, "Há scout sem tarefa: estude o próximo adversário ou procure talentos no mercado.", "Ver scouts", "scouts");
             if (elenco.Count <= Provisorio.TITULARES) A(Aviso.Nivel.Dica, "Sem reservas: se alguém sair, o time fica incompleto.", "Ver mercado", "mercado");
@@ -467,6 +491,7 @@ namespace CSM.Manager
             ultimaVenda = null;
             Lanca("Contratação de " + j.nome, -j.Preco);
             mercado.Remove(j); j.potencialRevelado = true; elenco.Add(j); GuardarInicio(j);
+            j.moral = Provisorio.MORAL_CONTRATADO; j.entrosamento = Provisorio.ENTROSAMENTO_CONTRATADO;
             return null;
         }
 
@@ -600,6 +625,16 @@ namespace CSM.Manager
                     for (int a = 0; a < 5; a++) j.Definir(a, j.Valor(a) - (j.idade - 27) * (a == (int)Atrib.Reflexo ? 0.012f : 0.006f));
                 }
                 j.preparo = preparo; j.cansaco = cansaco; j.mapasNaSemana = 0;
+            }
+            // moral e entrosamento (decisão 0019): titular joga e se integra; reserva perde ânimo
+            var tit = new HashSet<Jogador>(Titulares);
+            float coletivas = MaxColetivas > 0 ? Math.Min(sessoesColetivas, MaxColetivas) : 0;
+            foreach (var j in elenco)
+            {
+                bool t = tit.Contains(j);
+                float queda = Provisorio.MORAL_RESERVA_SEMANA * (j.traco == Traco.Estrela ? 2f : 1f);
+                j.moral = Math.Clamp(j.moral + (t ? Provisorio.MORAL_TITULAR_SEMANA : -queda), 0f, 100f);
+                j.entrosamento = Math.Clamp(j.entrosamento + (t ? Provisorio.ENTROSAMENTO_TITULAR + coletivas * Provisorio.ENTROSAMENTO_COLETIVA : Provisorio.ENTROSAMENTO_RESERVA), 0f, 100f);
             }
             // estudo de mapa: o time ganha afinidade com o mapa escolhido e perde um pouco com os outros
             if (estudoMapa >= 0 && GH.estudoMapa)
@@ -812,7 +847,14 @@ namespace CSM.Manager
             }
             for (int v = 0; v < vagas.Length; v++)
                 if (porVaga[v] == null) { porVaga[v] = livres[0]; livres.RemoveAt(0); }
-            for (int v = 0; v < vagas.Length; v++) { vagas[v].nome = porVaga[v].nome; vagas[v].skill = porVaga[v].SkillEfetiva(MultEfetivo(porVaga[v], mapa, adv)); }
+            for (int v = 0; v < vagas.Length; v++)
+            {
+                var j = porVaga[v];
+                vagas[v].nome = j.nome; vagas[v].traco = j.traco;
+                vagas[v].skill = j.SkillEfetiva(MultEfetivo(j, mapa, adv));
+                float e = EntrosamentoTime - (j.traco == Traco.Estrela ? Provisorio.ENTROSAMENTO_ESTRELA : 0f);
+                vagas[v].skill.entrosamento = Math.Clamp(e / 100f, 0f, 1f);
+            }
             if (adv != null)
             {
                 pt.B.nome = adv.nome;
@@ -895,6 +937,7 @@ namespace CSM.Manager
             foreach (var j in Titulares)
             {
                 j.mapasNaSemana++;
+                j.moral = Math.Clamp(j.moral + (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA), 0f, 100f);
                 if (j.idade <= 28) { int a = rng.Next(5); if (j.Valor(a) < j.potencial) j.Definir(a, j.Valor(a) + 0.08f * FatorIdade(j.idade)); }
             }
             var af = mundo.Clube.afinidade; af[mapa] = Math.Min(95, af[mapa] + 1);   // jogar no mapa dá afinidade

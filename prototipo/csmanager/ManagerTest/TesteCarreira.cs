@@ -176,6 +176,12 @@ class TesteCarreira
             var pa = cs.Proximo(); var pb = cl.Proximo();
             Ok(pa.camp?.id == pb.camp?.id && pa.conf?.a == pb.conf?.a && pa.conf?.b == pb.conf?.b && pa.semana == pb.semana, "o próximo compromisso do clube é o mesmo");
             Ok((cs.serie == null) == (cl.serie == null) && (cs.serie == null || (cl.serie.resultados.Count == cs.serie.resultados.Count && cl.serie.mapas.SequenceEqual(cs.serie.mapas) && cl.serie.veto.Completo == cs.serie.veto.Completo)), "a série em andamento (veto e mapas jogados) volta igual");
+            Ok(cl.elenco.Select(j => (int)j.traco + "|" + (int)j.moral + "|" + (int)j.entrosamento).SequenceEqual(cs.elenco.Select(j => (int)j.traco + "|" + (int)j.moral + "|" + (int)j.entrosamento)), "traço, moral e entrosamento voltam iguais do salvamento");
+            {   // salvamento de antes da decisão 0019: sem os campos novos, o jogador volta com os valores iniciais (não com moral 0)
+                var dv = SalvamentoDados.Para(cs); foreach (var jd in dv.elenco) { jd.temPersonalidade = false; jd.moral = 0; jd.entrosamento = 0; jd.traco = 3; }
+                var cv = SalvamentoDados.De(dv);
+                Ok(cv.elenco.All(j => j.moral == Provisorio.MORAL_INICIAL && j.entrosamento == Provisorio.ENTROSAMENTO_INICIAL && j.traco == Traco.Nenhum), "salvamento antigo: moral e entrosamento iniciais, sem traço");
+            }
             Ok(cl.historico.Count == cs.historico.Count && cl.titulos.Count == cs.titulos.Count, "histórico e campeonatos disputados iguais");
             // a carreira carregada continua jogável, inclusive virando de temporada
             int t0 = cl.Temporada; int gg = 0; while (cl.Temporada == t0 && !cl.Falido && gg++ < 200) { while (cl.TemJogoAgora && gg++ < 2000) cl.PularSerie(); if (cl.PodeAvancar) cl.AvancarSemana(); }
@@ -215,6 +221,41 @@ class TesteCarreira
                 Console.WriteLine("  uma partida completa da simulação: " + cron.ElapsedMilliseconds + " ms, placar " + ps.A.placar + " x " + ps.B.placar);
                 Ok(ps.acabou && ps.A.js.Sum(j => j.k) > 0 && ps.A.js.All(j => j.rounds > 0), "a partida montada pela carreira roda até o fim e devolve abates, dano e rounds");
             }
+        }
+
+        // ---------- personalidade (decisão 0019): traços, moral e entrosamento
+        Console.WriteLine("------ personalidade ------");
+        {
+            var cp = Carreira.Nova(21);
+            var todos = Enumerable.Range(0, 30).Select(k => Carreira.Nova(100 + k)).SelectMany(x => x.elenco.Concat(x.mercado)).ToList();
+            float comTraco = todos.Count(j => j.traco != Traco.Nenhum) / (float)todos.Count;
+            Ok(comTraco > 0.4f && comTraco < 0.6f, "cerca de metade dos jogadores tem traço (" + (int)(comTraco * 100) + "%)");
+            Ok(Enum.GetValues(typeof(Traco)).Cast<Traco>().Where(t => t != Traco.Nenhum).All(t => todos.Any(j => j.traco == t)), "todos os 6 traços aparecem");
+
+            // moral: vitória sobe, derrota desce; reserva perde ânimo na semana (Estrela o dobro)
+            var tit = cp.Titulares.First(); float m0 = tit.moral;
+            cp.Registrar(true, 13, 7, false); Ok(tit.moral == m0 + Provisorio.MORAL_VITORIA, "vitória: +" + Provisorio.MORAL_VITORIA + " de moral para os titulares");
+            cp.Registrar(false, 7, 13, false); Ok(tit.moral == m0, "derrota: -" + Provisorio.MORAL_DERROTA);
+            var res = cp.elenco.Skip(Provisorio.TITULARES).First(); res.traco = Traco.Nenhum; float r0 = res.moral, e0 = res.entrosamento, et0 = tit.entrosamento;
+            Avanca(cp);
+            Ok(res.moral == r0 - Provisorio.MORAL_RESERVA_SEMANA && res.entrosamento == e0 + Provisorio.ENTROSAMENTO_RESERVA, "semana: reserva perde moral e quase não ganha entrosamento");
+            Ok(tit.entrosamento > et0, "semana: titular ganha entrosamento");
+            float multAntes = cp.MultEfetivo(tit); tit.moral = 100; float multAlta = cp.MultEfetivo(tit); tit.moral = 0; float multBaixa = cp.MultEfetivo(tit);
+            Ok(multAlta > multAntes && multBaixa < multAntes, "moral muda a habilidade que vai para a partida");
+            var contratado = cp.mercado[0]; cp.dinheiro = 9000000; Ok(cp.Contratar(contratado) == null && contratado.entrosamento == Provisorio.ENTROSAMENTO_CONTRATADO && contratado.moral == Provisorio.MORAL_CONTRATADO, "contratado chega motivado e pouco entrosado");
+
+            // na simulação: entrosamento chega aos bots; traços valem nas situações certas
+            var ptp = cp.MontarPartida(5);
+            Ok(ptp.A.js.All(j => Math.Abs(j.skill.entrosamento - Math.Clamp((cp.EntrosamentoTime - (j.traco == Traco.Estrela ? Provisorio.ENTROSAMENTO_ESTRELA : 0)) / 100f, 0, 1)) < 1e-4f), "o entrosamento do time vai para os bots (Estrela com menos)");
+            var pt2 = new Partida(7);
+            foreach (var j in pt2.A.js) j.traco = Traco.Nenhum;
+            pt2.A.js[0].traco = Traco.Pistoleiro; pt2.A.js[1].traco = Traco.Lider;
+            float miraP0 = pt2.A.js[0].skill.aimSigma, frio2 = pt2.A.js[2].skill.composure, frio1 = pt2.A.js[1].skill.composure;
+            var m = pt2.Preparar();
+            Agent Ag(int k) => m.agents.First(x => x.name == pt2.A.js[k].nome);
+            Ok(Ag(0).skill.aimSigma < miraP0, "Pistoleiro mira melhor no round de pistol");
+            Ok(Ag(2).skill.composure > frio2 && Math.Abs(Ag(1).skill.composure - frio1) < 1e-6f, "Líder dá sangue-frio aos outros 4, não a ele mesmo");
+            Ok(pt2.A.js[0].skill.aimSigma == miraP0, "o traço não muda o atributo guardado do jogador, só o do round");
         }
 
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");

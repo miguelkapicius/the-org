@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace CSM.Sim
 {
+    /// <summary>Traço de personalidade de um jogador (decisão 0019). Muda a habilidade dele em certas situações do round.</summary>
+    public enum Traco { Nenhum = 0, Decisivo = 1, Esquentado = 2, Lider = 3, Estrela = 4, Pistoleiro = 5, Embalado = 6 }
+
     /// <summary>
     /// Uma partida inteira com as regras do CS2 competitivo: MR12 (quem fizer 13 ganha; 12x12 vai pra prorrogação),
     /// troca de lado no half, prorrogação MR3 (6 rounds com $12.500, quem fizer 4; 3x3 = outra), economia (dinheiro
@@ -30,6 +33,7 @@ namespace CSM.Sim
             public string nome; public Role roleT, roleCT; public char siteCT = 'M'; public Skill skill = new Skill();
             public int dinheiro; public string arma, pistola; public bool colete, capacete, kit; public List<string> nades = new List<string>();
             public int k, d, hs, dano, fk, rounds, guardou;
+            public Traco traco; public bool morreuPrimeiro;   // traço de personalidade (decisão 0019) e se morreu primeiro no último round
             public Role Role(bool t) => t ? roleT : roleCT;
         }
         public class Time
@@ -58,11 +62,40 @@ namespace CSM.Sim
             return true;
         }
 
-        /// <summary>A habilidade que o jogador leva para o round: a dele, com o foco do timeout somado ao sangue-frio enquanto durar.</summary>
-        static Skill SkillDoRound(Time t, Jogador j)
+        /// <summary>
+        /// A habilidade que o jogador leva para o round: a dele, com o foco do timeout (decisão 0018) e os traços de
+        /// personalidade que valem na situação do round (decisão 0019). Sem nada a somar, é a própria (sem cópia).
+        /// </summary>
+        Skill SkillDoRound(Time t, Jogador j)
         {
-            if (t.focoRounds <= 0) return j.skill;
-            var s = j.skill.Copia(); s.composure = MathX.Clamp(s.composure * (1 + t.foco), 0, 1); return s;
+            float frio = t.focoRounds > 0 ? t.foco : 0f, mira = 0f, reflexo = 0f, agr = 0f;
+            if (t.js.Any(x => x != j && x.traco == Traco.Lider)) frio += LIDER;
+            switch (j.traco)
+            {
+                case Traco.Decisivo: if (RoundDecisivo) frio += DECISIVO; break;
+                case Traco.Esquentado: if (j.morreuPrimeiro) { mira -= ESQUENTADO_MIRA; agr += ESQUENTADO_AGR; } break;
+                case Traco.Estrela: mira += ESTRELA; break;
+                case Traco.Pistoleiro: if (r == 0 || r == 12) { mira += PISTOLEIRO; reflexo += PISTOLEIRO; } break;
+                case Traco.Embalado: if (VenceuUltimos(t, 3)) reflexo += EMBALADO; break;
+            }
+            if (frio == 0 && mira == 0 && reflexo == 0 && agr == 0) return j.skill;
+            var s = j.skill.Copia();
+            s.composure = MathX.Clamp(s.composure * (1 + frio), 0, 1);
+            s.aimSigma *= 1 - mira;          // mira melhor = erro menor
+            s.reaction *= 1 - reflexo;       // reflexo melhor = reage antes
+            s.aggression = MathX.Clamp(s.aggression + agr, 0, 1);
+            return s;
+        }
+
+        // ---------------------------------------------------------------- traços (decisão 0019; números provisórios)
+        public const float DECISIVO = 0.15f, ESQUENTADO_MIRA = 0.08f, ESQUENTADO_AGR = 0.15f, LIDER = 0.05f, ESTRELA = 0.06f, PISTOLEIRO = 0.12f, EMBALADO = 0.06f;
+        /// <summary>Round que decide: match point de qualquer time, último round do half ou prorrogação.</summary>
+        bool RoundDecisivo => r >= 24 || UltimoDoHalf(r) || A.placar == Alvo(r) - 1 || B.placar == Alvo(r) - 1;
+        bool VenceuUltimos(Time t, int n)
+        {
+            if (historico.Count < n) return false;
+            for (int i = historico.Count - n; i < historico.Count; i++) if (historico[i].timeAvenceu != (t == A)) return false;
+            return true;
         }
 
         public class Info
@@ -482,6 +515,7 @@ namespace CSM.Sim
         public void Fechar(Match m)
         {
             bool tWin = m.winner == "TR";
+            foreach (var j in A.js.Concat(B.js)) j.morreuPrimeiro = m.firstDeath != null && m.firstDeath.name == j.nome;   // traço Esquentado
             var ganhou = tWin ? tAtual : ctAtual; var perdeu = tWin ? ctAtual : tAtual;
             ganhou.placar++; ultimo = ganhou;
             // leitura: cada time anota o próprio plano (e se deu certo) e o que viu do adversário

@@ -559,6 +559,32 @@ namespace CSM.ManagerUI
             }
         }
 
+        /// <summary>Selo do traço de personalidade (decisão 0019), com a explicação ao passar o mouse. null = sem traço ou não visível.</summary>
+        static VisualElement SeloTraco(Jogador j, bool visivel)
+        {
+            if (!visivel || j.traco == Traco.Nenhum) return null;
+            var s = Selo(Tracos.Nome(j.traco).ToUpperInvariant(), null); ComDica(s, Tracos.Descricao(j.traco)); return s;
+        }
+
+        /// <summary>Nome do jogador com o selo do traço ao lado.</summary>
+        static VisualElement NomeComTraco(Jogador j, string classe, bool veTraco)
+        {
+            var l = E(); l.style.flexDirection = FlexDirection.Row; l.style.alignItems = Align.Center;
+            l.Add(classe == "f17" ? L(j.nome, classe, "negrito") : L(j.nome, classe));
+            var s = SeloTraco(j, veTraco); if (s != null) { s.style.marginLeft = 8; l.Add(s); }
+            return l;
+        }
+
+        /// <summary>"moral 65", em laranja abaixo de 45 e vermelho abaixo de 30, com a explicação.</summary>
+        static VisualElement Moral(Jogador j, string antes)
+        {
+            int m = (int)j.moral;
+            var l = L(antes + "moral " + m, "f14", m < Provisorio.MORAL_AVISO ? "vermelho" : m < 45 ? "laranja" : "suave");
+            l.pickingMode = PickingMode.Position;   // o texto ignora o mouse por padrão: sem isso a dica não abre
+            ComDica(l, "Moral (0 a 100): sobe com vitórias e jogando de titular, cai com derrotas e no banco. Muda a habilidade na partida de -4,5% (0) a +3% (100); neutra em 60.");
+            return l;
+        }
+
         VisualElement CartaoJogador(Jogador j)
         {
             var cj = E("card-j");
@@ -567,8 +593,9 @@ namespace CSM.ManagerUI
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
             cj.Add(midia);
             var info = E("info");
-            info.Add(L(j.nome, "info-nome"));
+            info.Add(NomeComTraco(j, "info-nome", true));
             info.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave", "info-meta"));
+            info.Add(AtributoLinha("Moral", (int)j.moral));
             info.Add(AtributoLinha("Mira", j.Mira));
             info.Add(AtributoLinha("Reflexo", j.Reflexo));
             info.Add(AtributoLinha("Spray", j.Spray));
@@ -693,6 +720,11 @@ namespace CSM.ManagerUI
             res.Add(L("Força " + c.Forca, "f17", "negrito"));
             var adv = c.Adversario;
             res.Add(L("Chance de vitória " + Pct(c.ChanceVitoria()) + (adv != null ? " contra " + adv.nome : ""), "f16", "suave"));
+            int ent = (int)c.EntrosamentoTime;
+            var le = L("Entrosamento " + ent, "f16", ent < 40 ? "laranja" : "suave");
+            le.pickingMode = PickingMode.Position;
+            ComDica(le, "Média do entrosamento dos titulares (0 a 100). Mais entrosado, mais os bots trocam o colega que morreu, e a força sobe até 2%. Sobe a cada semana jogando junto e com sessões coletivas; um contratado chega com pouco.");
+            res.Add(le);
             topo.Add(res);
             var chips = E("chips-func");
             var faltando = c.FuncoesFaltando();
@@ -737,7 +769,9 @@ namespace CSM.ManagerUI
             s.Add(topo);
             s.Add(Retrato(j.nome, "retrato-p"));
             s.Add(L(j.nome, "slot-nome"));
+            var st = SeloTraco(j, true); if (st != null) { st.style.alignSelf = Align.Center; st.style.marginTop = 2; s.Add(st); }
             s.Add(L(j.idade + " anos", "f14", "suave"));
+            var mo = Moral(j, ""); mo.style.alignSelf = Align.Center; s.Add(mo);
             var cs = L("cansaço " + (int)j.cansaco, "f13", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "apagado"); cs.style.marginTop = 2; s.Add(cs);
             Clicavel(s, () => EscolherParaTroca(j));
             s.RegisterCallback<PointerEnterEvent>(_ => AtualizarDicaTroca(j));
@@ -865,8 +899,12 @@ namespace CSM.ManagerUI
                 var pessoa = E("linha-h");
                 pessoa.Add(Avatar(j.nome));
                 var nomes = E("pessoa-txt");
-                nomes.Add(L(j.nome, "f17", "negrito"));
-                nomes.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
+                bool doElenco = c.elenco.Contains(j);
+                nomes.Add(NomeComTraco(j, "f17", j.potencialRevelado || doElenco));
+                var meta = E(); meta.style.flexDirection = FlexDirection.Row;
+                meta.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
+                if (doElenco) meta.Add(Moral(j, " · "));
+                nomes.Add(meta);
                 pessoa.Add(nomes);
                 r.Add(Celula("c-j", pessoa));
                 r.Add(Celula("c-g", L(j.Overall.ToString(), "geral", ClasseNota(j.Overall))));

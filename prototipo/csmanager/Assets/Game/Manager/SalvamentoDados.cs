@@ -12,7 +12,8 @@ namespace CSM.Manager
     // (a simulação dos outros times é determinística a partir da semente). A sequência de sorteios da Carreira não é salva.
 
     [Serializable] public class SkillD { public float reaction, aimSigma, flick, spray, crosshair, pitchErr, aggression, composure, utilitaria; }
-    [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio; }
+    [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio;
+        public bool temPersonalidade; public int traco; public float moral, entrosamento; }   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
     [Serializable] public class LancD { public int semana, valor; public string descricao; }
     [Serializable] public class DesempD { public string nome; public int funcao, k, d, hs, dano, fk, rounds; }
     [Serializable] public class MapaSerieD { public string mapa; public int meus, deles; }
@@ -57,8 +58,14 @@ namespace CSM.Manager
 
         static SkillD Para(Skill s) => new SkillD { reaction = s.reaction, aimSigma = s.aimSigma, flick = s.flick, spray = s.spray, crosshair = s.crosshair, pitchErr = s.pitchErr, aggression = s.aggression, composure = s.composure, utilitaria = s.utilitaria };
         static Skill De(SkillD d) => new Skill { reaction = d.reaction, aimSigma = d.aimSigma, flick = d.flick, spray = d.spray, crosshair = d.crosshair, pitchErr = d.pitchErr, aggression = d.aggression, composure = d.composure, utilitaria = d.utilitaria };
-        static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone() };
-        static Jogador De(JogadorD d) => new Jogador { nome = d.nome, idade = d.idade, funcao = (Role)d.funcao, potencial = d.potencial, foco = d.foco, sessoes = d.sessoes, potencialRevelado = d.revelado, cansaco = d.cansaco, preparo = d.preparo, skill = De(d.skill), inicioTemporada = d.inicio != null && d.inicio.Length == 5 ? (float[])d.inicio.Clone() : new float[5] };
+        static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone(),
+            temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento };
+        static Jogador De(JogadorD d)
+        {
+            var j = new Jogador { nome = d.nome, idade = d.idade, funcao = (Role)d.funcao, potencial = d.potencial, foco = d.foco, sessoes = d.sessoes, potencialRevelado = d.revelado, cansaco = d.cansaco, preparo = d.preparo, skill = De(d.skill), inicioTemporada = d.inicio != null && d.inicio.Length == 5 ? (float[])d.inicio.Clone() : new float[5] };
+            if (d.temPersonalidade) { j.traco = (Traco)d.traco; j.moral = d.moral; j.entrosamento = d.entrosamento; }   // antes da 0019: valores iniciais, sem traço
+            return j;
+        }
 
         public static CarreiraD Para(Carreira c)
         {
