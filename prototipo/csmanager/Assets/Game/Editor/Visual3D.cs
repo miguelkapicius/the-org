@@ -748,8 +748,8 @@ namespace CSM.EditorTools
 
         public const string PASTA_JOGO = "Build";
 
-        /// <summary>O jogo pra jogar fora do editor: Build/CSManager.exe (tela cheia, partida 3D, dados dos bonecos e dos bots
-        /// copiados pra dentro por BuildDados). Roda bem mais leve que o Play do editor.</summary>
+        /// <summary>O jogo pra jogar fora do editor: Build/CSManager.exe (tela cheia; abre na interface do manager e a partida 3D
+        /// vem pelo "Assistir"; dados dos bonecos e dos bots copiados pra dentro por BuildDados). Roda bem mais leve que o Play do editor.</summary>
         [MenuItem("CS Manager/Gerar jogo (.exe)")]
         public static void GerarJogo()
         {
@@ -767,7 +767,9 @@ namespace CSM.EditorTools
         static UnityEditor.Build.Reporting.BuildResult Gerar(string pasta)
         {
             Setup();
-            var r = BuildPipeline.BuildPlayer(new[] { CENA3D }, Path.Combine(pasta, "CSManager.exe"), BuildTarget.StandaloneWindows64, BuildOptions.None);
+            if (!File.Exists(CenaManager.ARQ)) CenaManager.Criar();
+            // o manager primeiro (é a cena que abre) e a partida 3D, para onde o "Assistir" leva
+            var r = BuildPipeline.BuildPlayer(new[] { CenaManager.ARQ, CENA3D }, Path.Combine(pasta, "CSManager.exe"), BuildTarget.StandaloneWindows64, BuildOptions.None);
             Debug.Log($"[Visual3D] JOGO {r.summary.result} em {Path.GetFullPath(pasta)} ({r.summary.totalTime.TotalSeconds:0}s, {r.summary.totalErrors} erros)");
             return r.summary.result;
         }
