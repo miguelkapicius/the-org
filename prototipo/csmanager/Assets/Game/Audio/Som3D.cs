@@ -83,6 +83,13 @@ namespace CSM.Audio
             s.ApagarDono(dono, 0.1f);   // fadetime_volume_mapping_curve do CS2: o anterior some em 0,1 s
             s.Tocar(arma + "/tiro", boca, cp, vp, dono, 3);
             var vd2 = s.Tocar(arma + "/distante", boca, cd, vd, "dist" + quem, 2);
+            // AWP: o ferrolho depois de CADA tiro (como no CS), casado com a mão direita da animação tiro_AWP
+            // (Logs/bonecos3d: puxa até o quadro 19 = 0,62 s, trava no 23 = 0,77 s). Dono "rec": morreu/trocou de arma, corta.
+            if (arma == "awp")
+            {
+                s.Agendar(FERROLHO_AWP.x, "awp/ferrolho_tras", boca, C_FOLEY, 0.8f, "rec" + quem);
+                s.Agendar(FERROLHO_AWP.y, "awp/ferrolho_frente", boca, C_FOLEY, 0.8f, "rec" + quem);
+            }
             // validação (Player.log): resumo a cada 40 tiros — "distante na tela" tem que ser sempre 0
             bool tela = s.NaTela(boca); if (tela) { s.tirosTela++; if (vd2 != null) s.distTela++; } else s.tirosFora++;
             if (s.tirosTela + s.tirosFora >= 40)
@@ -92,6 +99,7 @@ namespace CSM.Audio
             }
         }
         int tirosTela, tirosFora, distTela;
+        public static Vector2 FERROLHO_AWP = new Vector2(0.62f, 0.77f);   // s depois do tiro: pico do "puxa" e do "trava"
 
         /// <summary>Recarga: as peças (pente sai/entra, ferrolho) agendadas na duração da recarga.</summary>
         public static void Recarga(Vector3 pos, string arma, float duracao, int quem = -1)
@@ -161,7 +169,7 @@ namespace CSM.Audio
         /// <summary>Começo do desarme (como no CS: tem o início, não tem o fim).</summary>
         public static void C4Desarme(Vector3 p, bool kit) => Eu()?.Tocar("c4/desarme_inicio", p, C_C4_FOLEY, 0.7f, "c4des", 2);
         public static void C4Sacar(Vector3 p) => Eu()?.Tocar("c4/sacar", p, C_FOLEY, 0.5f, null, 1);
-        public static void C4Explode(Vector3 p) { var s = Eu(); if (s == null) return; s.Tocar("c4/explode", p, C_C4_EXPLODE, 1f, null, 5); s.Tocar("c4/explode_distante", p, C_HE_DIST, 1f, null, 4); }
+        public static void C4Explode(Vector3 p) { var s = Eu(); if (s == null) return; s.ApagarDono("c4", 0.03f); s.Tocar("c4/explode", p, C_C4_EXPLODE, 1f, null, 5); s.Tocar("c4/explode_distante", p, C_HE_DIST, 1f, null, 4); }
 
         /// <summary>Chamar todo quadro: a C4 plantada bipa sozinha no ritmo do CS (intervalo encolhe com o tempo; nos
         /// últimos 10 s troca pro bip rápido). restante = segundos até explodir.</summary>
@@ -171,17 +179,37 @@ namespace CSM.Audio
         public static bool C4(Vector3 p, bool plantada, float restante, float total = 40f)
         {
             var s = Eu(); if (s == null) return false;
-            if (!plantada || restante <= 0) { s.proxBip = -1; s.finalTocou = s.alerta10 = false; return false; }
+            if (!plantada || restante <= 0) { s.proxBip = -1; s.finalTocou = s.alerta10 = false; s.c4UltT = 0; return false; }
             if (s.proxBip < 0 || Mathf.Abs(restante - s.proxBip) > 2f) { s.proxBip = restante - 1f; s.finalTocou = false; s.c4Logs = 0; Debug.Log($"[Som3D] C4 armada: faltam {restante:0.0}s de {total:0}s"); }   // 1º bip 1 s depois de plantar (ou C4 nova)
-            // último segundo: os bips param e entra o chiado de "timer acabou" (pedido do usuário, como no CS2)
-            if (restante <= FINAL_C4) { if (s.finalTocou) return false; s.finalTocou = true; s.Tocar("c4/final", p, C_C4_EXPLODE, 1f, "c4", 4); return true; }
+            // velocidade da partida (s de jogo por s real): em 2x/4x/8x o "último segundo" do jogo dura 0,5/0,25/0,12 s reais
+            // e o apito (clipe de FINAL_C4 s reais) ficava embaixo da explosão. Mede pelo próprio restante.
+            // Mede só quando o restante MUDA: a Sim anda em ticks de 1/32 s e a tela roda a 60-240 fps, então quadro a quadro
+            // davam vários "parado" (descartados) e um salto, e a taxa saía 2-8x em 1x (apito 4 s antes em 144 fps; sim offline).
+            float agoraR = Time.unscaledTime;
+            if (s.c4UltT <= 0 || restante > s.c4UltRest) { s.c4UltRest = restante; s.c4UltT = agoraR; }
+            else if (restante < s.c4UltRest)
+            {
+                float gap = agoraR - s.c4UltT;   // > 0,5 s = voltou de pausa: não mede
+                if (gap > 0 && gap < 0.5f) { float r = (s.c4UltRest - restante) / gap; if (r > 0.05f && r < 20f) s.c4Taxa = Mathf.Lerp(s.c4Taxa, r, 0.15f); }
+                s.c4UltRest = restante; s.c4UltT = agoraR;
+            }
+            // fim: os bips param e entra o apito, que TERMINA onde a explosão começa (dispara pelo tempo REAL que falta)
+            if (restante <= FINAL_C4 * Mathf.Clamp(s.c4Taxa, 1f, 8f))
+            {
+                s.proxBip = restante;   // a agenda acompanha o relógio no apito: senão o rearme (salto > 2 s) achava C4 nova e repetia o apito
+                if (s.finalTocou) return false; s.finalTocou = true;
+                var vf = s.Tocar("c4/final", p, C_C4_EXPLODE, 1f, "c4", 4);
+                Debug.Log($"[Som3D] C4 apito final: faltam {restante:0.00}s de jogo ({restante / Mathf.Max(s.c4Taxa, 0.05f):0.00}s reais, partida {s.c4Taxa:0.0}x), {(vf != null ? $"volume {vf.src.volume:0.00}" : "NÃO TOCOU")}");
+                return true;
+            }
             if (restante > s.proxBip) return false;
             C4Bip(p, restante < 10);
             s.proxBip = restante - Mathf.Max(0.15f, 0.1f + 0.9f * restante / total);
             return true;
         }
         float proxBip = -1;   // em segundos de 'restante' da C4
-        bool finalTocou, alerta10; public static float FINAL_C4 = 1.0f;
+        bool finalTocou, alerta10; public static float FINAL_C4 = 1.0f;   // = duração do clipe c4/final (s reais)
+        float c4Taxa = 1f, c4UltRest, c4UltT;
 
         /// <summary>Chamar todo quadro com o tempo da partida (m.t, ou replay.t no replay): as peças agendadas (recarga)
         /// seguem a simulação (pausa e 2x/4x/8x). Sem essa chamada, usa o relógio da Unity.</summary>

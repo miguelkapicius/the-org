@@ -1,0 +1,380 @@
+<title>Brasa, mapa 2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: prancheta de projeto — planta grande no topo, ficha técnica em colunas embaixo */
+:root {
+  --bg: #efe9df; --papel: #f8f4ec; --tinta: #2a2622; --suave: #6d6358; --linha: #d6ccbd;
+  --tr: #d2691e; --ct: #2f6db5; --frente: #e8c547;
+  --parede: #8d5a43; --rua: #dcc49a; --meio: #e6d3ad; --site: #f1dfb4; --alto: #a99a8a; --sacada: #c4573a; --escada: #7c7a80; --cob: #5d4a3c;
+  --display: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --corpo: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1d1a17; --papel: #26221e; --tinta: #eee6da; --suave: #a89c8e; --linha: #3d362f;
+  --tr: #ec8a3c; --ct: #6aa2e6; --frente: #e8c547;
+  --parede: #5b3a2c; --rua: #9d8a68; --meio: #ad9a76; --site: #c2ad80; --alto: #7d7064; --sacada: #c4573a; --escada: #5e5c62; --cob: #3a2e25; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1d1a17; --papel: #26221e; --tinta: #eee6da; --suave: #a89c8e; --linha: #3d362f;
+  --tr: #ec8a3c; --ct: #6aa2e6; --frente: #e8c547;
+  --parede: #5b3a2c; --rua: #9d8a68; --meio: #ad9a76; --site: #c2ad80; --alto: #7d7064; --sacada: #c4573a; --escada: #5e5c62; --cob: #3a2e25; color-scheme: dark }
+body { background: var(--bg); color: var(--tinta); font: 16px/1.55 var(--corpo); }
+.pagina { max-width: 1100px; margin: 0 auto; padding-block: 28px 64px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 800; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(44px, 9vw, 84px); text-transform: uppercase; }
+h2 { font-size: 30px; text-transform: uppercase; }
+h3 { font-size: 17px; margin: 0; }
+p { margin: 0; max-width: 68ch; }
+.rotulo { font: 600 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--suave); }
+header { display: grid; gap: 10px; }
+header p { font-size: 18px; }
+.estado { display: inline-flex; gap: 8px; align-items: center; font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; border: 1px solid var(--linha); padding: 4px 10px; border-radius: 3px; width: fit-content; background: var(--papel); }
+.estado i { width: 8px; height: 8px; border-radius: 50%; background: var(--frente); }
+.mapa { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 20px; align-items: start; }
+@media (max-width: 820px) { .mapa { grid-template-columns: minmax(0, 1fr); } }
+.prancha { background: var(--papel); border: 1px solid var(--linha); padding: 12px; min-width: 0; }
+.prancha svg { width: 100%; height: auto; display: block; touch-action: manipulation; }
+#tela3d { width: 100%; aspect-ratio: 1 / 1; max-height: 78vh; background: var(--bg); touch-action: none; }
+#tela3d canvas { display: block; width: 100% !important; height: 100% !important; }
+.abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.abas button { font: 600 13px var(--corpo); border: 1px solid var(--linha); background: var(--bg); color: var(--tinta); padding: 6px 12px; border-radius: 3px; cursor: pointer; }
+.abas button[aria-pressed="true"] { background: var(--tinta); color: var(--papel); border-color: var(--tinta); }
+.abas button:focus-visible, .lado button:focus-visible { outline: 2px solid var(--ct); outline-offset: 2px; }
+.lado { display: grid; gap: 14px; }
+.leitura { background: var(--papel); border: 1px solid var(--linha); padding: 14px; display: grid; gap: 8px; }
+.leitura .nums { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.leitura .nums b { display: block; font-size: 26px; }
+.tr { color: var(--tr); } .ct { color: var(--ct); }
+.legenda { display: grid; gap: 6px; font-size: 14px; }
+.legenda span { display: flex; gap: 8px; align-items: center; }
+.legenda i { width: 14px; height: 14px; border-radius: 2px; flex: none; border: 1px solid var(--linha); }
+.grade3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+.grade3 > div { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.grade3 h3 { font-family: var(--display); font-size: 22px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+.ref { font-size: 13px; color: var(--suave); }
+section { display: grid; gap: 16px; }
+.tabela { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; min-width: 520px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--linha); }
+th { font: 600 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--suave); }
+td.n { font-family: var(--mono); text-align: right; }
+td .chip { font: 600 12px var(--mono); padding: 2px 8px; border-radius: 2px; color: var(--papel); }
+.chip.tr { background: var(--tr); } .chip.ct { background: var(--ct); }
+.regras { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.regras li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; max-width: 80ch; }
+.regras li::before { content: "✓"; font-weight: 700; color: var(--ct); }
+.regras li.falta::before { content: "○"; color: var(--suave); }
+.fontes a { color: var(--ct); }
+svg text { font-family: var(--display); font-weight: 600; paint-order: stroke; stroke: var(--papel); stroke-width: 3px; fill: var(--tinta); }
+</style>
+
+<div class="pagina">
+  <header>
+    <span class="rotulo">CS Manager · mapa 2 · nome provisório</span>
+    <h1>Brasa</h1>
+    <p>Vila italiana no clima da Inferno, refeita do zero em cima das medidas da Inferno de verdade: banana pro B, meio com curta e longo, MF e caverna, tapete até o apê e a varanda em cima do poço, arco e biblioteca do CT. O CT chega antes em todo choke e o mapa pede muita granada.</p>
+    <span class="estado"><i></i>Protótipo de planta, versão 6 · ainda não jogável</span>
+  </header>
+
+  <div class="mapa">
+    <div class="prancha">
+      <div class="abas" role="group" aria-label="Camada do mapa">
+        <button id="v-planta" aria-pressed="true">Planta</button>
+        <button id="v-tempo" aria-pressed="false">Quem chega primeiro</button>
+        <button id="v-rotas" aria-pressed="false">Rotas</button>
+        <button id="v-visao" aria-pressed="false">Linha de visão</button>
+        <button id="v-pos" aria-pressed="false">Posições</button>
+        <button id="v-3d" aria-pressed="false">3D em blocos</button>
+      </div>
+      <svg id="svg" role="img" aria-label="Planta do mapa Brasa vista de cima"></svg>
+      <div id="box3d" hidden><div id="tela3d" role="img" aria-label="Prévia 3D em blocos da Brasa"></div><p class="ref">Arraste pra girar, pinça ou roda pra zoom. Blocos sem acabamento: chão na altura certa, prédios em volta, coberturas em escuro e o 2º andar aberto por cima.</p></div>
+    </div>
+    <div class="lado">
+      <div class="leitura">
+        <span class="rotulo">Toque numa casa do mapa</span>
+        <h3 id="l-nome">Carro (alto da banana)</h3>
+        <div class="nums"><div class="tr">TR<b id="l-tr">–</b></div><div class="ct">CT<b id="l-ct">–</b></div></div>
+        <p id="l-quem" class="ref"></p>
+      </div>
+      <div class="legenda" id="legenda"></div>
+      <p class="ref">Tempo = caminho mais curto correndo de fuzil, saindo da base (o jogador mais perto). 1 quadradinho = 25 unidades da Sim, mesma escala da Vila; a grade é 56 × 54 (a Vila tem 40 × 35).</p>
+    </div>
+  </div>
+
+  <section>
+    <span class="rotulo">Como foi feito</span>
+    <h2>Medido na Inferno de verdade</h2>
+    <p>Abri os arquivos da Inferno do CS2 instalado no seu PC: o radar oficial (1 pixel = 4,9 unidades) e as posições das bases e dos bombs. Em cima do radar calculei, pra cada ponto do mapa, quanto tempo o TR e o CT levam correndo de fuzil. Esses números viraram a meta da Brasa.</p>
+    <p>A meta é a Inferno com 25% a mais de distância. O boneco da Sim é maior que o do CS em relação ao chão, então, se eu usasse as medidas exatas, o mapa ficaria apertado de novo. O desenho é nosso; o que segue a Inferno é a ordem das peças, as larguras e os tempos.</p>
+  </section>
+
+  <section>
+    <span class="rotulo">O que a medição mostrou</span>
+    <h2>Como a Inferno funciona</h2>
+    <div class="grade3">
+      <div><h3>O CT chega antes em todo choke</h3><p>Na Inferno o CT chega no carro 5,4 s antes do TR, no alto do meio 6,7 s antes e na varanda 5,5 s antes. O TR domina o pé da banana, o meio de baixo e o próprio apê. O mapa puxa pro CT por isso, e não pela rotação.</p></div>
+      <div><h3>Encontro no meio de cada rota</h3><p>Os dois lados chegam juntos no centro do meio (diferença de 0,2 s) e a uns dois terços da subida da banana. É ali que a granada decide: quem gastar a utilitária primeiro perde a disputa.</p></div>
+      <div><h3>Rotação não é curta</h3><p>O CT leva 17,6 s do B pro A, porque os sites ficam longe um do outro. O TR, do meio da banana até a varanda, leva 11,1 s, porque o lado dele é compacto. Eu tinha errado isso na primeira versão.</p></div>
+      <div><h3>B só pela banana</h3><p>O TR só entra no B pela banana. O CT tem duas portas (pista e construção) e pisa no B 8 s antes do TR.</p></div>
+      <div><h3>A em anel</h3><p>O A fica perto da base CT (o CT pisa com 7,7 s, o TR com 19 s) e tem entrada por todo lado: curta, longo, biblioteca, varanda e poço.</p></div>
+      <div><h3>O que a Valve mudou e por quê</h3><p>No remake tiraram posições fortes demais do CT (o quarto escuro do apê), abriram a banana pra granada render mais, trocaram o carro por barris que a bala atravessa, deixaram a caverna meio andável e abriram uma segunda saída da base TR direto no MF.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="rotulo">Como se joga o banana</span>
+    <h2>Cada coisa tem uma função</h2>
+    <p>Na versão anterior o banana tinha os nomes da Inferno, mas as coberturas estavam soltas: o meio muro não protegia de nada e o banana caía de frente no B. Agora cada cobertura foi posta por causa de um ângulo, e uma régua de linha de visão confere (altura do chão, altura da cobertura, agachado ou em pé). As regras saíram da Inferno de verdade, medida no radar dela.</p>
+    <ul class="regras">
+      <li>Dos barris (o antigo carro) o CT vê o banana inteiro, até as toras. Por isso o TR sobe com molotov nos barris.</li>
+      <li>Agachado atrás das toras e do meio muro, o TR fica protegido de todos os CTs lá de cima.</li>
+      <li>De pé no meio muro, o TR pega os barris: é dali que ele disputa o alto.</li>
+      <li>A caixa do patamar esconde um CT agachado que pega quem chega no alto.</li>
+      <li>O corredor que leva ao B fica de lado, como na Inferno: dali o CT segura a saída do patamar, mas não vê o banana.</li>
+      <li>De dentro do corredor o TR não vê o B. Só na porta aparecem os ângulos, e ele limpa escuro e 1ª caixa (um de cada lado da porta), depois fonte, tripla e caixão.</li>
+    </ul>
+    <p class="ref">Na camada "Posições" do mapa, toque numa posição pra ver pra que ela serve e quem ela enxerga.</p>
+  </section>
+
+  <section>
+    <span class="rotulo">Volume</span>
+    <h2>Como fica em 3D</h2>
+    <div class="prancha" id="caixa3d" style="position:relative; overflow-x:auto"><div id="img3d" style="position:relative; min-width:640px"></div></div>
+    <p class="ref">Vista do sudeste, em blocos e com os prédios cortados baixos pra dar pra ler o mapa. As rampas aparecem em degraus. Não é o visual final: a maquete de verdade sai na Unity quando o jogo carregar a Brasa.</p>
+  </section>
+
+  <section>
+    <span class="rotulo">A Brasa, versão 6</span>
+    <h2>Peças no lugar</h2>
+    <div class="grade3">
+      <div><h3>Banana</h3><p>No formato da Inferno: reta no pé, diagonal subindo, patamar no alto e um corredor que sobe colado na parede do B e entra pela porta lá em cima. O TR chega no meio dele 2,2 s antes; o CT chega no alto 5,6 s antes. Na Inferno: 2,4 e 5,4 s.</p></div>
+      <div><h3>Bomb B</h3><p>Quem entra pela porta do banana limpa um ângulo de cada vez: escuro e 1ª caixa colados na porta (um de cada lado), fonte no meio, tripla e o caixão lá em cima. O CT chega pela pista, pela construção ou pela porta do banana.</p></div>
+      <div><h3>Meio</h3><p>Rua reta e comprida (14 casas por 5) do meio de baixo até o alto do meio, do lado do A, com o banana de um lado e o MF do outro, como na Inferno. Empate no centro (0,6 s); o CT segura o alto pelo NIP (atrás do caixote) e pela xuxa (na quina de baixo), que cruzam o meio, e chega lá 6,9 s antes. O TR tem cobertura agachado nos barris e na carroça do meio. O arco desce da base CT com uma dobra e passa no longo.</p></div>
+      <div><h3>MF e caverna</h3><p>O MF corre paralelo ao meio, do lado de baixo, e a base TR tem uma 2ª saída direto nele. A caverna liga o meio ao MF, e a janela sobe no apê CT. É do TR: ele chega no alto do MF 4 s antes.</p></div>
+      <div><h3>Tapete e apê</h3><p>Da base TR, rua, escada, sala no 2º andar, ponte e apê CT, que fica do lado do alto do meio. O CT entra pela caldeira, que sai do alto do meio, e chega na varanda 5,3 s antes (na Inferno, 5,5 s).</p></div>
+      <div><h3>Bomb A</h3><p>Curta com carroça, longo, biblioteca, cemitério elevado e areia. A varanda dá pro site e pro poço: o TR que pula é visto do site, do poço, da biblioteca e do cemitério, como na Inferno.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="rotulo">Linha de visão</span>
+    <h2>Quanto o olho alcança</h2>
+    <p>Pra cada casa, medi o raio mais comprido que dá pra enxergar (32 direções; prédio e cobertura bloqueiam, e o 2º andar só enxerga o 2º andar). A Inferno foi medida do mesmo jeito no radar, já na escala da Brasa. A Inferno é um mapa de linha curta, e é isso que faz a granada valer tanto.</p>
+    <div class="tabela"><table><thead><tr><th>Mapa</th><th>Mediana</th><th>90% das casas até</th><th>Mais comprida</th><th>Casas que enxergam 20+</th></tr></thead><tbody>
+      <tr><td>Inferno</td><td class="n">13,6</td><td class="n">20,3</td><td class="n">30,6</td><td class="n">11%</td></tr>
+      <tr><td>Brasa v4</td><td class="n">17,8</td><td class="n">25,8</td><td class="n">39,5</td><td class="n">35%</td></tr>
+      <tr><td>Brasa v5</td><td class="n">15,5</td><td class="n">22,0</td><td class="n">28,2</td><td class="n">16%</td></tr>
+    </tbody></table></div>
+    <p class="ref">Medidas em casas (1 casa = 25 unidades da Sim). A camada "Linha de visão" no mapa mostra onde o olho alcança mais longe.</p>
+  </section>
+
+  <section>
+    <span class="rotulo">Medição da Brasa</span>
+    <h2>Tempos x Inferno</h2>
+    <div class="tabela"><table id="tab"><thead><tr><th>Ponto</th><th>TR</th><th>CT</th><th>Chega primeiro</th><th>Meta (Inferno x 1,25)</th></tr></thead><tbody></tbody></table></div>
+    <div class="tabela"><table><thead><tr><th>Comparação</th><th>Brasa</th><th>Meta</th></tr></thead><tbody>
+      <tr><td>TR pisa no B</td><td class="n" id="c-tb"></td><td class="n">22,3 s</td></tr>
+      <tr><td>CT pisa no B</td><td class="n" id="c-cb"></td><td class="n">12,8 s</td></tr>
+      <tr><td>TR pisa no A</td><td class="n" id="c-ta"></td><td class="n">23,9 s</td></tr>
+      <tr><td>CT pisa no A</td><td class="n" id="c-ca"></td><td class="n">9,6 s</td></tr>
+      <tr><td>Rotação CT entre os sites</td><td class="n" id="c-rot"></td><td class="n">22,0 s</td></tr>
+      <tr><td>Rotação TR (meio da banana → varanda)</td><td class="n" id="c-rt"></td><td class="n">13,9 s</td></tr>
+    </tbody></table></div>
+    <p class="ref">"Pisa no site" é chegar na área de plantar, que tem o tamanho da Inferno (uns 5 a 6 casas de lado, o quadrado tracejado no mapa), não o site inteiro. A régua é a mesma nos dois mapas: caminho mais curto de fuzil, sem pulo nem degrau.</p>
+  </section>
+
+  <section>
+    <span class="rotulo">Mapa bom de FPS tático</span>
+    <h2>Regras usadas</h2>
+    <ul class="regras">
+      <li>Três rotas principais saindo da base TR (banana, meio e tapete), cada uma com o seu choke antes do site; MF e caverna são conectores.</li>
+      <li>Cada choke tem no máximo duas entradas, e as duas dão pra ver do mesmo lugar.</li>
+      <li>O defensor chega alguns segundos antes no choke, e o atacante nunca passa correndo antes de o defensor chegar.</li>
+      <li>Distâncias variadas: o meio e o arco são compridos (AWP), o apê é de perto, a banana é média com cobertura.</li>
+      <li>Linha de visão parecida com a da Inferno: medi nos dois mapas e quebrei as linhas compridas demais (rampa até o alto do meio, base CT até o meio, pista até a base CT) com dobras e coberturas.</li>
+      <li class="falta">Falta colocar os pontos de smoke e molotov e as alturas finas (degraus, janelas, coberturas).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="rotulo">Volume</span>
+    <h2>Alturas</h2>
+    <p>O lado TR fica embaixo (0). O meio de baixo, o meio, o alto do meio e o A ficam a +6. O B, a construção, a pista e a base CT ficam a +18. O banana e o arco são as subidas, e a caverna desce do meio pro MF (0). O 2º andar (tapete, ponte, apê e varanda) fica a +30, igual ao 2º andar da Vila, e o caixão e o cemitério ficam a +12 acima do site. O poço afunda 6 em relação ao A. Medido em unidades da Sim; o boneco tem 25.</p>
+    <p class="ref">Conferido: toda casa andável tem altura e nome de área, e não sobrou degrau acima de 10 sem escada ou rampa (o boneco sobe 10 sozinho, igual na Vila).</p>
+  </section>
+
+  <section>
+    <span class="rotulo">Clima da Inferno</span>
+    <h2>Ambientação</h2>
+    <p>A Brasa tem props próprios e não repete nenhum da Vila (barril, sacos, caixotes, bancas, bandeiras, vasos e a fonte redonda ficam só lá). Tudo é de pack da Kenney, licença CC0, que pode usar comercialmente: Fantasy Town, Furniture, Graveyard e Survival. Nada é gerado por código.</p>
+    <div class="grade3">
+      <div><h3>Paleta</h3><p>Reboco creme e ocre nas paredes. Telha mais queimada que a da Vila. Rua de pedra bege, ladrilho cor de barro no meio, terra no banana, na construção e no poço. Madeira escura nas portas, vigas e no apê, e venezianas verde-oliva.</p></div>
+      <div><h3>Banana</h3><p>Barris no lugar do carro (como a Valve fez), toras compridas no pé, tábuas no meio muro, cerca quebrada e uma oliveira na curva.</p></div>
+      <div><h3>Bomb B</h3><p>Caixões de verdade no caixão, fonte quadrada no meio, caixote grande na tripla, caixote na 1ª caixa e fardos de feno no cimento.</p></div>
+      <div><h3>Construção</h3><p>Igreja em ruína: muro quebrado, colunas, cruz de pedra, entulho, andaime e bancada de obra.</p></div>
+      <div><h3>Meio e MF</h3><p>Banco, poste de luz, lanterna, balde, vasos de pedra e lenha. Fachadas com janela e veneziana.</p></div>
+      <div><h3>Bomb A, arco e cemitério</h3><p>Carroça alta na curta, areia no site e arco de pedra no arco. O cemitério tem lápides, grade de ferro e um cipreste.</p></div>
+      <div><h3>Dentro de casa</h3><p>Tapete de verdade no chão do tapete, cama, mesa e cadeira no apê, parapeito na varanda e estantes na biblioteca.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="rotulo">Daqui pra frente</span>
+    <h2>Próximos passos</h2>
+    <div class="grade3">
+      <div><h3>Pronto</h3><p>Planta, tempos comparados com a Inferno, linha de visão, alturas, nomes das áreas, coberturas e o arquivo que o MapData precisa (brasa_mapa.json). O pedido pros bots está escrito e espera a sessão da Sim terminar o A/B.</p></div>
+      <div><h3>Depende dos bots</h3><p>O jogo carregar mais de um mapa e os bots aprenderem a Brasa (posições, rotas, estratégias, lineups). Eu não mexo em Map/ nem em Sim/.</p></div>
+      <div><h3>Depois, comigo</h3><p>Com a Brasa no MapData, a maquete 3D sai pelo mesmo processo da Vila; aí troco a paleta e coloco os props desta lista.</p></div>
+    </div>
+  </section>
+
+  <section class="fontes">
+    <span class="rotulo">Fontes da pesquisa</span>
+    <p class="ref"><a href="https://mibr.gg/cs2/guia-mapa-inferno/">MIBR: guia da Inferno (callouts em português)</a> · <a href="https://www.totalcsgo.com/callouts/inferno">TotalCSGO: callouts</a> · <a href="https://cspure.gg/blog/inferno-callouts">CSPure: callouts</a> · <a href="https://worldofleveldesign.com/categories/csgo-tutorials/csgo-how-to-design-gameplay-map-layouts.php">World of Level Design: layouts</a> · <a href="https://worldofleveldesign.com/categories/csgo-tutorials/csgo-principles-choke-point-level-design.php">World of Level Design: chokepoints</a> · <a href="https://critpoints.net/2018/02/18/good-fps-map-design/">Critpoints: Good FPS map design</a> · <a href="https://metabot.gg/en/cs2/guides/cs2-inferno-guide">Metabot: guia da Inferno</a> · <a href="https://csdb.gg/callouts/inferno">CSDB: callouts da Inferno</a> · <a href="https://counterstrikewiki.com/Inferno">Counter-Strike Wiki: Inferno</a></p>
+  </section>
+</div>
+
+<script>
+const D = /*DADOS*/null;
+const S = 20, svg = document.getElementById('svg'), NS = 'http://www.w3.org/2000/svg';
+svg.setAttribute('viewBox', `0 0 ${D.W * S} ${D.H * S}`);
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COR = { '#': '--parede', T: '--rua', C: '--rua', a: '--site', b: '--site', r: '--rua', m: '--meio', k: '--alto', n: '--alto', s: '--escada', '~': '--sacada', o: '--cob' };
+const NOMES_CASA = { '#': 'Prédio', T: 'Base TR', C: 'Base CT', a: 'Bomb A', b: 'Bomb B', r: 'Rua', m: 'Meio', k: '2º andar (casarão)', n: 'Plataforma (lagar)', s: 'Escada', '~': 'Sacada (pula pra baixo)', o: 'Cobertura' };
+let vista = 'planta', sel = [7, 13];
+function el(t, a, p) { const e = document.createElementNS(NS, t); for (const k in a) e.setAttribute(k, a[k]); (p || svg).appendChild(e); return e; }
+function anda(c) { return c !== '#' && c !== 'o'; }
+function mistura(a, b, t) { const h = x => [1, 3, 5].map(i => parseInt(x.slice(i, i + 2), 16)); const A = h(a), B = h(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(',')})`; }
+function desenha() {
+  svg.textContent = '';
+  const tr = css('--tr'), ct = css('--ct'), fr = css('--frente'), papel = css('--papel');
+  for (let y = 0; y < D.H; y++) for (let x = 0; x < D.W; x++) {
+    const c = D.grade[y][x]; let f = css(COR[c] || '--parede');
+    if (vista === 'tempo' && anda(c) && D.tr[y][x] != null && D.ct[y][x] != null) {
+      const d = D.tr[y][x] - D.ct[y][x];
+      f = Math.abs(d) < 1 ? fr : d > 0 ? mistura(papel, ct, Math.min(1, 0.25 + Math.abs(d) / 8)) : mistura(papel, tr, Math.min(1, 0.25 + Math.abs(d) / 8));
+    }
+    if (vista === 'visao' && D.visao && D.visao[y][x] != null) f = mistura(papel, css('--sacada'), Math.min(1, Math.max(0, (D.visao[y][x] - 6) / 22)));
+    el('rect', { x: x * S, y: y * S, width: S, height: S, fill: f, 'data-x': x, 'data-y': y });
+  }
+  for (const k in D.sites) { const [x0, x1, y0, y1] = D.sites[k]; el('rect', { x: x0 * S, y: y0 * S, width: (x1 - x0 + 1) * S, height: (y1 - y0 + 1) * S, fill: 'none', stroke: css('--tinta'), 'stroke-width': 2, 'stroke-dasharray': '6 5', 'pointer-events': 'none' }); }
+  if (vista === 'pos') for (let i = 0; i < D.posicoes.length; i++) {
+    const q = D.posicoes[i], sel2 = posSel === i, viu = posSel != null && D.posicoes[posSel].ve.includes(q.nome);
+    if (sel2) for (const nm of q.ve) { const o = D.posicoes.find(z => z.nome === nm); el('line', { x1: (q.x + .5) * S, y1: (q.y + .5) * S, x2: (o.x + .5) * S, y2: (o.y + .5) * S, stroke: css('--tinta'), 'stroke-width': 2, 'stroke-dasharray': '4 4', 'pointer-events': 'none' }); }
+    el('circle', { cx: (q.x + .5) * S, cy: (q.y + .5) * S, r: sel2 ? 11 : 8, fill: q.lado === 'T' ? tr : ct, stroke: viu || sel2 ? css('--tinta') : css('--papel'), 'stroke-width': viu || sel2 ? 3 : 2, 'data-pos': i, style: 'cursor:pointer' });
+  }
+  if (vista === 'rotas') for (const n in D.rotas) {
+    const pts = D.rotas[n].map(([x, y]) => `${(x + .5) * S},${(y + .5) * S}`).join(' ');
+    el('polyline', { points: pts, fill: 'none', stroke: n.startsWith('TR') ? tr : ct, 'stroke-width': 5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-dasharray': '10 7', opacity: .9, 'pointer-events': 'none' });
+  }
+  for (const [x, y] of D.spawnT) el('circle', { cx: (x + .5) * S, cy: (y + .5) * S, r: 5, fill: tr, 'pointer-events': 'none' });
+  for (const [x, y] of D.spawnCT) el('circle', { cx: (x + .5) * S, cy: (y + .5) * S, r: 5, fill: ct, 'pointer-events': 'none' });
+  for (const [n, x, y] of D.nomes) { const t = el('text', { x: (x + .5) * S, y: (y + .5) * S + 5, 'text-anchor': 'middle', 'font-size': n.startsWith('Bomb') || n.startsWith('Base') ? 20 : 14, 'pointer-events': 'none' }); t.textContent = n; }
+  el('rect', { x: sel[0] * S + 1, y: sel[1] * S + 1, width: S - 2, height: S - 2, fill: 'none', stroke: css('--tinta'), 'stroke-width': 3, 'pointer-events': 'none' });
+  legenda();
+}
+function legenda() {
+  const L = document.getElementById('legenda');
+  if (vista === 'pos') { L.innerHTML = '<span><i style="background:var(--tr)"></i>Posição do TR</span><span><i style="background:var(--ct)"></i>Posição do CT</span><span>Toque numa posição: as linhas mostram quem ela enxerga.</span>'; return; }
+  const itens = vista === 'visao'
+    ? [['--papel', 'Enxerga pouco (até 6 casas)'], ['--sacada', 'Enxerga longe (28 casas ou mais)']]
+    : vista === 'tempo'
+    ? [['--tr', 'TR chega antes'], ['--frente', 'Chegam juntos (menos de 1 s)'], ['--ct', 'CT chega antes']]
+    : [['--rua', 'Rua / base'], ['--meio', 'Meio (ladrilho)'], ['--site', 'Bomb site'], ['--alto', '2º andar / plataforma'], ['--sacada', 'Sacada (só desce)'], ['--escada', 'Escada'], ['--cob', 'Cobertura'], ['--parede', 'Prédio']];
+  L.innerHTML = itens.map(([c, t]) => `<span><i style="background:var(${c})"></i>${t}</span>`).join('') + (vista === 'rotas' ? '<span><i style="background:var(--tr)"></i>Rota TR (mais curta)</span><span><i style="background:var(--ct)"></i>Rota CT (mais curta)</span>' : '');
+}
+function le(x, y) {
+  sel = [x, y]; const c = D.grade[y][x], fmt = v => v == null ? '–' : v.toFixed(1).replace('.', ',') + ' s';
+  const p = D.pontos.find(p => p.x === x && p.y === y);
+  document.getElementById('l-nome').textContent = p ? p.nome : NOMES_CASA[c] || 'Casa';
+  const a = anda(c) ? D.tr[y][x] : null, b = anda(c) ? D.ct[y][x] : null;
+  document.getElementById('l-tr').textContent = fmt(a); document.getElementById('l-ct').textContent = fmt(b);
+  const vv = D.visao && D.visao[y][x] != null ? ` Daqui o olho alcança ${D.visao[y][x].toFixed(0)} casas.` : '';
+  document.getElementById('l-quem').textContent = (a == null || b == null ? 'Não dá pra pisar aqui.' : Math.abs(a - b) < 1 ? 'Os dois chegam praticamente juntos.' : `${a < b ? 'TR' : 'CT'} chega ${Math.abs(a - b).toFixed(1).replace('.', ',')} s antes.`) + vv;
+  desenha();
+}
+let posSel = null;
+svg.addEventListener('click', e => {
+  const c = e.target.closest('circle[data-pos]');
+  if (c) {
+    posSel = +c.dataset.pos; const q = D.posicoes[posSel];
+    document.getElementById('l-nome').textContent = q.nome;
+    document.getElementById('l-tr').textContent = q.lado === 'T' ? (q.pose === 'ag' ? 'agachado' : 'em pé') : '–';
+    document.getElementById('l-ct').textContent = q.lado === 'C' ? (q.pose === 'ag' ? 'agachado' : 'em pé') : '–';
+    document.getElementById('l-quem').textContent = q.papel + '. Enxerga: ' + (q.ve.length ? q.ve.join(', ') : 'ninguém das outras posições') + '.';
+    desenha(); return;
+  }
+  const r = e.target.closest('rect[data-x]'); if (r) le(+r.dataset.x, +r.dataset.y);
+});
+for (const v of ['planta', 'tempo', 'rotas', 'visao', 'pos', '3d']) document.getElementById('v-' + v).addEventListener('click', () => {
+  document.querySelectorAll('.abas button').forEach(b => b.setAttribute('aria-pressed', b.id === 'v-' + v));
+  const em3d = v === '3d'; svg.hidden = em3d; document.getElementById('box3d').hidden = !em3d;
+  if (em3d) { abre3d(); return; }
+  vista = v; desenha();
+});
+let tres = null;
+function carregaScript(src) { return new Promise((ok, erro) => { const e = document.createElement('script'); e.src = src; e.onload = ok; e.onerror = erro; document.head.appendChild(e); }); }
+async function abre3d() {
+  if (tres) { tres.redimensiona(); return; }
+  tres = { redimensiona() {} };
+  const tela = document.getElementById('tela3d');
+  try {
+    await carregaScript('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+    await carregaScript('https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js');
+  } catch (e) { tela.textContent = 'Não consegui carregar o 3D (biblioteca bloqueada).'; return; }
+  const T = THREE, U = 1 / 25;                       // 1 casa = 1; altura em unidades da Sim / 25
+  const cena = new T.Scene(); cena.background = new T.Color(css('--bg'));
+  const cam = new T.PerspectiveCamera(40, 1, 0.5, 400); cam.position.set(D.W * 0.5 + 34, 48, D.H * 0.5 + 44);
+  const rend = new T.WebGLRenderer({ antialias: true }); rend.setPixelRatio(Math.min(2, devicePixelRatio)); tela.appendChild(rend.domElement);
+  const ctl = new T.OrbitControls(cam, rend.domElement); ctl.target.set(D.W / 2, 0, D.H / 2); ctl.maxPolarAngle = 1.35; ctl.update();
+  cena.add(new T.HemisphereLight(0xfff4e0, 0x6b5a4a, 0.9));
+  const sol = new T.DirectionalLight(0xffffff, 0.75); sol.position.set(-30, 60, -20); cena.add(sol);
+  const caixa = new T.BoxGeometry(1, 1, 1); caixa.translate(0, 0.5, 0);
+  const cores = { T: '#e7b97a', C: '#9cc0e6', a: '#f0d9a6', b: '#f0d9a6', r: '#d8c29a', m: '#e9d6ae', k: '#a3784f', '~': '#c4573a', n: '#b9a58c', s: '#8e8a90' };
+  const itens = [];
+  for (let y = 0; y < D.H; y++) for (let x = 0; x < D.W; x++) {
+    const c = D.grade[y][x];
+    if (c === '#') {
+      if (D.topo[y][x] == null) continue;
+      let perto = false;
+      for (let dy = -1; dy <= 1 && !perto; dy++) for (let dx = -1; dx <= 1; dx++) { const r = D.grade[y + dy]; if (r && r[x + dx] && r[x + dx] !== '#') { perto = true; break; } }
+      if (perto) itens.push([x, y, 0, D.topo[y][x] * U, '#c98f6a']);
+      continue;
+    }
+    const z = D.z[y][x];
+    if (z == null) continue;
+    itens.push([x, y, 0, Math.max(0.12, z * U), cores[c] || '#d8c29a']);
+  }
+  for (const k of D.cob) {
+    for (let y = k.y0; y <= k.y1; y++) for (let x = k.x0; x <= k.x1; x++) itens.push([x + 0.1, y + 0.1, k.piso * U, k.h * U, k.tipo === 'barrel' ? '#7a4b2a' : '#5d4a3c', 0.8]);
+  }
+  const malha = new T.InstancedMesh(caixa, new T.MeshLambertMaterial(), itens.length);
+  const m = new T.Matrix4(), cor = new T.Color();
+  itens.forEach(([x, y, z0, h, c, lado], i) => { const l = lado || 1; m.makeScale(l, h, l); m.setPosition(x + l / 2, z0, y + l / 2); malha.setMatrixAt(i, m); malha.setColorAt(i, cor.set(c)); });
+  cena.add(malha);
+  const chao = new T.Mesh(new T.PlaneGeometry(D.W + 20, D.H + 20), new T.MeshLambertMaterial({ color: css('--bg') }));
+  chao.rotation.x = -Math.PI / 2; chao.position.set(D.W / 2, -0.01, D.H / 2); cena.add(chao);
+  tres.redimensiona = () => { const w = tela.clientWidth, h = tela.clientHeight; rend.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+  tres.redimensiona(); addEventListener('resize', tres.redimensiona);
+  (function anima() { requestAnimationFrame(anima); ctl.update(); rend.render(cena, cam); })();
+}
+const f = v => v.toFixed(1).replace('.', ',') + ' s';
+document.querySelector('#tab tbody').innerHTML = D.pontos.map(p => { const q = p.ct < p.tr ? 'ct' : 'tr'; return `<tr><td>${p.nome}</td><td class="n">${f(p.tr)}</td><td class="n">${f(p.ct)}</td><td><span class="chip ${q}">${q.toUpperCase()}</span> ${f(Math.abs(p.tr - p.ct)).replace(' s', '')} s antes</td><td class="n">${p.meta ? f(p.meta[0]).replace(' s', '') + ' / ' + f(p.meta[1]) : '–'}</td></tr>`; }).join('');
+document.getElementById('c-tb').textContent = f(D.pisa.B[0]); document.getElementById('c-cb').textContent = f(D.pisa.B[1]);
+document.getElementById('c-ta').textContent = f(D.pisa.A[0]); document.getElementById('c-ca').textContent = f(D.pisa.A[1]);
+document.getElementById('c-rot').textContent = f(D.rot.AB) + ' / ' + f(D.rot.BA); document.getElementById('c-rt').textContent = f(D.rot.TR);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', desenha);
+new MutationObserver(desenha).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+le(7, 13);
+(function () {
+  const box = document.getElementById('img3d'); if (!D.img3d) return;
+  const im = document.createElement('img'); im.src = D.img3d; im.alt = 'Brasa em 3D, blocos'; im.style.width = '100%'; im.style.display = 'block'; box.appendChild(im);
+  for (const r of D.rot3d.rotulos) {
+    const t = document.createElement('span'); t.textContent = r.n;
+    t.style.cssText = `position:absolute; left:${r.x}%; top:${r.y}%; transform:translate(-50%,-100%); font:600 11px var(--display); letter-spacing:.02em; color:var(--tinta); background:color-mix(in srgb, var(--papel) 80%, transparent); padding:0 3px; border-radius:2px; white-space:nowrap; pointer-events:none`;
+    box.appendChild(t);
+  }
+})();
+</script>

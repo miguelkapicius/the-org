@@ -48,6 +48,25 @@ namespace CSM.View3D
             }
             return g;
         }
+        // ------------------------------------------------------------------ poço (cobertura "well")
+        static IEnumerable<MapData.Cover> Pocos() { foreach (var c in MapData.covers) if (c.kind == "well") yield return c; }
+        /// <summary>Tira as voxels do poço de bloco (aro de pedra 15 e fundo escuro 19 do MapVoxels "well").</summary>
+        public static byte[] SemPocos(byte[] G)
+        {
+            if (Resources.Load<GameObject>("Packs/kenney_fountain-round") == null) return G;
+            var g = (byte[])G.Clone(); int NY = MapData.NY, NZ = CSM.View.MapVoxels.NZ;
+            foreach (var c in Pocos())
+            {
+                int f = BaseC(c); float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f;
+                for (int x = (int)cx - 6; x <= (int)cx + 6; x++) for (int y = (int)cy - 6; y <= (int)cy + 6; y++)
+                {
+                    if (x < 0 || y < 0 || x >= MapData.NX || y >= NY) continue;
+                    float dd = Mathf.Sqrt((x + 0.5f - cx) * (x + 0.5f - cx) + (y + 0.5f - cy) * (y + 0.5f - cy)); if (dd > 3.6f) continue;
+                    for (int z = System.Math.Max(0, f); z < NZ && z <= f + c.h + 1; z++) { int i = (x * NY + y) * NZ + z; if (g[i] == 15 || g[i] == 19) g[i] = 0; }
+                }
+            }
+            return g;
+        }
         public static void Barril(float x, float y, float f, float h) => itens.Add(new Item { tipo = Tipo.Barril, x = x, y = y, f = f, h = h });
         public static void Sacos(float x, float y, float f, int sem) => itens.Add(new Item { tipo = Tipo.Sacos, x = x, y = y, f = f, sem = sem });
         public static void Caixote(float x, float y, float f, int sem) => itens.Add(new Item { tipo = Tipo.Caixote, x = x, y = y, f = f, sem = sem });
@@ -101,9 +120,9 @@ namespace CSM.View3D
                 var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 Vector3 esc; float giro;
                 if (it.tipo == Tipo.Barril)
-                {   // altura da cobertura e o mesmo diâmetro do barril de código (6 do jogo)
-                    float d = 6f * MalhaMapa.ESC;
-                    esc = new Vector3(d / b.size.x, it.h * MalhaMapa.ESC / b.size.y, d / b.size.z); giro = (float)rng.NextDouble() * 360f;
+                {   // um tico maior que a cobertura (usuário: "aumenta um pouco o tamanho dos barris"): 7,4 de diâmetro e 20% mais alto
+                    float d = 7.4f * MalhaMapa.ESC;
+                    esc = new Vector3(d / b.size.x, it.h * 1.2f * MalhaMapa.ESC / b.size.y, d / b.size.z); giro = (float)rng.NextDouble() * 360f;
                 }
                 else if (it.tipo == Tipo.Sacos)
                 {   // pilha de sacos com ~10 do jogo de largura
@@ -135,6 +154,46 @@ namespace CSM.View3D
                 // bandeirola: o pé dela fica a 12 do chão, encostada na parede (meio pano pra fora)
                 if (it.tipo == Tipo.Bandeira) go.transform.position += Vector3.up * 12f * MalhaMapa.ESC;
                 n++;
+            }
+            // poço (cobertura "well"): o de voxel era um aro fino que o borrão picotava em 4 varetas cinza (usuário: "objeto
+            // cinza meio quebrado" no bomb B; "pega um poço do kenney"). Montado com peças do Kenney Fantasy Town Kit: aro
+            // de pedra com água (fountain-round, mais alto), dois postes (poles) e o telhadinho (roof-point) em telha
+            foreach (var c in Pocos())
+            {
+                float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f, d = Mathf.Max(c.r.x1 - c.r.x0, c.r.y1 - c.r.y0);
+                var pe = MalhaMapa.ParaUnity(cx, cy, BaseC(c)); float E = MalhaMapa.ESC;
+                float giro = ((c.r.x0 * 7 + c.r.y0 * 13) % 4) * 90f;
+                // tamanho alvo em unidades do jogo (largura, altura, fundo) no eixo do modelo; pé no ponto
+                void Peca(string nome, Vector3 alvo, float subir, Color? pinta = null)
+                {
+                    var (me, b) = Malha(nome); if (me == null) return;
+                    if (pinta is Color cor)
+                    {   // repinta mantendo o sombreado do kit (o telhadinho verde vira telha da vila)
+                        me = Object.Instantiate(me); var cs = me.colors; var cl = linear ? cor.linear : cor;
+                        for (int i = 0; i < cs.Length; i++) { float l = 0.75f + 0.5f * Mathf.Clamp01((cs[i].r + cs[i].g + cs[i].b) / 3f / 0.5f - 0.5f); cs[i] = new Color(cl.r * l, cl.g * l, cl.b * l, 1); }
+                        me.colors = cs;
+                    }
+                    var go = new GameObject("poço " + nome); go.transform.SetParent(raiz.transform, false);
+                    go.AddComponent<MeshFilter>().sharedMesh = me;
+                    var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+                    var esc = new Vector3(alvo.x * E / Mathf.Max(1e-4f, b.size.x), alvo.y * E / Mathf.Max(1e-4f, b.size.y), alvo.z * E / Mathf.Max(1e-4f, b.size.z));
+                    go.transform.localScale = esc; go.transform.rotation = Quaternion.Euler(0, giro, 0);
+                    var cc = new Vector3(b.center.x * esc.x, b.min.y * esc.y, b.center.z * esc.z);
+                    go.transform.position = pe + Vector3.up * subir * E - go.transform.rotation * cc;
+                    n++;
+                }
+                // um tico maior (usuário: "aumenta um pouco o tamanho... do poço"): aro passa a borda da cobertura
+                float aro = d * 1.15f, h = Mathf.Max(15f, c.h + 3f);
+                Peca("kenney_fountain-round", new Vector3(aro, 5.5f, aro), 0);
+                // postes: o kit traz os dois num modelo (finos num eixo, separados no outro); atravessam o aro
+                var (mp, bp) = Malha("kenney_poles");
+                if (mp != null)
+                {
+                    bool finoX = bp.size.x < bp.size.z;
+                    Peca("kenney_poles", finoX ? new Vector3(0.9f, h + 1f, aro * 0.92f) : new Vector3(aro * 0.92f, h + 1f, 0.9f), 0);
+                }
+                // telhadinho do tamanho do aro e pontudo (com 1,2 do aro e baixo ele parecia guarda-sol)
+                Peca("kenney_roof-point", new Vector3(aro * 1.02f, 4.6f, aro * 1.02f), h, new Color(0xE0 / 255f, 0x70 / 255f, 0x3F / 255f));
             }
             Debug.Log($"[Packs3D] {n} props de pack ({itens.Count} marcados)");
             return raiz;

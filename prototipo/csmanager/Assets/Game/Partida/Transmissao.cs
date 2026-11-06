@@ -62,6 +62,8 @@ namespace CSM.View3D
     {
         /// <summary>A/B: true volta pro diretor antigo (Transmissao.Mirar).</summary>
         public static bool Velho;
+        /// <summary>A/B: true tira a leitura do round calmo (granada, grupo, entrada, tédio, quem não aparece) — -diretor_inicio_velho.</summary>
+        public static bool InicioVelho;
         public const float CORTE = 380f;              // trocou de plano pra mais longe que isso: corte seco
 
         public int prota = -1;                        // id do protagonista (= índice em m.agents)
@@ -76,12 +78,21 @@ namespace CSM.View3D
         readonly int[] abatesRound = new int[10];
         Match mAtual; int abatesVistos;
         float agora, desde, avaliarEm, mortoEm = -1; V2 mortoOnde, lead; int matador = -1; bool freezeT;
+        // round calmo (antes do contato, setup, rotação): granada de cada um (até estourar + a smoke abrir), quando cada
+        // um esteve no ar pela última vez, a entrada do TR e a granada do protagonista (pra câmera acompanhar o voo)
+        readonly float[] nadeAte = new float[10], ultNoAr = new float[10];
+        readonly HashSet<Match.Nade> nadesVistas = new HashSet<Match.Nade>();
+        Match.Nade nadeProta; V2 estouroOnde; float estouroAte = -1, entradaEm = -99; bool entradaVista;
 
         void Reiniciar(Match m)
         {
             mAtual = m; prota = -1; abatesVistos = 0; mortoEm = -1; matador = -1; avaliarEm = 0; lead = new V2(0, 0);
-            for (int i = 0; i < 10; i++) { nota[i] = 0; ultLuta[i] = -99; abatesRound[i] = 0; }
+            for (int i = 0; i < 10; i++) { nota[i] = 0; ultLuta[i] = -99; abatesRound[i] = 0; nadeAte[i] = -1; ultNoAr[i] = agora; }
+            nadesVistas.Clear(); nadeProta = null; estouroAte = -1; entradaEm = -99; entradaVista = false;
         }
+
+        /// <summary>Ninguém trocando tiro com ele nem acabou de trocar, sem plantar/desarmar: momento de leitura do round.</summary>
+        bool Calmo(Agent a) => !(a.brain.target != null && a.brain.target.alive) && agora - ultLuta[a.id] > 2.5f && a.brain.action != "plantar" && a.brain.action != "desarmar";
 
         /// <summary>Um quadro do diretor. freezeResta &gt; 0 = tempo de compra (a Sim parada no spawn).</summary>
         public void Atualizar(Match m, float freezeResta, float dt)
@@ -115,6 +126,15 @@ namespace CSM.View3D
                 if (ab.by != null && ab.by != ab.v && !ab.aliado && ab.by.id < 10) { abatesRound[ab.by.id]++; ultLuta[ab.by.id] = agora; }
                 if (ab.v.id == prota) { mortoEm = agora; mortoOnde = ab.v.pos; matador = ab.by != null && ab.by != ab.v ? ab.by.id : -1; }
             }
+            // granadas novas: quem jogou fica interessante até ela estourar e a nuvem abrir; a do protagonista a câmera segue
+            foreach (var nd in m.flying)
+                if (nadesVistas.Add(nd) && nd.by != null && nd.by.id < 10) nadeAte[nd.by.id] = Math.Max(nd.t1, m.t + 0.8f) + 1.2f;
+            if (nadeProta != null && !m.flying.Contains(nadeProta)) { estouroOnde = nadeProta.P; estouroAte = agora + 1.3f; nadeProta = null; }
+            if (prota >= 0 && prota < n && nadeProta == null)
+                foreach (var nd in m.flying) if (nd.by == m.agents[prota] && (nadeProta == null || nd.t0 > nadeProta.t0)) nadeProta = nd;
+            var igT = m.igl[(int)Team.T];
+            if (!entradaVista && igT != null && igT.Executou) { entradaVista = true; entradaEm = agora; }
+            if (prota >= 0 && prota < n) ultNoAr[prota] = agora;
 
             if (agora >= avaliarEm) { avaliarEm = agora + 0.2f; for (int i = 0; i < n; i++) nota[i] = Nota(m, m.agents[i]); }
             int melhor = -1; for (int i = 0; i < n; i++) if (m.agents[i].alive && (melhor < 0 || nota[i] > nota[melhor])) melhor = i;
@@ -173,6 +193,21 @@ namespace CSM.View3D
             if (a.gunId == "awp") s += 6;
             s += 4 * abatesRound[a.id];
             if (a.id == prota) s += 20;                         // inércia: não pula por qualquer coisa
+            if (!InicioVelho && cont < 40 && Calmo(a))
+            {
+                // leitura do round (o que o observer mostra antes do contato): quem vai jogar/jogou granada, o grupo andando
+                // junto, a entrada do TR; plano calmo comprido cansa e quem não aparece faz tempo (o setup do CT) ganha vez
+                if (ac == "granada") s += 50; else if (m.t < nadeAte[a.id]) s += 38;
+                int viz = 0; foreach (var o in m.agents) if (o != a && o.alive && o.team == a.team && (o.pos - a.pos).Len < 380) viz++;
+                s += 6 * Math.Min(viz, 4);
+                if (a.IsT && viz >= 2 && !m.bombPlanted && agora - entradaEm < 10) s += 18;
+                if (a.id == prota) s -= Math.Min(50, Math.Max(0, agora - desde - 3.5f) * 7);
+                else
+                {
+                    s += Math.Min(18, (agora - ultNoAr[a.id]) * 0.8f);
+                    if (prota >= 0 && prota < m.agents.Count && m.agents[prota].team != a.team) s += 6;
+                }
+            }
             return s;
         }
 
@@ -182,7 +217,7 @@ namespace CSM.View3D
             var a = m.agents[novo];
             bool longe = prota < 0 || (a.pos - centro).Len > CORTE;
             if (prota >= 0 && longe) { corte = true; cortes++; }
-            prota = novo; desde = agora; mortoEm = -1; matador = -1; planos++;
+            prota = novo; desde = agora; mortoEm = -1; matador = -1; planos++; nadeProta = null; estouroAte = -1;
             lead = new V2(MathF.Cos(a.aim), MathF.Sin(a.aim)) * 110;
             if (prota >= 0 && longe) centro = a.pos;   // o próximo Fechar recalcula; aqui só pro teste de distância seguinte
         }
@@ -208,14 +243,30 @@ namespace CSM.View3D
             }
             string ac = a.brain.action;
             if ((ac == "plantar" || ac == "desarmar") && m.bombPlanted) Inclui(m.bombPos);
-            // caixa grande demais (alguém do outro lado): fica só com ele, a mira e o alvo
+            // round calmo: o grupo dele junto no quadro, pra onde a granada vai, o voo dela e a nuvem abrindo
+            bool calmo = !InicioVelho && !briga && Calmo(a), util = false;
+            if (calmo)
+            {
+                foreach (var e in m.agents) if (e != a && e.alive && e.team == a.team && (e.pos - a.pos).Len < 350) Inclui(e.pos);
+                // (o PlanoGranada não: ele guarda o cálculo no Brain e ler antes da hora mudaria o arremesso)
+                if (ac == "granada") util = true;
+                if (nadeProta != null) { Inclui(nadeProta.P); util = true; }
+                else if (agora < estouroAte) { Inclui(estouroOnde); util = true; }
+            }
+            // caixa grande demais (alguém do outro lado): fica só com ele, a mira e o alvo (ou com a granada, se ela é a ação)
             if (x1 - x0 > 1000 || y1 - y0 > 850)
             {
-                Caixa(); Inclui(a.pos); Inclui(a.pos + lead);
-                if (a.brain.target != null && a.brain.target.alive) Inclui(a.brain.target.pos);
+                Caixa();
+                if (calmo && nadeProta != null) { Inclui(nadeProta.P); if ((nadeProta.l.to - nadeProta.P).Len < 600) Inclui(nadeProta.l.to); }
+                else if (calmo && agora < estouroAte) Inclui(estouroOnde);
+                else
+                {
+                    Inclui(a.pos); Inclui(a.pos + lead);
+                    if (a.brain.target != null && a.brain.target.alive) Inclui(a.brain.target.pos);
+                }
             }
             briga |= a.brain.target != null && a.brain.target.alive;
-            plano = briga ? "luta" : ac == "plantar" || ac == "desarmar" ? "bomba" : nota[a.id] >= 70 ? "contato" : m.agents.Count(o => o.alive && o.IsT == a.IsT) == 1 ? "clutch" : "seguindo";
+            plano = briga ? "luta" : ac == "plantar" || ac == "desarmar" ? "bomba" : nota[a.id] >= 70 && !util ? "contato" : util ? "granada" : m.agents.Count(o => o.alive && o.IsT == a.IsT) == 1 ? "clutch" : "seguindo";
             Fechar(briga);
         }
 

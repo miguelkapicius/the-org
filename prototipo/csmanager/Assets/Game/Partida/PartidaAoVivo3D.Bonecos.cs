@@ -212,6 +212,7 @@ namespace CSM.View3D
         readonly Dictionary<int, string> animSom = new Dictionary<int, string>();   // última animação que tocou som
         // sons por estado: degrau da escada já tocado, quem está pisando no fogo, quem já ficou cego (zumbido do seguido)
         readonly Dictionary<int, int> escadaDegrau = new Dictionary<int, int>();
+        int saqueCurto;   // diagnóstico: saques curtos pulados (log das 6 primeiras)
         readonly HashSet<int> noFogo = new HashSet<int>(), cegoVisto = new HashSet<int>(), quaseVazio = new HashSet<int>(), vendeu = new HashSet<int>();
         readonly List<Vector3> molotovsNoAr = new List<Vector3>();
         readonly List<(Vector3 p, bool inc, float t)> molotovsSumiram = new List<(Vector3, bool, float)>();   // de quem é o fogo novo
@@ -370,7 +371,8 @@ namespace CSM.View3D
                 }
                 else if (ev.anim == "saque" && !a.faca) { anim = "sacar_" + arma; u = (m.t - ev.ini) / ev.dur; }
                 else if (ev.anim == "costas" && !a.faca) { anim = "sacar_costas_" + arma; u = (m.t - ev.ini) / ev.dur; }
-                else if (a.Blind(m.t)) { anim = b.Tem("cego_" + arma) ? "cego_" + arma : "cego"; u = m.t; porTempo = true; }
+                // cego atirando no vento (Sim: o flashado recua e pode atirar andando): no tique do tiro a arma vem pra frente
+                else if (a.Blind(m.t) && (a.faca || m.t - a.lastShotT >= tiroDur)) { anim = b.Tem("cego_" + arma) ? "cego_" + arma : "cego"; u = m.t; porTempo = true; }
                 else if (ev.anim == "pegar" && !a.faca) { anim = "pegar_" + arma; u = (m.t - ev.ini) / ev.dur; }
                 else if (ev.anim == "trocar" && !a.faca) { anim = "sacar_" + arma; u = (m.t - ev.ini) / ev.dur; }
                 else if (!a.faca && a.gun.Reloading) { anim = "recarga_" + arma; u = 1 - a.gun.reloadLeft / a.gun.s.Reload; }
@@ -397,10 +399,20 @@ namespace CSM.View3D
                 if (!a.faca && a.alive && !anda && a.sacaAte > m.t && string.IsNullOrEmpty(acao) && a.nadeNaMao == null && !a.gun.Reloading && !a.noAr
                     && !a.Blind(m.t) && m.t - a.lastShotT > tiroDur && !anim.StartsWith("sacar_costas"))
                 {
-                    if (!sacando.TryGetValue(a.id, out var sc) || sc.ate != a.sacaAte) { sc = (m.t, a.sacaAte); sacando[a.id] = sc; }
-                    // primária com inventário (veio da pistola pelo Q): sai das costas por cima do ombro
-                    bool dasCostas = !WeaponStats.Pistola(a.gunId) && a.TemOutra && b.Tem("sacar_costas_" + arma);
-                    anim = (dasCostas ? "sacar_costas_" : "sacar_") + arma; u = (m.t - sc.ini) / Mathf.Max(0.1f, sc.ate - sc.ini);
+                    if (!sacando.TryGetValue(a.id, out var sc) || sc.ate != a.sacaAte)
+                    {
+                        sc = (m.t, a.sacaAte); sacando[a.id] = sc;
+                        if (sc.ate - sc.ini < 0.25f && saqueCurto++ < 6) Debug.Log($"[Visual3D] saque curto pulado: {a.name} {arma} sobrava {sc.ate - sc.ini:0.00}s round {rn} t={m.t:0.0}");
+                    }
+                    // saque que começou andando e sobrou pouco quando parou (usuário: "antes de atirar a mão dá uma tremidinha
+                    // e vai pra arma"): a animação inteira cabia no resto — a mão descia e voltava num piscar. Com menos de
+                    // 0,25 s de saque pela frente fica na mira (a arma já está quase na mão)
+                    if (sc.ate - sc.ini >= 0.25f)
+                    {
+                        // primária com inventário (veio da pistola pelo Q): sai das costas por cima do ombro
+                        bool dasCostas = !WeaponStats.Pistola(a.gunId) && a.TemOutra && b.Tem("sacar_costas_" + arma);
+                        anim = (dasCostas ? "sacar_costas_" : "sacar_") + arma; u = (m.t - sc.ini) / Mathf.Max(0.1f, sc.ate - sc.ini);
+                    }
                 }
                 // mira pra cima/baixo: pro alvo do duelo (telhado, 2º andar, escada)
                 float pAlvo = 0;
@@ -457,7 +469,7 @@ namespace CSM.View3D
                     if (a.gun.inMag > 0 && a.gun.inMag <= Mathf.CeilToInt(a.gun.s.mag * 0.2f)) { if (quaseVazio.Add(a.id)) Som3D.QuaseVazio(b.transform.position); }
                     else if (a.gun.inMag > a.gun.s.mag * 0.5f) quaseVazio.Remove(a.id);
                 }
-                bool queima = a.alive && m.FireAt(a.pos);
+                bool queima = a.alive && m.NoFogo(a);    // a mesma regra da Sim: queima quem encosta o corpo na chama desenhada (-exp bxFogoCorpoVelho volta ao pé na célula)
                 if (queima) { fx.Queimando(b.transform.position, dt); if (noFogo.Add(a.id)) Som3D.Queimando(b.transform.position, a.id); }
                 else noFogo.Remove(a.id);
                 // zumbido da flash só de quem a câmera segue (é o "ouvido" do espectador)
@@ -521,7 +533,15 @@ namespace CSM.View3D
                 ultHp[a.id] = a.hp;
                 // posição do pé e rumo da mira (interpolados entre passos da simulação: Visivel)
                 b.transform.position = MalhaMapa.ParaUnity(vis.p.x, vis.p.y, vis.z);
-                float alvoR = naEscada ? 270f : Mathf.Atan2(Mathf.Cos(vis.mira), -Mathf.Sin(vis.mira)) * Mathf.Rad2Deg;
+                float miraV = vis.mira;
+                // desarmando: de frente pra C4 (usuário: "o ct defusar olhando para a c4"; a mira da Sim às vezes ficava
+                // olhando pro lado de onde viria o TR e ele mexia na bomba de costas pra ela)
+                if (anim.StartsWith("desarmar") && m.bombPlanted)
+                {
+                    var dc = m.bombPos - vis.p;
+                    if (dc.Len > 0.5f) miraV = Mathf.Atan2(dc.y, dc.x);
+                }
+                float alvoR = naEscada ? 270f : Mathf.Atan2(Mathf.Cos(miraV), -Mathf.Sin(miraV)) * Mathf.Rad2Deg;
                 float r = rumo.TryGetValue(a.id, out float r0) ? Mathf.LerpAngle(r0, alvoR, 1 - Mathf.Exp(-25f * dt)) : alvoR;
                 if (!a.alive) r = r0;
                 rumo[a.id] = r;
@@ -567,7 +587,7 @@ namespace CSM.View3D
                 // LED vermelho em cima da C4 (antes era uma bolota de fogo laranja flutuando 5,5 acima: usuário "luz da C4 não
                 // tá legal"): mesma agenda do bip, calculada aqui (vale no replay também), clarão curto e um brilho fraco aceso
                 float restante = replay != null ? Match.BOMB - (replay.t - c4PlantouEm) : m.BombLeft;
-                bool armada = replay != null ? c4PlantouEm >= 0 && (c4ExplodiuEm < 0 || replay.t < c4ExplodiuEm) && !(m.defused && replay.t >= m.t - 0.1f)
+                bool armada = replay != null ? c4PlantouEm >= 0 && (c4ExplodiuEm < 0 || replay.t < c4ExplodiuEm) && (c4DesarmouEm < 0 || replay.t < c4DesarmouEm) && !(m.defused && replay.t >= m.t - 0.1f)
                                              : !m.defused && !m.exploded;
                 LedC4(armada && restante > 0 ? DesdeBip(restante, Match.BOMB) : -1);
             }

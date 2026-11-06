@@ -69,7 +69,125 @@ namespace CSM.Sim
         // ================================================================ início do round
         public void Start()
         {
-            if (team == Team.T) StartT(); else StartCT();
+            if (team == Team.T) { StartT(); if (EXP.Contains("apPezinhoCallLigado")) CallPezinho(); } else { StartCT(); if (EXP.Contains("apPezinhoCTLigado")) FormacaoPezinhoCT(); }
+        }
+
+        /// <summary>PEZINHO NA FORMAÇÃO DO CT (opt-in apPezinhoCTLigado): no CT o pezinho é parte do setup ("o B fica com dois e um
+        /// sobe"), decidido pelo IGL no começo do round — não qualquer um no meio do caminho. A dupla sai de quem já joga
+        /// naquele bomb (âncora + quem divide o site), nunca do AWP nem do rotação (essenciais em outro lugar), e só com 3+ no
+        /// bomb (quem fica cobre o ângulo largado enquanto montam). Pesa pela crença: onde a leitura diz que o TR vem (subir
+        /// onde eles vão é onde rende) e se o lugar já queimou (já matamos dali: eles pré-miram lá em cima).</summary>
+        void FormacaoPezinhoCT()
+        {
+            if (!NavGrid.BOOST || (NavGrid.Ilhas.Count == 0 && NavGrid.BordasPezinho.Count == 0)) { if (Match.Auditar) m.Aud("pezinho CT: formação", "sem lugar alto no mapa"); return; }
+            var L = m.leitura[(int)team]; float lado = L != null && L.Adapta ? L.intencao.lado : 0;
+            var opcoes = new List<(Agent sobe, Agent da, float w, char site)>();
+            foreach (char site in new[] { 'A', 'B' })
+            {
+                V2 pl = Places.Plant(site);
+                var noSite = m.agents.Where(a => a.team == team && a.alive && a.brain.order?.hold != null && a.brain.order.until >= 999
+                                             && (a.brain.order.hold.pos - pl).Len < 450).ToList();
+                if (noSite.Count < 2) continue;   /* sozinho no bomb não tem quem dê */
+                bool awpVelho = EXP.Contains("apAwpPezinhoVelho");
+                var podem = noSite.Where(a => !a.hasBomb && (!awpVelho || a.role != Role.Awper && a.role != Role.Rotacao && a.gunId != "awp")).ToList();
+                foreach (var sobe in podem)
+                {
+                    V2 hp = sobe.brain.order.hold.pos; V2 topo = default; bool tem = false; float dTopo = 161;
+                    foreach (var il in NavGrid.Ilhas) { float d = (il.centro - hp).Len; if (d < dTopo) { dTopo = d; topo = il.centro; tem = true; } }
+                    foreach (var bd in NavGrid.BordasPezinho) { float d = (bd.alto - hp).Len; if (d < dTopo) { dTopo = d; topo = bd.alto; tem = true; } }
+                    if (!tem) continue;
+                    Agent da = null; float dd = 1e9f;   /* quem dá: o do mesmo bomb com o ponto mais perto (o desvio é curto e ele volta pro lugar) */
+                    foreach (var x in podem) if (x != sobe)
+                    {   float d = (x.brain.order.hold.pos - hp).Len;
+                        if (!awpVelho && x.gunId == "awp") d = d / 0.25f + 40;          /* AWP como escada: custa caro, pesa pouco */
+                        if (!awpVelho && x.role == Role.Rotacao) d = d / 0.4f;           /* quem gira largar a rotação: pesa contra */
+                        if (d < dd) { dd = d; da = x; } }
+                    if (da == null || dd > 400) continue;
+                    float w = 1f;
+                    w *= MathF.Exp(0.7f * (site == 'A' ? lado : -lado));                         /* a leitura diz que vêm aqui */
+                    if (L != null) w /= 1f + 1.5f * L.Queimado(topo, team, 90);                   /* já matamos dali: eles esperam lá em cima */
+                    w *= sobe.role == Role.Ancora ? 1.2f : 1f;                                    /* a âncora conhece o bomb dela */
+                    if (!awpVelho && sobe.gunId == "awp")                                          /* AWP lá em cima: vale pela linha longa até o ângulo */
+                    {   V2 lk = sobe.brain.order.hold.look != null && sobe.brain.order.hold.look.Length > 0 ? sobe.brain.order.hold.look[0] : pl;
+                        w *= 0.6f * (1f + MathF.Min(1f, (lk - topo).Len / 500f)); }
+                    if (!awpVelho && sobe.role == Role.Rotacao) w *= 0.4f;                        /* quem gira subir: perde a rotação */
+                    if (noSite.Count == 2) w *= 0.4f * MathF.Exp(-0.7f * (site == 'A' ? lado : -lado));   /* com 2, montar abre o bomb: só se a leitura diz que não vêm aqui cedo */
+                    opcoes.Add((sobe, da, w, site));
+                }
+            }
+            if (opcoes.Count == 0) { if (Match.Auditar) m.Aud("pezinho CT: formação", "sem dupla possível (2+ no bomb, sem AWP/rotação)"); return; }
+            float soma = opcoes.Sum(o => o.w);
+            float p = ExpNum("apPezinhoCTChance", 0.25f) * MathF.Min(1.6f, soma / opcoes.Count);
+            if (rng.Rand() >= p) { if (Match.Auditar) m.Aud("pezinho CT: formação", "dava, não chamou"); return; }
+            var esc = opcoes[rng.Weighted(opcoes.Select(o => o.w).ToArray())];
+            esc.sobe.brain.ctPezinhoPar = esc.da;
+            Call($"setup com pezinho no {esc.site}: {esc.da.name} dá pezinho pro {esc.sobe.name}, o resto segura");
+            if (Match.Auditar) m.Aud("pezinho CT: formação", $"chamou no {esc.site} · {esc.sobe.role} sobe, {esc.da.role} dá");
+        }
+
+        /// <summary>CALL DO IGL PRO PEZINHO (opt-in apPezinhoCallLigado): "Vulcão e Faísca, vão no casarão, pezinho pro Vulcão
+        /// subir e chegar antes no B". Pesa pela crença: quanto o pezinho encurta a rota de quem vai pro bomb do plano, se o
+        /// lugar está livre (ninguém esperado ali), a compra (no eco a surpresa vale mais) e se tem quem dê o pezinho sem
+        /// sair do caminho dele. Não decide nada sozinho: vira uma chance, e quem sobe ainda desiste se aparecer gente.</summary>
+        void CallPezinho()
+        {
+            if (!NavGrid.BOOST || NavGrid.BordasPezinho.Count == 0) return;
+            char site = m.planSite;
+            if (!plan.StartsWith("plano do banco") && stage != null && !stage.StartsWith("plano do banco"))
+            {   char ult = plan.Length > 0 ? plan[plan.Length - 1] : ' ';
+                if (ult != 'A' && ult != 'B') { if (Match.Auditar) m.Aud("pezinho: call do IGL (parou em)", "plano sem bomb definido"); return; }   /* default sem bomb definido: não tem pra onde encurtar */
+                site = ult; }
+            V2 alvo = Places.Plant(site);
+            var trs = m.agents.Where(a => a.IsT && a.alive).ToList();
+            Agent sobe = null, da = null; (V2 chao, V2 alto) esc = default; float melhor = 0;
+            /* além do atalho, o lugar alto vale por si (segurar de cima, info, surpresa): enxerga o bomb do plano */
+            float vPos = ExpNum("apPezinhoCallPosicao", 250f); int indo = 0, comBorda = 0;
+            foreach (var a in trs)
+            {
+                bool velho = EXP.Contains("apCallVaiVelho"), awpA = a.gunId == "awp";
+                if (a.hasBomb || velho && awpA || a.brain.order == null) continue;
+                V2 ga = a.brain.order.hold != null ? a.brain.order.hold.pos : a.brain.order.dest;
+                /* no começo a ordem é de controle de mapa: o destino que conta é o bomb do plano — menos pro lurker, que joga do
+                   outro lado: o destino dele é o dele, e a distância já o deixa longe do pezinho (peso, não regra) */
+                if ((ga - alvo).Len > 450) { if (velho || a.role == Role.Lurker) continue; ga = alvo; }
+                indo++;
+                float direto = NavGrid.PathLen(a.pos, ga); if (float.IsInfinity(direto)) continue;
+                foreach (var bd in NavGrid.BordasPezinho)
+                {
+                    if (Intel.Esperados(bd.chao, 400) > 0.3f || Intel.Esperados(bd.alto, 400) > 0.3f) continue;
+                    float ida = NavGrid.PathLen(a.pos, bd.chao), resto = NavGrid.PathLen(bd.alto, ga);
+                    if (float.IsInfinity(ida) || float.IsInfinity(resto)) continue;
+                    comBorda++;
+                    float ganho = direto - (ida + 4f * a.MaxSpeed + resto);
+                    /* valor do lugar alto × alcance da arma: a AWP lá em cima com linha longa é o motivo de muito pezinho */
+                    float dLinha = (bd.alto - alvo).Len;
+                    if (dLinha < (awpA && !velho ? 1100 : 650) && MapData.LosWalk(bd.alto, NavGrid.ZAt(bd.alto), alvo, NavGrid.ZAt(alvo), 18f))
+                        ganho += vPos * (awpA && !velho ? 1f + MathF.Min(1f, dLinha / 500f) : 1f);
+                    if (ganho <= melhor) continue;
+                    Agent par = null; float desv = 350;   /* quem dá: o que menos sai do caminho dele (custo pesado pela arma) */
+                    foreach (var x in trs)
+                    {
+                        if (x == a || x.hasBomb || x.brain.order == null) continue;
+                        V2 gx = x.brain.order.hold != null ? x.brain.order.hold.pos : x.brain.order.dest;
+                        if ((gx - alvo).Len > 450 && !velho && x.role != Role.Lurker) gx = alvo;   /* o lurker conta o caminho dele mesmo */
+                        float dv = NavGrid.PathLen(x.pos, bd.chao) + NavGrid.PathLen(bd.chao, gx) - NavGrid.PathLen(x.pos, gx);
+                        if (!velho && x.gunId == "awp") dv = dv / 0.25f + 40;   /* abaixar a AWP pra ser escada custa caro: pesa bem pouco, mas não zero */
+                        if (dv < desv) { desv = dv; par = x; }
+                    }
+                    if (par == null) continue;
+                    melhor = ganho; sobe = a; da = par; esc = (bd.chao, bd.alto);
+                }
+            }
+            if (sobe == null || melhor < ExpNum("apPezinhoCallGanho", 120f))
+            {   if (Match.Auditar) m.Aud("pezinho: call do IGL (parou em)", indo == 0 ? "ninguém indo pro bomb do plano" : comBorda == 0 ? "sem borda livre/alcançável" : sobe == null ? "nenhuma borda vale (sem par ou sem ganho)" : "ganho pequeno");
+                return; }   /* pouco ganho (atalho + valor do lugar): não vale */
+            string compra = m.compra[(int)team];
+            float p = ExpNum("apPezinhoCallChance", 0.35f) * MathF.Min(1f, melhor / 600f) * (compra == "full" ? 1f : compra == "force" ? 1.1f : 1.3f);
+            if (Match.Auditar) m.Aud("pezinho: call do IGL (avaliou)", $"{Match.PontoBoost(esc.alto)} · ganho {melhor / sobe.MaxSpeed:0.0} s · {compra}");
+            if (rng.Rand() >= p) return;
+            sobe.brain.callPar = da; sobe.brain.callChao = esc.chao; sobe.brain.callAlto = esc.alto; sobe.brain.callAte = 40f;
+            Call($"{sobe.name} e {da.name}: pezinho em {MapData.Callout(esc.alto)} pro {sobe.name} chegar antes no {site}");
+            if (Match.Auditar) m.Aud("pezinho: call do IGL (chamou)", Match.PontoBoost(esc.alto));
         }
 
         void StartT()
@@ -224,6 +342,7 @@ namespace CSM.Sim
                     if (!NavGrid.Movable(q) || usados.Any(u => (u - q).Len < 45)) continue;
                     if (!MapData.LosWalk(q, NavGrid.ZAt(q), alvo, NavGrid.ZAt(alvo), 18f) && rng.Rand() < 0.8f) continue;
                     var nh = new Hold(h.name + " (do lado)", q, h.look.Reverse().ToArray());   // outro ponto, ângulo na outra ordem
+                    if (!EXP.Contains("apOrdemDestVelho") && (a.brain.order.dest - h.pos).Len < 1) a.brain.order.dest = q;   /* o dest acompanha o hold */
                     a.brain.order.hold = nh; usados.Add(q);
                     break;
                 }
@@ -231,6 +350,7 @@ namespace CSM.Sim
         }
 
         // ================================================================ banco de estratégias (rounds pro traduzidos)
+        public Estrategias.Plano Estr => estr;   /* bx: leitura do plano (Headless -partidas mede a variedade das calls) */
         Estrategias.Plano estr; readonly Dictionary<int, int> slotDe = new Dictionary<int, int>(); readonly Dictionary<int, string> estrUlt = new Dictionary<int, string>();
         int lurkSlot = -1; bool lurkSegue; float estrHora = -1;
         bool UsaBanco => estr != null;
@@ -254,6 +374,7 @@ namespace CSM.Sim
             if (cands.Count == 0) return false;
             var L = m.leitura[(int)team];
             float lado = L != null && L.Adapta ? L.intencao.lado : 0;
+            if (tr && L != null && L.Adapta && EXP.Contains("bxIglCrencaLigado")) lado = L.LadoCrenca();   /* bx: lado pela crença contínua (CT visto + não ser previsível) */
             var w = new float[cands.Count];
             for (int i = 0; i < cands.Count; i++)
             {
@@ -1003,7 +1124,8 @@ namespace CSM.Sim
             }
             // vantagem: matamos gente e um bomb já é nosso (a gente lá dentro/perto e eles sem ninguém lá) — não fica
             // esperando a hora do plano: entra e planta agora (o tempo é deles quando a gente espera)
-            if (!executed && t > 10 && !EXP.Contains("semVantagem"))
+            if (JuizNovo) JuizTR(mine, carrier);
+            if (!executed && t > 10 && !EXP.Contains("semVantagem") && !JuizNovo)
             {
                 int nos = mine.Count, eles = m.Alive(Other);
                 (char s, float sc, int perto, float e) best = (' ', float.NegativeInfinity, 0, 0);
@@ -1070,7 +1192,7 @@ namespace CSM.Sim
             }
             // o relógio manda: se o que sobra mal dá pra levar o C4 até o bomb (na velocidade de verdade, com parada e
             // quina — ~75% da máxima), plantar e brigar, entra agora no bomb mais perto/mais vazio
-            if (!executed && !EXP.Contains("semRelogio"))
+            if (!executed && !EXP.Contains("semRelogio") && !JuizNovo)
             {
                 V2 de = carrier?.pos ?? (m.bombDropped ? m.droppedBomb : mine[0].pos);
                 float la = NavGrid.PathLen(de, Plant('A')) - 300 * Intel.Esperados(SITES_A, 450), lb = NavGrid.PathLen(de, Plant('B')) - 300 * Intel.Esperados(SITES_B, 450);
@@ -1115,7 +1237,7 @@ namespace CSM.Sim
             }
             // execução travando: perdemos gente na entrada e eles seguem fortes lá, e o outro bomb deve estar vazio → recua
             // e vai no outro (se dá tempo de atravessar)
-            if (executed && !m.bombPlanted && !pivotou && mine.Count >= 2 && m.RoundLeft > 40 && t - execT > 4 && !EXP.Contains("semPivo"))
+            if (executed && !m.bombPlanted && !pivotou && mine.Count >= 2 && m.RoundLeft > 40 && t - execT > 4 && !EXP.Contains("semPivo") && !JuizNovo)
             {
                 char aqui = m.planSite, outro = aqui == 'A' ? 'B' : 'A';
                 float eAqui = Intel.Esperados(aqui == 'A' ? SITES_A : SITES_B, 420), eLa = Intel.Esperados(outro == 'A' ? SITES_A : SITES_B, 420);
@@ -1129,7 +1251,7 @@ namespace CSM.Sim
                 if (mine.Count(a => rect.Contains(a.pos.x, a.pos.y)) >= 2 || mine.Any(a => a.hasBomb && rect.Contains(a.pos.x, a.pos.y))) travou = false;
                 if (travou && eLa < 0.8f && Rola1("pivo", 0.5f + 0.15f * perdi))
                 {
-                    pivotou = true; m.planSite = outro;
+                    pivotou = true; m.planSite = outro; m.Ev("juiz: TR trocou de bomb/round");   // mesmo contador nos dois braços (velho = pivô antigo)
                     Call($"tá difícil no {aqui} (caímos {perdi}, devem ter {eAqui:0.0} lá) e o {outro} deve estar vazio ({eLa:0.0}): recua e vai {outro}");
                     Execute(outro, mine);
                 }
@@ -1184,7 +1306,7 @@ namespace CSM.Sim
 
         void Execute(char site, List<Agent> mine)
         {
-            stage = $"execução {site}"; execVivos = mine.Count; execT = m.t;
+            stage = $"execução {site}"; execVivos = mine.Count; execT = m.t; pExec = -1;
             bool c4Atras = !EXP.Contains("c4Frente2");
             // quem abre nunca é o portador: o entry com o C4 cede a frente pro colega mais perto do bomb
             var entry = mine.FirstOrDefault(a => a.role == Role.Entry && !(c4Atras && a.hasBomb));
@@ -1460,7 +1582,19 @@ namespace CSM.Sim
                 V2 centro = site == 'A' ? SITES_A : SITES_B;
                 float vem = Intel.Esperados(centro, 420);
                 var meus = mine.Where(a => (a.pos - centro).Len < 520 && a.brain.target == null && !a.guardando && a.role != Role.Awper && !a.brain.Malotando).ToList();
-                if (vem < 2.5f || meus.Count == 0 || vem < meus.Count * 2f) continue;
+                float ganhoRecua = 0;
+                if (JuizCT)
+                {   /* bx: segurar x recuar pela chance de ganhar (não por "2 contra 1") */
+                    int ix = site == 'A' ? 0 : 1;
+                    if (vem < 1.5f || meus.Count == 0 || t < juizCTProx[ix]) continue;
+                    juizCTProx[ix] = t + 2f;
+                    var longe = mine.Where(a => !meus.Contains(a)).ToList();
+                    float pSeg = ChanceCTNoBomb(site, meus, longe, vem, m.Alive(Other)), pRec = ChanceCTRecua(mine, vem, m.Alive(Other));
+                    ganhoRecua = pRec - pSeg;
+                    if (Match.Auditar) m.Aud("juiz CT: segurar x recuar", $"{meus.Count} aqui x {vem:0} vindo · " + (ganhoRecua > 0f ? "recuar vale mais" : "segurar vale mais") + (vem < 2.5f || vem < meus.Count * 2f ? " · (regra velha: segurava)" : " · (regra velha: recuava)"));
+                    if (ganhoRecua <= 0f) continue;   /* a chance de recuar cresce com o ganho (abaixo): sem degrau */
+                }
+                else if (vem < 2.5f || meus.Count == 0 || vem < meus.Count * 2f) continue;
                 recuou.Add(site);
                 var st = RetakeStage(site); var foram = new List<string>();
                 V2? esconde = !EXP.Contains("esconderPlant") || EXP.Contains("esconderPlantVelho") ? null : EsconderPraPlant(site, meus[0].pos);   /* opt-in: com o canto que acho hoje o TR ganhava +1,3 */
@@ -1478,6 +1612,7 @@ namespace CSM.Sim
                     }
                     // reforço chegando (colega girando pro bomb a poucos segundos): segura e atrasa — recuar aí entrega o plant de graça
                     float pRecua = 0.75f - 0.45f * P.Agr(a.skill.aggression);
+                    if (JuizCT) pRecua = MathX.Clamp(ganhoRecua / (0.10f + 0.10f * P.Agr(a.skill.aggression)), 0, 0.95f);   /* bx: quanto mais vale recuar, mais provável; o agressivo segura mais */
                     if (EXP.Contains("recuoComAjuda")   /* opt-in: neutro/negativo no A/B (TR +0,6) */)
                     {
                         int vemAjuda = mine.Count(x => x != a && !meus.Contains(x) && NavGrid.PathLen(x.pos, centro) / MathF.Max(1, x.MaxSpeed) < 6f);
@@ -1488,6 +1623,7 @@ namespace CSM.Sim
                     foram.Add(a.name);
                 }
                 if (foram.Count > 0) Call($"{string.Join(", ", foram)}: recua no {site}, joga pelo retake");
+                if (JuizCT && foram.Count == 0 && !escondeu) recuou.Remove(site);   /* bx: ninguém recuou agora — o juiz pesa de novo daqui a 2 s, com o que mudou */
             }
             // info de vazio: alguém olhou e o bomb (com o caminho até ele) tá limpo → o TR deve estar do outro lado: um que
             // não é âncora joga pro outro bomb antes do ataque chegar (o âncora fica: pode ser lurk)
@@ -1562,6 +1698,13 @@ namespace CSM.Sim
             if (hot != ' ' && (hot != rotatedTo || !giroCerto && CertoEm(hot)))   // girou pela estimativa e agora VIU: vai o resto
             {
                 if (hot != rotatedTo && rotatedTo != ' ') m.Ev("CT desfez o giro/round");
+                if (Match.Auditar)
+                {   // granada como informação: girou só pelo utilitário (ninguém visto lá) — acertou o bomb do TR ou caiu no fake?
+                    V2 cG = hot == 'A' ? SITES_A : SITES_B;
+                    bool viu = Intel.contacts.Values.Any(x => m.t - x.t < 8 && m.agents[x.id].alive && (x.pos - cG).Len < 700);
+                    bool util = m.pousos.Any(p => p.tm == Other && m.t - p.t < 6 && (p.p - cG).Len < 520);
+                    m.Aud("CT girou: por quê × era o bomb do TR?", (viu ? "viu gente" : util ? "só granada" : "estimativa") + " · " + (m.planSite == hot ? "certo" : "outro bomb (fake/troca)"));
+                }
                 m.sus.Giro(team, hot, hot != rotatedTo && rotatedTo != ' ' && !CertoEm(hot));
                 rotatedTo = hot; giroCerto = CertoEm(hot); giroT = m.t; m.Ev("giros CT/round");
                 // bomb ainda nosso (nenhum TR visto dentro dele agora): quem gira vai SEGURAR junto (crossfire com o
@@ -1577,6 +1720,7 @@ namespace CSM.Sim
                 int outros = mine.Count(a => a.brain.homeSite != hot);
                 int vao = certo ? podem.Count : Math.Min(podem.Count, Math.Max(1, (int)MathF.Ceiling(hot == 'A' ? eA : eB) + 1 - jaLa));
                 if (!certo) vao = Math.Min(vao, outros - 1);   // um fica do outro lado
+                if (!certo && JuizCT) vao = GiroPeloJuiz(hot, podem, mine, eA, eB, Math.Max(0, outros - 1), vao);   /* bx: pela chance dos dois cenários */
                 var giram = new HashSet<Agent>(podem.Take(Math.Max(0, vao)));
                 foreach (var a in podem) if (!giram.Contains(a)) a.brain.Think($"giro pro {hot} pela estimativa — fico deste lado, pode ser fake");
                 // call só do que acontece: ninguém pra girar (sozinho, ou quem está lá já basta) não vira "giram 0"
@@ -2041,6 +2185,260 @@ namespace CSM.Sim
         }
 
         /// <summary>
+        /// Quanto o time leva pra plantar AGORA: quem está com o C4 (ou o mais perto vai buscar o caído) até o bomb mais
+        /// rápido de plantar — caminho de verdade correndo, os 3,2 s do plant e um tanto por CT esperado em cima do bomb.
+        /// O TR guarda por tempo só se nem assim dá (dá pra plantar até uns 4 s do fim).
+        /// </summary>
+        // ===================== JUIZ DO ROUND =====================
+        // Uma crença só pras decisões grandes do meio do round, em qualquer situação: entrar agora (e em qual bomb),
+        // seguir tomando o mapa até a hora do plano, largar o bomb travado pelo outro, guardar a arma ou retomar.
+        // Antes eram gatilhos soltos e fixos (vantagem 2+, "dominado", relógio, pivô, "1 contra 3", "3x2 guarda"...).
+        // Agora cada saída tem uma CHANCE DE GANHAR estimada pelo que o time acredita:
+        //   força nossa (arma × vida de cada um) contra a deles NO bomb (esperados pela info, vantagem de quem defende)
+        //   + quem deles gira a tempo (rotação × o nosso tempo pra chegar e plantar) + o pós-plant contra o resto,
+        //   com o relógio cortando o que não dá tempo. A decisão é sorteada pelos pesos e pelo jeito do IGL (humano,
+        //   não limiar), e volta a ser pesada a cada poucos segundos quando a situação muda.
+        // 1ª versão REPROVOU no A/B jz (2026-11-06): TR vence +3,9, troca de bomb 0,45/round (velho 0,14), CT guarda 0,32 (velho 0,24).
+        // Fica opt-in (-exp juizLigado) até a recalibração passar; o exe sai com os gatilhos antigos
+        public static bool JuizNovo => EXP.Contains("juizLigado");
+        float juizProx, juizP = 1f, pExec = -1, eExec; char juizBest = ' '; string juizPorque = "";
+        public float ChanceRound => juizP;   // última crença do time sobre ganhar o round (HUD/auditoria)
+
+        static float ForcaDe(string g, int hp) => (0.35f + 0.065f * WeaponStats.Forca(g)) * (0.35f + 0.65f * MathX.Clamp(hp / 100f, 0, 1));
+        float ForcaNossa(List<Agent> quem) { float f = 0; foreach (var a in quem) f += ForcaDe(a.Primaria ?? a.gunId, a.hp); return f; }
+        /// <summary>Força média de UM deles pela crença: vida do último contato e a arma se foi vista; sem info, rifle cheio.</summary>
+        float ForcaDeUm()
+        {
+            float s = 0; int n = 0;
+            foreach (var x in m.agents)
+            {
+                if (x.team == team || !x.alive) continue;
+                int hp = 100; string g = "ak";
+                if (Intel.contacts.TryGetValue(x.id, out var c)) { if (m.t - c.hpT < 20) hp = c.hp; if (c.seen && m.t - c.t < 30) g = x.Primaria ?? x.gunId; }
+                s += ForcaDe(g, hp); n++;
+            }
+            return n > 0 ? s / n : 1f;
+        }
+        float TempoAtePlantar(List<Agent> mine, char site)
+        {
+            float v = MapCheck.RUN * 0.9f, best = float.MaxValue;
+            V2 ps = Plant(site);
+            foreach (var a in mine)
+            {
+                float ate;
+                if (a.hasBomb) ate = NavGrid.PathLen(a.pos, ps) / v;
+                else if (m.bombDropped) ate = (NavGrid.PathLen(a.pos, m.droppedBomb) + NavGrid.PathLen(m.droppedBomb, ps)) / v;
+                else continue;
+                if (!float.IsInfinity(ate)) best = MathF.Min(best, ate);
+            }
+            return best + Match.PLANT;
+        }
+        /// <summary>
+        /// Chance de ganhar indo no bomb <paramref name="s"/> daqui a <paramref name="atraso"/> s. Lanchester (força²): a
+        /// entrada é a nossa força contra os esperados lá (×1,3: quem defende o bomb tem o ângulo) mais quem gira antes do
+        /// plant; o pós-plant é quem sobra (×1,3: agora o ângulo é nosso) contra o resto que vem retomar.
+        /// <paramref name="esquece"/> 0..1: o quanto a info de agora vai valer até lá (esperar = eles se reorganizam).
+        /// </summary>
+        float ChanceNoBomb(List<Agent> mine, char s, float atraso, float esquece, out float tPlant, float giroExtra = 0)
+        {
+            tPlant = TempoAtePlantar(mine, s) + atraso + 1.5f * MathF.Min(2f, Intel.Esperados(Plant(s), 400));
+            int eles = m.Alive(Other);
+            if (eles == 0) return 1f;
+            if (tPlant > m.RoundLeft - 0.5f) return 0f;   // não dá tempo de plantar: aí só matando todo mundo (conta em ChanceSemPlant)
+            V2 c = s == 'A' ? SITES_A : SITES_B, o = s == 'A' ? SITES_B : SITES_A;
+            float eS = Intel.Esperados(c, 450);
+            eS = eS * (1 - esquece) + MathF.Min(eles, eles * 0.5f) * esquece;
+            eS = MathF.Min(eS, eles);
+            float resto = MathF.Max(0, eles - eS);
+            float giro = NavGrid.PathLen(o, c) / (MapCheck.RUN * 0.85f) + giroExtra;   // giroExtra: eles demoram pra perceber que a gente saiu
+            // dos que estão longe, quantos chegam antes do plant: o relógio do giro começa quando a gente aparece (entra), então
+            // esperar NÃO dá mais tempo pra eles girarem — só a nossa travessia de agora conta
+            float chegam = MathX.Clamp((tPlant - atraso - Match.PLANT - giro + 4f) / 8f, 0, 1);
+            float um = ForcaDeUm(), A = ForcaNossa(mine);
+            float D = (eS * 1.3f + resto * chegam * 0.9f) * um;
+            float pEntra = A * A / (A * A + D * D + 1e-4f);
+            float sobra = A * MathF.Sqrt(MathF.Max(0.15f, 1 - D * D / (A * A + 1e-4f))) * 1.3f;
+            float R = resto * (1 - chegam) * um;
+            float pPos = R < 0.01f ? 1f : sobra * sobra / (sobra * sobra + R * R);
+            return pEntra * pPos;
+        }
+        /// <summary>Sem dar tempo de plantar: só ganha matando todos (eles seguram, a gente tem que achar).</summary>
+        float ChanceSemPlant(List<Agent> mine)
+        {
+            float A = ForcaNossa(mine), D = m.Alive(Other) * ForcaDeUm() * 1.3f;
+            return D < 0.01f ? 1f : 0.6f * A * A / (A * A + D * D);
+        }
+        /// <summary>Chance de o CT ganhar a retomada: a gente contra os TR esperados no bomb (×1,3: pós-plant é deles) e o relógio do defuse.</summary>
+        float ChanceRetake(List<Agent> mine)
+        {
+            int eles = m.Alive(Other); if (eles == 0) return 1f;
+            float melhor = float.MaxValue;
+            foreach (var x in mine) melhor = MathF.Min(melhor, NavGrid.PathLen(x.pos, m.bombPos) / (MapCheck.RUN * 0.85f) + Match.DefuseTime(x));
+            float folga = m.BombLeft - melhor;
+            if (folga < 0) return 0f;
+            float eB = MathF.Max(Intel.Esperados(m.bombPos, 600), 0.6f * eles);
+            float A = ForcaNossa(mine), D = eB * 1.3f * ForcaDeUm();
+            float tempo = MathX.Clamp(0.25f + folga / 10f, 0.25f, 1f);   // pouca folga = entrar sem util, um por vez
+            return A * A / (A * A + D * D + 1e-4f) * tempo;
+        }
+
+        /* bx: JUIZ DO CT antes do plant — a mesma crença do juiz do TR (força = arma × vida, esperados pela info, Lanchester,
+           ×1,3 pra quem tem o ângulo), pra decidir recuar pro retake e quantos giram, em vez de limiar fixo.
+           -exp bxJuizCTLigado (opt-in até o A/B) */
+        public static bool JuizCT => EXP.Contains("bxJuizCTLigado");
+        readonly float[] juizCTProx = new float[2];
+        /// <summary>
+        /// bx: chance de o CT ganhar o round se o ataque (<paramref name="eS"/> esperados) vier no bomb <paramref name="s"/>:
+        /// quem está lá segura (×1,3: o ângulo é nosso), quem está longe conta conforme chega antes do plant; segurando, a
+        /// sobra joga contra o resto deles; perdendo a entrada, quem não estava lá retoma contra os que sobraram (×1,3 deles).
+        /// </summary>
+        float ChanceCTNoBomb(char s, List<Agent> aqui, List<Agent> longe, float eS, int eles)
+        {
+            if (eles <= 0) return 1f;
+            eS = MathX.Clamp(eS, 0.5f, eles);
+            V2 c = s == 'A' ? SITES_A : SITES_B;
+            float um = ForcaDeUm();
+            float tPlant = 4f + Match.PLANT + 1.5f * MathF.Min(2, aqui.Count);   // o TR entra, troca com quem segura e planta
+            float Fa = ForcaNossa(aqui), Fv = 0, Fr = 0;
+            foreach (var x in longe)
+            {
+                float chega = NavGrid.PathLen(x.pos, c) / (MapCheck.RUN * 0.85f);
+                float w = float.IsInfinity(chega) ? 0 : MathX.Clamp((tPlant - chega + 3f) / 6f, 0, 1);
+                float f = ForcaDe(x.Primaria ?? x.gunId, x.hp);
+                Fv += f * w; Fr += f * (1 - w);
+            }
+            float A = Fa * 1.3f + Fv * 0.9f, D = eS * um;
+            float pSeg = A < 0.01f ? 0 : A * A / (A * A + D * D + 1e-4f);
+            float sobraN = (Fa + Fv) * MathF.Sqrt(MathF.Max(0.15f, 1 - D * D / (A * A + 1e-4f))) + Fr;
+            float R = MathF.Max(0, eles - eS) * um;
+            float pDepois = R < 0.01f ? 1f : sobraN * sobraN / (sobraN * sobraN + R * R + 1e-4f);
+            float sobraT = D * MathF.Sqrt(MathF.Max(0.15f, 1 - A * A / (D * D + 1e-4f)));
+            float Dret = (sobraT + 0.6f * R) * 1.3f;
+            float pRet = Fr < 0.01f ? 0 : 0.85f * Fr * Fr / (Fr * Fr + Dret * Dret + 1e-4f);
+            return pSeg * pDepois + (1 - pSeg) * pRet;
+        }
+        /// <summary>bx: chance de o CT ganhar largando o bomb (planta sem troca) e retomando com todo mundo vivo.</summary>
+        float ChanceCTRecua(List<Agent> mine, float eS, int eles)
+        {
+            if (eles <= 0) return 1f;
+            eS = MathX.Clamp(eS, 0.5f, eles);
+            float um = ForcaDeUm(), F = ForcaNossa(mine), R = MathF.Max(0, eles - eS);
+            float D = (eS + 0.6f * R) * 1.3f * um;
+            return 0.85f * F * F / (F * F + D * D + 1e-4f);
+        }
+        /// <summary>
+        /// bx: quantos giram pro bomb quente (só estimativa, sem certeza): o que dá mais chance de ganhar somando os dois
+        /// cenários — o ataque é mesmo lá (peso pela crença) ou é do outro lado (quem saiu de lá faz falta).
+        /// </summary>
+        int GiroPeloJuiz(char hot, List<Agent> podem, List<Agent> mine, float eA, float eB, int max, int velho)
+        {
+            char o = hot == 'A' ? 'B' : 'A'; float eH = hot == 'A' ? eA : eB, eO = hot == 'A' ? eB : eA; int eles = m.Alive(Other);
+            float pH = (eH + 0.2f) / (eH + eO + 0.4f);
+            float ataque = 0.75f * eles;   // se vier, vem a maior parte
+            int best = 0; float bv = -1, v0 = 0;
+            for (int k = 0; k <= Math.Min(podem.Count, max); k++)
+            {
+                var vai = new HashSet<Agent>(podem.Take(k));
+                var emH = mine.Where(a => a.brain.homeSite == hot || vai.Contains(a)).ToList();
+                var emO = mine.Where(a => !emH.Contains(a)).ToList();
+                float v = pH * ChanceCTNoBomb(hot, emH, emO, MathF.Max(eH, ataque), eles) + (1 - pH) * ChanceCTNoBomb(o, emO, emH, MathF.Max(eO, ataque), eles);
+                if (k == 0) v0 = v;
+                v += rng.Uniform(0, 0.015f);   // humano: perto do empate, às vezes um, às vezes outro
+                if (v > bv) { bv = v; best = k; }
+            }
+            if (Match.Auditar) m.Aud("juiz CT: quantos giram (juiz x regra velha)", $"{best} x {velho} de {podem.Count}");
+            return best;
+        }
+
+        /// <summary>TR antes do plant: pesa entrar agora (A/B), seguir o plano ou (já executando) trocar de bomb.</summary>
+        void JuizTR(List<Agent> mine, Agent carrier)
+        {
+            float t = m.t;
+            if (t < 10) { juizP = 1f; juizProx = 0; return; }   // round novo: crença zera
+            if (t < juizProx || m.bombPlanted || mine.Count == 0) return;
+            juizProx = t + 2.5f + rng.Rand();
+            int nos = mine.Count, eles = m.Alive(Other);
+            float agr = P.Agr(Funcao(Role.Igl)?.skill.aggression ?? 0.5f);
+            float pA = ChanceNoBomb(mine, 'A', 0, 0, out float tA), pB = ChanceNoBomb(mine, 'B', 0, 0, out float tB);
+            char best = pA >= pB ? 'A' : 'B'; float pAgora = MathF.Max(pA, pB);
+            // esperar até a hora do plano: perde tempo, e a vantagem de agora (gente que matamos, bomb vazio) se dilui
+            float ate = UsaBanco ? MathF.Max(0, estrHora - t) : MathF.Max(0, P.tExecDefault - t);
+            float espera = MathX.Clamp(ate, 6, 30);
+            float pDepois = MathF.Max(ChanceNoBomb(mine, 'A', espera, 0.6f, out _), ChanceNoBomb(mine, 'B', espera, 0.6f, out _));
+            pDepois += executed ? 0 : 0.05f * (1 - agr);   // seguir o plano tem valor (util e posição combinadas), mais pro IGL calmo
+            juizP = MathF.Max(MathF.Max(pAgora, pDepois), pAgora < 0.01f ? ChanceSemPlant(mine) : 0);
+            juizBest = best;
+            juizPorque = $"{nos}x{eles}, A {pA:0%} B {pB:0%}, esperando {pDepois:0%}";
+            m.Ev(pAgora > pDepois + 0.02f ? "juiz TR: entrar agora vale mais (checagens)" : "juiz TR: seguir o plano vale mais (checagens)");
+            if (!executed)
+            {
+                float ganho = pAgora - pDepois;
+                if (ganho <= 0.02f) return;
+                // decisão humana: quanto maior o ganho, mais provável; IGL agressivo topa ganho menor
+                float p = MathX.Clamp(ganho / (0.18f - 0.08f * agr), 0, 0.95f);
+                if (rng.Rand() >= p) { m.Ev("juiz: podia entrar, seguiu o plano/decisão"); return; }
+                executed = true; m.planSite = best;
+                m.Ev(nos > eles ? "TR entrou na hora: vantagem de jogadores/round" : "TR entrou na hora: leitura do juiz/round");
+                Call($"{nos} contra {eles}: no {best} a gente tem {pAgora:0%} agora e {pDepois:0%} esperando — entra e planta");
+                Execute(best, mine);
+                return;
+            }
+            // já executando: o outro bomb vale mais mesmo pagando a travessia? (o que já conquistamos aqui pesa na conta)
+            // "tá difícil / tá esquisito": a crença de quando decidiu entrar vs a de agora. Caímos gente, vimos ou ouvimos
+            // mais CT do que achava, sentiram a util deles → a chance aqui despencou e o time duvida do bomb. Os CT que
+            // giraram pra cá não sabem na hora que a gente saiu (demoram ~6 s pra perceber), então o outro bomb fica fraco
+            // por um tempo. A dúvida pesa junto com a vantagem do outro lado; uma decisão por situação (não um sorteio a
+            // cada 3 s, que virava troca por ruído).
+            if (!pivotou && mine.Count >= 1)
+            {
+                char aqui = m.planSite, outro = aqui == 'A' ? 'B' : 'A';
+                float pAqui = aqui == 'A' ? pA : pB;
+                V2 cAq = aqui == 'A' ? SITES_A : SITES_B;
+                if (pExec < 0) { pExec = pAqui; eExec = Intel.Esperados(cAq, 450); }   // crença no momento em que a execução começou
+                float pLa = ChanceNoBomb(mine, outro, 0, 0, out _, 6f);
+                var rect = CSM.Map.MapData.SITES[aqui.ToString()];
+                bool conquistou = mine.Count(a => rect.Contains(a.pos.x, a.pos.y)) >= 2 || mine.Any(a => a.hasBomb && rect.Contains(a.pos.x, a.pos.y));
+                if (conquistou) pLa -= 0.15f;   // largar o que conquistou custa
+                int perdi = execVivos - mine.Count;
+                int vistos = Intel.contacts.Values.Count(x => m.t - x.t < 5 && m.agents[x.id].alive && (x.pos - cAq).Len < 520);
+                // "esquisito" é SURPRESA, não a queda esperada (o CT girando pra cá já estava na conta): caímos gente, ou
+                // apareceu mais CT do que a gente achava que tinha lá quando decidiu
+                bool surpresa = perdi > 0 || vistos >= MathF.Ceiling(eExec) + 1;
+                float queda = surpresa ? MathF.Max(0, pExec - pAqui) : 0, ganho = pLa - pAqui;
+                float pTroca = MathX.Clamp((ganho + 0.5f * queda - 0.06f) / 0.3f, 0, 0.75f) * (0.8f + 0.4f * (1 - agr));   // o IGL calmo larga mais fácil
+                // uma decisão por SURPRESA (cada um que cai, cada CT a mais que aparece), não por oscilação da conta
+                string situ = $"pivo{perdi}_{vistos}";
+                if (ganho > 0.05f && t - execT > 4 && m.RoundLeft > 25 && pTroca > 0 && (surpresa || ganho > 0.2f) && Rola1(situ, pTroca))
+                {
+                    pivotou = true; m.planSite = outro; m.Ev("juiz: TR trocou de bomb/round");
+                    Call(queda > 0.15f ? $"tá esquisito no {aqui} (achava {pExec:0%}, agora {pAqui:0%}{(perdi > 0 ? $", caímos {perdi}" : "")}) e no {outro} dá {pLa:0%}: recua e vai {outro}"
+                                       : $"no {aqui} a gente tem {pAqui:0%}, no {outro} {pLa:0%}: recua e vai {outro}");
+                    Execute(outro, mine);
+                }
+            }
+        }
+
+        float TempoDePlantar(List<Agent> mine)
+        {
+            float v = MapCheck.RUN * 0.9f, best = float.MaxValue;
+            foreach (char site in new[] { 'A', 'B' })
+            {
+                V2 ps = Plant(site);
+                float contesta = 1.5f * MathF.Min(2f, Intel.Esperados(ps, 400));   // CT esperado lá: troca de tiro antes de plantar
+                foreach (var a in mine)
+                {
+                    float ate;
+                    if (a.hasBomb) ate = NavGrid.PathLen(a.pos, ps) / v;
+                    else if (m.bombDropped) ate = (NavGrid.PathLen(a.pos, m.droppedBomb) + NavGrid.PathLen(m.droppedBomb, ps)) / v;
+                    else continue;
+                    if (float.IsInfinity(ate)) continue;
+                    best = MathF.Min(best, ate + Match.PLANT + contesta);
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
         /// Guardar a arma: cada jogador, quando a situação fica ruim (em desvantagem sem tempo, sem tempo de desarmar,
         /// clutch impossível...), pesa o quanto a arma dele vale, o quanto o time precisa dela no próximo round (aperto
         /// da economia) e o próprio jeito de jogar. Às vezes guarda, às vezes tenta. Uma decisão por situação.
@@ -2051,14 +2449,34 @@ namespace CSM.Sim
             foreach (var a in mine)
             {
                 bool semSaida = team == Team.T && !m.bombPlanted && nos <= 2 && eles >= 3 && m.RoundLeft < 27 && !EXP.Contains("saveTRVelho");   // real: 96% dos tempos têm 1-2 TR vivos, 82% com 3+ CT
+                // juiz: a mesma crença do round decide se a situação é ruim (chance de ganhar), não a contagem fixa
+                float chance = 1f;
+                if (JuizNovo)
+                {
+                    chance = team == Team.T && !m.bombPlanted ? juizP : team == Team.CT && m.bombPlanted ? ChanceRetake(mine) : 1f;
+                    semSaida = team == Team.T && !m.bombPlanted && chance < 0.1f && m.RoundLeft < 30;
+                }
                 if (a.guardando || a.brain.order.defuse || (a.hasBomb && !m.bombPlanted && !semSaida)) continue;
                 string ruim = null;
-                if (team == Team.T && !m.bombPlanted)
+                if (JuizNovo)
+                {
+                    // ruim = a crença diz que a chance é pequena; o quanto é pequena entra no peso de guardar logo abaixo
+                    if (team == Team.T && !m.bombPlanted && chance < 0.22f)
+                        ruim = semSaida || chance < 0.01f && TempoDePlantar(mine) > m.RoundLeft - 0.5f ? $"não dá tempo de plantar ({nos}x{eles}, {chance:0%})" : $"{nos} contra {eles}: {chance:0%} de chance";
+                    else if (team == Team.CT && m.bombPlanted)
+                    {
+                        bool alguemDa = mine.Any(x => Match.DefuseTime(x) + (x.pos - m.bombPos).Len / (EXP.Contains("facaDefuse") && !EXP.Contains("facaDefuseVelho") || m.Alive(Other) == 0 && !EXP.Contains("facaSemTRVelho") ? MapCheck.RUN : 55f) < m.BombLeft - 0.5f);
+                        if (!alguemDa) ruim = $"não dá tempo de desarmar ({m.BombLeft:0}s)";
+                        else if (chance < 0.15f) ruim = $"{nos} contra {eles} no retake: {chance:0%} de chance";
+                    }
+                }
+                else if (team == Team.T && !m.bombPlanted)
                 {
                     if (semSaida) ruim = $"{nos} contra {eles} com {m.RoundLeft:0}s";
                     else if (nos == 1 && eles >= 3 && m.RoundLeft < 45) ruim = $"1 contra {eles}";
                     else if (eles - nos >= 2 && m.RoundLeft < 35) ruim = $"{nos} contra {eles} com pouco tempo";
-                    else if (m.RoundLeft < 12 && (a.pos - Plant(m.planSite)).Len > 450) ruim = "não dá tempo de chegar no bomb";
+                    else if (EXP.Contains("saveTempoVelho") ? m.RoundLeft < 12 && (a.pos - Plant(m.planSite)).Len > 450 : m.RoundLeft < 20 && TempoDePlantar(mine) > m.RoundLeft - 0.5f)
+                        ruim = EXP.Contains("saveTempoVelho") ? "não dá tempo de chegar no bomb" : "não dá tempo de plantar";
                 }
                 else if (team == Team.CT && m.bombPlanted)
                 {
@@ -2067,16 +2485,22 @@ namespace CSM.Sim
                     else if (nos == 1 && eles >= 3) ruim = $"1 contra {eles} no retake";
                     else if (eles - nos >= 2 && m.BombLeft < 18) ruim = $"{nos} contra {eles} com {m.BombLeft:0}s";
                 }
-                if (ruim == null || !saveRolado.Add(a.id + ruim)) continue;
+                // uma decisão por situação (placar de vivos × fase do relógio), não a cada vez que o número da chance oscila
+                if (ruim == null || !saveRolado.Add(a.id + (JuizNovo ? $"{nos}x{eles}/{(int)(m.RoundLeft / 15)}/{ruim.StartsWith("não dá tempo")}" : ruim))) continue;
                 if (m.semAmanha[(int)team]) { a.brain.Think($"{ruim}, mas guardar pra quê? não tem próximo round com essa arma — vou"); continue; }
                 float valor = WeaponStats.Forca((a.Primaria ?? a.gunId)) / 10f + ((a.Primaria ?? a.gunId) == "awp" ? 0.4f : 0);
                 float p = (0.15f + 0.45f * m.aperto[(int)team] + 0.35f * valor - (WeaponStats.Pistola((a.Primaria ?? a.gunId)) ? 0.45f : 0)) * (1.15f - 0.5f * a.skill.aggression);
+                if (JuizNovo) p *= team == Team.CT ? MathX.Clamp((0.15f - chance) / 0.1f, 0, 1.4f) : MathX.Clamp((0.22f - chance) / 0.15f, 0, 1.4f);   // pro tenta retake/entrada até ~20% de chance; abaixo disso guarda cada vez mais (vantagem já está na chance)
+                else if (!EXP.Contains("saveTempoVelho") && nos > eles) p *= 0.35f;   // em vantagem (3x2) guardar é jogar fora o round
                 float aperto = m.aperto[(int)team];
                 if (ruim.StartsWith("não dá tempo"))
                 {
                     // CT sem tempo de desarmar: correr pra guardar, guardar onde está, ou caçar o TR que sai do bomb pra tirar arma
                     float agr = P.Agr(a.skill.aggression);
-                    float[] w = { 0.5f, 0.25f + 0.4f * aperto, (0.15f + 0.45f * agr) * (nos >= eles ? 1.4f : 0.6f) * (1 - 0.7f * aperto) * (WeaponStats.Pistola((a.Primaria ?? a.gunId)) ? 1.3f : 1f) };
+                    // caçar quem sai do bomb só existe pro CT com bomb plantado (o TR sem tempo de plantar caía aqui e ia caçar
+                    // um bomb que não existe: hold no canto (0,0) do mapa — achado da sim-apoio)
+                    bool cacaPossivel = team == Team.CT && m.bombPlanted || EXP.Contains("cacaTRVelho");
+                    float[] w = { 0.5f, 0.25f + 0.4f * aperto, cacaPossivel ? (0.15f + 0.45f * agr) * (nos >= eles ? 1.4f : 0.6f) * (1 - 0.7f * aperto) * (WeaponStats.Pistola((a.Primaria ?? a.gunId)) ? 1.3f : 1f) : 0 };
                     int op = rng.Weighted(w);
                     if (op == 2)
                     {

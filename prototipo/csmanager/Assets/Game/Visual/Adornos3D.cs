@@ -223,7 +223,7 @@ namespace CSM.View3D
                         // os jarros e vasos saíram (usuário: "cara de IA"); o obstáculo do Sim continua, agora como barris
                         // lado a lado preenchendo a cobertura (sem eles o boneco bateria em nada visível)
                         var jr = new Rng(c.r.x0 * 31 + c.r.y0);
-                        const float PASSO = 6.6f;
+                        const float PASSO = 7.8f;   // barril de pack tem 7,4 de diâmetro (Packs3D): sem encavalar
                         int nx = Mathf.Max(1, Mathf.FloorToInt((c.r.x1 - c.r.x0 - 0.4f) / PASSO)), ny = Mathf.Max(1, Mathf.FloorToInt((c.r.y1 - c.r.y0 - 0.4f) / PASSO));
                         float x0 = (c.r.x0 + c.r.x1) * 0.5f - (nx - 1) * PASSO * 0.5f, y0 = (c.r.y0 + c.r.y1) * 0.5f - (ny - 1) * PASSO * 0.5f;
                         for (int i = 0; i < nx; i++)
