@@ -1339,6 +1339,7 @@ namespace CSM.Sim
             // pro troca quase sempre quem está do lado: o matador acabou de atirar (mira no colega morto, às vezes
             // recarregando) — é a hora de abrir. Quem segura posição chave (AWP, âncora) troca menos
             float p = (trader ? 1f : tv ? 0.65f : 0.8f) * (order.hold == null ? 1f : tv ? 0.8f : 0.9f) * (me.gunId == "awp" ? 0.35f : 1f) * (0.7f + 0.5f * P.Agr(me.skill.aggression)) * (d < 180 ? (tv ? 1.15f : 1.3f) : 0.85f);
+            p *= 0.8f + 0.4f * MathX.Clamp(me.skill.entrosamento, 0, 1);   // entrosamento (decisão 0019): 0,5 = como antes
             // trocar correndo pra dentro de 2+ inimigos é morrer junto: aí segura o ângulo e espera ele aparecer
             float espM = m.intel[(int)me.team].Esperados(matador, 300);
             if (tv ? espM >= 2f : espM >= 2.5f) p *= tv ? 0.3f : 0.45f;

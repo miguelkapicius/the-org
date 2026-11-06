@@ -22,6 +22,9 @@ namespace CSM.Sim
         public float composure = 0.8f;      // erra menos no clutch / sob pressão
         public float utilitaria = 0.8f;     // execução de granada: sabe o pixel, mas quanto acerta (0..1)
 
+        /// <summary>Entrosamento com o time (decisão 0019), 0..1; 0,5 = neutro. Muda a chance de trocar o colega que morreu.</summary>
+        public float entrosamento = 0.5f;
+
         public Skill Copia() => (Skill)MemberwiseClone();
 
         /// <summary>
