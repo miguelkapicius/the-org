@@ -165,7 +165,8 @@ namespace CSM.View3D
                 ("HS frente", true, 0, "mira_M4A4", 0), ("HS costas", true, 180, "mira_M4A4", 0), ("HS lado", true, 90, "mira_M4A4", 0),
                 ("peito frente", false, 0, "mira_M4A4", 0), ("peito costas", false, 180, "mira_M4A4", 0), ("peito lado", false, 90, "mira_M4A4", 0),
                 ("HS correndo", true, 0, "andar_M4A4", 2.1f), ("peito agachado", false, 0, "agachar_M4A4", 0),
-                ("peito atirando", false, 0, "tiro_M4A4", 0) };   // 8: morre no meio do disparo (clarão na boca)
+                ("peito atirando", false, 0, "tiro_M4A4", 0),   // 8: morre no meio do disparo (clarão na boca)
+                ("peito correndo de verdade", false, 0, "andar_M4A4", 8.6f) };   // 9: na velocidade da Sim (215/s x 0,04): o que voava
             var sel = System.Array.ConvertAll(quais.Split(','), int.Parse);
             for (int k = 0; k < sel.Length; k++)
             {
@@ -187,7 +188,7 @@ namespace CSM.View3D
                 if (al.rg == null) continue;
                 var cp = al.rg.CabecaMenosPelve; cp.y = 0; cp.Normalize();
                 var fr = al.b.transform.forward; fr.y = 0; fr.Normalize();
-                sb.AppendLine($"[Visual3D] MORTE {al.nome}: giro {al.rg.Giro:0}° (líquido {al.rg.GiroLiq:+0;-0}°), cabeça caiu {Vector3.Dot(cp, al.dir):+0.00;-0.00} na direção da bala, {Vector3.Dot(cp, fr):+0.00;-0.00} pra frente do corpo{(al.rg.dormindo ? "" : " (ainda mexendo)")} [frente do tronco x do boneco {al.rg.FrenteConfere:+0.00;-0.00}]");
+                sb.AppendLine($"[Visual3D] MORTE {al.nome}: giro {al.rg.Giro:0}° (líquido {al.rg.GiroLiq:+0;-0}°), cabeça caiu {Vector3.Dot(cp, al.dir):+0.00;-0.00} na direção da bala, {Vector3.Dot(cp, fr):+0.00;-0.00} pra frente do corpo{(al.rg.dormindo ? "" : " (ainda mexendo)")} [frente do tronco x do boneco {al.rg.FrenteConfere:+0.00;-0.00}], deslizou {al.rg.Deslize / MalhaMapa.ESC:0.0} da Sim");
             }
             return sb.ToString();
         }

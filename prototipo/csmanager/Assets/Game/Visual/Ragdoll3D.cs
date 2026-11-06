@@ -111,6 +111,12 @@ namespace CSM.View3D
             var frenteCorpo = raiz.forward; frenteCorpo.y = 0; frenteCorpo = frenteCorpo.sqrMagnitude > 1e-6f ? frenteCorpo.normalized : -empurrao;
             var ladoCorpo = Vector3.Cross(Vector3.up, frenteCorpo);   // pra esquerda do boneco? (sinal não importa: simétrico)
             vel.y = 0;
+            // embalo de quem corria (usuário: "às vezes o ragdoll sai voando quando morre pra um tiro"): a velocidade da Sim
+            // é da escala do CS (215-250 por s) e o boneco tem ~22 de altura, então 85% dela jogava o corpo a ~8,5 u/s —
+            // ~60 da Sim (três bonecos) antes de bater no chão. Fica um tico do embalo, com teto na escala do boneco
+            const float EMBALO = 0.22f, EMBALO_MAX = 1.1f;   // fração da velocidade viva e teto (u/s ~ 27 da Sim por s)
+            float vm = vel.magnitude;
+            if (!EmbaloVelho) vel = vm > 1e-4f ? vel / vm * Mathf.Min(vm * EMBALO, EMBALO_MAX) / 0.85f : Vector3.zero;   // (o 0,85 de baixo continua)
             float deLado = R(-0.18f, 0.18f);              // o corpo todo tomba um pouco pra um lado (mesmo pra todas: sem torque)
             float joelhoMais = R(-0.12f, 0.12f);          // um joelho cede antes do outro: tomba de lado, não gira
             const float DT = 1 / 60f;
@@ -139,7 +145,7 @@ namespace CSM.View3D
                 if (i == (int)P.MaoR || i == (int)P.CotoveloR) v += Vector3.down * 0.35f - ladoCorpo * 0.3f;
                 xa[i] = x[i] - v * DT;
             }
-            frente0 = Horizontal(TroncoFrente()); FrenteConfere = Vector3.Dot(frente0, frenteCorpo);
+            frente0 = Horizontal(TroncoFrente()); FrenteConfere = Vector3.Dot(frente0, frenteCorpo); pelveIni = x[(int)P.Pelve];
             // peças -> osso
             osso = new int[pecas.Length]; lp = new Vector3[pecas.Length]; lr = new Quaternion[pecas.Length]; usa = new bool[pecas.Length];
             var Rb = new Quaternion[(int)Osso.N]; var Ob = new Vector3[(int)Osso.N];
@@ -290,6 +296,11 @@ namespace CSM.View3D
         /// pelve (mundo).</summary>
         public float Giro, GiroLiq, FrenteConfere;
         public Vector3 CabecaMenosPelve => x[(int)P.Cabeca] - x[(int)P.Pelve];
+        /// <summary>Laboratório (A/B): true = embalo antigo (85% da velocidade viva, sem teto).</summary>
+        public static bool EmbaloVelho;
+        /// <summary>Laboratório: quanto a pelve andou no chão desde a morte (u da Unity).</summary>
+        public float Deslize { get { var d = x[(int)P.Pelve] - pelveIni; d.y = 0; return d.magnitude; } }
+        Vector3 pelveIni;
         static Vector3 Horizontal(Vector3 v) { v.y = 0; return v.sqrMagnitude > 1e-8f ? v.normalized : Vector3.zero; }
 
         Vector3 TroncoFrente()

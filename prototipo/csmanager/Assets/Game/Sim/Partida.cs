@@ -78,9 +78,11 @@ namespace CSM.Sim
         // drops da compra: a decisão (quem paga pra quem) é daqui; o item nasce com quem pagou e é dropado em campo
         readonly List<(Jogador de, Jogador para, string item, string antes, bool naMao)> entregas = new List<(Jogador, Jogador, string, string, bool)>();
         readonly List<(Jogador j, string arma)> comecaCom = new List<(Jogador, string)>();
+        /// <summary>Arma que mudou de dono sem compra (o rifle velho do AWPer pro colega): não aparece como compra na cabeça.</summary>
+        readonly List<(Jogador j, string arma)> repasses = new List<(Jogador, string)>();
         public Match Preparar()
         {
-            entregas.Clear(); comecaCom.Clear();
+            entregas.Clear(); comecaCom.Clear(); repasses.Clear();
             bool aT = ATerrorista(r);
             tAtual = aT ? A : B; ctAtual = aT ? B : A;
             bool trocaLado = r == 12 || r >= 24 && (r - 24) % 6 == 3;
@@ -206,9 +208,13 @@ namespace CSM.Sim
                 foreach (var n in j.nades) if (!sobra.Remove(n)) l.Add(n);
                 itens[j] = l;
             }
+            // repasse não é compra: o rifle velho (até uma Galil que o CT pegou do chão) ia pra cabeça como "comprou galil"
+            bool repV = TeamBrain.EXP.Contains("repasseVelho");
+            if (!repV) foreach (var (jr, ar) in repasses) if (itens.TryGetValue(jr, out var lr)) lr.Remove(ar);
             foreach (var e in entregas)
             {
                 if (!itens.TryGetValue(e.para, out var lp) || !itens.TryGetValue(e.de, out var ld)) continue;
+                if (!repV && repasses.Contains((e.para, e.item))) continue;
                 if (e.naMao) { lp.Remove(e.item); if (e.antes != null) ld.Remove(e.antes); continue; }   // troca da AWP: ninguém comprou
                 if (lp.Remove(e.item)) ld.Add(e.item);
             }
@@ -265,6 +271,7 @@ namespace CSM.Sim
                 Log($"  IGL ({tm.nome}): força até {teto}");
                 ev.Add("ECO força com teto");
             }
+            var armaAntes = new Dictionary<Jogador, string>(); foreach (var j0 in js) armaAntes[j0] = j0.arma;   // o que cada um tinha antes da compra (revenda)
             foreach (var j in js)
             {
                 bool awp = j.Role(t) == Role.Awper;
@@ -301,6 +308,10 @@ namespace CSM.Sim
                 {
                     string quer = awp && tipo == "full" && j.dinheiro >= Preco("awp") + (TeamBrain.EXP.Contains("awpCompraVelha") ? 1000 : 650) ? "awp" : Rifle(j, t);
                     if (j.dinheiro >= Preco(quer) + 650) { j.dinheiro -= Preco(quer); DarPrimaria(j, quer); }
+                    else if (tipo == "full" && PISTOLAS_EXTRAS && !TeamBrain.EXP.Contains("famasGalilVelho") && j.dinheiro   /* A/B 40 partidas (2026-11-06): galil/famas 0,15→0,33/round, TR 49,3→50,3 (ruído ±2,4), cheia x cheia igual */ >= Preco(t ? "galil" : "famas") + 650 && rng.Rand() < 0.7f)
+                    {   // compra cheia mas curto pro rifle: o pro vai de Galil/FAMAS + colete (às vezes espera o drop do colega rico)
+                        string barato0 = t ? "galil" : "famas"; j.dinheiro -= Preco(barato0); DarPrimaria(j, barato0);
+                    }
                     else if (tipo == "force")
                     {
                         string smg = t ? "mac10" : "mp9", barato = t ? "galil" : "famas", pf = t ? "tec9" : "fiveseven";
@@ -347,13 +358,27 @@ namespace CSM.Sim
                     string antesAwper = awper.arma;
                     string velho = awper.arma; DarPrimaria(awper, "awp"); if (velho != null && WeaponStats.Pistola(velho)) velho = null;
                     var semArma = js.FirstOrDefault(j => j != awper && !TemPrimaria(j));
+                    // ninguém sem primária: o rifle do AWPer ia ficar largado na base. No CS2 quem comprou uma arma pior NESTE
+                    // round revende (reembolso cheio no tempo de compra) e fica com o rifle. -exp revendaVelha: fica no chão
+                    if (semArma == null && velho != null && !TeamBrain.EXP.Contains("revendaVelha"))
+                    {
+                        var vende = js.Where(j => j != awper && j != paga && TemPrimaria(j) && j.arma != "awp" && armaAntes.TryGetValue(j, out var ant) && ant != j.arma && Preco(j.arma) < Preco(velho))
+                                      .OrderBy(j => Preco(j.arma)).FirstOrDefault();
+                        if (vende != null)
+                        {
+                            Log($"  {vende.nome} revendeu {WeaponStats.ALL[vende.arma].name} pra ficar com {WeaponStats.ALL[velho].name} do {awper.nome}");
+                            vende.dinheiro += Preco(vende.arma); vende.arma = armaAntes[vende] != null && WeaponStats.Pistola(armaAntes[vende]) ? armaAntes[vende] : null;
+                            if (vende.pistola != null && vende.arma == null) { vende.arma = vende.pistola; vende.pistola = null; }
+                            semArma = vende;
+                        }
+                    }
                     // em campo: quem pagou dropa a AWP pro AWPer; o rifle velho dele cai quando ele pega, e quem está sem
                     // arma pega do chão (se o AWPer comprou, ele mesmo dropa o rifle pro colega)
                     if (paga != awper) entregas.Add((paga, awper, "awp", antesAwper, false));
                     if (velho != null && !WeaponStats.Pistola(velho) && semArma != null)
                     {
                         if (paga == awper) entregas.Add((awper, semArma, velho, semArma.arma, false)); else comecaCom.Add((semArma, semArma.arma));
-                        DarPrimaria(semArma, velho);
+                        DarPrimaria(semArma, velho); repasses.Add((semArma, velho));
                     }
                     Log($"  {(paga == awper ? $"{awper.nome} comprou a AWP" : $"{paga.nome} dropou a AWP pro {awper.nome}")}");
                 }

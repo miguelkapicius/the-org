@@ -61,7 +61,7 @@ Todos os números (salários, preços, prêmios, custo da Gaming House) são pro
 
 ## Jogar sem abrir a Unity
 
-`Build/CSManager.exe` é a build de Windows mais recente: é só abrir. A pasta `Build` inteira precisa ir junto,
+`Build/CSManager.exe` é a build de Windows mais recente (06/11/2026, 14:15): é só abrir. A pasta `Build` inteira precisa ir junto,
 porque o jogo lê os dados de `Build/CSManager_Data`. Ela não tem a integração com o manager; essa só existe no
 projeto.
 

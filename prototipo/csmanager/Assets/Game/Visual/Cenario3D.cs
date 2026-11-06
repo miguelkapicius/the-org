@@ -46,7 +46,7 @@ namespace CSM.View3D
             // enfeites miúdos (jarros, sacos, cestos, barris, tralhas de telhado, rodas da carroça) também saem do borrão
             // (viravam "blobs") e entram como peça de quina viva
             // o chafariz da base TR também sai do borrão e entra como modelo (Kenney, Chafariz3D)
-            var GM = Pisos3D.Harmonizar(Pisos3D.Madeira(Packs3D.SemBancas(Adornos3D.Limpar(Caixas3D.SemCaixas(Pilar3D.SemPilares(Chafariz3D.SemChafariz(G)))))));   // bancas do Kenney (Packs3D), piso dos nichos (Pisos3D)   // + deck de madeira da banca do B (Pisos3D)   // pilares também (Kenney, Pilar3D)
+            var GM = Pisos3D.Harmonizar(Pisos3D.Madeira(Packs3D.SemPocos(Packs3D.SemBancas(Adornos3D.Limpar(Caixas3D.SemCaixas(Pilar3D.SemPilares(Chafariz3D.SemChafariz(G))))))));   // bancas do Kenney (Packs3D), piso dos nichos (Pisos3D)   // + deck de madeira da banca do B (Pisos3D)   // pilares também (Kenney, Pilar3D)
             var ps = MalhaMapa.Gerar(GM, SigmaTeste > 0 ? SigmaTeste : arredondado, 100, linear);
             matMapa.SetTexture("_Topo", MalhaMapa.Topo(GM, linear)); matMapa.SetFloat("_UsarTopo", 1); matMapa.SetFloat("_Esc", MalhaMapa.ESC);
             matMapa.SetTexture("_Escada", MalhaMapa.Escada(linear));   // degraus desenhados na rampa lisa da escada (Maquete.shader)

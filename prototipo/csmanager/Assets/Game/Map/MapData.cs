@@ -155,6 +155,37 @@ namespace CSM.Map
             return true;
         }
 
+        /* bx: a TELA arredonda as quinas vivas das paredes (MalhaMapa: surface nets com borrão, ~1-1,5 de raio): a célula da
+           quina convexa (parede com um vizinho livre na horizontal E um na vertical) não aparece na tela. LosWalkTela é o
+           LosWalk que ignora essas células (o que o jogador vê na transmissão). */
+        static readonly Lazy<bool[,]> quinaComida = new Lazy<bool[,]>(() =>
+        {
+            var q = new bool[NX, NY];
+            bool Livre(int x, int y) => InMap(x, y) && walk[x, y];
+            for (int x = 0; x < NX; x++)
+                for (int y = 0; y < NY; y++)
+                    if (!walk[x, y] && (Livre(x - 1, y) || Livre(x + 1, y)) && (Livre(x, y - 1) || Livre(x, y + 1))) q[x, y] = true;
+            return q;
+        });
+        public static bool QuinaComida(int x, int y) => quinaComida.Value[x, y];
+        public static bool LosWalkTela(V2 a, float zA, V2 b, float zB, float eye)
+        {
+            V2 d = b - a; float L = d.Len;
+            if (L < 1e-3f) return true;
+            int n = (int)L + 2; float ea = zA + eye, eb = zB + eye; var qc = quinaComida.Value;
+            for (int i = 1; i < n - 1; i++)
+            {
+                float t = i / (float)(n - 1);
+                int x = (int)MathF.Floor(a.x + d.x * t), y = (int)MathF.Floor(a.y + d.y * t);
+                if (!InMap(x, y)) return false;
+                if (!walk[x, y]) { if (qc[x, y]) continue; return false; }
+                float h = ea + (eb - ea) * t;
+                if (floor[x, y] + coverH[x, y] > h) return false;
+                if (floor[x, y] > GZ + 1 && !stair[x, y] && fmat[x, y] != Floor.Cart && h < floor[x, y] + 8) return false;
+            }
+            return true;
+        }
+
         /// <summary>Até onde o olho enxerga numa direção (na altura do olho, chão reto), de 2 em 2 unidades.</summary>
         public static float Raio(V2 a, float zA, V2 dir, float max, float eye)
         {

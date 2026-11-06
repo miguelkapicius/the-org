@@ -275,6 +275,80 @@ namespace CSM.View
 
         static float Ease(float x) { x = Math.Clamp(x, 0, 1); return 1 - (1 - x) * (1 - x); }
 
+        // ------------------------------------------------------------- a smoke QUE A TELA DESENHA (pra Sim ver igual)
+        // O Fumaca3D soma as bolotas como esferas macias numa grade igual a esta (mesmo canto, mesma célula) e o shader
+        // tira a densidade dela. As células (Sample) dão um domo de raio ~34; as esferas passam ~15 além. Estas contas
+        // são as mesmas do Fumaca3D.Atualizar/Esfera e do FumDens (média do ruído): mudou lá, muda aqui.
+        public const float VIS_RAIO = 1.4f, VIS_ESCALA = 1.05f;
+        float[] vis, visForca; float visAge = -9;
+
+        /// <summary>Remonta o campo das esferas (só quando a smoke está mudando: crescendo/voando ou se desfazendo).</summary>
+        void VisAtualiza(float t)
+        {
+            bool mudando = age < GROW + 0.8f || age > LIFE - FADE - 0.1f;
+            if (vis != null && (!mudando ? visAge >= GROW + 0.8f : age - visAge < 0.1f)) return;
+            visAge = age;
+            if (vis == null) { vis = new float[nx * ny * nz]; visForca = new float[puffs.Count]; } else Array.Clear(vis, 0, vis.Length);
+            var centro = new V3(origin.x, origin.y, origin.z + 4);
+            float mnx = x0 * C, mny = y0 * C, mnz = z0 * C;
+            for (int k = 0; k < puffs.Count; k++)
+            {
+                var p = puffs[k];
+                float r = PuffR(p, t); if (r <= 0.3f) continue;
+                var c = PuffC(p, t);
+                float d = Sample(c, t);
+                float a = Math.Clamp((d - 0.02f) / 0.14f, 0, 1); a = a * a * (3 - 2 * a);
+                float voo = Math.Clamp((age - p.t0 * 0.6f) / 0.7f, 0, 1);
+                if (voo < 1) a = Math.Max(a, 0.85f * Math.Clamp(r / p.r, 0, 1));
+                visForca[k] = Math.Max(visForca[k], a);
+                float f = visForca[k]; if (f < 0.02f) continue;
+                V3 q = centro + (c - centro) * VIS_ESCALA;
+                float fr = p.ph * 0.37f; fr -= MathF.Floor(fr);
+                float R = r * VIS_RAIO * (0.7f + 0.7f * fr), inv = 1 / R, R2 = R * R;
+                float px = q.x - mnx, py = q.y - mny, pz = q.z - mnz;
+                int xa = Math.Max(0, (int)MathF.Floor((px - R) / C)), xb = Math.Min(nx - 1, (int)MathF.Floor((px + R) / C));
+                int ya = Math.Max(0, (int)MathF.Floor((py - R) / C)), yb = Math.Min(ny - 1, (int)MathF.Floor((py + R) / C));
+                int za = Math.Max(0, (int)MathF.Floor((pz - R) / C)), zb = Math.Min(nz - 1, (int)MathF.Floor((pz + R) / C));
+                for (int z = za; z <= zb; z++)
+                {
+                    float dz = (z + 0.5f) * C - pz;
+                    for (int y = ya; y <= yb; y++)
+                    {
+                        float dy = (y + 0.5f) * C - py, dyz = dy * dy + dz * dz; if (dyz >= R2) continue;
+                        for (int x = xa; x <= xb; x++)
+                        {
+                            float dx = (x + 0.5f) * C - px, d2 = dx * dx + dyz; if (d2 >= R2) continue;
+                            float v = f * Math.Clamp((1 - MathF.Sqrt(d2) * inv) / 0.45f, 0, 1);
+                            int i = Idx(x, y, z); if (v > vis[i]) vis[i] = v;
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Densidade que a TELA mostra (0..1) no ponto: campo das esferas (trilinear como a textura), furo de tiro e bolha
+        /// da HE desta Sim, e a curva do FumDens com o ruído na média (fica visível a partir de ~0,26 do campo).
+        /// </summary>
+        public float SampleVis(V3 p, float t)
+        {
+            VisAtualiza(t);
+            float fx = p.x / C - x0 - 0.5f, fy = p.y / C - y0 - 0.5f, fz = p.z / C - z0 - 0.5f;
+            int ix = (int)MathF.Floor(fx), iy = (int)MathF.Floor(fy), iz = (int)MathF.Floor(fz);
+            if (ix < 0 || iy < 0 || iz < 0 || ix >= nx - 1 || iy >= ny - 1 || iz >= nz - 1) return 0;
+            float ax = fx - ix, ay = fy - iy, az = fz - iz, b = 0, aberto = 0;
+            for (int c = 0; c < 8; c++)
+            {
+                int i = Idx(ix + (c & 1), iy + ((c >> 1) & 1), iz + ((c >> 2) & 1));
+                float w = ((c & 1) != 0 ? ax : 1 - ax) * (((c >> 1) & 1) != 0 ? ay : 1 - ay) * (((c >> 2) & 1) != 0 ? az : 1 - az);
+                b += w * vis[i]; aberto += w * Math.Min(1f, Math.Max(clear[i], tiro[i]));
+            }
+            if (b < 0.02f) return 0;
+            float d = b * (1 - aberto);
+            d -= 0.25f * (1 - Math.Clamp(d * 1.15f, 0, 1));   // ruído fino do shader, na média
+            return Math.Clamp((d - 0.26f) / 0.42f, 0, 1);
+        }
+
         /// <summary>Caixa no mundo (pra cortar o raio).</summary>
         public (V3 mn, V3 mx) Bounds => (new V3(x0 * C, y0 * C, z0 * C), new V3((x0 + nx) * C, (y0 + ny) * C, (z0 + nz) * C));
     }
@@ -287,6 +361,9 @@ namespace CSM.View
     {
         public const int C = 4, CELLS = 170;   // ~raio 30 em área aberta (num corredor vai mais longe)
         public const float SPREAD = 0.5f, LIFE = 7f;
+        /// <summary>O fogo que a TELA desenha (Efeitos3D.Fogos): chama sai do centro da célula ±VIS_SPREAD e tem raio até VIS_RAIO_CHAMA —
+        /// passa ~1,75 da borda da célula. A Sim (padrão; bxFogoCorpoVelho volta) queima quem encosta o corpo nisso: mudou lá, muda aqui.</summary>
+        public const float VIS_SPREAD = 1.75f, VIS_RAIO_CHAMA = 2f;
         public readonly V3 origin; public float age;
         public readonly List<(int x, int y, int z, int order, float phase)> cells = new List<(int, int, int, int, float)>();
 

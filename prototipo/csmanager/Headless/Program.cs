@@ -82,9 +82,10 @@ namespace CSM.Headless
             Parallel.For(0, n, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
             {
                 var evs = new System.Collections.Generic.Dictionary<string, int>();
-                var p = new Partida(seed0 + i); p.Jogar(m => { foreach (var k in m.ev) if (k.Key.Contains("lembrado") || k.Key.Contains("queimado") || k.Key.StartsWith("FIM") || k.Key.StartsWith("PLANT") || k.Key.Contains("guardou")) { evs.TryGetValue(k.Key, out int v); evs[k.Key] = v + k.Value; }
+                var calls = new System.Collections.Generic.List<(char site, string tipo, int idx, int ctA, int ctB, int ctIdx, char foi)>();
+                var p = new Partida(seed0 + i); p.Jogar(m => { { var et = m.igl[0].Estr; var ec = m.igl[1].Estr; int nA = 0, nB = 0; if (ec != null) for (int k = 0; k < 5; k++) { var z = ec.ZonaEntre(k, 15, 25); if (z == "A") nA++; else if (z == "B") nB++; } calls.Add((et?.site ?? '?', et?.Tipo ?? m.igl[0].plan, et?.idx ?? -1, nA, nB, ec?.idx ?? -1, m.bombPlanted ? m.planSite : '-')); } foreach (var k in m.ev) if (k.Key.Contains("lembrado") || k.Key.Contains("queimado") || k.Key.StartsWith("FIM") || k.Key.StartsWith("PLANT") || k.Key.Contains("guardou")) { evs.TryGetValue(k.Key, out int v); evs[k.Key] = v + k.Value; }
                     void Soma(string c, int x) { evs.TryGetValue(c, out int v); evs[c] = v + x; }   // sinais do visual: compras no freeze e clique seco
-                    Soma("SINAL rounds", 1); foreach (var dr in m.drops) if (dr.para != null && dr.de != null && dr.de.team == dr.para.team && dr.t < 15) Soma("ECO drop da compra que ninguém pegou", 1); foreach (var dr in m.drops) if (dr.t < 20 && !WeaponStats.Pistola(dr.gun) && ((dr.pos - CSM.Map.MapData.SPAWN_T[2]).Len < 320 || (dr.pos - CSM.Map.MapData.SPAWN_CT[2]).Len < 320)) Soma("ECO arma primária esquecida na base (" + (dr.para != null ? "drop pra alguém" : dr.de != null ? "largada por " + dr.de.brain.order.name.Split(':')[0] : "sem dono") + ")", 1); Soma("SINAL compras", m.compras.Count); Soma("SINAL cliques secos", m.cliques.Count);
+                    Soma("SINAL rounds", 1); foreach (var dr in m.drops) if (dr.para != null && dr.de != null && dr.de.team == dr.para.team && dr.t < 15) Soma("ECO drop da compra que ninguém pegou", 1); foreach (var dr in m.drops) if (dr.t < 20 && !WeaponStats.Pistola(dr.gun) && ((dr.pos - CSM.Map.MapData.SPAWN_T[2]).Len < 320 || (dr.pos - CSM.Map.MapData.SPAWN_CT[2]).Len < 320)) Soma("ECO arma primária esquecida na base (" + (dr.para != null ? "drop pra alguém" : dr.de != null ? "largada por " + dr.de.brain.order.name.Split(':')[0] : "sem dono") + ")", 1); Soma("SINAL compras", m.compras.Count); foreach (var cp in m.compras) if (cp.item == "galil" || cp.item == "famas") Soma("COMPRA galil/famas", 1); else if (cp.item == "ak" || cp.item == "m4" || cp.item == "m4s") Soma("COMPRA ak/m4", 1); else if (cp.item == "mp9" || cp.item == "mac10") Soma("COMPRA smg", 1); foreach (var cp in m.compras) { bool tr = cp.quem.IsT; string it = cp.item; if (tr ? it == "famas" || it == "m4" || it == "m4s" || it == "mp9" || it == "fiveseven" : it == "galil" || it == "ak" || it == "mac10" || it == "tec9") Soma("COMPRA DO OUTRO LADO: " + (tr ? "TR " : "CT ") + it, 1); } Soma("SINAL cliques secos", m.cliques.Count);
                     foreach (var g in System.Linq.Enumerable.GroupBy(m.compras, c => c.quem)) { var ts = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select(g, c => c.t)); for (int q = 1; q < ts.Count; q++) if (ts[q] - ts[q - 1] < 0.25f) Soma("SINAL compra colada (<0,25 s)", 1); if (ts.Count > 0 && (ts[0] < -Match.FREEZE || ts[^1] > 0)) Soma("SINAL compra fora do freeze", 1); }
                 });
                 lock (tr)
@@ -110,9 +111,11 @@ namespace CSM.Headless
                         int k = h.n <= 6 ? 0 : h.n <= 12 ? 1 : h.n <= 18 ? 2 : 3; trecho[k, 0]++; if (h.timeAvenceu) trecho[k, 1]++;
                     }
                     for (int k = 0; k < 4; k++) for (int c = 0; c < 2; c++) rep[k, c] += p.A.leitura.repete[k, c] + p.B.leitura.repete[k, c];
+                    IglVariedade(p, calls);
                 }
             });
             var sb = new StringBuilder();
+            sb.Append(IglTexto());
             sb.AppendLine($"{n} partidas, {rs} rounds, {sw.Elapsed.TotalMinutes:0.0} min. A [{modoA}] x B [{modoB}]");
             sb.AppendLine($"A ganhou {100f * vA / n:0.0}% das partidas; TR ganhou {100f * winsT / roundsT:0.0}% dos rounds");
             for (int t = 0; t < 2; t++) { var D = Partida.Diag; float r = Math.Max(1, D[t, 0]); sb.AppendLine($"  compra cheia {(t == 0 ? "TR" : "CT")}: {D[t, 0]} rounds, AWP com o AWPer {100 * D[t, 1] / r:0}%, primária {D[t, 2] / r:0.0}/5, capacete {D[t, 3] / r:0.0}/5, granadas {D[t, 4] / r:0.0}, kits {D[t, 5] / r:0.0}"); }
@@ -127,6 +130,61 @@ namespace CSM.Headless
             return 0;
         }
 
+        /* bx: variedade das calls do IGL por partida (repetição seguida, quanto domina uma call, adaptação ao CT) */
+        static readonly System.Collections.Generic.SortedDictionary<string, double> iglV = new System.Collections.Generic.SortedDictionary<string, double>();
+        static void IV(string k, double x) { iglV.TryGetValue(k, out double v); iglV[k] = v + x; }
+        static double G(string k) => iglV.TryGetValue(k, out double v) ? v : 0;
+        static void IglVariedade(Partida p, System.Collections.Generic.List<(char site, string tipo, int idx, int ctA, int ctB, int ctIdx, char foi)> calls)
+        {
+            int n = Math.Min(calls.Count, p.historico.Count);
+            for (int lado = 0; lado < 2; lado++)
+            {   /* cada time de TR (A e B), na ordem dos rounds dele */
+                var seq = new System.Collections.Generic.List<int>();
+                for (int r = 0; r < n; r++) if ((p.historico[r].ladoA == "TR") == (lado == 0)) seq.Add(r);
+                if (seq.Count < 4) continue;
+                var cont = new System.Collections.Generic.Dictionary<string, int>(); var contS = new System.Collections.Generic.Dictionary<char, int>();
+                int repC = 0, repS = 0, pares = 0, streak = 1, maxStreak = 1, ctRep = 0, ctPar = 0;
+                for (int j = 0; j < seq.Count; j++)
+                {
+                    var c = calls[seq[j]]; string call = c.site + " " + c.tipo;
+                    cont.TryGetValue(call, out int v); cont[call] = v + 1; contS.TryGetValue(c.site, out int vs); contS[c.site] = vs + 1;
+                    IV("TR call · " + call, 1); IV("TR rounds", 1);
+                    if (j == 0) continue;
+                    var a = calls[seq[j - 1]]; var ha = p.historico[seq[j - 1]]; pares++;
+                    bool tGanhouAnt = (ha.ladoA == "TR") == ha.timeAvenceu;
+                    if (call == a.site + " " + a.tipo) repC++;
+                    if (c.site == a.site) { repS++; streak++; maxStreak = Math.Max(maxStreak, streak); } else streak = 1;
+                    IV("TR depois de " + (tGanhouAnt ? "ganhar" : "perder") + " · rounds", 1);
+                    if (c.site == a.site) IV("TR depois de " + (tGanhouAnt ? "ganhar" : "perder") + " · mesmo bomb", 1);
+                    /* adaptação: o CT do round anterior (planejado aos 15-25 s) tinha menos gente em qual bomb? */
+                    if (a.ctA != a.ctB) { char fraco = a.ctA < a.ctB ? 'A' : 'B'; IV("TR adapta · rounds com CT desigual antes", 1); if (c.site == fraco) IV("TR adapta · foi no bomb mais vazio do CT anterior", 1); }
+                    if (c.ctIdx >= 0 && a.ctIdx >= 0) { ctPar++; if (c.ctIdx == a.ctIdx) ctRep++; }
+                    /* CT lendo o TR: o CT deste round pôs mais gente no bomb onde o TR foi no round anterior? */
+                    if (c.ctA != c.ctB && (a.site == 'A' || a.site == 'B')) { IV("CT adapta · rounds", 1); if ((c.ctA > c.ctB ? 'A' : 'B') == a.site) IV("CT adapta · encheu o bomb do TR anterior", 1); }
+                }
+                double esp = 0; foreach (var kv in cont) esp += (double)kv.Value * kv.Value / ((double)seq.Count * seq.Count);
+                double espS = 0; foreach (var kv in contS) espS += (double)kv.Value * kv.Value / ((double)seq.Count * seq.Count);
+                int mx = 0; foreach (var kv in cont) mx = Math.Max(mx, kv.Value);
+                contS.TryGetValue('A', out int sa); contS.TryGetValue('B', out int sbb);
+                IV("metade · n", 1); IV("metade · rounds", seq.Count); IV("metade · calls diferentes", cont.Count);
+                IV("metade · % da call mais usada", 100.0 * mx / seq.Count);
+                IV("metade · repetiu a call seguida %", pares > 0 ? 100.0 * repC / pares : 0); IV("metade · repetição esperada da call (sorteio) %", 100 * esp);
+                IV("metade · mesmo bomb seguido %", pares > 0 ? 100.0 * repS / pares : 0); IV("metade · mesmo bomb esperado (sorteio) %", 100 * espS);
+                IV("metade · maior sequência no mesmo bomb", maxStreak); IV("metade · % no bomb mais usado", 100.0 * Math.Max(sa, sbb) / seq.Count);
+                IV("metade · CT repetiu o setup seguido %", ctPar > 0 ? 100.0 * ctRep / ctPar : 0);
+            }
+        }
+        static string IglTexto()
+        {
+            var sb = new StringBuilder("IGL: VARIEDADE DAS CALLS (por metade de TR = um time atacando)\n");
+            double nm = Math.Max(1, G("metade · n")), tr = Math.Max(1, G("TR rounds"));
+            foreach (var kv in iglV) if (kv.Key.StartsWith("metade ·") && kv.Key != "metade · n") sb.AppendLine($"  {kv.Key,-52} {kv.Value / nm:0.0}");
+            foreach (var g in new[] { "ganhar", "perder" }) { double r = G($"TR depois de {g} · rounds"); if (r > 0) sb.AppendLine($"  TR depois de {g}: mesmo bomb {100 * G($"TR depois de {g} · mesmo bomb") / r:0.0}% de {r:0}"); }
+            { double r = G("TR adapta · rounds com CT desigual antes"); if (r > 0) sb.AppendLine($"  TR foi no bomb mais vazio do CT do round anterior: {100 * G("TR adapta · foi no bomb mais vazio do CT anterior") / r:0.0}% de {r:0}"); }
+            { double r = G("CT adapta · rounds"); if (r > 0) sb.AppendLine($"  CT encheu o bomb onde o TR foi no round anterior: {100 * G("CT adapta · encheu o bomb do TR anterior") / r:0.0}% de {r:0}"); }
+            foreach (var kv in iglV) if (kv.Key.StartsWith("TR call ·")) sb.AppendLine($"  {kv.Key,-40} {100 * kv.Value / tr:0.0}%");
+            return sb.ToString();
+        }
         static string Exemplos()
         {
             var sb = new StringBuilder("\nEXEMPLOS DE SUSPEITA (semente do round avulso)\n");
@@ -146,6 +204,28 @@ namespace CSM.Headless
             if (Array.IndexOf(a, "-soExplicar") >= 0) Brain.Explicar = true;   // teste: só os porquês
             var ini = Stopwatch.StartNew();
             new Match(seed0); Spots.All();
+            if (Array.IndexOf(a, "-medirSmoke") >= 0)
+            {   // raio da smoke na altura do olho: células da Sim (Sample > 0,35) × o que a tela mostra (SampleVis > 0,3)
+                foreach (var o in new[] { Places.PlantA, Places.PlantB, Places.Cell(20, 10) })
+                {
+                    var sv = new CSM.View.SmokeVolume(new CSM.View.V3(o.x, o.y, NavGrid.ZAt(o)));
+                    for (float tt = 0; tt < 4; tt += 0.05f) sv.Update(0.05f);
+                    float z = NavGrid.ZAt(o) + 18; var sb = new StringBuilder();
+                    for (int k = 0; k < 8; k++)
+                    {
+                        float ang = k * MathF.PI / 4, r1 = 0, r2 = 0;
+                        for (float rr = 0; rr < 90; rr += 1)
+                        {
+                            var q = new CSM.View.V3(o.x + MathF.Cos(ang) * rr, o.y + MathF.Sin(ang) * rr, z);
+                            if (sv.Sample(q, 4) > 0.35f) r1 = rr;
+                            if (sv.SampleVis(q, 4) > 0.3f) r2 = rr;
+                        }
+                        sb.Append($" {r1:0}/{r2:0}");
+                    }
+                    Console.WriteLine($"smoke em {o.x:0},{o.y:0} — raio por direção (células/tela):{sb}");
+                }
+                return 0;
+            }
             if (Array.IndexOf(a, "-aquecer") >= 0) Console.WriteLine(Match.Aquecer());
             Console.WriteLine($"mapa pronto em {ini.Elapsed.TotalSeconds:0.0} s (marcos do A* {NavGrid.msMarcos:0} ms)");
             if (Array.IndexOf(a, "-zmapa") >= 0)
@@ -299,6 +379,46 @@ namespace CSM.Headless
                     for (float x = 30f; x <= 38.5f; x += 0.25f) { var p = new V2(x * MapData.Q, y * MapData.Q); sb.Append(!NavGrid.Movable(p) ? ' ' : MapData.LosWalk(p, NavGrid.ZAt(p), h, NavGrid.ZAt(h), 18f) ? '#' : '.'); }
                     Console.WriteLine(sb);
                 }
+            }
+            if (Array.IndexOf(a, "-visao") >= 0)
+            {   /* bx: validador da visão — o raio único da Sim (olho → olho do alvo, alvo = ponto) contra raios em vários pontos do
+                   corpo (cabeça dos lados, ombros, peito, quadril, pés) na mesma geometria do MapData. Conta, entre os pares em que
+                   ALGUMA parte do corpo aparece, quantos a Sim diz "não vê" e qual parte aparecia; e os lugares onde mais acontece. */
+                int np = int.Parse(Arg(a, "-pares", "200000")); var rnd = new Random(seed0);
+                float olho = float.Parse(Arg(a, "-olho", "18"), System.Globalization.CultureInfo.InvariantCulture);
+                var cont = new System.Collections.Generic.SortedDictionary<string, int>(); var lugar = new System.Collections.Generic.Dictionary<string, int>();
+                void C(string k) { cont.TryGetValue(k, out int v); cont[k] = v + 1; }
+                (string nome, float h, float lado)[] PARTES = { ("cabeça", 21, 0), ("cabeça (lado)", 21, 2.5f), ("olho", 18, 0), ("ombro", 15, 3.5f), ("peito", 12, 0), ("peito (lado)", 12, 3.5f), ("quadril", 8, 3), ("pé", 2, 2) };
+                int vFeitos = 0, algo = 0, simNao = 0;
+                for (int k = 0; k < np * 20 && vFeitos < np; k++)
+                {
+                    var pa = new V2((float)rnd.NextDouble() * MapData.NX, (float)rnd.NextDouble() * MapData.NY);
+                    var pb = pa + V2.Ang((float)rnd.NextDouble() * 6.2832f) * (40 + (float)rnd.NextDouble() * 1100);
+                    if (!MapData.InMap((int)pb.x, (int)pb.y) || !NavGrid.Movable(pa) || !NavGrid.Movable(pb)) continue;
+                    vFeitos++;
+                    float za = NavGrid.ZAt(pa), zb = NavGrid.ZAt(pb);
+                    V2 d = pb - pa; float dl = d.Len; V2 lat = new V2(-d.y / dl, d.x / dl);
+                    bool centro = MapData.LosWalk(pa, za + olho - 18f, pb, zb + 18f - 18f, 18f);   /* = Brain.CanSee */
+                    string viu = null;
+                    foreach (var (nome, h, ld) in PARTES)
+                    {
+                        foreach (float s in ld == 0 ? new[] { 0f } : new[] { ld, -ld })
+                            if (MapData.LosWalk(pa, za + olho, pb + lat * s, zb + h, 0f)) { viu = nome; break; }
+                        if (viu != null) break;
+                    }
+                    if (viu == null && !centro && MapData.LosWalkTela(pa, za + olho - 18f, pb, zb, 18f)) viu = "quina arredondada da tela";
+                    if (viu == null && !centro) continue;
+                    algo++;
+                    string faixa = dl < 300 ? "a <300" : dl < 700 ? "b 300-700" : "c 700+";
+                    if (centro) { C("vê pelo raio da Sim · " + faixa); continue; }
+                    simNao++; C("Sim NÃO vê, aparecia: " + viu); C("Sim NÃO vê · " + faixa);
+                    string lg = MapData.Callout(pa) + " → " + MapData.Callout(pb); lugar.TryGetValue(lg, out int lv); lugar[lg] = lv + 1;
+                }
+                Console.WriteLine($"VISÃO (olho {olho}): {vFeitos} pares, algo do corpo visível em {algo}; a Sim não vê {simNao} = {100f * simNao / Math.Max(1, algo):0.0}%");
+                foreach (var kv in cont) Console.WriteLine($"  {kv.Key,-44} {kv.Value,7}  {100f * kv.Value / Math.Max(1, algo):0.0}%");
+                Console.WriteLine("  piores lugares (observador → alvo):");
+                foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(lugar, x => x.Value), 15)) Console.WriteLine($"    {kv.Key,-50} {kv.Value}");
+                return 0;
             }
             if (Array.IndexOf(a, "-tempos") >= 0)
             {
@@ -510,7 +630,7 @@ namespace CSM.Headless
                 Console.WriteLine($"  por parte (ms por passo): total {totT / tot:0.000}");
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(Match.Tempos, q => q.Value), 22)) Console.WriteLine($"    {kv.Value / tot,7:0.000}  {kv.Key}");
                 foreach (var kv in System.Linq.Enumerable.OrderByDescending(Brain.Perfil, q => q.Value)) Console.WriteLine($"    {kv.Value * 1000.0 / System.Diagnostics.Stopwatch.Frequency / tot,7:0.000}  (dentro do cérebro) {kv.Key}");
-                Console.WriteLine($"    NavGrid: campos inteiros {NavGrid.nCampo} ({NavGrid.msCampo / Math.Max(1, NavGrid.nCampo):0.0} ms cada, {NavGrid.msCampo / tot:0.000} ms/passo) · A* {NavGrid.nAEstrela} ({NavGrid.msAEstrela / Math.Max(1, NavGrid.nAEstrela):0.00} ms cada, {NavGrid.msAEstrela / tot:0.000} ms/passo, {NavGrid.NosAEstrela / Math.Max(1, NavGrid.nAEstrela)} células cada, {NavGrid.NosAEstrela / Math.Max(0.001, NavGrid.msAEstrela):0} células/ms) · estimativas no lugar de A* (orçamento estourado) {NavGrid.Negados} · respondidas pela busca da origem {NavGrid.DaOrigemRespondeu} · A* que passaram do teto (pixel) {NavGrid.Desistiu}");
+                Console.WriteLine($"    NavGrid: memória de campos {NavGrid.memoAcertos} acertos / {NavGrid.memoErros} contas"); Console.WriteLine($"    NavGrid: campos inteiros {NavGrid.nCampo} ({NavGrid.msCampo / Math.Max(1, NavGrid.nCampo):0.0} ms cada, {NavGrid.msCampo / tot:0.000} ms/passo) · A* {NavGrid.nAEstrela} ({NavGrid.msAEstrela / Math.Max(1, NavGrid.nAEstrela):0.00} ms cada, {NavGrid.msAEstrela / tot:0.000} ms/passo, {NavGrid.NosAEstrela / Math.Max(1, NavGrid.nAEstrela)} células cada, {NavGrid.NosAEstrela / Math.Max(0.001, NavGrid.msAEstrela):0} células/ms) · estimativas no lugar de A* (orçamento estourado) {NavGrid.Negados} · respondidas pela busca da origem {NavGrid.DaOrigemRespondeu} · A* que passaram do teto (pixel) {NavGrid.Desistiu}");
                 Console.WriteLine($"  1º passo do round ({iniN} rounds), ms por round:");
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(iniT, q => q.Value), 25)) Console.WriteLine($"    {kv.Value / Math.Max(1, iniN),8:0.00}  {kv.Key}");
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(iniP, q => q.Value), 15)) Console.WriteLine($"    {kv.Value * 1000.0 / System.Diagnostics.Stopwatch.Frequency / Math.Max(1, iniN),8:0.00}  (dentro do cérebro) {kv.Key}");
