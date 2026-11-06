@@ -1331,7 +1331,9 @@ namespace CSM.Sim
             if (Match.Auditar && d <= 420 && killer != null) m.Aud("troca: colega a até 420 — por que não foi", me.guardando ? "guardando a arma" : action != null ? "em ação (" + action + ")" : target != null ? "já em combate" : "avaliou");
             if (Match.Auditar && d <= 420 && killer != null && target != null)   /* bx: em combate com quem? (visão do corpo: mais duelos ao mesmo tempo) */
                 m.Aud("troca: já em combate com", (target == killer ? "o matador" : "outro") + (parcial[target.id] ? " · só um pedaço" : " · corpo todo") + ((target.pos - me.pos).Len < 300 ? " · <300" : " · 300+"));
-            if (d > 420 || killer == null || me.guardando || action != null) { if (d < 260) Think($"{dead.name} caiu perto — segurando"); return; }
+            // entrosamento (decisão 0019): o time entrosado vai trocar de mais longe (340 a 500; 420 em 0,5, como antes)
+            float alcanceTroca = 340f + 160f * MathX.Clamp(me.skill.entrosamento, 0, 1);
+            if (d > alcanceTroca || killer == null || me.guardando || action != null) { if (d < 260) Think($"{dead.name} caiu perto — segurando"); return; }
             // troca (refrag): quem está perto vai em cima de quem matou — o suporte/entry quase sempre, quem segura
             // posição às vezes (depende do jeito dele e de quanto a posição importa); o AWP raramente sai do ângulo
             bool trader = me.role == Role.Suporte || me.role == Role.Entry || me.role == Role.Igl || me.role == Role.Rotacao;
@@ -1339,7 +1341,9 @@ namespace CSM.Sim
             // pro troca quase sempre quem está do lado: o matador acabou de atirar (mira no colega morto, às vezes
             // recarregando) — é a hora de abrir. Quem segura posição chave (AWP, âncora) troca menos
             float p = (trader ? 1f : tv ? 0.65f : 0.8f) * (order.hold == null ? 1f : tv ? 0.8f : 0.9f) * (me.gunId == "awp" ? 0.35f : 1f) * (0.7f + 0.5f * P.Agr(me.skill.aggression)) * (d < 180 ? (tv ? 1.15f : 1.3f) : 0.85f);
-            p *= 0.8f + 0.4f * MathX.Clamp(me.skill.entrosamento, 0, 1);   // entrosamento (decisão 0019): 0,5 = como antes
+            // entrosamento (decisão 0019): limita a 100% ANTES (para quem troca sempre a chance já passava de 1 e o multiplicador
+            // não mudava nada) e multiplica de 0,6 (0) a 1,4 (1); em 0,5 fica igual a antes
+            p = MathF.Min(p, 1f) * (0.6f + 0.8f * MathX.Clamp(me.skill.entrosamento, 0, 1));
             // trocar correndo pra dentro de 2+ inimigos é morrer junto: aí segura o ângulo e espera ele aparecer
             float espM = m.intel[(int)me.team].Esperados(matador, 300);
             if (tv ? espM >= 2f : espM >= 2.5f) p *= tv ? 0.3f : 0.45f;
