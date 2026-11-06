@@ -379,6 +379,8 @@ namespace CSM.Sim
             for (int i = 0; i < cands.Count; i++)
             {
                 var p = cands[i]; float f = (EXP.Contains("forcaIgual") ? 1f : Estrategias.Forca(p.idx)) * (p.ganhou ? 1.15f : 0.9f);
+                // estilo escolhido pelo manager (decisão 0014): prefere os planos daquele estilo, sem proibir os outros
+                if (P.categoria != Estrategias.Categoria.Equilibrada && p.categoria == P.categoria && !EXP.Contains("semEstiloBanco")) f *= Estrategias.PREFERENCIA_ESTILO;
                 if (L != null)
                 {
                     if (L.bancoUsados.Contains(p.idx)) f *= 0.25f;

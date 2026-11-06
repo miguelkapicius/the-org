@@ -66,7 +66,9 @@ namespace CSM.Sim
                 if (h < float.MaxValue) return MathX.Clamp(h - 4, 3, 80);
                 return plant > 0 ? MathX.Clamp(plant - 12, 3, 80) : MathF.Min(padrao, 72);
             }
-            public string Nome => $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo})";
+            /// <summary>Estilo de jogo do plano (decisão 0014), calculado dos dados em <see cref="Classificar"/>.</summary>
+            public Categoria categoria;
+            public string Nome => $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo}, {categoria})";
             public string Tipo => !tr ? "setup" : comprometeu >= 0 && comprometeu < 25 ? "rush" : comprometeu >= 0 && comprometeu < 50 ? "execução" : "default";
         }
 
@@ -101,7 +103,95 @@ namespace CSM.Sim
                 for (int k = 0; k < 5; k++) if (p.js[k] == null) p.js[k] = new Jogador { passos = new Passo[0] };
                 l.Add(p);
             }
+            Classificar(l);
             todos = l;
+        }
+
+        // ---------------------------------------------------------------- estilos de jogo
+        /// <summary>
+        /// Os 5 estilos que o manager escolhe (decisão 0014; mesma ordem do Estilo do manager). Cada plano do banco cai em um
+        /// deles; o IGL prefere os do estilo do time (<see cref="PREFERENCIA_ESTILO"/>). Equilibrada = sem preferência.
+        /// </summary>
+        public enum Categoria { Equilibrada = 0, Agressiva = 1, Defensiva = 2, ExecucoesRapidas = 3, ControleDeMapa = 4 }
+
+        /// <summary>Quanto um plano do estilo escolhido pesa a mais na escolha do IGL. Provisório: medir com a simulação.</summary>
+        public const float PREFERENCIA_ESTILO = 6f;
+        /// <summary>Nota mínima (em desvios-padrão) para o plano ganhar um estilo; abaixo disso fica Equilibrada.</summary>
+        const float NOTA_MINIMA = 0.6f;
+
+        // Áreas medidas nos próprios dados (presença de cada lado nos primeiros 25 s): do lado do TR (o CT só pisa nelas se
+        // avançar), disputadas (os dois lados chegam cedo), do meio e onde o CT segura os bombs. Valem para a Vila.
+        static readonly HashSet<string> LADO_TR = new HashSet<string> { "Casarao_corredor", "Rato", "Palacio_sala", "Rampa_baixo", "Topo_meio", "Hall_palacio", "Casarao", "Rua_B", "Topo_entrada" };
+        static readonly HashSet<string> DISPUTADAS = new HashSet<string> { "Meio", "Rato", "Casarao_corredor", "Palacio_sala", "Curta_sobe" };
+        static readonly HashSet<string> MEIO = new HashSet<string> { "Meio", "Janelao", "Rato", "Topo_meio", "Esc_rato" };
+        static readonly HashSet<string> SEGURAR_CT = new HashSet<string> { "A", "B", "CT", "Conector_fim", "Viela", "Mercado", "Esc_plataforma", "Sacada_A", "Conector" };
+        static readonly HashSet<string> ZONA_A = new HashSet<string> { "A", "Esc_plataforma", "Rampa_baixo", "Hall_palacio", "Palacio_sala", "Sacada_A", "Conector", "Conector_fim" };
+        static readonly HashSet<string> ZONA_B = new HashSet<string> { "B", "Curta_sobe", "Mercado", "Viela", "Rua_B", "Casarao", "Casarao_corredor" };
+
+        /// <summary>
+        /// Põe cada plano num estilo, pelo que o time fez no round pro:
+        ///   TR — Agressiva: muitas mortes nos primeiros 25 s e presença cedo nas áreas disputadas;
+        ///        Defensiva: entra tarde, quase sem contato cedo e sem brigar pelo meio (espera o erro);
+        ///        Execuções rápidas: entra no bomb cedo, sem trocar tiro antes;
+        ///        Controle de mapa: entra tarde depois de passar muito tempo no meio e nas disputadas.
+        ///   CT — Agressiva: avança para o lado do TR e troca tiro cedo; Defensiva: fica nos bombs, sem avançar;
+        ///        Execuções rápidas (no CT, rotação rápida): jogadores que passam de um bomb para o outro antes dos 50 s;
+        ///        Controle de mapa: muito tempo no meio nos primeiros 30 s.
+        /// Cada traço vira nota padronizada (desvios da média do lado); ganha o estilo de maior nota, se passar de NOTA_MINIMA.
+        /// </summary>
+        static void Classificar(List<Plano> l)
+        {
+            foreach (bool tr in new[] { true, false })
+            {
+                var q = l.FindAll(p => p.tr == tr); if (q.Count == 0) continue;
+                float[][] notas;
+                if (tr)
+                {
+                    var h = Z(q, p => p.HoraDeEntrar(72)); var m = Z(q, p => Mortes(p, 25)); var c = Z(q, p => Tempo(p, DISPUTADAS, 0, 20));
+                    var ctl = Z(q, p => { float hh = p.HoraDeEntrar(72); return Tempo(p, DISPUTADAS, 10, MathF.Max(10, hh)) + Tempo(p, MEIO, 10, MathF.Max(10, hh)); });
+                    notas = new float[q.Count][];
+                    for (int i = 0; i < q.Count; i++) notas[i] = new[] { 0, m[i] + c[i], h[i] - m[i] - 0.5f * ctl[i], -h[i] - 0.5f * m[i], ctl[i] + 0.5f * h[i] };
+                }
+                else
+                {
+                    var f = Z(q, p => Tempo(p, LADO_TR, 0, 30)); var m = Z(q, p => Mortes(p, 25)); var s = Z(q, p => Tempo(p, SEGURAR_CT, 0, 40));
+                    var r = Z(q, Rotacoes); var mi = Z(q, p => Tempo(p, MEIO, 0, 30));
+                    notas = new float[q.Count][];
+                    for (int i = 0; i < q.Count; i++) notas[i] = new[] { 0, f[i] + m[i], s[i] - f[i] - m[i], r[i], mi[i] - 0.5f * f[i] };
+                }
+                for (int i = 0; i < q.Count; i++)
+                {
+                    int b = 1; for (int k = 2; k < 5; k++) if (notas[i][k] > notas[i][b]) b = k;
+                    q[i].categoria = notas[i][b] >= NOTA_MINIMA ? (Categoria)b : Categoria.Equilibrada;
+                }
+            }
+        }
+
+        static float[] Z(List<Plano> q, Func<Plano, float> v)
+        {
+            var x = new float[q.Count]; double soma = 0, soma2 = 0;
+            for (int i = 0; i < q.Count; i++) { x[i] = v(q[i]); soma += x[i]; soma2 += (double)x[i] * x[i]; }
+            double media = soma / q.Count, dp = Math.Sqrt(Math.Max(0, soma2 / q.Count - media * media)); if (dp < 1e-6) dp = 1;
+            for (int i = 0; i < q.Count; i++) x[i] = (float)((x[i] - media) / dp);
+            return x;
+        }
+        static float Tempo(Plano p, HashSet<string> areas, float t0, float t1)
+        {
+            float s = 0;
+            foreach (var j in p.js) foreach (var ps in j.passos) if (areas.Contains(ps.area)) s += MathF.Max(0, MathF.Min(ps.ate, t1) - MathF.Max(ps.de, t0));
+            return s;
+        }
+        static float Mortes(Plano p, float t) { int n = 0; foreach (var j in p.js) if (j.morreu > 0 && j.morreu <= t) n++; return n; }
+        static float Rotacoes(Plano p)
+        {
+            int n = 0;
+            foreach (var j in p.js)
+            {
+                bool a = false, b = false;
+                foreach (var ps in j.passos) if (ps.de < 50) { a |= ZONA_A.Contains(ps.area); b |= ZONA_B.Contains(ps.area); }
+                if (a && b) n++;
+            }
+            return n;
         }
 
         // ---------------------------------------------------------------- áreas → posições

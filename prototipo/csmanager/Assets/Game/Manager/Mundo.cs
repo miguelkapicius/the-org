@@ -33,7 +33,7 @@ namespace CSM.Manager
         {
             Estilo.Agressiva => "Pressiona cedo, abre ângulos largos e arrisca duelos. Forte contra quem fica parado; sofre contra defesa organizada.",
             Estilo.Defensiva => "Segura posições, espera o erro e troca de ângulo com calma. Forte contra rush; sofre contra execuções rápidas.",
-            Estilo.ExecucoesRapidas => "Decide o bomb cedo, com execuções rápidas e coordenadas. Forte contra defesa passiva; sofre contra controle de mapa.",
+            Estilo.ExecucoesRapidas => "Decide o bomb cedo, com execuções rápidas e coordenadas; na defesa, roda rápido entre os bombs. Forte contra defesa passiva; sofre contra controle de mapa.",
             Estilo.ControleDeMapa => "Toma espaço aos poucos e só executa tarde, com informação. Forte contra execuções rápidas; sofre contra agressão.",
             _ => "Sem ajustes: o jogo padrão da IA, sem pontos fortes nem fracos contra os outros estilos.",
         };
@@ -65,8 +65,16 @@ namespace CSM.Manager
                 case Estilo.ExecucoesRapidas: p.estilo = 0.2f; p.tExec = 30; p.tExecDefault = 44; p.tFake = 46; break;
                 case Estilo.ControleDeMapa: p.tExec = 52; p.tExecDefault = 70; p.avancar = 0.9f; break;
             }
+            p.categoria = Categoria(e);   // o IGL prefere os planos do banco desse estilo
             return p;
         }
+
+        public static Estrategias.Categoria Categoria(Estilo e) => e switch
+        {
+            Estilo.Agressiva => Estrategias.Categoria.Agressiva, Estilo.Defensiva => Estrategias.Categoria.Defensiva,
+            Estilo.ExecucoesRapidas => Estrategias.Categoria.ExecucoesRapidas, Estilo.ControleDeMapa => Estrategias.Categoria.ControleDeMapa,
+            _ => Estrategias.Categoria.Equilibrada,
+        };
     }
 
     /// <summary>O mundo: times, ranking, circuitos e o calendário de campeonatos da temporada.</summary>

@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -50,6 +50,33 @@ _A definir (de partida e de carreira)._
 ## Treino, cansaço, afinidade de mapa e estratégia (decisões 0013 e 0014)
 
 O que o manager configura vira **habilidade na partida**: o **preparo** do treino soma, o **cansaço** subtrai, a **afinidade** com o mapa jogado soma ou subtrai, e a **estratégia** escolhida ajusta os pesos da IA do time (agressividade, hora de executar, quanto segurar). Assim tudo aparece no que os bots fazem (pilar 3). Números provisórios.
+
+### Estratégia escolhe os planos de round (decisão 0017)
+
+A IA joga cada round seguindo um **plano de round** tirado de um banco de rounds pro. Cada plano é **classificado** em um dos 5 estilos da estratégia, e o IGL **prefere** os planos do estilo que o manager escolheu (sem proibir os outros, para o time não ficar previsível). Equilibrada não tem preferência.
+
+**[Sugestão]** Como cada plano ganha um estilo (pelo que o time fez no round pro; nota em desvios da média do lado, mínimo 0,6, senão fica Equilibrada):
+
+| Estilo | Ataque (TR) | Defesa (CT) |
+|---|---|---|
+| Agressiva | muitas mortes nos primeiros 25 s e presença cedo nas áreas disputadas | avança para o lado do TR e troca tiro cedo |
+| Defensiva | entra tarde, quase sem contato cedo e sem brigar pelo meio | fica nos bombs, sem avançar |
+| Execuções rápidas | entra no bomb cedo, sem trocar tiro antes | **rotação rápida**: jogadores passam de um bomb para o outro antes dos 50 s |
+| Controle de mapa | entra tarde depois de muito tempo no meio e nas áreas disputadas | muito tempo no meio nos primeiros 30 s |
+
+Banco atual (1286 planos): TR 116 agressivos, 102 defensivos, 206 rápidos, 185 de controle, 34 equilibrados; CT 139, 236, 87, 105 e 76.
+
+**Medido** (`Headless -estilos`, 18 partidas por estilo, time A com o estilo contra B Equilibrada, ~400 rounds cada):
+
+| Estilo do time | Rounds TR com plano do estilo (antes → depois) | Plant médio do TR (depois) | Rounds CT com plano do estilo (antes → depois) |
+|---|---|---|---|
+| Equilibrada | — | 64 s | — |
+| Agressiva | 22 % → 55 % | 56 s | 22 % → 63 % |
+| Defensiva | 16 % → 50 % | 69 s | 38 % → 78 % |
+| Execuções rápidas | 37 % → 74 % | 54 s | 10 % → 47 % |
+| Controle de mapa | 29 % → 63 % | 68 s | 10 % → 50 % |
+
+Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos. As vitórias por lado não mudaram além do ruído da amostra. **Ponto a olhar:** o CT agressivo usa mais planos agressivos, mas não morreu mais cedo que o Equilibrado (0,52 contra 0,54 mortes antes dos 25 s); pode ser que o cérebro do bot recue antes de chegar ao avanço do plano.
 
 ## Perguntas em aberto
 
