@@ -43,6 +43,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 ## 5. Para depois
 
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
+- [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "vidro noturno" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 

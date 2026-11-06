@@ -110,6 +110,8 @@ namespace CSM.ManagerUI
             var estilo = Resources.Load<StyleSheet>("ManagerUI/Manager");
             if (estilo != null) tela.styleSheets.Add(estilo);
             else Debug.LogError("Falta Assets/Resources/ManagerUI/Manager.uss: a interface do manager fica sem estilo.");
+            tela.style.backgroundImage = new StyleBackground(Ui.FundoNoite());
+            tela.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
             doc.rootVisualElement.Add(tela);
             tela.focusable = true;
             tela.RegisterCallback<KeyDownEvent>(AoTeclar);
@@ -467,7 +469,7 @@ namespace CSM.ManagerUI
             var hub = E("hub");
             var p = c.Proximo(); bool agora = c.TemJogoAgora;
 
-            // 1) o compromisso: cartão lima com o botão da ação principal
+            // 1) o compromisso: cartão em destaque com o botão da ação principal
             var cm = HubCartao(agora ? "SÉRIE CONTRA " + p.adv.nome.ToUpperInvariant() : p.camp != null ? p.camp.nome.ToUpperInvariant() : "FIM DA TEMPORADA",
                 agora ? p.camp.nome + " · " + Fmt.Serie(p.conf.md) + " · chance de vitória " + Pct(c.ChanceVitoria()) : p.camp != null ? "Começa " + Quando(p.semana, c.Semana) + " (semana " + p.semana + ")" : "O ranking decide o circuito do ano que vem",
                 null, null, true);
@@ -489,9 +491,9 @@ namespace CSM.ManagerUI
             return hub;
         }
 
-        VisualElement HubCartao(string titulo, string sub, int? selo, Action acao, bool lima)
+        VisualElement HubCartao(string titulo, string sub, int? selo, Action acao, bool destaque)
         {
-            var card = E("hub-card"); if (lima) card.AddToClassList("lima");
+            var card = E("hub-card"); if (destaque) card.AddToClassList("destaque");
             card.Add(E("hub-arte"));
             if (selo.HasValue) { var bd = E("hub-selo"); bd.Add(L(selo.Value.ToString())); card.Add(bd); }
             var corpo = E("hub-corpo");

@@ -13,6 +13,44 @@ namespace CSM.ManagerUI
     {
         public static Color Hex(string h) { ColorUtility.TryParseHtmlString("#" + h, out var c); return c; }
 
+        /// <summary>
+        /// Fundo da interface: céu noturno em degradê (azul-noite no alto, brilho índigo e uma faixa quente no horizonte) com
+        /// poucas estrelas. É o que aparece "atrás do vidro" dos painéis translúcidos. Gerado em código (sem imagem no repositório);
+        /// pequeno e com filtro bilinear, a Unity estica para a tela.
+        /// </summary>
+        public static Texture2D FundoNoite()
+        {
+            const int w = 480, h = 270;
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "FundoNoite" };
+            var topo = new Color(0.030f, 0.045f, 0.110f); var meio = new Color(0.045f, 0.060f, 0.150f); var base_ = new Color(0.085f, 0.070f, 0.140f);
+            var px = new Color[w * h];
+            var rng = new System.Random(7);
+            for (int y = 0; y < h; y++)
+            {
+                float v = y / (float)(h - 1);                       // 0 = embaixo, 1 = no alto
+                Color c = v > 0.45f ? Color.Lerp(meio, topo, (v - 0.45f) / 0.55f) : Color.Lerp(base_, meio, v / 0.45f);
+                for (int x = 0; x < w; x++)
+                {
+                    float u = x / (float)(w - 1);
+                    float dx = (u - 0.28f) * 1.6f, dy = v - 0.62f;
+                    float brilho = Mathf.Clamp01(1f - Mathf.Sqrt(dx * dx + dy * dy) / 0.55f);   // mancha índigo atrás do menu
+                    float dx2 = (u - 0.85f) * 1.6f, dy2 = v - 0.25f;
+                    float brilho2 = Mathf.Clamp01(1f - Mathf.Sqrt(dx2 * dx2 + dy2 * dy2) / 0.45f);
+                    Color cc = c + new Color(0.03f, 0.06f, 0.20f) * (brilho * brilho) + new Color(0.07f, 0.04f, 0.16f) * (brilho2 * brilho2);
+                    cc.a = 1f; px[y * w + x] = cc;
+                }
+            }
+            for (int i = 0; i < 28; i++)                            // estrelas (mais no alto)
+            {
+                int x = rng.Next(w), y = (int)(h * (1f - (float)Math.Pow(rng.NextDouble(), 1.8) * 0.8f)) - 1;
+                if (y < 0 || y >= h) continue;
+                float b = 0.15f + (float)rng.NextDouble() * 0.30f;
+                px[y * w + x] = Color.Lerp(px[y * w + x], Color.white, b);
+            }
+            tex.SetPixels(px); tex.Apply(false, false); tex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+            return tex;
+        }
+
         /// <summary>Classe de cor da nota (0..100): verde, azul, laranja, vermelho. Serve para texto (.verde) e barra (.fill.verde).</summary>
         public static string ClasseNota(int v) => v >= 80 ? "verde" : v >= 60 ? "azul" : v >= 40 ? "laranja" : "vermelho";
 
@@ -40,10 +78,10 @@ namespace CSM.ManagerUI
         }
 
         // ------------------------------------------------------------------ botões e abas
-        public static VisualElement Botao(string texto, Action acao, bool ativo = true, bool lima = false, string icone = null, params string[] extra)
+        public static VisualElement Botao(string texto, Action acao, bool ativo = true, bool destaque = false, string icone = null, params string[] extra)
         {
             var b = E("btn");
-            if (lima && ativo) b.AddToClassList("lima");
+            if (destaque && ativo) b.AddToClassList("destaque");
             if (!ativo) b.AddToClassList("desligado");
             foreach (var c in extra) b.AddToClassList(c);
             if (icone != null) b.Add(new Icone(icone, 18));
