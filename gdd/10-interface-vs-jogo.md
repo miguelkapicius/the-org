@@ -41,7 +41,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | Planta, alturas, áreas com nome | `Map/MapData.cs` (estática) | À mão, da planta aprovada |
 | Navegação | `Map/NavGrid.cs`, `Map/NavCheck.cs`, `Map/MapCheck.cs` | Gerada da planta |
 | Lugares táticos (posições do CT, reunião do TR, lineups de granada, spots de plant e pós-plant) | `Sim/Places.cs`, `Map/Spots.cs` | À mão |
-| Banco de estratégias (rotas dos 5 por round) | `Sim/EstrategiasDados.cs` | Convertido de rounds pro de **Mirage** (`Tools/estrategias/converter.py`), com as regiões da Vila. Precisa ter planos de **todos os 5 estilos** (decisão 0017) |
+| Banco de estratégias (rotas dos 5 por round) | `Sim/EstrategiasDados.cs` | Convertido de rounds pro de **Mirage** (`Tools/estrategias/converter.py`), com as regiões da Vila. Precisa ter planos de **todos os 5 estilos** (decisão 0017) e regras de rota para nomear as jogadas do playbook (`ROTA_A`/`ROTA_B`, decisão 0022) |
 | Áreas da classificação por estilo (lado do TR, disputadas, meio, bombs) | `Sim/Estrategias.cs` (`LADO_TR`, `DISPUTADAS`...) | Medidas nos dados da Vila |
 | Força medida de cada estratégia | `Sim/EstrategiasForca.cs` | Medida rodando a simulação sem gráficos |
 | Onde cada time costuma estar / de onde o inimigo aparece | `Sim/rotas.bin`, `Sim/aparece.bin`, `Sim/posicoes.txt` | Aprendidos rodando muitos rounds (`Editor/MatchCli.cs`) |
