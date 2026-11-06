@@ -18,6 +18,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] **Elenco:** os jogadores têm contrato (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
 - [ ] **Pré-partida:** o manager também configura as compras padrão do time? (veto de mapas e estratégia já decididos, 0014) → `gdd/08-ui-ux.md`
 - [ ] **Adversários:** os jogadores dos times adversários têm atributos próprios (como os do mercado) ou o adversário continua sendo só um número de força? → `gdd/10-interface-vs-jogo.md`
+- [ ] **Traços de personalidade** (ideia prioritária 2): quais existem, quantos por jogador, e o manager os vê desde o início ou só com scout? → `gdd/11-ideias.md`
+- [ ] **Playbook** (ideia prioritária 5): o manager escolhe planos por mapa e por lado? Quantos favoritos e proibidos pode marcar? → `gdd/11-ideias.md`
 - [ ] **Funções:** o manager escolhe a função de CT de cada titular (âncora, rotação, qual bomb) ou ela sai da função de TR? → `gdd/10-interface-vs-jogo.md`
 
 ## 3. Escopo e produto
@@ -44,6 +46,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] Quais estilos o manager pode escolher no timeout além de agressivo e defensivo? → `gdd/01-core-loop.md`
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
+- [ ] O que transforma um adversário em rival (número de confrontos, finais, eliminações)? → `gdd/11-ideias.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 
