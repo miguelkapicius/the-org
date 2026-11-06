@@ -52,6 +52,7 @@ namespace CSM.Manager
         public List<string> diario = new List<string>(); public List<ScoutD> scouts = new List<ScoutD>(); public List<IntelD> intel = new List<IntelD>(); public List<EmprestimoD> emprestimos = new List<EmprestimoD>();
         public List<EquipeD> equipes = new List<EquipeD>(); public List<CampeonatoD> campeonatos = new List<CampeonatoD>();
         public SerieD serie = new SerieD();
+        public List<string> favoritasTR = new List<string>(), proibidasTR = new List<string>(), favoritasCT = new List<string>(), proibidasCT = new List<string>();   // decisão 0022
     }
 
     public static class SalvamentoDados
@@ -79,6 +80,7 @@ namespace CSM.Manager
                 semanasNegativo = c.semanasNegativo, falido = c.falido, clube = c.clube, semana = c.mundo.semana, temporada = c.mundo.temporada, proxId = c.mundo.ProxId, mundoSeed = c.mundo.Seed,
             };
             d.elenco = c.elenco.Select(Para).ToList(); d.mercado = c.mercado.Select(Para).ToList();
+            d.favoritasTR = c.favoritasTR.ToList(); d.proibidasTR = c.proibidasTR.ToList(); d.favoritasCT = c.favoritasCT.ToList(); d.proibidasCT = c.proibidasCT.ToList();
             d.extrato = c.extrato.Select(l => new LancD { semana = l.semana, valor = l.valor, descricao = l.descricao }).ToList();
             d.historico = c.historico.Select(r => new ResultadoD
             {
@@ -122,6 +124,8 @@ namespace CSM.Manager
             if (d == null || d.versao != VERSAO || d.elenco == null || d.elenco.Count < Provisorio.TITULARES || d.equipes == null || d.equipes.Count < 2) return null;
             var c = Carreira.ParaRestaurar(d.seed, d.numPartida);
             c.clube = d.clube; c.dinheiro = d.dinheiro; c.numPartida = d.numPartida; c.nivelGH = d.nivelGH; c.estilo = (Estilo)d.estilo; c.sessoesColetivas = d.coletivas; c.estudoMapa = d.estudoMapa;
+            if (d.favoritasTR != null) c.favoritasTR.AddRange(d.favoritasTR); if (d.proibidasTR != null) c.proibidasTR.AddRange(d.proibidasTR);
+            if (d.favoritasCT != null) c.favoritasCT.AddRange(d.favoritasCT); if (d.proibidasCT != null) c.proibidasCT.AddRange(d.proibidasCT);
             c.semanasNegativo = d.semanasNegativo; c.falido = d.falido;
             c.elenco.AddRange(d.elenco.Select(De)); c.mercado.AddRange(d.mercado.Select(De));
             c.extrato.AddRange(d.extrato.Select(l => new Lancamento { semana = l.semana, valor = l.valor, descricao = l.descricao }));

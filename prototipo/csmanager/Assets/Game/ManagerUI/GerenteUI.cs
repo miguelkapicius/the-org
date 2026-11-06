@@ -27,7 +27,7 @@ namespace CSM.ManagerUI
         public int seed = 7;
         public const string CENA_PARTIDA = "Partida3D";
 
-        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Serie, PreMatch, PosPartida }
+        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Playbook, Serie, PreMatch, PosPartida }
         Aba aba = Aba.Painel, abaAnterior = Aba.Painel;
         Carreira c;
         VisualElement tela, janela, conteudo, toastEl, dicaEl;
@@ -162,6 +162,7 @@ namespace CSM.ManagerUI
                 case KeyCode.Alpha6: Ir(Aba.Financas); break;
                 case KeyCode.Alpha7: Ir(Aba.GamingHouse); break;
                 case KeyCode.Alpha8: Ir(Aba.Scouts); break;
+                case KeyCode.Alpha9: Ir(Aba.Playbook); break;
                 case KeyCode.Escape:
                     if (aba == Aba.PreMatch) Ir(Aba.Serie);
                     else if (aba == Aba.Serie || aba == Aba.PosPartida) Ir(Aba.Painel);
@@ -237,6 +238,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: titulo = "Gaming House"; sub = "Cada nível libera vantagens: treino, scouts, recuperação, patrocínio (decisão 0016)."; break;
                 case Aba.Financas: titulo = "Finanças"; sub = "Salários e manutenção saem toda semana; prêmios e patrocínio entram."; break;
                 case Aba.Scouts: titulo = "Scouts"; sub = "Descubra como o adversário joga e quem vale a pena contratar."; break;
+                case Aba.Playbook: titulo = "Playbook"; sub = "As jogadas que o seu time prefere e as que ele nunca faz (decisão 0022)."; break;
                 case Aba.Serie: titulo = "Preparar série"; sub = c.serie != null ? c.serie.camp.nome + " · " + Fmt.Rotulo(c.serie.camp.nome, c.serie.conf.rotulo) : ""; break;
                 case Aba.PosPartida: { var r = resumoAberto ?? c.naoVisto; titulo = "Pós-partida"; sub = r != null ? r.campeonato + " · " + r.mapa + " · contra " + r.adversario : ""; break; }
                 default: titulo = "Painel do clube"; sub = "Semana " + c.Semana + " · temporada " + c.Temporada + " · " + c.clube; break;
@@ -256,6 +258,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: TelaGamingHouse(); break;
                 case Aba.Financas: TelaFinancas(); break;
                 case Aba.Scouts: TelaScouts(); break;
+                case Aba.Playbook: TelaPlaybook(); break;
                 case Aba.Serie: TelaSerie(); break;
                 case Aba.PosPartida: TelaPosPartida(); break;
                 default: TelaPainel(); break;
@@ -287,6 +290,8 @@ namespace CSM.ManagerUI
             Item(nav, "Finanças", "dollar", Aba.Financas, null);
             Item(nav, "Gaming House", "house", Aba.GamingHouse, c.nivelGH.ToString());
             Item(nav, "Scouts", "eye", Aba.Scouts, c.scouts.Count > 0 ? c.scouts.Count.ToString() : null);
+            int nPlay = c.favoritasTR.Count + c.favoritasCT.Count + c.proibidasTR.Count + c.proibidasCT.Count;
+            Item(nav, "Playbook", "tag", Aba.Playbook, nPlay > 0 ? nPlay.ToString() : null);
 
             // o próximo passo do jogo: jogar a série marcada ou avançar o tempo
             var prox = E("proxima");
@@ -321,7 +326,7 @@ namespace CSM.ManagerUI
                 aba = Aba.Painel; Mostrar(); Toast("Carreira nova começada.");
             });
             m.Add(nova);
-            m.Add(L("Salva sozinho. Teclas 1 a 8 trocam de tela. Valores provisórios (protótipo).", "f13", "apagado", "quebra", "rodape"));
+            m.Add(L("Salva sozinho. Teclas 1 a 9 trocam de tela. Valores provisórios (protótipo).", "f13", "apagado", "quebra", "rodape"));
             return m;
         }
 

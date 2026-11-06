@@ -50,7 +50,8 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
 | Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |
 | Entrosamento | O quanto dois jogadores do elenco jogam bem juntos; muda a simulação (ex.: trade kill). | química, sinergia | 11-ideias |
-| Playbook | Escolhas do manager, por mapa, de planos de round favoritos e proibidos que o IGL respeita. | livro de jogadas | 11-ideias |
+| Playbook | Escolhas do manager, por mapa e por lado, de jogadas favoritas e proibidas que o IGL respeita. | livro de jogadas | 02-mecanicas |
+| Jogada | Grupo de planos de round parecidos, com nome legível ("Rush A pela Rampa", "Setup 2-1-2"); é o que o manager marca no playbook. | tática, play | 02-mecanicas |
 | Melhores momentos | Lances-chave de um round ou partida, mostrados em replay na transmissão e no pós-partida. | highlights | 08-ui-ux |
 | Rivalidade | Histórico marcante contra um adversário, medido em pontos por série (finais, eliminações, sequências). Os 3 de mais pontos (com 10 ou mais) são os rivais do clube. | — | 01-core-loop |
 | Arquirrival | O rival com mais pontos de rivalidade. | — | 01-core-loop |

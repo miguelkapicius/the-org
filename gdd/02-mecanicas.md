@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -77,6 +77,10 @@ Banco atual (1286 planos): TR 116 agressivos, 102 defensivos, 206 rápidos, 185 
 | Controle de mapa | 29 % → 63 % | 68 s | 10 % → 50 % |
 
 Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos. As vitórias por lado não mudaram além do ruído da amostra. **Ponto a olhar:** o CT agressivo usa mais planos agressivos, mas não morreu mais cedo que o Equilibrado (0,52 contra 0,54 mortes antes dos 25 s); pode ser que o cérebro do bot recue antes de chegar ao avanço do plano.
+
+### Playbook do manager (decisão 0022)
+
+**[Sugestão]** Os planos de round do banco são agrupados em **jogadas** com nome legível: no ataque pelo tipo, bomb e rota de entrada (ex.: "Rush A pela Rampa", "Split A (Palácio + Rampa)"); na defesa pela distribuição aos 20 s (ex.: "Setup 2-1-2 com avanço"). Hoje são 21 por lado com 5 ou mais planos. O manager marca jogadas **favoritas** (peso 4 na escolha do IGL) e **proibidas** (o IGL não escolhe; se proibir tudo o que cabe numa compra, ignora a proibição naquele round). Vagas por lado: 1 no nível 1 da Gaming House, +1 por nível, até 5. O playbook combina com a estratégia e continua depois de um timeout. Na tela, cada jogada abre a planta do mapa com as rotas dos 5 jogadores de um exemplo típico e os pontos fortes e fracos tirados dos dados. **Medido** (16 partidas): favorita do ataque de 8,2 % para 22,9 % dos rounds, da defesa de 9,3 % para 25,0 %; proibida de 12,1 % para 0 %.
 
 ## Personalidade dos jogadores (decisão 0019)
 
