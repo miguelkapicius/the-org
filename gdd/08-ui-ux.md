@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021
 
 _Telas, HUD e fluxo de navegação._
 
@@ -32,7 +32,7 @@ _Telas, HUD e fluxo de navegação._
 
 **Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 13 px na resolução de referência (1600×900); texto secundário com contraste mínimo de ~4,5:1 sobre o cartão; camadas bem separadas (fundo < janela < menu < cartão < item ativo) com bordas visíveis; item ativo do menu e aba escolhida bem marcados (aba escolhida = preenchida, com borda); botões sempre com borda; conteúdo rola em vez de ser cortado.
 
-**Princípios de experiência do manager** (**[Sugestão]**, aplicados no protótipo): (1) o efeito de uma decisão aparece **antes** de confirmá-la (troca de escalação, contratação), ligando a gestão ao que se vê na partida (pilar 3); (2) o jogo diz **o que fazer agora** (avisos no painel), em vez de exigir que o jogador procure; (3) ações que custam dinheiro têm **desfazer** quando possível; (4) avisos de resultado são temporários e não tomam a tela; (5) dicas ao passar o mouse explicam cada atributo; (6) teclas 1 a 8 trocam de tela, Enter assiste e Esc volta na pré-partida; (7) a carreira é **salva sozinha** a cada ação. **Personalidade** (decisão 0019): o traço aparece como selo ao lado do nome (explicação ao passar o mouse; no mercado só depois do scout), a moral aparece embaixo do nome no elenco e como barra no cartão do painel, e o entrosamento do time fica no topo da escalação. Moral baixa e time pouco entrosado viram avisos no painel.
+**Princípios de experiência do manager** (**[Sugestão]**, aplicados no protótipo): (1) o efeito de uma decisão aparece **antes** de confirmá-la (troca de escalação, contratação), ligando a gestão ao que se vê na partida (pilar 3); (2) o jogo diz **o que fazer agora** (avisos no painel), em vez de exigir que o jogador procure; (3) ações que custam dinheiro têm **desfazer** quando possível; (4) avisos de resultado são temporários e não tomam a tela; (5) dicas ao passar o mouse explicam cada atributo; (6) teclas 1 a 8 trocam de tela, Enter assiste e Esc volta na pré-partida; (7) a carreira é **salva sozinha** a cada ação. **Personalidade** (decisão 0019): o traço aparece como selo ao lado do nome (explicação ao passar o mouse; no mercado só depois do scout), a moral aparece embaixo do nome no elenco e como barra no cartão do painel, e o entrosamento do time fica no topo da escalação. Moral baixa e time pouco entrosado viram avisos no painel. **Rivalidades** (decisão 0021): a preparação da série mostra o retrospecto contra o adversário e o selo CLÁSSICO quando ele é rival; o painel do clube lista os rivais (o primeiro como ARQUIRRIVAL) com retrospecto e sequência.
 
 Os atributos mostrados no elenco e no mercado são uma leitura direta do que a IA dos bots já usa (mira, reflexo, spray, utilitária, sangue-frio), para que o que o manager vê seja o que muda na partida (pilar 3). Os titulares escolhidos entram na partida assistida com o nome e a habilidade deles.
 

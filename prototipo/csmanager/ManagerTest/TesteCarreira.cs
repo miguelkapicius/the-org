@@ -285,6 +285,49 @@ class TesteCarreira
             Ok(cl2.historico[0].jogada == cm.historico[0].jogada && cl2.historico[0].jogadaNossa == cm.historico[0].jogadaNossa, "a jogada do resultado volta igual do salvamento");
         }
 
+        // ---------- rivalidades (decisão 0021)
+        Console.WriteLine("------ rivalidades ------");
+        {
+            Resultado Serie(string adv, string camp, string fase, bool venceu, int md, int meus, int deles) => new Resultado
+            { adversario = adv, campeonato = camp, rotulo = camp + " · " + fase, serieEncerrada = true, venceuSerie = venceu, venceu = venceu, serieMd = md, serieMeus = meus, serieDeles = deles };
+            var hist = new List<Resultado>   // mais recente primeiro
+            {
+                Serie("TITAS", "Copa Sul", "Final", false, 3, 1, 2),        // 0,5 + 4 (final) + 3 (eliminado) + 1 (até o fim) = 8,5
+                Serie("TITAS", "Liga", "rodada 2", true, 1, 1, 0),          // 0,5
+                Serie("TITAS", "Copa Norte", "Semifinal", true, 3, 2, 0),   // 0,5 + 2 (mata-mata) = 2,5
+                Serie("LOBOS", "Major de Outono", "rodada 1 (0-0)", true, 1, 1, 0),   // 0,5 + 2 (Major) = 2,5
+            };
+            var rts = Rivalidades.Todos(hist);
+            var tit = rts.First(x => x.adversario == "TITAS"); var lob = rts.First(x => x.adversario == "LOBOS");
+            Ok(tit.pontos == 11.5f && tit.Rival && tit.series == 3 && tit.vitorias == 2 && tit.derrotas == 1, "final perdida no 3º mapa + semifinal + liga = 11,5 pontos: rival (" + tit.pontos + ")");
+            Ok(lob.pontos == 2.5f && !lob.Rival, "uma série de Major sem mata-mata não faz rival (" + lob.pontos + ")");
+            Ok(tit.ultimaEliminacao == "Final da Copa Sul" && tit.sequencia == -1, "lembra a última eliminação e a sequência");
+            {   // no máximo 3 rivais, mesmo com muitos times acima do limite
+                var muitos = new List<Resultado>();
+                foreach (var n in new[] { "A1", "A2", "A3", "A4", "A5" }) { muitos.Add(Serie(n, "Copa", "Final", false, 3, 1, 2)); muitos.Add(Serie(n, "Copa B", "Final", false, 3, 1, 2)); }
+                Ok(Rivalidades.Todos(muitos).Count(x => x.Rival) == Rivalidades.MAX_RIVAIS, "no máximo " + Rivalidades.MAX_RIVAIS + " rivais ao mesmo tempo");
+            }
+            Ok(rts[0].adversario == "TITAS", "o arquirrival vem primeiro");
+
+            // clássico: contra um rival a moral muda o dobro
+            var cr = Carreira.Nova(41); int g2 = 0;
+            while (!cr.TemJogoAgora && g2++ < 20) cr.AvancarSemana();
+            var se = cr.PrepararSerie();
+            cr.historico.Add(Serie(se.adv.nome, "Copa Antiga", "Final", false, 3, 1, 2));
+            cr.historico.Add(Serie(se.adv.nome, "Copa Mais Antiga", "Semifinal", false, 3, 0, 2));
+            Ok(cr.Classico(se.adv), "o próximo adversário virou rival depois de duas eliminações");
+            foreach (var j in cr.Titulares) j.moral = 50;
+            var rm = cr.PularMapa();
+            Ok(cr.historico.Contains(rm) && cr.Titulares.Where(j => cr.elenco.Contains(j)).All(j => Math.Abs(j.moral - 50) == Provisorio.MORAL_VITORIA * Carreira.CLASSICO_MORAL), "no clássico a moral muda o dobro (" + (rm.venceu ? "vitória" : "derrota") + ")");
+
+            // carreira de duas temporadas pulando tudo: aparecem rivais e notícias com memória
+            var cl = Carreira.Nova(42); int semanasR = 0;
+            while (cl.Temporada < 3 && semanasR++ < 200) { int gg = 0; while (cl.TemJogoAgora && gg++ < 50) cl.PularSerie(); cl.AvancarSemana(); }
+            Console.WriteLine("  em 2 temporadas: " + cl.Retrospectos.Count + " adversários, " + cl.Rivais.Count + " rival(is): " + string.Join("; ", cl.Rivais.Take(3).Select(r => r.adversario + " " + r.pontos + " pts")));
+            foreach (var n in cl.diario.Where(d => d.Contains("rival") || d.Contains("Revanche") || d.Contains("Clássico") || d.Contains("tabu") || d.Contains("seguida") || d.Contains("eliminou") || d.Contains("MVPs")).Take(6)) Console.WriteLine("    " + n);
+            Ok(cl.Retrospectos.Count > 5 && cl.Rivais.Count <= Rivalidades.MAX_RIVAIS, "o clube enfrenta vários adversários e tem no máximo " + Rivalidades.MAX_RIVAIS + " rivais");
+        }
+
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");
         Environment.Exit(falhas == 0 ? 0 : 1);
     }

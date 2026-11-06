@@ -1,6 +1,6 @@
 # Core loop
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014, 0018
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014, 0018, 0021
 
 _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 
@@ -35,6 +35,10 @@ O manager pode **pular** uma partida sem assistir. Nesse caso, o resultado é **
 Carreira com **ligas, campeonatos e temporadas inspirados no circuito profissional de CS** (decisão 0010), com nomes próprios (decisão 0004).
 
 **[Sugestão]** Subir de divisão, ganhar prestígio, atrair patrocinadores e jogadores melhores, evoluir a Gaming House.
+
+### Rivalidades e notícias (decisão 0021)
+
+**[Sugestão]** O clube guarda o retrospecto contra cada adversário. Séries pesam pontos de rivalidade (mais em mata-mata, final, eliminação, série até o último mapa e Major); os 3 times de mais pontos (com 10 ou mais) são **rivais**, e o primeiro é o **arquirrival**. Série contra rival é **clássico**: a moral dos titulares muda o dobro e vencer rende um bônus de patrocínio. As notícias do clube lembram a história: clássico, revanche, sequência, fim de tabu, novo rival, marcos de MVP e revelações.
 
 ### Calendário e campeonatos (decisão 0012)
 

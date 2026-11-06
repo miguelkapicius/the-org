@@ -52,7 +52,10 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Entrosamento | O quanto dois jogadores do elenco jogam bem juntos; muda a simulação (ex.: trade kill). | química, sinergia | 11-ideias |
 | Playbook | Escolhas do manager, por mapa, de planos de round favoritos e proibidos que o IGL respeita. | livro de jogadas | 11-ideias |
 | Melhores momentos | Lances-chave de um round ou partida, mostrados em replay na transmissão e no pós-partida. | highlights | 08-ui-ux |
-| Rivalidade | Adversário com histórico marcante contra o clube (finais, eliminações, sequências). | clássico | 11-ideias |
+| Rivalidade | Histórico marcante contra um adversário, medido em pontos por série (finais, eliminações, sequências). Os 3 de mais pontos (com 10 ou mais) são os rivais do clube. | — | 01-core-loop |
+| Arquirrival | O rival com mais pontos de rivalidade. | — | 01-core-loop |
+| Clássico | Série contra um rival: a moral muda o dobro e vencer rende bônus de patrocínio. | derby | 01-core-loop |
+| Retrospecto | Séries e mapas vencidos e perdidos contra um adversário, a sequência atual e a última eliminação. | head-to-head, H2H | 01-core-loop |
 | Modo resumo | Forma de assistir só os rounds decisivos de uma partida e pular o resto. | modo rápido | 11-ideias |
 | Jogada da partida | O lance de maior nota de uma partida assistida (abates de um jogador, com destaque para clutch, multi-kill, AWP, na cabeça...). | jogada do jogo, play of the game | 08-ui-ux |
 | MVP | O jogador do clube com a melhor nota de desempenho num mapa (MVP do mapa) ou na soma dos mapas de uma série (MVP da série). | craque do jogo, melhor em campo | 08-ui-ux |

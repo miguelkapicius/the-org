@@ -776,7 +776,39 @@ namespace CSM.Manager
             int primeiro = mundo.PosicaoRanking(0) <= mundo.PosicaoRanking(p.adv.id) ? 0 : 1;   // o melhor colocado veta primeiro
             serie = new Serie { camp = p.camp, conf = p.conf, adv = p.adv, veto = new Veto(p.conf.md, primeiro) };
             AvancarVetoIA();
+            NoticiaAntesDaSerie(p.adv);
             return serie;
+        }
+
+        // ------------------------------------------------------------------------------------------ rivalidades (decisão 0021)
+        public const float CLASSICO_MORAL = 2f;   // no clássico a moral muda o dobro
+        public const int MARCO_MVP_1 = 5, MARCO_MVP_2 = 10, MARCO_MVP_3 = 20, IDADE_REVELACAO = 21;
+
+        /// <summary>Retrospecto contra cada adversário já enfrentado, do mais rival para o menos.</summary>
+        public List<Retrospecto> Retrospectos => Rivalidades.Todos(historico);
+        public Retrospecto Contra(string adv) => Retrospectos.FirstOrDefault(x => x.adversario == adv) ?? new Retrospecto { adversario = adv };
+        public List<Retrospecto> Rivais => Retrospectos.Where(x => x.Rival).ToList();
+        public bool Classico(Equipe adv) => adv != null && Contra(adv.nome).Rival;
+
+        void NoticiaAntesDaSerie(Equipe adv)
+        {
+            var rt = Contra(adv.nome);
+            if (rt.Rival) Anotar("Clássico contra " + adv.nome + ": " + rt.Texto + ". A moral pesa o dobro nesta série.");
+            else if (rt.ultimaEliminacao != null) Anotar("Revanche: " + adv.nome + " eliminou o clube na " + rt.ultimaEliminacao + ".");
+        }
+
+        void NoticiasDepoisDaSerie(Retrospecto antes, Retrospecto depois, Resultado r, bool classico)
+        {
+            string adv = r.adversario;
+            if (!antes.Rival && depois.Rival) Anotar(adv + " virou rival do clube (" + depois.Texto + ").");
+            if (r.venceuSerie && depois.sequencia >= 3) Anotar(depois.sequencia + "ª série seguida vencida contra " + adv + ".");
+            if (r.venceuSerie && antes.sequencia <= -2) Anotar("Fim do tabu: primeira série vencida contra " + adv + " depois de " + (-antes.sequencia) + " derrotas seguidas.");
+            if (!r.venceuSerie && Rivalidades.Eliminado(r)) Anotar(adv + " eliminou o clube na " + Rivalidades.Fase(r) + " da " + r.campeonato + ".");
+            if (classico && r.venceuSerie)
+            {
+                Lanca("Bônus de clássico (patrocinadores)", PatrocinioPorSemana);
+                Anotar("Vitória no clássico contra " + adv + ": os patrocinadores pagam " + Fmt.Dinheiro(PatrocinioPorSemana) + " de bônus.");
+            }
         }
 
         int Aff(Equipe e, int m) => e.afinidade[m];
@@ -939,18 +971,26 @@ namespace CSM.Manager
                 saldoAntes = dinheiro, forcaMinha = Forca, forcaDeles = adv != null ? adv.Forca : 0,
                 estimado = desempenho == null, desempenho = desempenho ?? Estimar(venceu, meus + deles),
             };
+            // clássico (decisão 0021): contra um rival a moral muda o dobro; o retrospecto de antes serve para as notícias
+            var antes = adv != null ? Contra(adv.nome) : null;
+            bool classico = antes != null && antes.Rival;
+            float pesoMoral = classico ? CLASSICO_MORAL : 1f;
             // quem jogou fica cansado e ganha um pouco de experiência (jovens aprendem mais)
             foreach (var j in Titulares)
             {
                 j.mapasNaSemana++;
-                j.moral = Math.Clamp(j.moral + (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA), 0f, 100f);
+                j.moral = Math.Clamp(j.moral + pesoMoral * (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA), 0f, 100f);
                 if (j.idade <= 28) { int a = rng.Next(5); if (j.Valor(a) < j.potencial) j.Definir(a, j.Valor(a) + 0.08f * FatorIdade(j.idade)); }
             }
             var af = mundo.Clube.afinidade; af[mapa] = Math.Min(95, af[mapa] + 1);   // jogar no mapa dá afinidade
 
             // melhores momentos (decisão 0020): MVP do mapa e jogada da partida entram no histórico do jogador e nas notícias
             var mvp = r.Melhor; var jm = mvp != null ? elenco.FirstOrDefault(j => j.nome == mvp.nome) : null;
-            if (jm != null) jm.mvps++;
+            if (jm != null)
+            {
+                jm.mvps++;
+                if (jm.mvps == MARCO_MVP_1 || jm.mvps == MARCO_MVP_2 || jm.mvps == MARCO_MVP_3) Anotar(jm.nome + " chega a " + jm.mvps + " MVPs de mapa pelo clube.");
+            }
             if (jogada != null)
             {
                 r.jogada = jogada.Descricao;
@@ -976,7 +1016,12 @@ namespace CSM.Manager
                     var mapasSerie = historico.Take(s.resultados.Count - 1).Append(r);
                     var ms = mapasSerie.SelectMany(x => x.desempenho).GroupBy(x => x.nome).OrderByDescending(g => g.Sum(x => x.Nota)).FirstOrDefault();
                     var jms = ms != null ? elenco.FirstOrDefault(j => j.nome == ms.Key) : null;
-                    if (jms != null) { r.mvpSerie = jms.nome; jms.mvpsSerie++; if (s.Md > 1) Anotar("MVP da série contra " + r.adversario + ": " + jms.nome + "."); }
+                    if (jms != null)
+                    {
+                        r.mvpSerie = jms.nome; jms.mvpsSerie++;
+                        if (jms.idade <= IDADE_REVELACAO) Anotar("Revelação: " + jms.nome + ", " + jms.idade + " anos, é o MVP da série contra " + r.adversario + ".");
+                        else if (s.Md > 1) Anotar("MVP da série contra " + r.adversario + ": " + jms.nome + ".");
+                    }
                     bool souA = s.conf.a == 0;
                     s.camp.RegistrarClube(s.conf, souA ? s.MinhasVit : s.DelesVit, souA ? s.DelesVit : s.MinhasVit);
                     var fim = new ResumoSemana();
@@ -988,6 +1033,7 @@ namespace CSM.Manager
             }
             emPartida = false; pendente = null;
             historico.Insert(0, r); naoVisto = r;
+            if (r.serieEncerrada && antes != null) NoticiasDepoisDaSerie(antes, Contra(r.adversario), r, classico);
             return r;
         }
     }
