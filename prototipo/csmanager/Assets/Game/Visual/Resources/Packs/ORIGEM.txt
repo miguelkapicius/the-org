@@ -5,3 +5,19 @@ caixote_cebola/batata/tomate/alface/cenoura.fbx = Crate of Onions/Potatoes/Tomat
 Convertidos do GLB com a cor de cada face no vértice por pack_cor.py.txt.
 kenney_banner-red/green.fbx, kenney_stall-red/green.fbx = Kenney Fantasy Town Kit 2.0 (CC0, kenney.nl)
 kenney_pottedPlant.fbx, kenney_plantSmall1/2/3.fbx = Kenney Furniture Kit (CC0, kenney.nl), baixado em 2026-11-05: vasos das fachadas (Packs3D.Vaso)
+kenney_fountain-round.fbx, kenney_poles.fbx, kenney_roof-point.fbx (+ poles-horizontal, não usado) = Kenney Fantasy Town Kit 2.0 (CC0, kenney.nl), do zip já baixado, 2026-11-05: poço do bomb B (Packs3D, cobertura "well"); GLB em Art/Kenney/fantasy_town_poco, convertidos por pack_cor.py
+Kit da Brasa (2º mapa), 2026-11-06, dos mesmos zips CC0 já baixados (kenney.nl), convertidos por pack_cor.py:
+  Kenney Fantasy Town Kit 2.0: kenney_cart, cart-high, fountain-square-detail, wall-arch, balcony-wall-fence, planks, planks-half,
+  fence-broken, fence-gate, lantern, rock-small, rock-wide, tree-crooked, stall-bench, wall-broken, wheel.
+  Kenney Furniture Kit: kenney_bookcaseOpen, bookcaseClosedWide, rugRectangle, bedSingle, table, chair, sideTable.
+  Ainda não usados no jogo (esperam o MapData montar a Brasa).
+Kit da Brasa, parte 2 (2026-11-06), baixados de kenney.nl (CC0, License.txt no zip) a pedido do Gabriel ("os mapas têm que
+ter caras diferentes"; Kenney ou outra biblioteca com licença comercial). Zips em C:\Users\olive\Downloads:
+  kenney_graveyard-kit.zip (Graveyard Kit) -> kgy_coffin, coffin-old, cross-column, gravestone-cross, gravestone-round,
+    iron-fence, iron-fence-border-gate, column-large, pillar-square, urn-round, candle-multiple, lantern-glass,
+    lightpost-single, stone-wall-damaged, debris, hay-bale, trunk-long, pine-crooked, bench
+  kenney_survival-kit.zip (Survival Kit) -> ksv_barrel, barrel-open, box-large, box, bucket, resource-planks,
+    resource-wood, workbench, rock-sand-a, structure, tree-log (toras deitadas)
+  Fantasy Town: kenney_wall-arch-top-detail (topo do arco)
+  Convertidos por pack_cor.py. A Brasa não repete os props da Vila (barril/sacos Quaternius, caixotes KayKit, bancas,
+  bandeiras, vasos, fonte redonda).

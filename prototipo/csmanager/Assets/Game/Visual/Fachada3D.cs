@@ -93,6 +93,9 @@ namespace CSM.View3D
                     var t = fx ? new Vector3(0, 1, 0) : new Vector3(1, 0, 0);
                     var face = new Vector3(x + (fx ? 1f : 0.5f), y + (fx ? 0.5f : 1f), fz);
                     int semente = x * 7919 + y * 104729;
+                    // porta com barril/caixa/saco na frente (usuário: "essa área do mapa tá zoada" — a fileira de barris
+                    // tapava a entrada com o toldo em cima): sai a porta inteira (batente, toldo, lanterna e vasos), fica parede
+                    if (dbay && Tapado(face + t * (14.5f - k), n, t)) { Limpa(fz, fz + 31); dbay = false; }
                     if (dbay && k == 12) Toldo(o, face, n, t, semente);
                     if (viga) Viga(o, face + Vector3.forward * (top - 5 - fz), n, t, semente);
                     // enfeite atrás de caixa/barril encostado na parede não aparece (ficava uma flor saindo atrás da caixa)

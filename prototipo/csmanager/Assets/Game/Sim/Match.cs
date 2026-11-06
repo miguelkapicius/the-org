@@ -578,7 +578,7 @@ namespace CSM.Sim
             {
                 nextFireDmg = t + 0.25f;
                 foreach (var a in agents)
-                    if (a.alive && FogoEm(a.pos) is FireArea fg) { fogoDe.TryGetValue(fg, out var dono); Hurt(a, dono != null && dono.team != a.team && !TeamBrain.EXP.Contains("fogoSemDono") ? dono : null, 9, Combat.Part.Perna, dono != null && dono.team == Team.CT ? "incendiaria" : "molotov", dono);   /* CS2: quem jogou leva o abate e os $300 */ if (!a.alive) { a.killedByFire = true; Ev("morreu na molotov/round"); } }
+                    if (a.alive && FogoNoCorpo(a) is FireArea fg) { fogoDe.TryGetValue(fg, out var dono); Hurt(a, dono != null && dono.team != a.team && !TeamBrain.EXP.Contains("fogoSemDono") ? dono : null, 9, Combat.Part.Perna, dono != null && dono.team == Team.CT ? "incendiaria" : "molotov", dono);   /* CS2: quem jogou leva o abate e os $300 */ if (!a.alive) { a.killedByFire = true; Ev("morreu na molotov/round"); } }
             }
             if (pos) return;   // pós-round: sem detector, auditoria nem fim de round
             PerfMarca(4); if (t >= proxSuspeita) { proxSuspeita = t + 1; Suspeitas(); } PerfMarca(5);
@@ -618,7 +618,7 @@ namespace CSM.Sim
                 {
                     if (c.order >= f.Visible) continue; tot++;
                     var q = new V3(c.x * FireArea.C + 2, c.y * FireArea.C + 2, c.z + 6);
-                    foreach (var sm in smokes) if (sm.Sample(q, t) > 0.3f) { dentro++; break; }
+                    foreach (var sm in smokes) if (SDens(sm, q) > 0.3f) { dentro++; break; }
                 }
                 if (tot > 0 && (TeamBrain.EXP.Contains("apagaMetade") ? dentro * 2 > tot : dentro > 0))
                 {
@@ -708,6 +708,7 @@ namespace CSM.Sim
             a.vel = a.vel + dir * acc;
         }
 
+        static readonly bool ApoioQuina = TeamBrain.EXP.Contains("apApoioQuinaLigado");
         public static float FOLGA => TeamBrain.EXP.Contains("folga45") ? 4.5f : 4f;   // meia largura do corpo (CS2: 16 = 4 aqui): o centro não chega mais perto que isso da parede
         /// <summary>Parede (ou caixa mais alta que o pé) mais perto, até 6: distância e a direção pra sair dela.</summary>
         public static V2 ParedePerto(V2 p, float z, out float dist)
@@ -900,6 +901,19 @@ namespace CSM.Sim
                 if (dp < FOLGA) { V2 q = a.pos + fora * MathF.Min(FOLGA - dp, 1.2f); if (Pode(q)) a.pos = q; }
             }
             float zt = NavGrid.ZAt(a.pos);
+            if (ApoioQuina && zt < a.z - 0.5f && !escada)
+            {   /* APOIO NA QUINA (opt-in apApoioQuinaLigado), como no CS2: o corpo é uma caixa larga (32×32 lá = meia largura FOLGA aqui)
+                   e o chão é o mais alto que fica debaixo de QUALQUER parte dela, não só do centro — com uma ponta apoiada na
+                   pilha/caixa ele fica em pé na beira (parece flutuar um pouco). Só conta o que está na altura do pé ou abaixo
+                   (subir degrau continua pelo centro): uma parede ao lado nunca vira chão */
+                float h = FOLGA - 0.5f;
+                for (int k = 0; k < 8; k++)
+                {
+                    V2 q = a.pos + new V2(k == 0 || k == 3 || k == 5 ? -h : k == 1 || k == 6 ? 0 : h, k < 3 ? -h : k < 5 ? 0 : h);
+                    float zq = NavGrid.ZAt(q);
+                    if (zq <= a.z + 0.5f && zq > zt) zt = zq;
+                }
+            }
             if (NavGrid.BOOST)
             {   /* pezinho: a cabeça de quem está embaixo é chão (sobe e desce junto com o duck dele) */
                 Agent sob = null;
@@ -1120,6 +1134,13 @@ namespace CSM.Sim
             a.brain.Entregou();
             a.lunetaNoTiro = a.scoped;   // killfeed: a luneta no momento do tiro (sai dela logo abaixo, antes do dano)
             if (a.gunId == "awp") a.scoped = false;   // AWP sai da luneta depois do tiro (puxa o ferrolho)
+            if (Auditar && a.brain.target != null && (a.gunId == "ak" || a.gunId == "m4" || a.gunId == "m4s" || a.gunId == "galil" || a.gunId == "famas"))
+            {   // spray de rifle: acerto por bala (1ª, 2-3, 4-6, 7-10, 11+) e distância — pro acerta a maioria até ~10 balas no médio
+                float dd = (a.brain.target.pos - a.pos).Len; int sp = a.spray;
+                string fx = dd < 100 ? "a perto <100" : dd < 220 ? "b médio 100-220" : dd < 420 ? "c longe 220-420" : "d muito longe";
+                string bx = sp <= 1 ? "1ª" : sp <= 3 ? "2-3" : sp <= 6 ? "4-6" : sp <= 10 ? "7-10" : "11+";
+                Aud($"spray rifle {fx}: bala {bx}", victim == a.brain.target ? "acertou" : "errou");
+            }
             if (victim != null && victim.team != a.team)
             {
                 a.hits++; int hpAntes = victim.hp;
@@ -1132,6 +1153,18 @@ namespace CSM.Sim
                     atiradorTR = a.IsT, vitimaViu = viu, faseVitima = fv, faseAtirador = fa, situAtirador = a.brain.Situacao, situVitima = victim.brain.Situacao, holdAtirador = a.brain.PosicaoAgora, holdVitima = victim.brain.PosicaoAgora, foraDaVisao = fora, smoke = smk, cego = cego, posAtirador = a.pos, posVitima = victim.pos, t = t, plantado = bombPlanted, seed = seed, matador = a.name, vitima = victim.name,
                     vitViuHa = viu ? t - victim.brain.alvoDesde : -1, matViuHa = a.brain.target == victim ? t - a.brain.alvoDesde : -1,
                     vitimaAtirou = t - victim.lastShotT < 1f, vitAndando = victim.Speed > victim.MaxSpeed * 0.3f });
+                if (Auditar && !victim.alive)
+                {   /* bx: como cada um via o outro no abate (visão do corpo) — e quando a vítima ia trocar/ajudar */
+                    string comoV = "matador via " + (a.brain.parcial[victim.id] ? "um pedaço" : "o corpo") + " · vítima " + (!viu ? "não via" : victim.brain.parcial[a.id] ? "via um pedaço" : "via o corpo");
+                    Aud("abate: como cada um via", comoV);
+                    if (fv == "indo trocar" || fv == "ajudando no duelo") Aud("abate: quem ia trocar/ajudar morreu", comoV + (victim.Speed > victim.MaxSpeed * 0.3f ? " · andando" : " · parado"));
+                    if (a.brain.parcial[victim.id] && !viu)
+                    {   /* bx: a vítima deixou um pedaço do corpo pra fora sem ver o matador: em que situação? */
+                        string fvc = fv ?? "?"; int cp = fvc.IndexOfAny(new[] { ':', '(', '—' }); if (cp > 0) fvc = fvc.Substring(0, cp).Trim(); if (fvc.Length > 28) fvc = fvc.Substring(0, 28);
+                        bool foraV = MathF.Abs(MathX.AngDiff((a.pos - victim.pos).Atan2, victim.aim)) > 55f * MathF.PI / 180;
+                        Aud("abate: vítima com pedaço pra fora sem ver", (victim.IsT ? "TR " : "CT ") + (victim.Speed > victim.MaxSpeed * 0.3f ? "andando" : "parado") + (foraV ? " · olhando pra outro lado" : " · olhando pra ele") + " · " + fvc);
+                    }
+                }
             }
             else if (victim != null && !TeamBrain.EXP.Contains("semFogoAmigo"))
             {   // fogo amigo: a bala machuca o colega (reduzido, como no CS2 de torneio: ff_damage_reduction_bullets 0,33)
@@ -1162,6 +1195,9 @@ namespace CSM.Sim
             if (part == Combat.Part.Tronco && v.armor > 0) v.armor = Math.Max(0, v.armor - dmg / 2);
             if (by != null && what == by.gunId) { sus.Dano(v, by); v.apanhouEm = t; }
             if (by != null && what == by.gunId) Chamar(v, by);   // quem levou tiro sabe de onde veio e canta (HE não diz)
+            if (by != null && what == by.gunId && by.team != v.team && !TeamBrain.EXP.Contains("colegaApanhaVelho"))
+                foreach (var b in agents)   // quem está do lado VÊ o colega tomando tiro e ouve de onde veio: vira pra lá na hora
+                    if (b != v && b.alive && b.team == v.team && (b.pos - v.pos).Len < 600) b.brain.ColegaApanhou(v, by);
             v.brain.Entregou();
             if (v.hp > 0 && by != null && what == by.gunId) v.brain.Atingido(by);   // tiro (não fogo/explosão) e ainda vivo
             // call de dano: quem acertou sabe quanto tirou ("ele tá com 20")
@@ -1301,6 +1337,7 @@ namespace CSM.Sim
             float t1 = l.kind == "flash" ? t + FUSE_FLASH : l.kind == "he" ? t + FUSE_HE : l.kind == "smoke" ? t + T + 0.5f : t + T;
             n.t1 = t1;
             flying.Add(n);
+            if (!TeamBrain.EXP.Contains("somVelho")) Sound(a.pos, a.team, "granada", 260, 40);   // pino + arremesso: se ouve como passo
             Log($"{a.name} jogou {l.name}");
             if (l.kind == "flash")
             {   // "vou bangar!": o time perto vira a cara na hora e quem ia abrir o pixel pra lá espera estourar
@@ -1331,6 +1368,7 @@ namespace CSM.Sim
             else if (!TeamBrain.EXP.Contains("estouroVelho") && l.kind == "he") n.t1 = t + FUSE_HE;
             n.tipo = pl.tipo; n.sabe = sabe; n.forca = pl.forca; n.up = real.up; n.yaw = real.yaw;
             flying.Add(n);
+            if (!TeamBrain.EXP.Contains("somVelho")) Sound(a.pos, a.team, "granada", 260, 40);   // pino + arremesso: se ouve como passo
             Log($"{a.name} jogou {l.name} ({pl}{(sabe ? ", lineup que ele sabe" : ", no olho")})");
             Ev(sabe ? "granada: lineup sabida/round" : "granada: no olho/round"); Ev($"granada: {Arremesso.Nome(pl.tipo)}/round");
             if (Auditar && (l.kind == "he" || l.kind == "molotov"))
@@ -1531,7 +1569,7 @@ namespace CSM.Sim
             {
                 if (smokeDe.TryGetValue(s, out var tm) && tm == meu) continue;
                 var (mn, mx) = s.Bounds; if (p.x < mn.x || p.y < mn.y || p.x > mx.x || p.y > mx.y) continue;
-                if (s.Sample(new V3(p.x, p.y, NavGrid.ZAt(p) + 18), t) > 0.35f) return s;
+                if (SDens(s, new V3(p.x, p.y, NavGrid.ZAt(p) + 18)) > 0.35f) return s;
             }
             return null;
         }
@@ -1555,9 +1593,16 @@ namespace CSM.Sim
             {
                 if (Auditar) Aud("molotov: pegou fogo?", (n.sabe ? "lineup sabida · " : "no olho · ") + (n.noAr ? "sumiu no ar" : "pegou"));
                 if (n.noAr) Log($"molotov do {n.by.name} estourou no ar (sem fogo)");
-                else if (!TeamBrain.EXP.Contains("semApagar") && smokes.Exists(sm => sm.Sample(new V3(n.l.to.x, n.l.to.y, z + 6), t) > 0.3f))
+                else if (!TeamBrain.EXP.Contains("semApagar") && smokes.Exists(sm => SDens(sm, new V3(n.l.to.x, n.l.to.y, z + 6)) > 0.3f))
                 { fogoApagado.Add((n.l.to, z, t)); Log($"molotov do {n.by.name} caiu na smoke e não pegou"); Ev("molotov caiu na smoke/round"); }
-                else { var fa = new FireArea(new V3(n.l.to.x, n.l.to.y, z)); fires.Add(fa); fogoDe[fa] = n.by; }
+                else { var fa = new FireArea(new V3(n.l.to.x, n.l.to.y, z)); fires.Add(fa); fogoDe[fa] = n.by; if (Auditar) { float re = MathF.Sqrt(fa.cells.Count * FireArea.C * FireArea.C / MathF.PI), rmax = 0; foreach (var c in fa.cells) rmax = MathF.Max(rmax, (new V2(c.x * FireArea.C + 2, c.y * FireArea.C + 2) - n.l.to).Len); Aud("molotov: raio do fogo (equivalente · mais longe)", $"{(int)(re / 5) * 5}-{(int)(re / 5) * 5 + 5} · máx {(int)(rmax / 10) * 10}-{(int)(rmax / 10) * 10 + 10}"); } }
+                if (Auditar && !n.noAr)
+                {   // validador da molotov: caiu onde tinha gente? (inimigo mais perto e colega mais perto do fogo)
+                    float dI = 9999, dA = 9999;
+                    foreach (var x in agents) if (x.alive && x != n.by) { float dd = (x.pos - n.l.to).Len; if (x.team != n.by.team) dI = MathF.Min(dI, dd); else dA = MathF.Min(dA, dd); }
+                    Aud("molotov: inimigo mais perto do fogo", dI < 40 ? "a dentro (<40)" : dI < 120 ? "b do lado (40-120)" : dI < 300 ? "c perto (120-300)" : "d ninguém (300+)");
+                    if (dA < 40) Aud("molotov: caiu em cima do colega", "sim");
+                }
             }
             else if (n.l.kind == "he")
             {
@@ -1595,7 +1640,7 @@ namespace CSM.Sim
             {
                 V2 fp = TeamBrain.EXP.Contains("flashNoAlvo") ? n.l.to : n.P;   // onde ela estourou (a física, não a mira)
                 flashes.Add((fp, z + 4, t));
-                int cegouIni = 0, porque = 0;   // auditor: o melhor que chegou num inimigo (0 nenhum perto, 1 sem visão, 2 de costas, 3 fraca, 4 cegou)
+                int cegouIni = 0, porque = 0, cegouSi = 0, cegouAli = 0;   // auditor: o melhor que chegou num inimigo (0 nenhum perto, 1 sem visão, 2 de costas, 3 fraca, 4 cegou)
                 foreach (var a in agents)
                 {
                     if (!a.alive) continue;
@@ -1623,13 +1668,15 @@ namespace CSM.Sim
                                             : $"meio cego {parcial:0.0}s (flash pegou de lado){(a.team == n.by.team ? $" — do {n.by.name}" : "")}");
                     float dur = total + parcial;
                     if (a.team != n.by.team) { n.by.flashInimigo++; if (total > 0) { cegouIni++; porque = 4; } Log($"flash do {n.by.name} cegou {a.name} {dur:0.0}s"); }
-                    else { n.by.flashAliado++; Log($"flash do {n.by.name} cegou o aliado {a.name} {dur:0.0}s"); }
+                    else { n.by.flashAliado++; if (total > 0) { if (a == n.by) cegouSi++; else cegouAli++; } Log($"flash do {n.by.name} cegou o aliado {a.name} {dur:0.0}s"); }
                 }
                 if (Auditar)
                 {   // eficácia por tipo de flash (pelo nome que ela recebeu ao ser jogada)
                     string nm = n.l.name, tipo = nm.StartsWith("bang") ? "bang pro colega" : nm.Contains("pop-flash") ? "pop pra mim" : nm.Contains("antes de passar") ? "no matador conhecido"
                         : nm.Contains("retake") ? "retake" : nm.Contains("pegar o bomb") ? "pegar o C4" : nm.Contains("barulho") ? "no barulho" : "lineup/proativa";
                     Aud("flash: cegou inimigo (total) por tipo", $"{tipo} · {(cegouIni > 0 ? "sim" : "não")}");
+                    Aud("flash: cegou do próprio time (total)", cegouSi > 0 ? "a quem jogou" : cegouAli > 0 ? "b colega" : "c ninguém do time");
+                    Aud("flash: resultado", cegouIni > 0 && cegouSi + cegouAli == 0 ? "a só inimigo (boa)" : cegouIni > 0 ? "b inimigo e time" : cegouSi + cegouAli > 0 ? "c só o time (ruim)" : "d ninguém");
                     Aud("flash: o que chegou no inimigo", new[] { "a nenhum inimigo a 700", "b inimigo perto mas sem visão do estouro", "c via o estouro mas de costas (>110°)", "d de lado/longe: só meio cego", "e cegou" }[porque]);
                     if (porque == 1 || porque == 0) { float dIni = 9999; foreach (var x in agents) if (x.alive && x.team != n.by.team) dIni = MathF.Min(dIni, (x.pos - fp).Len);
                         Aud("flash: estourou longe do inimigo (dist do mais perto)", dIni < 150 ? "a <150" : dIni < 300 ? "b 150-300" : dIni < 700 ? "c 300-700" : "d 700+"); }
@@ -1672,6 +1719,23 @@ namespace CSM.Sim
         {
             if (smokes.Count == 0) return false;
             float L = (b - a).Len; int n = (int)(L / 6) + 1;
+            if (!SmokeTelaVelha && !TeamBrain.EXP.Contains("smokeSomaVelha"))
+            {   // a mesma conta do shader (FumCobertura): opacidade 1 - exp(-0,9 · soma da densidade da tela); tapa a partir
+                // de ~90% (o que o jogador vê como smoke fechada). Furo de tiro e bolha da HE abrem igual
+                float passo = L / n, tau = 0;
+                foreach (var s in smokes)
+                {
+                    var (mn, mx) = s.Bounds;
+                    for (int i = 0; i <= n; i++)
+                    {
+                        float u = i / (float)n; V2 p = a + (b - a) * u; float z = za + (zb - za) * u;
+                        if (p.x < mn.x || p.y < mn.y || p.x > mx.x || p.y > mx.y) continue;
+                        tau += s.SampleVis(new V3(p.x, p.y, z), t) * passo;
+                        if (tau * 0.9f > 2.3f) return true;
+                    }
+                }
+                return false;
+            }
             if (!TeamBrain.EXP.Contains("smokeSomaVelha"))
             {   // CS2: a fumaça SOMA ao longo da linha (opacidade), das duas pontas inclusive — quem está dentro não vê fora e
                 // quem está fora não vê dentro; fumaça rala atravessada por um trecho longo também tapa. Só a bolha da HE (e o
@@ -1705,20 +1769,40 @@ namespace CSM.Sim
             return false;
         }
 
+        /// <summary>bx: tem fumaça densa (a da tela) nesse ponto? (borda da smoke pra quem segura a saída)</summary>
+        public bool SmokeDensaEm(V2 p, float z) => SmokeDense(p, z);
         bool SmokeDense(V2 p, float z)
         {
             foreach (var s in smokes)
             {
                 var (mn, mx) = s.Bounds;
                 if (p.x < mn.x || p.y < mn.y || p.x > mx.x || p.y > mx.y) continue;
-                if (s.Sample(new V3(p.x, p.y, z), t) > 0.35f) return true;
+                if (SDens(s, new V3(p.x, p.y, z)) > 0.35f) return true;
             }
             return false;
         }
 
-        public bool SmokeNear(V2 p, float r) => smokes.Any(s => (new V2(s.origin.x, s.origin.y) - p).Len < r + 30 && s.age > 1.2f);
+        // a smoke que a TELA desenha (esferas das bolotas, ~15 maior que as células) é a que conta pra ver, apagar fogo e
+        // "perto da smoke". -exp smokeTelaVelha: as células (domo ~34), a antiga
+        // REPROVOU no fatorial fx (2026-11-06): erros +0,10, plant +1,7, TR +1,2, retake −1,4 (guardou no raio, viu o plant
+        // passar, parado no fogo). Fica DESLIGADA (smoke antiga) até os bots aprenderem a jogar com a smoke maior;
+        // -exp smokeTelaLigado liga pra teste
+        static bool SmokeTelaVelha => !TeamBrain.EXP.Contains("smokeTelaLigado");
+        float SDens(SmokeVolume s, V3 q) => SmokeTelaVelha ? s.Sample(q, t) : s.SampleVis(q, t);
+        public bool SmokeNear(V2 p, float r) => smokes.Any(s => (new V2(s.origin.x, s.origin.y) - p).Len < r + (SmokeTelaVelha ? 30 : 45) && s.age > 1.2f);
 
         public bool FireAt(V2 p) => FogoEm(p) != null;
+        /* bx: queima quem ENCOSTA o corpo (raio FOLGA) na chama que a tela desenha (célula + VIS_SPREAD + VIS_RAIO_CHAMA), como o
+           CS2 (o corpo tocando o fogo), não só o centro do boneco. padrão desde o A/B fatorial bxf (2026-11-06); -exp bxFogoCorpoVelho volta */
+        public static bool FogoCorpo => !TeamBrain.EXP.Contains("bxFogoCorpoVelho");
+        public FireArea FogoNoCorpo(Agent a)
+        {
+            var f = FogoEm(a.pos); if (f != null || !FogoCorpo || fires.Count == 0) return f;
+            float r = FOLGA + FireArea.VIS_SPREAD + FireArea.VIS_RAIO_CHAMA - FireArea.C / 2f;
+            for (int k = 0; k < 8; k++) { f = FogoEm(a.pos + V2.Ang(k * 0.7854f) * r); if (f != null) return f; }
+            return null;
+        }
+        public bool NoFogo(Agent a) => FogoNoCorpo(a) != null;
         /// <summary>O fogo aceso que cobre o ponto (o primeiro da lista), ou null.</summary>
         public FireArea FogoEm(V2 p)
         {

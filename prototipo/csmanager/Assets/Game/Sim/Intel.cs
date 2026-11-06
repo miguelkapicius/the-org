@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using CSM.Map;
 
@@ -245,6 +245,25 @@ namespace CSM.Sim
         }
 
         public void Morreu(int id) { var r = inimigos.Find(x => x.id == id); if (r != null) { r.vivo = false; Array.Clear(r.poss, 0, r.poss.Length); } }
+
+        /// <summary>bx: as k células mais prováveis de ter inimigo num raio (peso = soma das probabilidades dos rastros ali).
+        /// É onde o time ACREDITA que eles estão — pra mirar a flash na cara deles, não num ângulo genérico.</summary>
+        public List<(V2 p, float w)> Provaveis(V2 p, float radius, int k)
+        {
+            var res = new List<(V2 p, float w)>(); int rr = (int)(radius / C) + 1, cx = (int)(p.x / C), cy = (int)(p.y / C);
+            for (int x = cx - rr; x <= cx + rr; x++)
+                for (int y = cy - rr; y <= cy + rr; y++)
+                {
+                    if (x < 0 || y < 0 || x >= GX || y >= GY) continue;
+                    V2 c = Center(x, y); if ((c - p).Len > radius) continue;
+                    int i = x * GY + y; float w = 0;
+                    foreach (var r in inimigos) if (r.vivo && r.area > 0 && r.poss[i] > 0) w += r.poss[i] / r.area;
+                    if (w <= 0.002f) continue;
+                    if (res.Count < k) res.Add((c, w));
+                    else { int mn = 0; for (int j = 1; j < res.Count; j++) if (res[j].w < res[mn].w) mn = j; if (w > res[mn].w) res[mn] = (c, w); }
+                }
+            return res;
+        }
 
         /// <summary>Quantos inimigos devem estar num raio (soma das probabilidades de cada um estar ali).</summary>
         public float Esperados(V2 p, float radius)

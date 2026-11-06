@@ -214,10 +214,20 @@ namespace CSM.Sim
         /// <summary>Altura da mira pelo quanto o alvo está agachado (0..1): a cabeça desce junto com o corpo.</summary>
         public static float AimHeight(Agent a, float dist, float duckAlvo)
         {
-            float k = 1f - 0.28f * duckAlvo;
             bool head = a.gunId != "awp" && dist < 450 && a.spray < a.pesos.sprayPeito;
+            if (HitboxTela) return head ? CabecaZ(duckAlvo) : PeitoZ(duckAlvo);
+            float k = 1f - 0.28f * duckAlvo;
             return (head ? 21.5f : 15f) * k;
         }
+        /// <summary>
+        /// Hitbox no boneco que a TELA desenha (medido no modelo exportado, unidades da Sim, z do pé): cabeça com centro
+        /// 19,5 em pé e 16,8 agachado; tronco z 7-16,5 (centro 11,7); pernas até ~7. Agachar desce tudo ~2,7. A área que
+        /// conta como cabeça fica DENTRO da cabeça chibi desenhada, centrada nela, no tamanho do CS (o HS não vira o
+        /// cabeção). -exp hitboxTelaVelho: a antiga (cabeça 19,6-23,4, centro 21,5, acima da desenhada).
+        /// </summary>
+        public static bool HitboxTela => !TeamBrain.EXP.Contains("hitboxTelaVelho");
+        public static float CabecaZ(float duck) => 19.5f - 2.7f * duck;
+        public static float PeitoZ(float duck) => 12.5f - 2.6f * duck;
 
         static (Agent, Part, V2, float) Acertou(Match m, Agent a, Agent b, Part p, V2 fim, float z)
         {
@@ -303,6 +313,14 @@ namespace CSM.Sim
                     float lat = MathF.Abs(rel.x * -dir.y + rel.y * dir.x);
                     // hitbox interna: o desenho chibi tem a cabeça grande, mas a área que conta como cabeça no jogo fica
                     // dentro dela, na proporção do CS (~35% da largura do tronco) — senão o HS vai lá pra cima
+                    if (HitboxTela)
+                    {
+                        float dz = 2.7f * b.duck, cab = CabecaZ(b.duck);
+                        if (MathF.Abs(hz - cab) < 1.9f && lat < 1.7f) return Acertou(m, a, b, Part.Cabeca, p, zz);
+                        if (hz > 7f - dz && hz <= cab - 1.9f && lat < 5f) return Acertou(m, a, b, Part.Tronco, p, zz);
+                        if (hz >= 0 && hz <= 7f - dz && lat < 3f) return Acertou(m, a, b, Part.Perna, p, zz);
+                        continue;
+                    }
                     if (hz > 19.6f * k && hz < 23.4f * k && lat < 1.7f) return Acertou(m, a, b, Part.Cabeca, p, zz);
                     if (hz > 9f * k && hz <= 19.3f * k && lat < 4.6f) return Acertou(m, a, b, Part.Tronco, p, zz);
                     if (hz >= 0 && hz <= 9f * k && lat < 3.6f) return Acertou(m, a, b, Part.Perna, p, zz);

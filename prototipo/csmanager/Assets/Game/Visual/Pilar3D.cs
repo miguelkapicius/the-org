@@ -47,7 +47,40 @@ namespace CSM.View3D
             return g;
         }
 
+        /// <summary>Coluna de pedra no estilo da vila (usuário: o pillar-stone do Kenney "continua quebrado esquisito" — o
+        /// anel fino no terço de baixo é do desenho do kit e lia como rachadura). Base em dois degraus, fuste roliço um tico
+        /// afinando, colarinho, capitel abrindo e laje quadrada em cima; arenito claro (o mesmo das escadas) e a base/capitel
+        /// um tom abaixo. Mesma altura da cobertura e pegada de ~7 (colisão e navmesh da Sim não mudam).</summary>
         public static GameObject Montar(Material mat, Transform pai, bool linear)
+        {
+            var o = new Obra3D(); float E = MalhaMapa.ESC;
+            Color pedra = new Color(0xE2 / 255f, 0xD2 / 255f, 0xB2 / 255f), escura = new Color(0xC8 / 255f, 0xB4 / 255f, 0x90 / 255f);
+            int n = 0;
+            foreach (var c in Pilares())
+            {
+                float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f, z0 = Base(c), h = c.h;
+                Vector3 U(float dz) => MalhaMapa.ParaUnity(cx, cy, z0 + dz);
+                Vector3 Cima(float dz) => Vector3.up * dz * E;
+                // base: dois degraus quadrados
+                o.Caixa(U(1.0f), new Vector3(3.6f, 1.0f, 3.6f) * E, escura);
+                o.Caixa(U(2.6f), new Vector3(3.15f, 0.6f, 3.15f) * E, escura);
+                o.Cilindro(U(3.2f), Cima(0.8f), 2.95f * E, 2.7f * E, 16, pedra);                     // toro da base
+                // fuste
+                o.Cilindro(U(4.0f), Cima(h - 4.0f - 4.4f), 2.6f * E, 2.3f * E, 16, pedra);
+                o.Cilindro(U(h - 4.4f), Cima(0.6f), 2.55f * E, 2.55f * E, 16, escura);               // colarinho
+                // capitel abrindo e laje
+                o.Cilindro(U(h - 3.8f), Cima(1.8f), 2.35f * E, 3.2f * E, 16, pedra);
+                o.Caixa(U(h - 1.0f), new Vector3(3.6f, 1.0f, 3.6f) * E, escura);
+                n++;
+                Debug.Log($"[Pilar3D] coluna em ({cx:0},{cy:0}) altura {h} do jogo");
+            }
+            if (n == 0) return null;
+            mat = new Material(mat) { name = "Maquete pilar" }; mat.SetFloat("_UsarTopo", 0); mat.SetFloat("_UsarVertice", 1);
+            return o.Montar("Pilares (coluna)", mat, pai);
+        }
+
+        /// <summary>Versão antiga (pillar-stone do Kenney), guardada pra comparação.</summary>
+        public static GameObject MontarKenney(Material mat, Transform pai, bool linear)
         {
             var pf = Resources.Load<GameObject>("Kenney/pillar-stone");
             if (pf == null) { Debug.LogWarning("[Pilar3D] faltou Resources/Kenney/pillar-stone"); return null; }

@@ -28,6 +28,7 @@ namespace CSM.Sim
             new Alvo("TR vence %", 42, 49, 2),            // real 45,6 (Mirage 44)
             new Alvo("tempo acabou %", 4, 9, 1.5f),       // real 6,6
             new Alvo("plant %", 43, 53, 1),               // real 49,7 (Mirage 46)
+            new Alvo("retake geral (CT ganha depois do plant) %", 30, 35, 1),   // real ~30-35 (todo plant; o "CT ganha retake" abaixo é só o recorte 2+ CT e CT >= TR)
             new Alvo("1º abate (s)", 33, 44, 2),          // real 38
             new Alvo("HS % (rifle)", 46, 56, 1),          // real 51
             new Alvo("1º abate é do CT %", 55, 65, 1),    // real 60
@@ -156,6 +157,7 @@ namespace CSM.Sim
         public Dictionary<string, float> Valores() => new Dictionary<string, float>
         {
             ["TR vence %"] = Pct(trWins, rounds),
+            ["retake geral (CT ganha depois do plant) %"] = Pct(ev.Where(k => k.Key.StartsWith("PLANT com") && k.Key.EndsWith("CT venceu")).Sum(k => k.Value), ev.Where(k => k.Key.StartsWith("PLANT com") && !k.Key.EndsWith("CT venceu")).Sum(k => k.Value)),
             ["mira no contato, mediana (°)"] = contatosTiro.Count > 0 ? contatosTiro.OrderBy(x => x).ElementAt(contatosTiro.Count / 2) : 99,
             ["  mira <2° % todos os avistamentos / real 45"] = contatos.Count > 0 ? 100f * contatos.Count(c => c.flick < 2) / contatos.Count : 0,
             ["  mira >8° % todos os avistamentos / real 16"] = contatos.Count > 0 ? 100f * contatos.Count(c => c.flick > 8) / contatos.Count : 0,
@@ -274,7 +276,7 @@ namespace CSM.Sim
             {
                 int tot = g.Sum(a => a.n);
                 sb.AppendLine($"    {g.Key} ({tot})");
-                bool porPonto = g.Key.StartsWith("pezinho por ponto") || g.Key == "destravou: lugar" || g.Key.StartsWith("sem caminho") || g.Key.StartsWith("nota de erros:");   /* por ponto: lista tudo, com a contagem (pra somar fora) */
+                bool porPonto = g.Key.StartsWith("pezinho") || g.Key == "destravou: lugar" || g.Key.StartsWith("sem caminho") || g.Key.StartsWith("nota de erros:");   /* por ponto: lista tudo, com a contagem (pra somar fora) */
                 foreach (var a in g.OrderByDescending(a => a.n).Take(porPonto ? 80 : 9)) sb.AppendLine($"       {a.i,-46} {Pct(a.n, tot),5:0.0}%" + (porPonto ? $"  n={a.n}" : ""));
             }
             var abs = acertos.Where(a => a.matou).ToList();

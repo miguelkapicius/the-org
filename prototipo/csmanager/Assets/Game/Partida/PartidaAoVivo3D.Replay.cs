@@ -37,7 +37,12 @@ namespace CSM.View3D
 
         void Gravar()
         {
-            var q = new Quadro { t = m.t, b = new Pose1[m.agents.Count] };
+            // carimbo = o tempo que está DESENHADO (o boneco fica entre o passo de antes e o atual, ver Visivel), não o
+            // m.t do passo: a 60+ fps dois quadros seguidos tinham o mesmo m.t com poses diferentes e o replay andava aos
+            // trancos (corre, para, corre a 32 Hz), o que na câmera lenta ficava bem visível
+            float tVis = m.t - Match.DT * (1 - Mathf.Clamp01(1 - (m.t - relogio) / Match.DT));
+            if (gravado.Count > 0) tVis = Mathf.Max(tVis, gravado[gravado.Count - 1].t);
+            var q = new Quadro { t = tVis, b = new Pose1[m.agents.Count] };
             for (int i = 0; i < m.agents.Count; i++)
             {
                 var a = m.agents[i]; var b = bonecos[a.id];
@@ -156,7 +161,10 @@ namespace CSM.View3D
                 ProximoLance(r); vel = r.L.vel;
             }
             // quadros em volta do tempo do replay
-            int i1 = gravado.FindIndex(q => q.t >= r.t); if (i1 < 0) i1 = gravado.Count - 1; int i0 = Mathf.Max(0, i1 - 1);
+            // (busca binária: o round inteiro gravado passa de 30 mil quadros a 144 fps; o carimbo só cresce)
+            int lo = 0, hi = gravado.Count;
+            while (lo < hi) { int mid = (lo + hi) >> 1; if (gravado[mid].t >= r.t) hi = mid; else lo = mid + 1; }
+            int i1 = lo < gravado.Count ? lo : gravado.Count - 1; int i0 = Mathf.Max(0, i1 - 1);
             var q0 = gravado[i0]; var q1 = gravado[i1];
             float w = q1.t > q0.t ? Mathf.Clamp01((r.t - q0.t) / (q1.t - q0.t)) : 1;
             rq0 = q0; rq1 = q1; rw = w;

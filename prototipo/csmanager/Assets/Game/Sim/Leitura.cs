@@ -108,6 +108,7 @@ namespace CSM.Sim
         public void MeuPlano(string plano, bool ganhou, char site = ' ')
         {
             rodada++;
+            if (site == 'A' || site == 'B') histA = 0.6f * histA + 0.4f * (site == 'A' ? 1 : 0);   /* bx: o quanto o CT deles tem motivo pra nos esperar no A */
             meus.TryGetValue(plano, out var x); meus[plano] = (x.n + 1, x.w + (ganhou ? 1 : 0));
             ultimos.Add(plano); if (ultimos.Count > 4) ultimos.RemoveAt(0);
             meusSites.Add((site, ganhou)); if (meusSites.Count > 4) meusSites.RemoveAt(0);
@@ -145,10 +146,32 @@ namespace CSM.Sim
             ctRounds++;
             int perto(V2 c) => vistos.Where(v => v.t < 40 && (v.p - c).Len < 520).Select(v => v.id).Distinct().Count();
             if (perto(Places.PlantA) >= 3) ctStackA++; else if (perto(Places.PlantB) >= 3) ctStackB++;
+            {   /* bx: CT em cada bomb pelo que a gente viu. Só se vê o bomb onde se foi: se lá tinha n, o outro tem ~4-n (5 menos
+                   quem segura o meio); o bomb que ninguém viu é deduzido, não "vazio". Média que esquece (os últimos pesam mais). */
+                float nA = perto(Places.PlantA), nB = perto(Places.PlantB);
+                if (nA > 0 && nB == 0) nB = MathF.Max(0, 4 - nA); else if (nB > 0 && nA == 0) nA = MathF.Max(0, 4 - nB);
+                if (nA + nB > 0) { ctEmA = 0.65f * ctEmA + 0.35f * nA; ctEmB = 0.65f * ctEmB + 0.35f * nB; ctVisto++; }
+            }
             if (vistos.Any(v => v.t < 18 && v.p.y > 15 * CSM.Map.MapData.Q)) ctAgressivo++;
             FimRound();
         }
         void FimRound() { vistos.Clear(); Array.Fill(vistoEm, -9f); }
+
+        /* bx: crença contínua do IGL TR (sem limiar de "3 vistos"): quantos CT a gente viu em cada bomb nos rounds passados (os
+           últimos pesam mais) e o quanto o CT deles tem motivo pra nos esperar em cada bomb (nossos últimos bombs) */
+        public float ctEmA = 1.5f, ctEmB = 1.5f, histA = 0.5f; public int ctVisto;
+        /// <summary>
+        /// bx: pra que lado a crença puxa o ataque (+1 = A, -1 = B), pensando como IGL pro: o bomb onde a gente VIU menos CT é
+        /// o mais fraco (confiança cresce com os rounds vistos); e o bomb onde eles mais nos esperam (fomos lá seguido) é o
+        /// que eles reforçam — não ser previsível. A intenção do time (perdeu 2 seguidas, stack lido) entra junto.
+        /// </summary>
+        public float LadoCrenca()
+        {
+            float conf = Math.Min(1f, ctVisto / 4f);
+            float fraco = conf * Math.Clamp(0.55f * (ctEmB - ctEmA), -0.8f, 0.8f);   /* viu mais CT no B → puxa A */
+            float previsivel = -1.1f * (histA - 0.5f);                                  /* fomos muito A → eles esperam A → puxa B */
+            return Math.Clamp(0.5f * intencao.lado + fraco + previsivel, -0.9f, 0.9f);
+        }
 
         /// <summary>Taxa com "prior" (começa em meio a meio; leva uns rounds pra acreditar).</summary>
         public static float Taxa(int x, int n, float prior = 0.5f, float peso = 3) => (x + prior * peso) / (n + peso);

@@ -18,7 +18,7 @@ namespace CSM.View3D
         readonly HashSet<FireArea> fogosVistos = new HashSet<FireArea>();
         readonly List<FireArea> fogosAcesos = new List<FireArea>();
         readonly List<Vector3> centrosFogo = new List<Vector3>(); bool c4PlantadoVisto;
-        float c4PlantouEm = -1, c4ExplodiuEm = -1;   // pro replay: a C4 plantada só aparece no chão depois do plant (e some na explosão)
+        float c4PlantouEm = -1, c4ExplodiuEm = -1, c4DesarmouEm = -1;   // pro replay: a C4 plantada só aparece no chão depois do plant (e some na explosão)
         readonly Dictionary<FireArea, float> idadeFogo = new Dictionary<FireArea, float>(); int vaporesVistos;
         float ultHE = -1, ultFlash = -1; bool c4Explodiu;
         readonly Dictionary<int, int> passoVisto = new Dictionary<int, int>();
@@ -73,6 +73,8 @@ namespace CSM.View3D
                 fx.HE(hp); Som3D.HE(hp); Tremer(h.p, 0.9f); Empurrar(hp, 2.4f, 6.5f);
                 foreach (var f in fumacas.Values) f.Explosao(new V3(h.p.x, h.p.y, h.z), m.t);
             }
+            // desarmou agora: guarda o instante (no replay o LED para de piscar no defuse, não só no fim do round)
+            if (m.defused && c4DesarmouEm < 0 && replay == null) c4DesarmouEm = m.t;
             if (m.exploded && !c4Explodiu)
             {
                 c4Explodiu = true; c4ExplodiuEm = m.t;
