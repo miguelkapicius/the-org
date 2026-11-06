@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -77,6 +77,23 @@ Banco atual (1286 planos): TR 116 agressivos, 102 defensivos, 206 rápidos, 185 
 | Controle de mapa | 29 % → 63 % | 68 s | 10 % → 50 % |
 
 Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos. As vitórias por lado não mudaram além do ruído da amostra. **Ponto a olhar:** o CT agressivo usa mais planos agressivos, mas não morreu mais cedo que o Equilibrado (0,52 contra 0,54 mortes antes dos 25 s); pode ser que o cérebro do bot recue antes de chegar ao avanço do plano.
+
+## Personalidade dos jogadores (decisão 0019)
+
+**[Sugestão]** Além dos 5 atributos, cada jogador tem **moral** e **entrosamento** (0 a 100), e cerca de metade tem um **traço**. Tudo muda a simulação (pilar 3). Números provisórios.
+
+| Traço | Efeito na partida |
+|---|---|
+| Decisivo | +15 % de sangue-frio em match point, último round do half e prorrogação |
+| Esquentado | No round seguinte a um em que morreu primeiro: mira 8 % pior e mais agressivo |
+| Líder | Escalado, +5 % de sangue-frio para os outros 4 titulares |
+| Estrela | Mira 6 % melhor sempre; troca menos os colegas; a moral cai o dobro no banco |
+| Pistoleiro | +12 % de mira e reflexo nos rounds de pistol |
+| Embalado | +6 % de reflexo quando o time venceu os 3 últimos rounds |
+
+- **Moral:** +3 por mapa vencido, -3 por mapa perdido (titulares); por semana +1 titular, -2 reserva. Vale de -4,5 % (0) a +3 % (100) na habilidade; neutra em 60.
+- **Entrosamento:** por semana +5 titular, +1 reserva, +3 por sessão coletiva (titulares); contratado chega com 20. A média dos titulares muda a chance de um bot **trocar** o colega que morreu (×0,6 a ×1,4, neutra em 50), a distância de onde ele vai trocar (340 a 500) e a força (±2 %). **Medido** (24 partidas por valor): mortes trocadas em até 5 s vão de 21,0 % (entrosamento 10) a 23,2 % (50) e 25,1 % (90); nas vitórias por round o efeito ainda não aparece além do ruído.
+- Os traços dos jogadores do mercado só aparecem com scout. O adversário ainda não tem traços (não tem jogadores de verdade).
 
 ## Perguntas em aberto
 

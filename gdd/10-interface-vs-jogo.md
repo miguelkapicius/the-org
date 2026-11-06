@@ -109,7 +109,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | # | O que a interface mostra | O que o jogo faz hoje | Status |
 |---|---|---|---|
 | T1 | Treino, preparo, cansaço, estudo de mapa, bootcamp, recuperação | Calculados no manager e levados à partida como multiplicador da habilidade | ✅ |
-| T2 | Sessões coletivas: "entrosamento do time" | Só somam preparo, igual ao treino individual. Não há entrosamento na simulação (trade, comunicação) | 🟡 |
+| T2 | Sessões coletivas: "entrosamento do time" | Somam preparo e, desde a decisão 0019, +3 de entrosamento por sessão para os titulares; o entrosamento muda a chance de trade kill dos bots | ✅ |
 | T3 | Transmissão: HUD de campeonato, killfeed, economia, radar, replay de melhores momentos, velocidade 1 a 4, pausa, pular round | Existe na cena 3D (`Partida/`, `Interface/Hud/Hud3D.cs`) | ✅ |
 | T4 | — | O painel de placar da partida (tecla P) mostra "Vila" fixo, mesmo quando a série diz outro mapa (ver M3) | ❌ |
 

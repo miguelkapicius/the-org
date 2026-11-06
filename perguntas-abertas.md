@@ -18,7 +18,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] **Elenco:** os jogadores têm contrato (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
 - [ ] **Pré-partida:** o manager também configura as compras padrão do time? (veto de mapas e estratégia já decididos, 0014) → `gdd/08-ui-ux.md`
 - [ ] **Adversários:** os jogadores dos times adversários têm atributos próprios (como os do mercado) ou o adversário continua sendo só um número de força? → `gdd/10-interface-vs-jogo.md`
-- [ ] **Traços de personalidade** (ideia prioritária 2): quais existem, quantos por jogador, e o manager os vê desde o início ou só com scout? → `gdd/11-ideias.md`
 - [ ] **Playbook** (ideia prioritária 5): o manager escolhe planos por mapa e por lado? Quantos favoritos e proibidos pode marcar? → `gdd/11-ideias.md`
 - [ ] **Funções:** o manager escolhe a função de CT de cada titular (âncora, rotação, qual bomb) ou ela sai da função de TR? → `gdd/10-interface-vs-jogo.md`
 
@@ -51,6 +50,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 6. Validar sugestões do agente
 
-- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) e **0018** (timeout do manager): confirmar os detalhes marcados como proposta do agente.
+- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) **0018** (timeout do manager) e **0019** (traços, moral e entrosamento): confirmar os detalhes marcados como proposta do agente.
 
 - [ ] Revisar os trechos marcados **[Sugestão]** no GDD (principalmente `00-visao.md` e `02-mecanicas.md`): confirmar (tirar a marca) ou apagar.
