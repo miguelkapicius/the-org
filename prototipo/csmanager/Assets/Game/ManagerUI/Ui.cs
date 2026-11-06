@@ -18,6 +18,24 @@ namespace CSM.ManagerUI
         /// poucas estrelas. É o que aparece "atrás do vidro" dos painéis translúcidos. Gerado em código (sem imagem no repositório);
         /// pequeno e com filtro bilinear, a Unity estica para a tela.
         /// </summary>
+        static Texture2D veu;
+        /// <summary>Véu escuro de baixo para cima (transparente no alto, quase opaco embaixo): põe o texto legível sobre as artes.</summary>
+        public static Texture2D VeuInferior()
+        {
+            if (veu != null) return veu;
+            const int h = 128;
+            veu = new Texture2D(1, h, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "VeuInferior", hideFlags = HideFlags.DontUnloadUnusedAsset };
+            var cor = new Color(0.027f, 0.043f, 0.102f);
+            for (int y = 0; y < h; y++)
+            {
+                float v = y / (float)(h - 1);                       // 0 = embaixo
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.62f - v) / 0.62f)) * 0.94f;
+                veu.SetPixel(0, y, new Color(cor.r, cor.g, cor.b, a));
+            }
+            veu.Apply(false, false);
+            return veu;
+        }
+
         public static Texture2D FundoNoite()
         {
             const int w = 480, h = 270;

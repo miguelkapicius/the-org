@@ -270,7 +270,7 @@
 .dica > .t { font-size: 14px; white-space: normal; }
 
 /* avisos do painel */
-.avisos { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 4px 18px; margin-bottom: 22px; }
+.avisos { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 4px 18px; margin-bottom: 4px; }
 .aviso { flex-direction: row; align-items: center; height: 50px; border-top-width: 1px; border-top-color: var(--linha); }
 .aviso.primeiro { border-top-width: 0; }
 .aviso-ponto { width: 10px; height: 10px; border-radius: 5px; margin-right: 14px; background-color: var(--azul); }
@@ -408,7 +408,9 @@
 
 /* diário */
 .diario { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 6px 18px; }
-.diario-linha { flex-direction: row; align-items: center; height: 36px; }
+.diario-linha { flex-direction: row; align-items: center; height: 42px; border-top-width: 1px; border-top-color: var(--linha); overflow: hidden; }
+.diario-linha.primeiro { border-top-width: 0; }
+.diario-linha.clicavel-l:hover { background-color: rgba(150, 170, 255, 0.06); }
 .diario-linha > .t { font-size: 15px; }
 
 /* faixa das 52 semanas */
@@ -444,7 +446,7 @@
 .rk-nome { flex-grow: 1; }
 .rk-pts { width: 100px; -unity-text-align: middle-right; }
 .duas-colunas { flex-direction: row; }
-.coluna { flex-grow: 1; flex-basis: 0; margin-right: 22px; }
+.coluna { flex-grow: 1; flex-basis: 0; min-width: 0; margin-right: 22px; }
 .coluna.ultima { margin-right: 0; }
 
 /* controles pequenos */
@@ -541,26 +543,22 @@
 /* ======================================================================================================
    Hub (cartões de vidro com a ação em destaque) e abas em destaque
    ====================================================================================================== */
-.hub { flex-direction: row; margin-right: -16px; margin-bottom: 26px; }
-.hub-card { flex-grow: 1; flex-basis: 0; height: 330px; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; margin-right: 16px; overflow: hidden; transition-property: background-color; transition-duration: 120ms; }
-.hub-card:hover { background-color: rgba(150, 170, 255, 0.10); border-color: rgba(127, 152, 255, 0.55); }
-.hub-card.destaque { background-color: var(--destaque); border-color: var(--destaque-claro); }
-.hub-card.destaque:hover { background-color: var(--destaque-claro); }
-.hub-arte { height: 180px; align-items: center; justify-content: center; -unity-background-scale-mode: scale-to-fit; }
-.hub-card .ic { color: var(--destaque-claro); }
-.hub-card.destaque .ic { color: #ffffff; }
+.hub { flex-direction: row; margin-right: -16px; margin-bottom: 30px; }
+.hub-card { flex-grow: 1; flex-basis: 0; height: 340px; background-color: var(--cartao); -unity-background-scale-mode: scale-and-crop; border-width: 1px; border-color: var(--linha2); border-radius: 6px; margin-right: 16px; overflow: hidden; transition-property: border-color, translate; transition-duration: 160ms; }
+.hub-card:hover { border-color: rgba(127, 152, 255, 0.7); translate: 0 -3px; }
+.hub-card.destaque { border-width: 2px; border-color: var(--destaque); }
+.hub-card.destaque:hover { border-color: var(--destaque-claro); }
+.hub-veu { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.hub-card .ic { color: #ffffff; }
 .hub-selo { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 30px; border-radius: 4px; background-color: rgba(10, 14, 32, 0.85); align-items: center; justify-content: center; padding: 0 9px; }
 .hub-selo > .t { color: #ffffff; font-size: 16px; -unity-font-style: bold; -unity-text-align: middle-center; }
-.hub-corpo { flex-grow: 1; justify-content: flex-end; padding: 0 20px 18px 20px; }
-.hub-tit { color: #ffffff; font-size: 27px; -unity-font-style: bold; white-space: normal; letter-spacing: 0.5px; }
-.hub-sub { color: var(--suave); font-size: 14px; white-space: normal; margin-top: 4px; }
-.hub-card.destaque .hub-sub { color: #dfe5ff; }
-.hub-btn { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 14px; background-color: var(--destaque); border-radius: 3px; padding: 11px 16px; }
-.hub-btn > .t { color: #ffffff; font-size: 17px; -unity-font-style: bold; letter-spacing: 1px; }
+.hub-corpo { flex-grow: 1; justify-content: flex-end; padding: 0 20px 20px 20px; }
+.hub-tit { color: #ffffff; font-size: 25px; -unity-font-style: bold; white-space: normal; letter-spacing: 1px; }
+.hub-sub { color: #c9cfea; font-size: 15px; white-space: normal; margin-top: 4px; }
+.hub-btn { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 16px; background-color: var(--destaque); border-radius: 4px; padding: 12px 16px; }
+.hub-btn > .t { color: #ffffff; font-size: 16px; -unity-font-style: bold; letter-spacing: 1px; }
 .hub-btn > .ic { color: #ffffff; }
 .hub-btn:hover { background-color: var(--destaque-claro); }
-.hub-card.destaque .hub-btn { background-color: rgba(10, 14, 32, 0.55); }
-.hub-card.destaque .hub-btn:hover { background-color: rgba(10, 14, 32, 0.75); }
 
 .aba.ativo { border-bottom-color: var(--destaque); }
 .aba.ativo > .t { color: #ffffff; }

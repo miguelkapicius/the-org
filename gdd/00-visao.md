@@ -1,6 +1,6 @@
 # Visão
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0007
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0007, 0023
 
 _A base de tudo. Toda outra seção deve respeitar os pilares definidos aqui._
 
@@ -32,6 +32,7 @@ Um jogo de **manager de um time de tático-FPS competitivo**, em que você monta
 2. **Assistir é o prêmio.** A partida é apresentada como uma transmissão competitiva em 3D, com cara de demo: câmera, primeira pessoa, vida dos jogadores, minimapa. (decisões 0001 e 0002)
 3. **Gestão que aparece na partida.** Economia, melhorias e escolhas do manager precisam ter efeito visível no que acontece no servidor. **[Sugestão]** Se uma decisão do manager não muda nada que dá para ver na partida, ela é suspeita.
 4. **Identidade própria.** Parece CS no ritmo e na sensação, mas mapas, armas, nomes e visual são nossos. (decisão 0004)
+5. **Complexo por dentro, simples de entender.** A UX e a UI são pilar do projeto: a simulação pode ser tão profunda quanto quisermos, mas o que o jogador vê tem de ser simples de aprender e de entender. A interface mostra a conclusão (o que fazer, o que muda) e deixa o detalhe a um passo. (decisão 0023, proposta)
 
 ## O que o jogo NÃO é
 
