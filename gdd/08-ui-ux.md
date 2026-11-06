@@ -36,6 +36,8 @@ _Telas, HUD e fluxo de navegação._
 
 Os atributos mostrados no elenco e no mercado são uma leitura direta do que a IA dos bots já usa (mira, reflexo, spray, utilitária, sangue-frio), para que o que o manager vê seja o que muda na partida (pilar 3). Os titulares escolhidos entram na partida assistida com o nome e a habilidade deles.
 
+**O que a interface mostra e o jogo ainda não faz** (só um mapa jogável, estratégias com efeito não medido, adversários sem jogadores de verdade, timeout etc.) está listado em `10-interface-vs-jogo.md`. Consulte antes de mexer nessas telas.
+
 Todos os números da interface (salários, preços, prêmios, custo da Gaming House, tamanho do elenco) são **provisórios**: servem para o protótipo andar e não são decisão de design.
 
 ## HUD

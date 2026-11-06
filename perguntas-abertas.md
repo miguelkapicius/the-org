@@ -17,10 +17,14 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] **Elenco:** os jogadores têm contrato (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)? → `gdd/03-progressao.md`
 - [ ] **Pré-partida:** o manager também configura as compras padrão do time? (veto de mapas e estratégia já decididos, 0014) → `gdd/08-ui-ux.md`
+- [ ] **Adversários:** os jogadores dos times adversários têm atributos próprios (como os do mercado) ou o adversário continua sendo só um número de força? → `gdd/10-interface-vs-jogo.md`
+- [ ] **Funções:** o manager escolhe a função de CT de cada titular (âncora, rotação, qual bomb) ou ela sai da função de TR? → `gdd/10-interface-vs-jogo.md`
 
 ## 3. Escopo e produto
 
 - [ ] **MVP:** quantos mapas? → `gdd/05-conteudo.md`
+- [ ] O mapa jogável de hoje entra no pool com qual nome: "Vila" (código) ou "Forja" (interface)? O "Vila Velha" do pool continua? → `gdd/10-interface-vs-jogo.md`
+- [ ] De onde vêm as estratégias de um mapa novo (hoje o banco vem de rounds pro de um mapa da Valve): gerar pela simulação, montar à mão ou outro caminho? → `gdd/10-interface-vs-jogo.md`
 - [ ] **MVP:** lista de armas e utilitárias → `gdd/05-conteudo.md`
 - [ ] Tamanho do escopo do primeiro lançamento → `gdd/00-visao.md`
 - [ ] Haverá replays das partidas? A simulação precisa ser determinística? → `gdd/09-tecnico.md`

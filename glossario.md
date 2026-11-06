@@ -32,6 +32,8 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Circuito | Grupo de campeonatos de um mesmo nível: Amador, Pro ou Elite. | tier, divisão | 01-core-loop |
 | Ranking | Lista dos 48 times por pontos de colocação em campeonatos; decide o circuito do clube. | classificação | 01-core-loop |
 | Veto | Fase antes da série em que os times banem e escolhem mapas. | pick/ban | 08-ui-ux |
+| Pool de mapas | Os 7 mapas que podem entrar no veto de uma série. | map pool | 08-ui-ux |
+| Mapa jogável | Mapa do pool que tem geometria 3D e os dados da IA, e por isso pode ser assistido. Hoje só um. | mapa 3D (ambíguo) | 10-interface-vs-jogo |
 | Afinidade | O quanto um time domina um mapa (0 a 100); entra na habilidade na partida. | domínio | 02-mecanicas |
 | Estratégia | Conjunto de ajustes de estilo da IA do time (agressiva, defensiva, execuções rápidas...) escolhido na pré-partida. | tática, plano de jogo | 02-mecanicas |
 | Treino | Plano semanal que o manager define para cada jogador (foco e frequência). Evolui atributos e gera preparo e cansaço. | prática | 02-mecanicas |
