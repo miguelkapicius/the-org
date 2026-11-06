@@ -59,6 +59,14 @@ namespace CSM.View3D
         /// <summary>Monta a maquete e a partida (o Start chama; o editor chama direto pra tirar print sem Play).</summary>
         public void Iniciar()
         {
+            // semente da partida: no jogo é sorteada de verdade (~2 bilhões de valores, sem depender da hora), então não dá pra
+            // repetir uma partida por acaso (antes era sempre 15 e toda partida saía igual, round por round). -csm_seed N é
+            // ferramenta nossa pra repetir um bug; o jogador nunca escolhe. O editor (prints sem Play) segue na 15, pra comparar.
+            // Folga no topo: a vitrine soma 7919 e o Reiniciar soma 1.
+            var argv = System.Environment.GetCommandLineArgs(); int ia = System.Array.IndexOf(argv, "-csm_seed");
+            if (ia >= 0 && ia + 1 < argv.Length && int.TryParse(argv[ia + 1], out int sv)) seed = sv;
+            else if (Application.isPlaying) seed = System.Security.Cryptography.RandomNumberGenerator.GetInt32(1, int.MaxValue - 100000);
+            Debug.Log($"[Visual3D] partida com semente {seed} (pra repetir: -csm_seed {seed})");
             Brain.Explicar = true;
             Diretor.Velho = System.Array.Exists(System.Environment.GetCommandLineArgs(), s => s == "-diretor_velho");   // A/B do diretor
             Diretor.InicioVelho = System.Array.Exists(System.Environment.GetCommandLineArgs(), s => s == "-diretor_inicio_velho");   // A/B da leitura do round calmo

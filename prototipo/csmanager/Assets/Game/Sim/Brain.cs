@@ -440,7 +440,7 @@ namespace CSM.Sim
                 GuardaGranada(m.t, "a lineup mudou — guardei a granada");
             if (m.t < evasivoPulaAte && me.Speed > me.MaxSpeed * 0.7f && !me.noAr) { me.querPular = true; evasivoPulaAte = -9; }   // pulo da quebra de linha
             float t = m.t; faseAnt = fase; fase = "ordem";
-            Panico(t, dt);
+            long ppn = P0(); Panico(t, dt); P1("pânico", ppn);
             // ---- vê
             long pc = P0();
             Agent best = null; float bestScore = float.MaxValue;
@@ -658,7 +658,7 @@ namespace CSM.Sim
                 if (RoundGanho && !order.defuse) { if (LootGranada(t)) return; DeBoa(); return; }
                 if (EntregarCompra(t)) return;
                 if (PegarEntrega(t)) return;
-                Juiz(t); LunetaSegurando(t); ReacaoColega(t); return;
+                Juiz(t); long pl = P0(); LunetaSegurando(t); ReacaoColega(t); P1("luneta + reação colega", pl); return;
             }
             // ---- troca: aliado morreu perto, vai em cima de quem matou
             if (t < tradeUntil) { fase = "indo trocar"; MoveTo(tradePos, true); if (SmokeEspera && SmokeNoCaminho(t)) { Face(Pixel(tradePos), 3); return; } /* bx: a troca/ajuda também decide a smoke inimiga no caminho (antes atravessava sem pensar)*/ ClearAngles(true); Face(Pixel(tradePos), 3); Think("indo trocar"); return; }   // pré-mirado na quina dele
@@ -2665,7 +2665,7 @@ namespace CSM.Sim
         /// </summary>
         void Juiz(float t)
         {
-            PedirItem(t); AtenderItem(t);   // pedir/dropar item é de passagem (o G não para ninguém)
+            long pj = P0(); PedirItem(t); AtenderItem(t);   // pedir/dropar item é de passagem (o G não para ninguém)
             float agr = P.Agr(me.skill.aggression);
             var intel = m.intel[(int)me.team];
             juizN = 0;
@@ -4808,12 +4808,20 @@ namespace CSM.Sim
             var cands = new List<(string nome, V2 p)>();
             foreach (var hd in HOLDS_CT) cands.Add((hd.name, hd.pos));   /* os cantos onde se segura: o TR entrando acha o CT neles; o CT retomando acha o TR do pós-plant neles */
             if (focus is V2 fo) cands.Add((focusName ?? "canto", fo));
-            float melhorG = 0; string aNome = null, aK = null, aPq = null; V2 aP = default, aJoga = default;
-            foreach (var (nome, sp) in cands)
+            float melhorG = 0; string aNome = null, aK = null, aPq = null, aChave = null; V2 aP = default, aJoga = default;
+            foreach (var (nome, sp0) in cands)
             {
-                string chave = "prenade " + (int)(sp.x / 40) + "_" + (int)(sp.y / 40);
+                V2 sp = sp0; string chave = "prenade " + (int)(sp0.x / 40) + "_" + (int)(sp0.y / 40);
                 if (m.utilUsada.Contains(chave)) continue;
                 if (!me.IsT && (sp - m.bombPos).Len > 520) continue;
+                {   /* bx: o canto é uma região — quem segura fica um pouco pro lado do ponto: miro onde a crença diz (agora + costume) */
+                    V2 c0 = sp; float bq = it.Esperados(sp, 45) + 0.5f * Rotas.Perto(inim, sp, m.t, 45);
+                    for (int k = 0; k < 8; k++)
+                    {
+                        V2 q = NavGrid.Snap(c0 + V2.Ang(k * 0.7854f) * 55f); if (!NavGrid.Movable(q)) continue;
+                        float vq = it.Esperados(q, 45) + 0.5f * Rotas.Perto(inim, q, m.t, 45); if (vq > bq + 0.02f) { bq = vq; sp = q; }
+                    }
+                }
                 float dh = (sp - me.pos).Len; if (dh < 120 || dh > 560 || AmigoNoAlvo(sp)) continue;
                 /* onde no meu caminho o canto me pega primeiro, e quão perto o caminho passa dele */
                 float zs = NavGrid.ZAt(NavGrid.Snap(sp)) + 18, anda = 0, andaV = -1, minPath = 1e9f; V2 ant = me.pos, dir = default, pv = default;
@@ -4839,7 +4847,7 @@ namespace CSM.Sim
                     string ck = chave + " " + k; if (rolou.Contains(ck)) return; rolou.Add(ck);   /* uma decisão por canto e tipo */
                     float g = (vale - guardar) * util;
                     if (Match.Auditar) m.Aud("pre-nade: avaliou (tipo · crença · ganho)", k + " · " + crenca + " · " + (g <= 0 ? "a não vale" : g < 0.1f ? "b pouco" : g < 0.25f ? "c médio" : "d muito"));
-                    if (g > melhorG) { melhorG = g; aNome = nome; aK = k; aP = sp; aJoga = joga; aPq = pq; }
+                    if (g > melhorG) { melhorG = g; aNome = nome; aK = k; aP = sp; aJoga = joga; aPq = pq; aChave = chave; }
                 }
                 /* flash pré-peek: eu vou passar na cara dele logo depois do estouro; colega perto do estouro fica de fora */
                 if (nF > 0)
@@ -4867,10 +4875,11 @@ namespace CSM.Sim
             if (aK == null || rng.Rand() > MathX.Clamp(melhorG / 0.3f, 0, 0.9f) || !Alcanca(aJoga, aK == "he" ? "he" : aK == "flash" ? "flash" : "molotov")) return false;
             preNadeAgora = true; Jogar(aK, $"{aK} de praxe em {aNome}", aJoga); preNadeAgora = false;
             if (action != "granada") return false;
-            m.utilUsada.Add("prenade " + (int)(aP.x / 40) + "_" + (int)(aP.y / 40)); m.Ev($"pre-nade {aK}/round"); porquePendente = aPq;
+            m.utilUsada.Add(aChave); m.Ev($"pre-nade {aK}/round"); porquePendente = aPq;
             if (Match.Auditar)
             {   /* auditoria: quem estava lá de verdade (só lê) — o resultado sai 4 s depois do estouro */
-                var real = new List<(Agent, int, V2, float)>(); foreach (var x in m.agents) if (x.alive && x.team != me.team && (x.pos - aP).Len < 160) real.Add((x, x.hp, x.pos, x.blindUntil));
+                float rr = aK == "molotov" ? 100f : aK == "he" ? 110f : aK == "flash" ? 200f : 160f;
+                var real = new List<(Agent, int, V2, float)>(); foreach (var x in m.agents) if (x.alive && x.team != me.team && (x.pos - aP).Len < rr) real.Add((x, x.hp, x.pos, x.blindUntil));
                 string info = it.Esperados(aP, 110) < 0.15f ? "sem info" : "com crença";
                 preNades.Add(new PreNadeReg { p = aP, t = actionEnd + 1.6f, kind = aK, porque = info, real = real });
                 m.Aud("pre-nade: jogado · tinha alguém lá de verdade", aK + " · " + info + " · " + (real.Count == 0 ? "ninguém" : real.Count == 1 ? "1" : "2+"));
