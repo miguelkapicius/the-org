@@ -911,18 +911,6 @@ namespace CSM.ManagerUI
         }
 
         // ================================================================================================ mercado (vitrine em GerenteUI.Mercado.cs)
-        void Contratar(Jogador j)
-        {
-            var erro = c.Contratar(j);
-            comparar.Remove(j);
-            var sai = erro == null ? c.QuemSaiPara(j) : null;
-            Resposta(erro, j.nome + " entrou no elenco (reserva).", sai != null ? "Escalar agora" : null, () =>
-            {
-                c.TornarTitular(j); Salvar(); Mostrar();
-                Toast(j.nome + " agora é titular. Força " + c.Forca + ", chance de vitória " + Pct(c.ChanceVitoria()) + ".");
-            });
-        }
-
         void AtualizarPrevia(Jogador j)
         {
             if (previaTxt == null) return;
@@ -935,7 +923,7 @@ namespace CSM.ManagerUI
                 var sai = c.QuemSaiPara(j);
                 string t;
                 if (c.elenco.Count >= c.ElencoMax) t = "Elenco cheio: venda alguém antes de contratar.";
-                else if (c.dinheiro < j.Preco) t = "Falta dinheiro: " + j.nome + " custa " + Fmt.Dinheiro(j.Preco) + ".";
+                else if (c.dinheiro < Negociador.Pedido(c, j).luvas) t = "Falta dinheiro: " + j.nome + " pede " + Fmt.Dinheiro(Negociador.Pedido(c, j).luvas) + " de luvas.";
                 else if (sai != null)
                 {
                     int f = c.ForcaCom(j, sai);
@@ -943,7 +931,8 @@ namespace CSM.ManagerUI
                     bom = true;
                 }
                 else t = j.nome + " não melhora os titulares: entraria como reserva.";
-                t += "   |   saldo depois " + Fmt.Dinheiro(c.dinheiro - j.Preco) + " · salário +" + Fmt.Dinheiro(j.Salario) + "/sem";
+                var ped = Negociador.Pedido(c, j);
+                t += "   |   se aceitar o pedido: saldo depois " + Fmt.Dinheiro(c.dinheiro - ped.luvas) + " · salário +" + Fmt.Dinheiro(ped.salario) + "/sem";
                 previaTxt.text = t;
             }
             previaCaixa?.EnableInClassList("bom", bom);
@@ -976,13 +965,18 @@ namespace CSM.ManagerUI
             {
                 ("painel", () => { aba = Aba.Painel; filtroPainel = 1; }, null),
                 ("calendario", () => aba = Aba.Calendario, null),
-                ("calendario-detalhe", () => { aba = Aba.Calendario; campAberto = c.CampeonatosDoClube.FirstOrDefault(x => x.iniciado) ?? c.CampeonatosDoClube.First(); }, null),
+                ("calendario-detalhe", () => { aba = Aba.Calendario; campAberto = c.CampeonatosDoClube.FirstOrDefault(x => x.iniciado) ?? c.CampeonatosDoClube.First(); campAba = 0; }, null),
+                ("camp-premios", () => { campAba = 1; }, null),
+                ("camp-participantes", () => { campAba = 2; }, null),
+                ("camp-partidas", () => { campAba = 3; }, null),
+                ("camp-chaves", () => { var kk = c.mundo.campeonatos.FirstOrDefault(x => x.formato != Formato.Liga && !x.iniciado && x.times.Count >= 8); if (kk != null) { kk.iniciado = true; kk.Iniciar(-1); campAberto = kk; campAbaDe = kk; } campAba = 4; }, () => { }),
                 ("elenco", () => { aba = Aba.Elenco; comparar.Clear(); }, () => PreverTroca(c.elenco[5])),
                 ("elenco-comparar", () => { aba = Aba.Elenco; comparar.Clear(); comparar.Add(c.elenco[1]); comparar.Add(c.elenco[5]); }, null),
                 ("treino", () => { aba = Aba.Treino; treinoJogador = null; comparar.Clear(); }, null),
                 ("treino-jogador", () => { aba = Aba.Treino; treinoJogador = c.elenco[1]; c.DefinirLadoTreino(treinoJogador, 0); }, null),
                 ("treino-jogador-ct", () => { aba = Aba.Treino; treinoJogador = c.elenco.FirstOrDefault(x => x.LadoForte == false) ?? c.elenco[2]; }, () => treinoJogador = null),
-                ("mercado", () => { aba = Aba.Mercado; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
+                ("mercado", () => { aba = Aba.Mercado; mercadoChat = false; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
+                ("mercado-negociacao", () => { mercadoChat = true; var jj = c.mercado.OrderByDescending(x => x.Overall).Skip(2).First(); chatJogador = jj; var n = Negociador.Abrir(c, jj); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.6), (int)(n.salarioPedido * 0.7), false); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.95), (int)(n.salarioPedido * 0.95), true); aba = Aba.Mercado; }, null),
                 ("scouts", () => aba = Aba.Scouts, null),
                 ("playbook", () => { PlantaJogada.InicioDaCaptura = 0.62f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); c.MarcarJogada(js[0].nome, true, Carreira.MarcaJogada.Favorita); c.MarcarJogada(js[2].nome, true, Carreira.MarcaJogada.Proibida); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),
                 ("playbook-ct", () => { ladoPlaybookTR = false; jogadaAberta = Estrategias.Jogadas(false)[0].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),

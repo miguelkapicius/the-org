@@ -189,6 +189,7 @@ namespace CSM.Manager
         public readonly List<Jogador> mercado = new List<Jogador>();
         public readonly List<Lancamento> extrato = new List<Lancamento>();
         public readonly List<Resultado> historico = new List<Resultado>();
+        public readonly Dictionary<Jogador, Negociacao> negociacoes = new Dictionary<Jogador, Negociacao>();   // conversas de contratação em andamento (decisão 0026; não são salvas)
         public readonly List<ResultadoCampeonato> titulos = new List<ResultadoCampeonato>();   // campeonatos já disputados
         public readonly List<string> diario = new List<string>();
         public Mundo mundo;
@@ -499,13 +500,18 @@ namespace CSM.Manager
             if (extrato.Count > 200) extrato.RemoveAt(extrato.Count - 1);
         }
 
-        public string Contratar(Jogador j)
+        /// <summary>Contrata um jogador do mercado. Sem argumentos é o preço de tabela; com <paramref name="luvas"/> e <paramref name="salario"/> é o que foi
+        /// acertado na negociação (decisão 0026).</summary>
+        public string Contratar(Jogador j, int? luvas = null, int? salario = null)
         {
             if (!mercado.Contains(j)) return "Esse jogador não está mais no mercado.";
             if (elenco.Count >= ElencoMax) return "Elenco cheio (" + ElencoMax + "). Venda alguém ou suba a Gaming House.";
-            if (dinheiro < j.Preco) return "Dinheiro insuficiente.";
+            int custo = luvas ?? j.Preco;
+            if (dinheiro < custo) return "Dinheiro insuficiente.";
             ultimaVenda = null;
-            Lanca("Contratação de " + j.nome, -j.Preco);
+            Lanca("Contratação de " + j.nome, -custo);
+            if (salario.HasValue) j.salarioAcordado = salario.Value;
+            negociacoes.Remove(j);
             mercado.Remove(j); j.potencialRevelado = true; elenco.Add(j); GuardarInicio(j);
             j.moral = Provisorio.MORAL_CONTRATADO; j.entrosamento = Provisorio.ENTROSAMENTO_CONTRATADO;
             return null;
@@ -675,6 +681,11 @@ namespace CSM.Manager
                 bool t = tit.Contains(j);
                 float queda = Provisorio.MORAL_RESERVA_SEMANA * (j.traco == Traco.Estrela ? 2f : 1f);
                 j.moral = Math.Clamp(j.moral + (t ? Provisorio.MORAL_TITULAR_SEMANA : -queda), 0f, 100f);
+                if (j.promessaSemanas > 0)   // promessa de titular (decisão 0026): cumprir rende moral, descumprir tira
+                {
+                    j.promessaSemanas--;
+                    if (!t) j.moral = Math.Clamp(j.moral - 6f, 0f, 100f); else if (j.promessaSemanas == 0) j.moral = Math.Clamp(j.moral + 5f, 0f, 100f);
+                }
                 j.entrosamento = Math.Clamp(j.entrosamento + (t ? Provisorio.ENTROSAMENTO_TITULAR + coletivas * Provisorio.ENTROSAMENTO_COLETIVA : Provisorio.ENTROSAMENTO_RESERVA), 0f, 100f);
             }
             // estudo de mapa: o time ganha afinidade com o mapa escolhido e perde um pouco com os outros

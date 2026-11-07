@@ -989,3 +989,113 @@
 .pb-stats { padding: 6px 0 2px 0; margin-bottom: 0; background-color: rgba(0, 0, 0, 0); }
 .pb-bloco { width: 118px; margin-right: 6px; margin-bottom: 10px; }
 .pb-topo { margin-bottom: 12px; }
+
+
+/* ======================================================================================================
+   Tela do campeonato (capa, resumo flutuante, abas) e leaderboard do ranking
+   ====================================================================================================== */
+.camp-capa { height: 240px; border-radius: 6px; overflow: hidden; background-color: #0c0e11; padding: 40px 38px; flex-shrink: 0; margin-top: 4px; }
+.camp-titulo { font-size: 60px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-crumb { flex-direction: row; align-items: center; margin-top: 8px; }
+.camp-crumb > .t { font-size: 14px; color: var(--suave); }
+.camp-crumb > .camp-crumb-link:hover { color: #ffffff; }
+.camp-crumb > .camp-crumb-sep { margin: 0 10px; color: var(--apagado); }
+.camp-crumb > .camp-crumb-atual { color: #ffffff; }
+.camp-resumo { flex-direction: row; flex-wrap: wrap; align-items: center; margin: -78px 30px 0 30px; padding: 26px 30px; background-color: #0e1013; border-radius: 6px; border-width: 1px; border-color: rgba(255, 255, 255, 0.03); flex-shrink: 0; }
+.camp-r-esq { flex-grow: 1; flex-basis: 360px; min-width: 300px; margin-right: 20px; }
+.camp-r-nome { font-size: 36px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-stat { align-items: center; padding: 4px 28px; border-left-width: 1px; border-left-color: rgba(255, 255, 255, 0.015); }
+.camp-stat-v { font-size: 38px; -unity-text-align: middle-center; margin-top: 4px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-link { margin-top: 4px; }
+.camp-acao { align-items: center; padding: 4px 0 4px 28px; border-left-width: 1px; border-left-color: rgba(255, 255, 255, 0.015); min-width: 240px; }
+.camp-contagem { font-size: 58px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+
+.camp-visao { flex-direction: row; flex-wrap: wrap; align-items: flex-start; margin-top: 8px; }
+.camp-col-principal { flex-grow: 2; flex-basis: 520px; min-width: 0; margin-right: 22px; }
+.camp-col-lado { flex-grow: 1; flex-basis: 300px; min-width: 280px; }
+.camp-card { background-color: rgba(255, 255, 255, 0.006); border-radius: 6px; padding: 24px 26px; margin-bottom: 18px; }
+.camp-card-tit { font-size: 28px; margin-bottom: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-txt { font-size: 15px; color: var(--suave); }
+.camp-sub { font-size: 21px; margin: 22px 0 6px 0; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-dado { flex-direction: row; justify-content: space-between; margin-bottom: 8px; }
+.camp-mini { flex-direction: row; align-items: center; padding: 8px 10px; border-radius: 4px; margin-bottom: 6px; background-color: rgba(255, 255, 255, 0.004); }
+.camp-mini.meu { background-color: rgba(240, 166, 64, 0.014); }
+.camp-mini-pos { width: 38px; font-size: 13px; color: var(--apagado); }
+.pb-item-q.neutro { background-color: var(--apagado); }
+
+.camp-linha-cab { flex-direction: row; align-items: center; padding: 12px 20px; margin-top: 14px; }
+.camp-linha-cab > .t { font-size: 13px; color: var(--apagado); }
+.camp-linha { flex-direction: row; align-items: center; height: 54px; padding: 0 20px; margin-bottom: 6px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.004); }
+.camp-linha:hover { background-color: rgba(255, 255, 255, 0.008); }
+.camp-linha.meu { background-color: rgba(240, 166, 64, 0.014); }
+.camp-c1 { width: 240px; } .camp-c2 { flex-grow: 1; flex-basis: 0; }
+.camp-p1 { flex-grow: 2; flex-basis: 0; min-width: 0; } .camp-p2 { flex-grow: 1; flex-basis: 0; } .camp-p3 { width: 96px; }
+.camp-mono { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.camp-topo-aba { margin-top: 22px; }
+
+.camp-jogos { padding: 8px 0; margin-top: 8px; }
+.camp-rodada { font-size: 12px; letter-spacing: 1.2px; color: var(--apagado); margin: 20px 22px 8px 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.camp-jogo { flex-direction: row; align-items: center; height: 56px; padding: 0 22px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.008); }
+.camp-jogo.meu { background-color: rgba(240, 166, 64, 0.014); }
+.camp-jogo-data { width: 110px; font-size: 13px; color: var(--apagado); }
+.camp-jogo-a { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-right; }
+.camp-jogo-b { flex-grow: 1; flex-basis: 0; }
+.camp-jogo-placar { width: 110px; font-size: 18px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.camp-jogo-est { width: 130px; align-items: flex-end; }
+
+.camp-chave { margin-top: 24px; flex-shrink: 0; }
+.camp-chave-cab { position: absolute; top: 0; height: 44px; }
+.camp-chave-tit { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.camp-chave-card { background-color: rgba(255, 255, 255, 0.008); border-radius: 4px; border-width: 1px; border-color: rgba(255, 255, 255, 0.02); justify-content: center; }
+.camp-chave-card.meu { border-color: rgba(240, 166, 64, 0.5); }
+.camp-chave-lado { flex-direction: row; align-items: center; justify-content: space-between; height: 31px; padding: 0 12px; }
+.camp-chave-nome { font-size: 14px; flex-shrink: 1; overflow: hidden; }
+.camp-chave-v { font-size: 15px; margin-left: 8px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+
+.rk-c1 { width: 90px; } .rk-c2 { flex-grow: 1; flex-basis: 0; min-width: 0; } .rk-c3 { width: 190px; } .rk-c4 { width: 100px; } .rk-c5 { width: 160px; }
+.rk-lin { height: 62px; }
+.rk-av { width: 34px; height: 34px; border-radius: 17px; margin-right: -10px; border-width: 2px; border-color: #0b0d10; }
+.rk-av > .t { font-size: 15px; }
+.camp-paginas { flex-direction: row; justify-content: flex-end; margin-top: 18px; }
+.camp-pag { width: 38px; height: 38px; border-radius: 19px; align-items: center; justify-content: center; margin-left: 6px; }
+.camp-pag:hover { background-color: rgba(255, 255, 255, 0.012); }
+.camp-pag.on { background-color: #eceef1; }
+.camp-pag.on > .t { color: #0b0d10; }
+
+/* ======================================================================================================
+   Negociação: lista de conversas, balões, caixa de proposta e o que pesa para o jogador
+   ====================================================================================================== */
+.neg-corpo { flex-direction: row; align-items: flex-start; margin-top: 4px; }
+.neg-lista { width: 340px; height: 650px; flex-shrink: 0; margin-right: 22px; }
+.neg-linha { flex-direction: row; align-items: center; padding: 12px 14px; margin-bottom: 6px; border-radius: 6px; background-color: rgba(255, 255, 255, 0.005); }
+.neg-linha:hover { background-color: rgba(255, 255, 255, 0.01); }
+.neg-linha.sel { background-color: rgba(255, 255, 255, 0.016); }
+.neg-foto { width: 48px; height: 48px; border-radius: 24px; flex-shrink: 0; }
+.neg-foto-g { width: 58px; height: 58px; border-radius: 29px; flex-shrink: 0; }
+.neg-foto-p { width: 36px; height: 36px; border-radius: 18px; flex-shrink: 0; margin-right: 12px; }
+.neg-linha-meio { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-left: 12px; }
+.neg-linha-topo { flex-direction: row; justify-content: space-between; }
+.neg-ponto { position: absolute; left: 50px; top: 48px; width: 12px; height: 12px; border-radius: 6px; background-color: var(--verde); border-width: 2px; border-color: #0b0d10; }
+.neg-ponto.off { background-color: var(--apagado); }
+.neg-conversa { flex-grow: 1; flex-basis: 0; min-width: 0; height: 650px; margin-right: 22px; background-color: rgba(255, 255, 255, 0.006); border-radius: 6px; }
+.neg-topo { flex-direction: row; align-items: center; padding: 20px 24px; border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.012); }
+.neg-nome { font-size: 32px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.neg-msgs { flex-grow: 1; padding: 0 22px 12px 22px; }
+.neg-balao-linha { flex-direction: row; align-items: flex-end; margin-top: 14px; }
+.neg-balao-linha.nos { justify-content: flex-end; }
+.neg-balao { max-width: 68%; flex-shrink: 1; background-color: rgba(255, 255, 255, 0.012); border-radius: 12px; padding: 12px 16px; }
+.neg-balao.nos { background-color: rgba(240, 166, 64, 0.07); }
+.neg-hora { font-size: 12px; color: var(--apagado); margin: 0 10px 4px 10px; }
+.neg-sistema { align-self: center; margin: 18px 0 4px 0; padding: 8px 16px; border-radius: 4px; background-color: rgba(75, 191, 140, 0.08); }
+.neg-oferta { padding: 16px 22px 18px 22px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.012); }
+.neg-passos { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
+.neg-passo { margin-right: 26px; margin-bottom: 10px; }
+.neg-valor { font-size: 28px; min-width: 130px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.neg-rodape { flex-direction: row; align-items: center; margin-top: 4px; }
+.neg-fatores { width: 300px; flex-shrink: 0; background-color: rgba(255, 255, 255, 0.006); border-radius: 6px; padding: 22px; }
+.neg-interesse { font-size: 38px; margin: 4px 0 16px 0; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.neg-fator { margin-bottom: 14px; }
+.neg-fator-topo { flex-direction: row; justify-content: space-between; align-items: center; }
+.neg-ficha { margin-top: 10px; padding: 14px 0 12px 0; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.012); }
+.neg-rodape { flex-direction: column; align-items: stretch; }
+.neg-botoes { flex-direction: row; justify-content: flex-end; margin-top: 10px; }

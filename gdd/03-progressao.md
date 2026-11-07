@@ -1,6 +1,6 @@
 # Progressão e economia
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024, 0026
 
 _Como o jogador evolui e quais recursos circulam._
 
@@ -39,6 +39,10 @@ A evolução dos jogadores é **multifatorial**: o jogo mistura vários dados, c
 - **Treino por lado (decisão 0024):** além do foco, o manager escolhe se a semana treina **os dois lados, só o TR ou só o CT**. Treinar um lado sobe o **domínio** dele (até 1,8 ponto por sessão), mas o atributo em foco rende só 60 % nessas sessões; o lado que ninguém treina esfria 1 % por semana em direção ao neutro. Assim um jogador pode virar especialista no TR ou ficar completo.
 - Todos os números são provisórios; os pesos finais ficam para o balanceamento.
 
+## Contratação por negociação (decisão 0026)
+
+Os jogadores do mercado **não têm preço fixo**. Cada um pede **luvas** (pagamento único) e **salário por semana**, e o quanto pede depende do que pesa para ele: **prestígio** do clube (circuito e ranking), se terá **vaga** de titular, a **estrutura** (Gaming House), as **finanças** (semanas de despesa no caixa) e o **clima** do time (moral e entrosamento). O manager negocia numa conversa: propõe luvas e salário (e pode garantir a vaga de titular), e o jogador aceita, faz contraproposta ou recusa, perdendo a paciência a cada resposta ruim. O salário acordado passa a ser o salário do jogador. Números provisórios.
+
 ## Curva de dificuldade
 
 _A definir._
@@ -62,4 +66,6 @@ O nível da Gaming House **libera** outras coisas que o manager pode melhorar, c
 - Elenco: os jogadores têm **contrato** (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)?
 - Evolução: quanto pesa cada fator (treino, experiência, idade)? (o pico de idade e o declínio já estão decididos)
 - Lados: o quanto o domínio de lado deve valer (hoje até ±8 % de habilidade) e quanto custa treinar um lado (hoje 1,8 ponto por sessão, atributo a 60 %)? (decisão 0024)
+- Negociação: os pesos dos fatores, o quanto o desejo muda luvas e salário e a paciência (valores provisórios da decisão 0026).
+- Concorrência: outros clubes podem disputar o mesmo jogador (e a duração do contrato)?
 - Balancear salários, juros, limite de empréstimo, prazo de falência e manutenção da Gaming House (valores provisórios das decisões 0015 e 0016).

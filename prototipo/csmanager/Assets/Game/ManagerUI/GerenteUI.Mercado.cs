@@ -17,6 +17,8 @@ namespace CSM.ManagerUI
 
         void TelaMercado()
         {
+            conteudo.Add(SegmentoMercado());
+            if (mercadoChat) { TelaNegociacao(); return; }
             // prévia: ao passar o mouse num jogador, mostra o que muda no time se ele for contratado
             previaCaixa = E("previa"); previaTxt = L("", "quebra"); previaCaixa.Add(previaTxt);
             conteudo.Add(previaCaixa);
@@ -95,14 +97,20 @@ namespace CSM.ManagerUI
             }
             corpo.Add(ats);
 
+            // ninguém tem preço fixo: o que ele pede hoje (luvas e salário) depende do seu clube (decisão 0026)
+            var (pl, ps) = Negociador.Pedido(c, j);
             var preco = E("vit-preco");
-            preco.Add(L("PREÇO", "dado-rot"));
-            preco.Add(L(Fmt.Dinheiro(j.Preco), "vit-preco-v", c.dinheiro >= j.Preco ? "t" : "vermelho"));
+            preco.Add(L("PEDE", "dado-rot"));
+            var pv = E(); pv.style.alignItems = Align.FlexEnd;
+            pv.Add(L(Fmt.Dinheiro(pl), "vit-preco-v", c.dinheiro >= pl ? "t" : "vermelho"));
+            pv.Add(L("+ " + Fmt.Dinheiro(ps) + "/sem", "f13", "suave"));
+            preco.Add(pv);
+            ComDica(preco, "Luvas (pagamento único) e salário por semana que ele pede agora. Mudam com o prestígio do clube, a vaga, a estrutura, as finanças e o clima. Negocie para baixar.");
             corpo.Add(preco);
 
             var ac = E("vit-acoes");
-            bool pode = !cheio && c.dinheiro >= j.Preco;
-            var contratar = BotaoMini("Contratar", () => Contratar(j), false, pode); contratar.AddToClassList("grow"); if (pode) contratar.AddToClassList("destaque");
+            bool conversando = c.negociacoes.ContainsKey(j);
+            var contratar = BotaoMini(conversando ? "Continuar conversa" : "Negociar", () => IniciarNegociacao(j), false, !cheio); contratar.AddToClassList("grow"); if (!cheio) contratar.AddToClassList("destaque");
             ac.Add(contratar);
             var cmpBtn = BotaoMini("", () => AlternarComparar(j), comparar.Contains(j), true, "swap"); cmpBtn.AddToClassList("so-ic");
             ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador (do mercado ou do seu elenco)");
