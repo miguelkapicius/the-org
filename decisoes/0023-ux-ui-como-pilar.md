@@ -22,7 +22,7 @@ Liga os outros pilares: a IA dos bots (pilar 1) e a gestão que aparece na parti
 ## Consequências
 Regras de interface (detalhadas em `gdd/08-ui-ux.md`):
 - **Uma informação, um lugar.** Se o hub mostra a série da semana, o aviso e o menu não repetem.
-- **Uma ação principal por tela**, em destaque (índigo); o resto é secundário.
+- **Uma ação principal por tela**, em destaque (o botão sólido claro, decisão 0025); o resto é secundário.
 - **Conclusão antes do número:** "5 titulares cansados: reduza o treino" antes da tabela de cansaço. Números completos ficam na dica ou na tela própria.
 - **Texto curto**, na língua do jogador: nada de termos internos (números de decisão, nomes de sistema do código).
 - **Uma ideia nova por vez:** sistema novo entra com uma explicação curta na primeira vez e um aviso acionável quando importa.

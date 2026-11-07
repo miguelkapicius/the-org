@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022, 0024
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -85,6 +85,8 @@ Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos.
 ## Personalidade dos jogadores (decisão 0019)
 
 **[Sugestão]** Além dos 5 atributos, cada jogador tem **moral** e **entrosamento** (0 a 100), e cerca de metade tem um **traço**. Tudo muda a simulação (pilar 3). Números provisórios.
+
+**[Sugestão]** Cada jogador também tem um **domínio de lado** (decisão 0024): um número de 0 a 100 para o TR e outro para o CT (50 é neutro). Na simulação, a mira, o reflexo e o sangue-frio dele mudam até ±8 % a cada 50 pontos de diferença para a média dos dois lados, conforme o lado do round (e o lado troca no half). A média dos dois é a força dele, então o geral e a chance de vitória não mudam: muda quem rende mais em cada metade da partida. Todo jogador nasce com uma especialidade sorteada (até ±20 pontos).
 
 | Traço | Efeito na partida |
 |---|---|

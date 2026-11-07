@@ -14,6 +14,8 @@ namespace CSM.Manager
     [Serializable] public class SkillD { public float reaction, aimSigma, flick, spray, crosshair, pitchErr, aggression, composure, utilitaria; }
     [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio;
         public bool temPersonalidade; public int traco; public float moral, entrosamento;
+        public int fotoId, salarioAcordado, promessaSemanas;   // decisão 0026 (0 = salário de tabela)
+        public bool temLados; public float ladoTR = 50, ladoCT = 50; public int ladoFoco = -1;   // decisão 0024; salvamento antigo = neutro nos dois lados
         public int mvps, mvpsSerie; public List<string> jogadas = new List<string>(); }   // decisão 0020   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
     [Serializable] public class LancD { public int semana, valor; public string descricao; }
     [Serializable] public class DesempD { public string nome; public int funcao, k, d, hs, dano, fk, rounds; }
@@ -46,7 +48,7 @@ namespace CSM.Manager
     public class CarreiraD
     {
         public int versao = 2, seed, dinheiro, numPartida, nivelGH, estilo, coletivas, estudoMapa, semanasNegativo, semana, temporada, proxId, mundoSeed;
-        public bool falido, temSerie; public string clube;
+        public bool falido, temSerie, temTutorial; public int tutorial; public string clube;
         public List<JogadorD> elenco = new List<JogadorD>(), mercado = new List<JogadorD>();
         public List<LancD> extrato = new List<LancD>(); public List<ResultadoD> historico = new List<ResultadoD>(); public List<TituloD> titulos = new List<TituloD>();
         public List<string> diario = new List<string>(); public List<ScoutD> scouts = new List<ScoutD>(); public List<IntelD> intel = new List<IntelD>(); public List<EmprestimoD> emprestimos = new List<EmprestimoD>();
@@ -63,11 +65,16 @@ namespace CSM.Manager
         static Skill De(SkillD d) => new Skill { reaction = d.reaction, aimSigma = d.aimSigma, flick = d.flick, spray = d.spray, crosshair = d.crosshair, pitchErr = d.pitchErr, aggression = d.aggression, composure = d.composure, utilitaria = d.utilitaria };
         static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone(),
             temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento,
+            fotoId = j.fotoId, salarioAcordado = j.salarioAcordado ?? 0, promessaSemanas = j.promessaSemanas,
+            temLados = true, ladoTR = j.ladoTR, ladoCT = j.ladoCT, ladoFoco = j.ladoFoco,
             mvps = j.mvps, mvpsSerie = j.mvpsSerie, jogadas = j.jogadas.ToList() };
         static Jogador De(JogadorD d)
         {
             var j = new Jogador { nome = d.nome, idade = d.idade, funcao = (Role)d.funcao, potencial = d.potencial, foco = d.foco, sessoes = d.sessoes, potencialRevelado = d.revelado, cansaco = d.cansaco, preparo = d.preparo, skill = De(d.skill), inicioTemporada = d.inicio != null && d.inicio.Length == 5 ? (float[])d.inicio.Clone() : new float[5] };
             if (d.temPersonalidade) { j.traco = (Traco)d.traco; j.moral = d.moral; j.entrosamento = d.entrosamento; }   // antes da 0019: valores iniciais, sem traço
+            j.fotoId = d.fotoId;
+            if (d.salarioAcordado > 0) j.salarioAcordado = d.salarioAcordado; j.promessaSemanas = d.promessaSemanas;
+            if (d.temLados) { j.ladoTR = d.ladoTR; j.ladoCT = d.ladoCT; j.ladoFoco = d.ladoFoco; }
             j.mvps = d.mvps; j.mvpsSerie = d.mvpsSerie; if (d.jogadas != null) j.jogadas.AddRange(d.jogadas);
             return j;
         }
@@ -76,7 +83,7 @@ namespace CSM.Manager
         {
             var d = new CarreiraD
             {
-                seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
+                temTutorial = true, tutorial = c.tutorial, seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
                 semanasNegativo = c.semanasNegativo, falido = c.falido, clube = c.clube, semana = c.mundo.semana, temporada = c.mundo.temporada, proxId = c.mundo.ProxId, mundoSeed = c.mundo.Seed,
             };
             d.elenco = c.elenco.Select(Para).ToList(); d.mercado = c.mercado.Select(Para).ToList();
@@ -123,6 +130,7 @@ namespace CSM.Manager
         {
             if (d == null || d.versao != VERSAO || d.elenco == null || d.elenco.Count < Provisorio.TITULARES || d.equipes == null || d.equipes.Count < 2) return null;
             var c = Carreira.ParaRestaurar(d.seed, d.numPartida);
+            c.tutorial = d.temTutorial ? d.tutorial : Carreira.TUTORIAL_PASSOS;   // salvamento antigo: sem tour
             c.clube = d.clube; c.dinheiro = d.dinheiro; c.numPartida = d.numPartida; c.nivelGH = d.nivelGH; c.estilo = (Estilo)d.estilo; c.sessoesColetivas = d.coletivas; c.estudoMapa = d.estudoMapa;
             if (d.favoritasTR != null) c.favoritasTR.AddRange(d.favoritasTR); if (d.proibidasTR != null) c.proibidasTR.AddRange(d.proibidasTR);
             if (d.favoritasCT != null) c.favoritasCT.AddRange(d.favoritasCT); if (d.proibidasCT != null) c.proibidasCT.AddRange(d.proibidasCT);

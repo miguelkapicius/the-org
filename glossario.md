@@ -41,6 +41,9 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Preparo | Bônus temporário de habilidade nas partidas que vem do treino recente. | buff | 02-mecanicas |
 | Cansaço | Desgaste dos jogadores por treino e partidas; acima de um limite reduz a habilidade. | fadiga, stamina | 02-mecanicas |
 | Potencial | Teto de evolução de um atributo de um jogador; só se vê com scout. | talento | 03-progressao |
+| Domínio de lado | Número de 0 a 100 (50 é neutro) de cada jogador para o TR e para o CT. A diferença entre os dois muda a habilidade dele no lado em que joga o round; o treino pode focar em um lado. | afinidade de lado, rating de lado | 02-mecanicas |
+| Luvas | Pagamento único ao jogador na assinatura do contrato, tirado do caixa do clube; negociado junto com o salário. | bônus de assinatura, preço (usar só para o valor de mercado) | 03-progressao |
+| Negociação | Conversa do manager com um jogador do mercado para fechar luvas e salário; o jogador decide pelo conjunto (prestígio, vaga, estrutura, finanças, clima) e responde aceitando, contrapropondo ou recusando. | leilão, compra | 03-progressao |
 | Empréstimo | Dinheiro que o banco adianta ao clube, pago em parcelas semanais com juros. | dívida (usar só para o saldo negativo) | 03-progressao |
 | Pré-partida | Tela antes da partida: os dois times frente a frente e a escolha entre assistir e pular. | lobby, prematch | 08-ui-ux |
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |

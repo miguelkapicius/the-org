@@ -61,7 +61,8 @@ namespace CSM.View3D
             var clip = Resources.Load<AudioClip>("Sons/ambiente/vento_0");
             vento = new GameObject("Vento do menu").AddComponent<AudioSource>();
             vento.clip = clip; vento.loop = true; vento.spatialBlend = 0; vento.volume = 0; if (clip != null) vento.Play();
-            EntrarMenu();
+            if (PartidaAoVivo3D.DoManager) { vitrineAntes = false; Iniciar(); }   // vindo do manager: direto na partida, sem o menu do protótipo
+            else EntrarMenu();
         }
 
         // ------------------------------------------------------------------ peças
@@ -197,8 +198,13 @@ namespace CSM.View3D
         {
             var r = No("botões do fim", raiz, new Vector2(0.5f, 0.5f), new Vector2(0, -PH / 2 - 40), new Vector2(PW, 80), new Vector2(0.5f, 1));
             var g = r.gameObject.AddComponent<CanvasGroup>(); g.alpha = 0; g.blocksRaycasts = false; g.interactable = false;
-            Botao("reiniciar", r, new Vector2(0.5f, 0.5f), new Vector2(-170, 0), new Vector2(320, 70), "REINICIAR", true, () => { preto.color = Color.black; pretoAlvo = 0; p.Reiniciar(); fimT = 0; });
-            Botao("menu", r, new Vector2(0.5f, 0.5f), new Vector2(170, 0), new Vector2(320, 70), "MENU", false, () => { preto.color = Color.black; pretoAlvo = 0; p.ComecarVitrine(); EntrarMenu(); fimT = 0; });
+            if (PartidaAoVivo3D.DoManager)
+                Botao("voltar", r, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(560, 70), "VOLTAR AO MANAGER", true, () => p.VoltarAoManager());   // a série da carreira fecha aqui: prêmio, salários e a pós-partida
+            else
+            {
+                Botao("reiniciar", r, new Vector2(0.5f, 0.5f), new Vector2(-170, 0), new Vector2(320, 70), "REINICIAR", true, () => { preto.color = Color.black; pretoAlvo = 0; p.Reiniciar(); fimT = 0; });
+                Botao("menu", r, new Vector2(0.5f, 0.5f), new Vector2(170, 0), new Vector2(320, 70), "MENU", false, () => { preto.color = Color.black; pretoAlvo = 0; p.ComecarVitrine(); EntrarMenu(); fimT = 0; });
+            }
             return g;
         }
 
