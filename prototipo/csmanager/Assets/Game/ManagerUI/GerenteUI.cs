@@ -486,7 +486,7 @@ namespace CSM.ManagerUI
         {
             var card = E("hub-card"); if (destaque) card.AddToClassList("destaque");
             var img = Resources.Load<Texture2D>("ManagerUI/Hub/" + arte);   // ilustrações em Assets/Resources/ManagerUI/Hub (geradas no Figma)
-            if (img != null) card.style.backgroundImage = new StyleBackground(img);
+            if (img != null) { card.style.backgroundImage = new StyleBackground(img); AlinharAoTopo(card); }   // cobre o cartão sem esticar, rostos no alto
             var veu = E("hub-veu"); veu.style.backgroundImage = new StyleBackground(Ui.VeuInferior()); veu.pickingMode = PickingMode.Ignore; card.Add(veu);
             if (selo.HasValue) { var bd = E("hub-selo"); bd.Add(L(selo.Value.ToString())); card.Add(bd); }
             var corpo = E("hub-corpo");
@@ -984,6 +984,8 @@ namespace CSM.ManagerUI
                 ("treino-jogador-ct", () => { aba = Aba.Treino; treinoJogador = c.elenco.FirstOrDefault(x => x.LadoForte == false) ?? c.elenco[2]; }, () => treinoJogador = null),
                 ("mercado", () => { aba = Aba.Mercado; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("scouts", () => aba = Aba.Scouts, null),
+                ("playbook", () => { PlantaJogada.InicioDaCaptura = 0.62f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); c.MarcarJogada(js[0].nome, true, Carreira.MarcaJogada.Favorita); c.MarcarJogada(js[2].nome, true, Carreira.MarcaJogada.Proibida); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),
+                ("playbook-ct", () => { ladoPlaybookTR = false; jogadaAberta = Estrategias.Jogadas(false)[0].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),
                 ("serie", () => { c.PrepararSerie(); aba = Aba.Serie; }, null),
                 ("serie-veto-auto", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.Serie; }, null),
                 ("prematch", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.PreMatch; }, null),

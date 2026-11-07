@@ -929,3 +929,63 @@
 .pm-boneco { width: 440px; height: 591px; bottom: -215px; }
 .pm-boneco.esq { left: 0; } .pm-boneco.dir { right: 0; }
 .pm-dicas { left: 0; right: 0; justify-content: center; }
+
+/* ======================================================================================================
+   Playbook como quadro tático: alternador de lado, lista de jogadas, mapa animado, anéis e rotas
+   ====================================================================================================== */
+.pb-barra { flex-direction: row; justify-content: space-between; align-items: flex-end; margin: 20px 0 20px 0; border-bottom-width: 1px; border-bottom-color: rgba(255, 255, 255, 0.012); }
+.pb-seg { flex-direction: row; }
+.pb-seg-b { flex-direction: row; align-items: center; padding: 6px 4px 10px 0; margin-right: 34px; margin-bottom: -1px; border-bottom-width: 2px; border-bottom-color: rgba(0, 0, 0, 0); }
+.pb-seg-b > .t { font-size: 32px; color: var(--apagado); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pb-seg-b:hover > .t { color: var(--texto); }
+.pb-seg-b.ativo { border-bottom-color: #eceef1; }
+.pb-seg-b.ativo > .t { color: #ffffff; }
+.pb-seg-q { width: 10px; height: 10px; border-radius: 2px; margin-right: 12px; }
+.pb-seg-q.lado-tr { background-color: var(--laranja); } .pb-seg-q.lado-ct { background-color: var(--azul); }
+.pb-vagas { flex-direction: row; padding-bottom: 12px; }
+.pb-vaga { margin-left: 30px; }
+.pb-pips { flex-direction: row; margin-top: 7px; }
+.pb-pip { width: 20px; height: 8px; border-radius: 2px; margin-right: 4px; background-color: rgba(255, 255, 255, 0.012); border-width: 1px; border-color: rgba(255, 255, 255, 0.02); }
+.pb-pip.on.fav { background-color: var(--verde); border-color: var(--verde); }
+.pb-pip.on.proib { background-color: var(--vermelho); border-color: var(--vermelho); }
+
+.pb-corpo { flex-direction: row; align-items: flex-start; }
+.pb-lista { width: 380px; height: 820px; flex-shrink: 0; margin-right: 26px; }
+.pb-linha { flex-direction: row; align-items: center; justify-content: space-between; padding: 11px 14px; margin-bottom: 4px; border-radius: 4px; border-width: 1px; border-color: rgba(0, 0, 0, 0); background-color: rgba(255, 255, 255, 0.004); }
+.pb-linha:hover { background-color: rgba(255, 255, 255, 0.01); }
+.pb-linha.sel { background-color: rgba(255, 255, 255, 0.016); border-color: rgba(255, 255, 255, 0.14); }
+.pb-linha-esq { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: 10px; }
+.pb-linha-nome { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pb-linha-nums { align-items: flex-end; flex-shrink: 0; }
+.pb-linha-num { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.pb-linha-rot { font-size: 11px; color: var(--apagado); }
+
+.pb-painel { flex-grow: 1; min-width: 0; }
+.pb-topo { flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.pb-nome { font-size: 48px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pb-stats { flex-direction: row; flex-wrap: wrap; padding: 18px 10px 14px 10px; margin-bottom: 20px; background-color: rgba(255, 255, 255, 0.006); border-radius: 4px; }
+.pb-bloco { width: 132px; align-items: center; margin-right: 10px; }
+.pb-anel-v { font-size: 22px; color: var(--texto); -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.pb-num-caixa { width: 92px; height: 92px; align-items: center; justify-content: center; }
+.pb-num { font-size: 44px; color: var(--texto); -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+
+.pb-miolo { flex-direction: row; flex-wrap: wrap; align-items: flex-start; }
+.pb-quadro { margin-right: 26px; margin-bottom: 18px; width: 650px; }
+.pb-planta { background-color: #0c0e11; border-width: 1px; border-color: rgba(255, 255, 255, 0.035); border-radius: 4px; }
+.pb-site { font-size: 22px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pb-ctrl { flex-direction: row; align-items: center; margin-top: 12px; }
+.pb-tempo { flex-grow: 1; height: 12px; margin: 0 14px; border-radius: 6px; background-color: rgba(255, 255, 255, 0.012); }
+.pb-tempo-fill { height: 12px; border-radius: 6px; background-color: #eceef1; }
+.pb-rel { font-size: 14px; color: var(--suave); min-width: 92px; -unity-text-align: middle-right; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.pb-rod { flex-direction: row; align-items: center; margin: 12px 0 10px 0; }
+.pb-lateral { flex-grow: 1; flex-basis: 280px; min-width: 260px; }
+.pb-rota { flex-direction: row; align-items: flex-start; margin-top: 9px; }
+.pb-rota-ponto { width: 10px; height: 10px; border-radius: 5px; margin: 5px 10px 0 0; flex-shrink: 0; }
+.pb-item { flex-direction: row; align-items: flex-start; margin-top: 7px; }
+.pb-item-q { width: 6px; height: 6px; border-radius: 1px; margin: 7px 10px 0 0; flex-shrink: 0; }
+.pb-item-q.verde { background-color: var(--verde); } .pb-item-q.vermelho { background-color: var(--vermelho); }
+
+/* playbook: indicadores na coluna lateral, ao lado do mapa */
+.pb-stats { padding: 6px 0 2px 0; margin-bottom: 0; background-color: rgba(0, 0, 0, 0); }
+.pb-bloco { width: 118px; margin-right: 6px; margin-bottom: 10px; }
+.pb-topo { margin-bottom: 12px; }
