@@ -1,6 +1,6 @@
 # Direção de arte
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004, 0024, 0025
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004, 0024, 0025, 0027
 
 _Estilo visual e referências._
 
@@ -23,5 +23,5 @@ _A definir: mapas, modelos de jogadores, armas, efeitos._
 ## Perguntas em aberto
 
 - Estilo realista, estilizado ou low-poly?
-- Retratos dos jogadores: hoje são só duas imagens ilustrativas geradas por IA (operador TR e operador CT, decisão 0024). Arte final: um retrato por jogador, ilustrado à mão, ou gerado em volume? Qual é o estilo?
+- Retratos dos jogadores: hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA, em três faixas de idade (decisão 0027). Arte final: manter esse caminho, fazer retratos ilustrados à mão ou contratar fotografia de referência? Faltam expressões por estado (cansado, motivado) e mais rostos se o elenco visível passar de 32.
 - Tipografia da interface: hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL, decisão 0025). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo?

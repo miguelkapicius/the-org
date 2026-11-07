@@ -28,8 +28,8 @@ namespace CSM.ManagerUI
 
             // foto à direita, com o véu escuro do lado do texto (a UI Toolkit não tem gradiente)
             var foto = E("tj-foto"); foto.pickingMode = PickingMode.Ignore;
-            var tex = FotoLado(tr);
-            if (tex != null) { foto.style.backgroundImage = new StyleBackground(tex); AlinharAoTopo(foto); }
+            var tex = FotoJogador(j) ?? FotoLado(tr);
+            if (tex != null) { foto.style.backgroundImage = new StyleBackground(tex); AlinharAoTopo(foto); AddRim(foto, j); }
             var veu = E("tj-veu"); veu.pickingMode = PickingMode.Ignore;
             veu.style.backgroundImage = new StyleBackground(VeuLateral()); veu.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
             foto.Add(veu);

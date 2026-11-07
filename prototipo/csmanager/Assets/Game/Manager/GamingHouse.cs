@@ -106,6 +106,7 @@ namespace CSM.Manager
         // por semana, em pontos de salário/valor (provisório): o salário é pago por semana
         /// <summary>O salário de tabela do jogador (pela habilidade) e o que ficou acertado na negociação (decisão 0026).</summary>
         public int SalarioBase => (2000 + (int)(Overall * Overall * 0.6f)) / 50 * 50 / 4 / 50 * 50;
+        public int fotoId;                          // retrato fixo do jogador (1..N; 0 = ainda sem; decisão 0027)
         public int? salarioAcordado; public int promessaSemanas;   // promessa de titular: semanas que faltam para cumprir
         public int Salario => salarioAcordado ?? SalarioBase;
         public int Preco => Salario * 32;                 // contratação

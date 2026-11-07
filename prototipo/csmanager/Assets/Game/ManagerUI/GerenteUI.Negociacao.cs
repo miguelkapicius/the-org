@@ -55,7 +55,7 @@ namespace CSM.ManagerUI
         {
             var jj = j; c.negociacoes.TryGetValue(j, out var n);
             var l = E("neg-linha"); if (sel) l.AddToClassList("sel");
-            var foto = Retrato(j.nome, "neg-foto", FotoTR(j)); l.Add(foto);
+            var foto = Retrato(j, "neg-foto"); l.Add(foto);
             var meio = E("neg-linha-meio");
             var topo = E("neg-linha-topo");
             topo.Add(L(j.nome, "f16", "negrito")); topo.Add(L(n != null && n.msgs.Count > 0 ? "Sem " + n.msgs[n.msgs.Count - 1].semana : "", "f12", "apagado"));
@@ -77,7 +77,7 @@ namespace CSM.ManagerUI
             var f = Negociador.Fatores(c, j, n.promessa); float desejo = Negociador.Desejo(f);
 
             var topo = E("neg-topo");
-            topo.Add(Retrato(j.nome, "neg-foto-g", FotoTR(j)));
+            topo.Add(Retrato(j, "neg-foto-g"));
             var tx = E(); tx.style.marginLeft = 14; tx.style.flexGrow = 1;
             tx.Add(L(j.nome, "neg-nome"));
             tx.Add(L(bloq ? "Ocupado · volta na semana " + n.bloqueadoAte : "Ativo agora", "f14", bloq ? "laranja" : "verde"));
@@ -101,7 +101,7 @@ namespace CSM.ManagerUI
         {
             if (m.sistema) { var s = E("neg-sistema"); s.Add(L(m.texto, "f14", "verde", "quebra")); return s; }
             var linha = E("neg-balao-linha"); if (m.nos) linha.AddToClassList("nos");
-            if (!m.nos) linha.Add(Retrato(j.nome, "neg-foto-p", FotoTR(j)));
+            if (!m.nos) linha.Add(Retrato(j, "neg-foto-p"));
             var b = E("neg-balao"); if (m.nos) b.AddToClassList("nos");
             var t = L(m.texto, "f15", "quebra"); b.Add(t);
             linha.Add(b);

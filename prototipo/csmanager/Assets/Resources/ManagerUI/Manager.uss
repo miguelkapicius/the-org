@@ -1099,3 +1099,7 @@
 .neg-ficha { margin-top: 10px; padding: 14px 0 12px 0; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.012); }
 .neg-rodape { flex-direction: column; align-items: stretch; }
 .neg-botoes { flex-direction: row; justify-content: flex-end; margin-top: 10px; }
+
+/* retratos: rosto de estúdio com a luz do lado forte por cima */
+.retrato { overflow: hidden; }
+.retrato-rim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }

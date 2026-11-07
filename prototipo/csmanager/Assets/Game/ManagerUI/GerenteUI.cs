@@ -210,6 +210,7 @@ namespace CSM.ManagerUI
             rolagemGuardada = !mudou && rolagem != null ? rolagem.scrollOffset : Vector2.zero;
             if (c.naoVisto != null && aba == Aba.Painel) aba = Aba.PosPartida;   // o resultado do mapa que acabou vem antes do painel
             mudou = aba != abaAnterior; abaAnterior = aba;
+            AtribuirFotos(c.elenco.Concat(c.mercado));   // cada jogador tem o seu rosto (decisão 0027)
             janela.Clear(); previaTxt = null; previaCaixa = null; dicaTroca = null; rolagem = null;
             if (aba == Aba.PreMatch) { if (c.serie == null) { aba = Aba.Painel; abaAnterior = aba; } else { TelaPreMatch(); return; } }
 
@@ -596,7 +597,7 @@ namespace CSM.ManagerUI
         {
             var cj = E("card-j");
             var midia = E("midia");
-            midia.Add(Retrato(j.nome, "retrato-fill", FotoTR(j)));
+            midia.Add(Retrato(j, "retrato-fill"));
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
             cj.Add(midia);
             var info = E("info");

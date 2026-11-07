@@ -35,7 +35,7 @@ namespace CSM.ManagerUI
                 {
                     var jj = j;
                     var it = E("vit-top");
-                    it.Add(Retrato(j.nome, "vit-top-foto", FotoTR(j)));
+                    it.Add(Retrato(j, "vit-top-foto"));
                     it.Add(L(j.nome, "f15", "negrito", "centro"));
                     it.Add(L(j.Overall.ToString(), "f14", ClasseNota(j.Overall), "centro"));
                     it.RegisterCallback<PointerEnterEvent>(_ => AtualizarPrevia(jj));
@@ -128,7 +128,7 @@ namespace CSM.ManagerUI
         VisualElement MidiaJogador(Jogador j)
         {
             var midia = E("midia");
-            midia.Add(Retrato(j.nome, "retrato-fill", FotoTR(j)));
+            midia.Add(Retrato(j, "retrato-fill"));
             var fn = Selo(Fmt.FuncaoCurta(j.funcao), null); fn.AddToClassList("midia-selo"); ComDica(fn, Fmt.Funcao(j.funcao)); midia.Add(fn);
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); ComDica(ovr, COLS[0].dica); midia.Add(ovr);
             var forte = j.LadoForte;   // a foto mostra o lado em que ele rende mais
