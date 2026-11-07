@@ -8,7 +8,7 @@
 :root {
     --fundo: #0b0d10; --janela: rgba(0, 0, 0, 0); --cartao: rgba(255, 255, 255, 0.004); --cartao2: rgba(255, 255, 255, 0.002); --midia: rgba(255, 255, 255, 0.005); --item: rgba(255, 255, 255, 0.009);
     --linha: rgba(255, 255, 255, 0.008); --linha2: rgba(255, 255, 255, 0.021);
-    --texto: #eceef1; --suave: #a4aab4; --apagado: #6f7681;
+    --texto: #eceef1; --suave: #a4aab4; --apagado: #858c96;
     --destaque: #eceef1; --destaque-claro: #ffffff; --laranja: #f0a640; --azul: #62a8ee; --verde: #4bbf8c; --vermelho: #ec6a5f;
 }
 
@@ -228,7 +228,7 @@
 .pm-nome { margin: 30px 0 18px 0; font-size: 38px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; letter-spacing: 1px; }
 .pm-j { flex-direction: row; align-items: center; height: 31px; }
 .pm-j-fn { width: 42px; border-width: 1px; border-color: rgba(255, 255, 255, 0.066); border-radius: 4px; margin-right: 10px; align-items: center; }
-.pm-j-fn > .t { font-size: 11px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #cfcfd6; -unity-text-align: middle-center; }
+.pm-j-fn > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #cfcfd6; -unity-text-align: middle-center; }
 .pm-j > .t { font-size: 19px; color: #a9a9b0; letter-spacing: 1px; }
 .pm-bola { width: 18px; height: 18px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.014); margin: 76px 8px 0 8px; }
 
@@ -375,7 +375,7 @@
 .pm-dicas-item { flex-direction: row; align-items: center; margin-right: 26px; }
 .pm-dicas-item > .t { font-size: 14px; color: #565c66; letter-spacing: 1px; }
 .tecla { border-width: 1px; border-color: rgba(255, 255, 255, 0.035); border-radius: 3px; padding: 0 6px; margin-right: 8px; }
-.tecla > .t { font-size: 12px; color: #6f7681; }
+.tecla > .t { font-size: 12px; color: var(--apagado); }
 
 /* ======================================================================================================
    Calendário, campeonatos, treino, scouts, preparação da série, Gaming House e finanças (decisões 0012 a 0016)
@@ -587,7 +587,7 @@
 .cal-dia.passada { opacity: 0.62; }
 .cal-dia.camp { background-color: rgba(240, 170, 70, 0.008); }
 .cal-num { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); margin-right: 6px; }
-.cal-tag { font-size: 11px; color: var(--laranja); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+.cal-tag { font-size: 12px; color: var(--laranja); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
 .cal-chip { flex-direction: row; align-items: center; border-radius: 3px; padding: 2px 7px; margin-top: 4px; border-width: 1px; border-color: rgba(0, 0, 0, 0); }
 .cal-chip > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); overflow: hidden; text-overflow: ellipsis; }
 .cal-chip.pend { background-color: rgba(240, 170, 70, 0.042); border-color: var(--laranja); }
@@ -721,7 +721,7 @@
 
 /* rótulos pequenos em caixa-alta */
 .compromisso-tit, .treino-card-tit, .cartao-tit, .pm-chance-tit, .hero-res, .dado-rot, .rodada-tit {
-    font-size: 11px; letter-spacing: 1.6px; color: var(--apagado);
+    font-size: 12px; letter-spacing: 1.6px; color: var(--apagado);
     -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf");
 }
 .tr.th .t, .tj-linha-tab.cab .t { font-size: 12px; letter-spacing: 0.8px; color: var(--apagado); }
@@ -774,7 +774,7 @@
 
 /* ---- selos e barras ---- */
 .selo { padding: 3px 8px; border-radius: 2px; background-color: rgba(255, 255, 255, 0.008); }
-.selo > .t { font-size: 11px; letter-spacing: 1px; }
+.selo > .t { font-size: 12px; letter-spacing: 1px; }
 .selo.verde-bg { background-color: rgba(75, 191, 140, 0.026); } .selo.laranja-bg { background-color: rgba(240, 166, 64, 0.026); } .selo.vermelho-bg { background-color: rgba(236, 106, 95, 0.026); }
 .selo.azul-bg { background-color: rgba(98, 168, 238, 0.026); } .selo.azul-bg > .t { color: var(--azul); }
 .barra { height: 4px; border-radius: 2px; background-color: rgba(255, 255, 255, 0.012); }
@@ -906,7 +906,7 @@
 .vit-corpo { padding: 12px 4px 4px 4px; }
 .vit-attrs { flex-direction: row; margin: 12px 0 10px 0; }
 .vit-at { flex-grow: 1; flex-basis: 0; align-items: center; }
-.vit-at-rot { font-size: 11px; color: var(--apagado); -unity-text-align: middle-center; }
+.vit-at-rot { font-size: 12px; color: var(--apagado); -unity-text-align: middle-center; }
 .vit-at-num { font-size: 16px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
 .vit-preco { flex-direction: row; justify-content: space-between; align-items: center; padding: 8px 0 12px 0; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.012); }
 .vit-preco-v { font-size: 24px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
@@ -958,7 +958,7 @@
 .pb-linha-nome { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
 .pb-linha-nums { align-items: flex-end; flex-shrink: 0; }
 .pb-linha-num { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
-.pb-linha-rot { font-size: 11px; color: var(--apagado); }
+.pb-linha-rot { font-size: 12px; color: var(--apagado); }
 
 .pb-painel { flex-grow: 1; min-width: 0; }
 .pb-topo { flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
