@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031, 0032
 
 _Telas, HUD e fluxo de navegação._
 
@@ -56,6 +56,8 @@ Todos os números da interface (salários, preços, prêmios, custo da Gaming Ho
 
 HUD da partida no estilo **transmissão competitiva** (decisão 0002):
 
+**Dois visuais** (decisão 0032, a validar): **Novo** (padrão), no visual do manager (grafite neutro, cantos de 3 px, sem sombra, card do jogador grafite com uma linha fina da cor do time embaixo mostrando a vida), e **Clássico**, o de antes (tons quentes e card preenchido pela vida). A escolha fica em Opções › Partida e vale na próxima partida.
+
 - visão em primeira pessoa do jogador acompanhado;
 - vida (e colete) do jogador acompanhado;
 - vida dos companheiros de time;
@@ -73,6 +75,6 @@ _A definir._
 
 ## Perguntas em aberto
 
-- O HUD de transmissão é fixo ou o jogador pode configurar?
+- O HUD de transmissão é fixo ou o jogador pode configurar? (hoje há dois visuais para validar, Novo e Clássico, decisão 0032)
 - Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011)
 - Pré-partida: o manager também configura as **compras padrão** do time? (veto de mapas e estratégia já estão decididos, decisão 0014)

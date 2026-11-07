@@ -7,7 +7,7 @@ namespace CSM.ManagerUI
     /// e nunca quebram o jogo se o armazenamento falhar (voltam ao padrão).</summary>
     public static class Opcoes
     {
-        const string K_EFEITOS = "csm_op_efeitos", K_AMBIENTE = "csm_op_ambiente", K_TAMANHO = "csm_op_tamanho", K_TELA_CHEIA = "csm_op_tela_cheia", K_JANELA = "csm_op_janela";
+        const string K_EFEITOS = "csm_op_efeitos", K_AMBIENTE = "csm_op_ambiente", K_TAMANHO = "csm_op_tamanho", K_TELA_CHEIA = "csm_op_tela_cheia", K_JANELA = "csm_op_janela", K_HUD = "csm_op_hud_novo";
 
         /// <summary>Passos de volume mostrados na tela (50 % é o padrão: os sons já nascem leves, decisão 0029).</summary>
         public static readonly float[] PassosVolume = { 0f, 0.25f, 0.5f, 0.75f, 1f };
@@ -27,6 +27,8 @@ namespace CSM.ManagerUI
         /// <summary>0 = pequena, 1 = normal, 2 = grande.</summary>
         public static int Tamanho { get => Mathf.Clamp(LerI(K_TAMANHO, 1), 0, 2); set => Gravar(K_TAMANHO, Mathf.Clamp(value, 0, 2)); }
         public static bool TelaCheia { get => LerI(K_TELA_CHEIA, 0) == 1; set => Gravar(K_TELA_CHEIA, value ? 1 : 0); }
+        /// <summary>HUD da partida no visual novo (grafite) ou no clássico (decisão 0032). O padrão é o novo; a escolha fica nas Opções.</summary>
+        public static bool HudNovo { get => LerI(K_HUD, 1) == 1; set => Gravar(K_HUD, value ? 1 : 0); }
         public static int Janela { get => LerI(K_JANELA, -1); set => Gravar(K_JANELA, value); }
 
         /// <summary>Referência da interface: quanto maior a escala, menor a referência (e mais a interface cresce na tela).</summary>
@@ -59,7 +61,7 @@ namespace CSM.ManagerUI
 
         public static void RestaurarPadroes()
         {
-            try { PlayerPrefs.DeleteKey(K_EFEITOS); PlayerPrefs.DeleteKey(K_AMBIENTE); PlayerPrefs.DeleteKey(K_TAMANHO); PlayerPrefs.DeleteKey(K_TELA_CHEIA); PlayerPrefs.DeleteKey(K_JANELA); PlayerPrefs.Save(); } catch (Exception) { }
+            try { PlayerPrefs.DeleteKey(K_EFEITOS); PlayerPrefs.DeleteKey(K_AMBIENTE); PlayerPrefs.DeleteKey(K_TAMANHO); PlayerPrefs.DeleteKey(K_TELA_CHEIA); PlayerPrefs.DeleteKey(K_JANELA); PlayerPrefs.DeleteKey(K_HUD); PlayerPrefs.Save(); } catch (Exception) { }
         }
     }
 }

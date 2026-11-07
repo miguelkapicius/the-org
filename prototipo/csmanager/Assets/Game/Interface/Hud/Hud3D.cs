@@ -19,12 +19,13 @@ namespace CSM.View3D
     {
         // tema escuro aprovado no mockup (referência IEM/PGL): grafite quente, texto creme, cor do time viva na vida
         static Color Hx(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
-        static readonly Color CT = Hx("#5B9BFF"), TR = Hx("#F5A524");
-        static readonly Color ESCURO = new Color(31 / 255f, 27 / 255f, 24 / 255f, 0.92f), CREME = Hx("#FFF4E2"), CINZA = new Color(1f, 0.957f, 0.886f, 0.45f);
-        static readonly Color VERDE = Hx("#8BE79C"), VERMELHO = Hx("#E5382E");
-        static readonly Color VIDA_TR = Hx("#D9831A"), VIDA_CT = Hx("#2F6FD6"), VIDA_BAIXA = Hx("#D63A2F"), RASTRO = Hx("#FF8A7A");
-        static readonly Color CAIXA_TR = Hx("#A85A00"), CAIXA_CT = Hx("#1E4FB0"), PLACAR_TR = Hx("#FFB43C"), PLACAR_CT = Hx("#6FA8FF");
-        static readonly Color VAZIO = new Color(1f, 0.957f, 0.886f, 0.07f);
+        // As cores vêm do HudTema (decisão 0032): o HUD tem duas caras, Clássico e Novo, e estas propriedades só repassam a escolhida.
+        static Color CT => HudTema.CT; static Color TR => HudTema.TR;
+        static Color ESCURO => HudTema.Escuro; static Color CREME => HudTema.Creme; static Color CINZA => HudTema.Cinza;
+        static Color VERDE => HudTema.Verde; static Color VERMELHO => HudTema.Vermelho;
+        static Color VIDA_TR => HudTema.VidaTR; static Color VIDA_CT => HudTema.VidaCT; static Color VIDA_BAIXA => HudTema.VidaBaixa; static readonly Color RASTRO = Hx("#FF8A7A");
+        static Color CAIXA_TR => HudTema.CaixaTR; static Color CAIXA_CT => HudTema.CaixaCT; static Color PLACAR_TR => HudTema.PlacarTR; static Color PLACAR_CT => HudTema.PlacarCT;
+        static Color VAZIO => HudTema.Vazio;
         static Color Lado(bool t) => t ? TR : CT;
         static Color Escurece(Color c, float k) => new Color(c.r * k, c.g * k, c.b * k, c.a);
 
@@ -96,7 +97,7 @@ namespace CSM.View3D
         // cards
         class Card
         {
-            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public RawImage[] nades = new RawImage[4]; public RawImage c4Ico, kitIco;
+            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public RawImage[] nades = new RawImage[4]; public RawImage c4Ico, kitIco; public Image hpFina;
             public RawImage icone, iconeFora, capacete, caveira; public Text slot;
             public Image vidaFundo, vidaLag; public RawImage[] kills = new RawImage[5];
             public float hpMostra = 100, hpLag = 100, lagEspera, flash; public int ultHp = 100;
@@ -158,9 +159,9 @@ namespace CSM.View3D
         readonly Dictionary<string, int> slotDe = new Dictionary<string, int>();
         readonly List<Image> manchas = new List<Image>();
         const float MAPA_W = 340, MARCA_D = 17;
-        static readonly Color MAPA_PISO = Hx("#2B2622"), MAPA_ALTO = Hx("#3D3631"), MAPA_LINHA = Hx("#D9CCB8"), MAPA_CAIXA = Hx("#8A8079");
-        static readonly Color MAPA_SITE = Hx("#F2C200"), MAPA_SPAWN = new Color(0.16f, 0.55f, 0.3f, 0.85f), MARCA_TXT = Hx("#1A1714");
-        static readonly Color MARCA_T = Hx("#F2C76B"), MARCA_CT = Hx("#8EC0F5"), C4_MAPA = Hx("#FF4A3D");
+        static Color MAPA_PISO => HudTema.MapaPiso; static Color MAPA_ALTO => HudTema.MapaAlto; static Color MAPA_LINHA => HudTema.MapaLinha; static Color MAPA_CAIXA => HudTema.MapaCaixa;
+        static Color MAPA_SITE => HudTema.MapaSite; static readonly Color MAPA_SPAWN = new Color(0.16f, 0.55f, 0.3f, 0.85f); static Color MARCA_TXT => HudTema.MarcaTxt;
+        static Color MARCA_T => HudTema.MarcaT; static Color MARCA_CT => HudTema.MarcaCT; static readonly Color C4_MAPA = Hx("#FF4A3D");
         // economia (começo do round)
         class LinhaEco { public Text nome, dinheiro, tags; public RawImage icone; public RawImage[] nades = new RawImage[4]; }
         RectTransform eco; Image ecoFundo; Text[] ecoTime = new Text[2], ecoTipo = new Text[2], ecoValor = new Text[2];
@@ -237,7 +238,7 @@ namespace CSM.View3D
             histFundo = histPainel.rectTransform; histGrupo = histFundo.gameObject.AddComponent<CanvasGroup>();
             histA = Texto("A", histFundo, new Vector2(0, 1), new Vector2(10, -6), new Vector2(44, CEL), "", 15, PLACAR_TR, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
             histB = Texto("B", histFundo, new Vector2(0, 1), new Vector2(10, -6 - PASSO), new Vector2(44, CEL), "", 15, PLACAR_CT, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
-            Painel("meio", histFundo, new Vector2(0, 1), new Vector2(56 + 12 * PASSO + 4, -6), new Vector2(2, 2 * PASSO - 2), new Color(1, 0.957f, 0.886f, 0.25f), new Vector2(0, 1));
+            Painel("meio", histFundo, new Vector2(0, 1), new Vector2(56 + 12 * PASSO + 4, -6), new Vector2(2, 2 * PASSO - 2), new Color(CREME.r, CREME.g, CREME.b, 0.25f), new Vector2(0, 1));
             for (int lin = 0; lin < 2; lin++)
                 for (int i = 0; i < 24; i++)
                 {
@@ -260,7 +261,7 @@ namespace CSM.View3D
         // barra de progresso na cor da ação).
         const float C4_LARG = 730, C4_Y = -96, C4_ALT = 8, ACAO_Y = -129, ACAO_L = 400, ACAO_A = 44;
         Image c4Barra, c4Def, c4Trilho, acao, acaoFaixa, acaoCheio; RawImage relogioC4, acaoIco; Text acaoTxt, acaoSeg; float c4Alfa, acaoAlfa;
-        static readonly Color C4_VERMELHO = Hx("#E5382E"), C4_AMBAR = Hx("#F5A524"), C4_AZUL = Hx("#5B9BFF");
+        static Color C4_VERMELHO => HudTema.C4Vermelho; static Color C4_AMBAR => HudTema.C4Ambar; static Color C4_AZUL => HudTema.C4Azul;
         void MontarC4()
         {
             var top = new Vector2(0.5f, 1);
@@ -386,6 +387,13 @@ namespace CSM.View3D
                     var vr = c.vidaFundo.rectTransform; vr.anchorMin = Vector2.zero; vr.anchorMax = Vector2.one; vr.offsetMin = vr.offsetMax = Vector2.zero;
                     c.vidaFundo.sprite = c.vidaLag.sprite; c.vidaFundo.type = Image.Type.Filled; c.vidaFundo.fillMethod = Image.FillMethod.Horizontal;
                     c.vidaFundo.fillOrigin = a ? 0 : 1; c.vidaFundo.raycastTarget = false;
+                    if (HudTema.Novo)
+                    {
+                        // HUD novo: o card é grafite, a vida enche só um tom escuro e a cor do time vira uma linha fina embaixo (decisão 0032)
+                        var fb = new Vector2(a ? 0 : 1, 0);
+                        c.hpFina = No("vida fina", t, fb, new Vector2(sx * 56, 0), new Vector2(384, 3), fb).gameObject.AddComponent<Image>();
+                        c.hpFina.sprite = c.vidaLag.sprite; c.hpFina.type = Image.Type.Filled; c.hpFina.fillMethod = Image.FillMethod.Horizontal; c.hpFina.fillOrigin = a ? 0 : 1; c.hpFina.raycastTarget = false;
+                    }
                     c.hpBox = Painel("hp", t, lado, Vector2.zero, new Vector2(58, 56), CAIXA_TR, lado);
                     c.hpBox.sprite = null; c.hpBox.type = Image.Type.Simple;   // quadrado (usuário: o canto redondo do número ficava esquisito)
                     Raio(c.fundo, 3); Raio(c.borda, 3);                         // card com canto quase reto, casando com o número
@@ -862,7 +870,7 @@ namespace CSM.View3D
         // ordem da linha: [cego] MATADOR [+ (flash) ASSISTENTE] [no ar] ARMA [sem luneta][smoke][parede][HS] VÍTIMA;
         // a mais nova entra EMBAIXO; vive 5 s (x1,5 se envolve o jogador observado) e some em 1 s; o abate do observado
         // tem borda vermelha e fundo preto, a morte dele fundo vermelho. Tamanhos do CS2 (1080p) x1,3 pra transmissão.
-        static readonly Color KF_T = Hx("#eabe54"), KF_CT = Hx("#6f9ce6"), KF_FUNDO = new Color(0.07f, 0.065f, 0.06f, 0.78f);
+        static Color KF_T => HudTema.KfT; static Color KF_CT => HudTema.KfCT; static Color KF_FUNDO => HudTema.KfFundo;
         static readonly Color KF_MATOU = new Color(0, 0, 0, 0.9f), KF_MORREU = Hx("#630606D2"), KF_BORDA = Hx("#E10000");
         const int KF_TXT = 20;
         const float KF_ALT = 38, KF_ICO = 27, KF_ICO_P = 23, KF_VIDA = 5, KF_SOME = 1, KF_PASSO = 4;
@@ -1028,12 +1036,13 @@ namespace CSM.View3D
                     c.flash = Mathf.Max(0, c.flash - dt * 3);
                     var cor = Lado(t);
                     c.hp.text = a.alive ? a.hp.ToString() : ""; c.caveira.gameObject.SetActive(!a.alive);
-                    c.hpBox.color = a.alive ? (t ? CAIXA_TR : CAIXA_CT) : new Color(1, 0.957f, 0.886f, 0.1f);
+                    c.hpBox.color = a.alive ? (t ? CAIXA_TR : CAIXA_CT) : new Color(CREME.r, CREME.g, CREME.b, 0.1f);
                     c.hp.color = a.alive ? Color.white : CINZA;
                     // vida enche o card na cor do time (vermelho quando pouca); levou tiro: pisca claro
                     var cv = a.hp > 30 ? (t ? VIDA_TR : VIDA_CT) : VIDA_BAIXA;
                     c.vidaFundo.color = Color.Lerp(cv, Color.white, c.flash * 0.55f); c.vidaFundo.fillAmount = a.alive ? c.hpMostra / 100f : 0;
                     c.vidaLag.fillAmount = a.alive ? c.hpLag / 100f : 0;
+                    if (c.hpFina != null) { c.hpFina.fillAmount = c.vidaFundo.fillAmount; c.hpFina.color = a.hp > 30 ? Lado(t) : VERMELHO; }
                     c.nome.text = a.name.ToUpper();
                     c.nome.color = a.alive ? CREME : CINZA;
                     // kills do round: caveirinhas depois do nome

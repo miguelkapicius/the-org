@@ -126,9 +126,9 @@ namespace CSM.View3D
         {
             var im = No(nome, pai, ancora, pos, tam, pivo).gameObject.AddComponent<Image>();
             im.sprite = Redondo; im.type = Image.Type.Sliced; im.color = cor; im.raycastTarget = false;
-            Raio(im, Mathf.Min(10, Mathf.Min(tam.x, tam.y) * 0.5f));
+            Raio(im, Mathf.Min(HudTema.Raio, Mathf.Min(tam.x, tam.y) * 0.5f));   // 10 px no HUD clássico, 3 px no novo (decisão 0032)
             // sombra como efeito do próprio painel: some/anda junto com ele
-            if (sombra) { var s = im.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.3f); s.effectDistance = new Vector2(0, -5); s.useGraphicAlpha = true; }
+            if (sombra && HudTema.Sombra) { var s = im.gameObject.AddComponent<Shadow>(); s.effectColor = new Color(0, 0, 0, 0.3f); s.effectDistance = new Vector2(0, -5); s.useGraphicAlpha = true; }
             return im;
         }
 
