@@ -50,9 +50,9 @@ namespace CSM.View3D
         public static Color Vermelho => Es("#E5382E", "#EC6A5F");
 
         // ---- vida e caixas dos cards
-        public static Color VidaTR => Es("#D9831A", "#5C4118");
-        public static Color VidaCT => Es("#2F6FD6", "#1F4268");
-        public static Color VidaBaixa => Es("#D63A2F", "#6E2A25");
+        public static Color VidaTR => Es("#D9831A", "#2F3238");
+        public static Color VidaCT => Es("#2F6FD6", "#2F3238");
+        public static Color VidaBaixa => Es("#D63A2F", "#5E2724");
         public static Color CaixaTR => Es("#A85A00", "#33260F");
         public static Color CaixaCT => Es("#1E4FB0", "#12294A");
 

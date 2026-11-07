@@ -172,6 +172,18 @@ namespace CSM.ManagerUI
             return fotosCache[id] = Resources.Load<Texture2D>(PASTA_FOTOS + id.ToString("00"));
         }
 
+        /// <summary>O retrato de quem aparece na partida, pelo nome: o rosto do jogador do elenco ou, nos adversários, um rosto do conjunto escolhido
+        /// pelo nome (o mesmo de RetratoNome). Usado pelo HUD da partida (decisão 0032). Null se não há retratos.</summary>
+        public static Texture2D FotoDoNome(string nome)
+        {
+            var c = CSM.Manager.Carreira.Atual;
+            var j = c != null ? c.elenco.Concat(c.mercado).FirstOrDefault(x => x.nome == nome) : null;
+            if (j != null && j.fotoId > 0) return CarregaFoto(j.fotoId);
+            int total = FotosTotal(); if (total <= 0 || string.IsNullOrEmpty(nome)) return null;
+            int h = 11; foreach (char ch in nome) h = h * 31 + ch;
+            return CarregaFoto((h & 0x7fffffff) % total + 1);
+        }
+
         /// <summary>O retrato do jogador (null se ainda não tem ou se a pasta não existe).</summary>
         public static Texture2D FotoJogador(CSM.Manager.Jogador j) => j.fotoId > 0 ? CarregaFoto(j.fotoId) : null;
 

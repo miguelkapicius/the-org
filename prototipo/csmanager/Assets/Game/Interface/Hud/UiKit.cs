@@ -22,8 +22,17 @@ namespace CSM.View3D
         public const float RAIO_TEX = 40;
 
         // Barlow Condensed (OFL, Resources/Fontes): a fonte condensada das transmissões; sem ela, Bahnschrift do Windows
-        public static Font Fonte => fonte != null ? fonte : fonte = Resources.Load<Font>("Fontes/BarlowCondensed-Bold") ?? Font.CreateDynamicFontFromOSFont(new[] { "Bahnschrift", "Segoe UI Semibold", "Arial" }, 32);
-        public static Font Numero => numero != null ? numero : numero = Resources.Load<Font>("Fontes/BarlowCondensed-ExtraBold") ?? Font.CreateDynamicFontFromOSFont(new[] { "Bahnschrift", "Segoe UI Black", "Arial" }, 32);
+        // As fontes seguem o tema do HUD (decisão 0032): o novo usa a Barlow Condensed SemiBold do manager; o clássico, a Bold e a ExtraBold de antes.
+        // Trocar de tema entre duas partidas refaz as fontes e os materiais (os caches são por tema).
+        static bool fontesNovo; static bool fontesInit;
+        static void Sincroniza()
+        {
+            if (fontesInit && fontesNovo == HudTema.Novo) return;
+            fontesInit = true; fontesNovo = HudTema.Novo;
+            fonte = numero = null; sdfFonte = sdfNumero = null; estilos.Clear();
+        }
+        public static Font Fonte { get { Sincroniza(); return fonte != null ? fonte : fonte = (HudTema.Novo ? Resources.Load<Font>("ManagerUI/Fontes/BarlowCondensed-SemiBold") : null) ?? Resources.Load<Font>("Fontes/BarlowCondensed-Bold") ?? Font.CreateDynamicFontFromOSFont(new[] { "Bahnschrift", "Segoe UI Semibold", "Arial" }, 32); } }
+        public static Font Numero { get { Sincroniza(); return numero != null ? numero : numero = (HudTema.Novo ? Resources.Load<Font>("ManagerUI/Fontes/BarlowCondensed-SemiBold") : null) ?? Resources.Load<Font>("Fontes/BarlowCondensed-ExtraBold") ?? Font.CreateDynamicFontFromOSFont(new[] { "Bahnschrift", "Segoe UI Black", "Arial" }, 32); } }
 
         /// <summary>Fonte SDF gerada na hora a partir do TTF (atlas dinâmico: só os glifos usados entram).</summary>
         static TMP_FontAsset Sdf(Font f)
@@ -38,8 +47,8 @@ namespace CSM.View3D
         }
         const string GLIFOS = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~" +
                               "ÁÀÂÃÉÊÍÓÔÕÚÜÇáàâãéêíóôõúüç°ºª•—–…×";
-        public static TMP_FontAsset FonteSdf => sdfFonte != null ? sdfFonte : sdfFonte = Sdf(Fonte);
-        public static TMP_FontAsset NumeroSdf => sdfNumero != null ? sdfNumero : sdfNumero = Sdf(Numero);
+        public static TMP_FontAsset FonteSdf { get { var f = Fonte; return sdfFonte != null ? sdfFonte : sdfFonte = Sdf(f); } }
+        public static TMP_FontAsset NumeroSdf { get { var f = Numero; return sdfNumero != null ? sdfNumero : sdfNumero = Sdf(f); } }
 
         /// <summary>Material por estilo (0 liso, 1 sombra embaixo, 2 contorno escuro + sombra), compartilhado.</summary>
         static Material Estilo(TMP_FontAsset f, int tipo)

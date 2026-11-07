@@ -97,7 +97,7 @@ namespace CSM.View3D
         // cards
         class Card
         {
-            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public RawImage[] nades = new RawImage[4]; public RawImage c4Ico, kitIco; public Image hpFina;
+            public RectTransform r; public Image fundo, hpBox, hpBarra, hpAtraso, borda; public Text hp, nome, arma, dinheiro, tags; public RawImage[] nades = new RawImage[4]; public RawImage c4Ico, kitIco; public Image hpFina; public RawImage foto; public string fotoNome;
             public RawImage icone, iconeFora, capacete, caveira; public Text slot;
             public Image vidaFundo, vidaLag; public RawImage[] kills = new RawImage[5];
             public float hpMostra = 100, hpLag = 100, lagEspera, flash; public int ultHp = 100;
@@ -221,7 +221,7 @@ namespace CSM.View3D
                 // texto branco: pouco contraste)
                 var tile = Painel(a ? "time A" : "time B", raiz, top, new Vector2(sx * 95, -22), new Vector2(270, 70), ESCURO, new Vector2(a ? 1 : 0, 1), true);
                 var faixa = No("faixa", tile.transform, new Vector2(0.5f, 0), new Vector2(0, 0), new Vector2(0, 6), new Vector2(0.5f, 0)).gameObject.AddComponent<Image>();
-                faixa.rectTransform.anchorMin = new Vector2(0, 0); faixa.rectTransform.anchorMax = new Vector2(1, 0); faixa.rectTransform.sizeDelta = new Vector2(-16, 6);
+                faixa.rectTransform.anchorMin = new Vector2(0, 0); faixa.rectTransform.anchorMax = new Vector2(1, 0); faixa.rectTransform.sizeDelta = new Vector2(-16, HudTema.Novo ? 3 : 6);
                 faixa.raycastTarget = false; if (a) faixaA = faixa; else faixaB = faixa;
                 var nome = Texto("nome", tile.transform, new Vector2(a ? 0 : 1, 0.5f), new Vector2(sx * -18, 0), new Vector2(170, 40), "TIME", 24, CREME, a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight, false, new Vector2(a ? 0 : 1, 0.5f));
                 var pl = Texto("placar", tile.transform, new Vector2(a ? 1 : 0, 0.5f), new Vector2(sx * 16, 0), new Vector2(70, 60), "0", 50, CREME, TextAnchor.MiddleCenter, true, new Vector2(a ? 1 : 0, 0.5f));
@@ -364,6 +364,9 @@ namespace CSM.View3D
             return mostra;
         }
 
+        /// <summary>Onde começam o nome e o dinheiro dentro do card (px do lado de fora): no HUD novo o retrato e a vida vêm antes.</summary>
+        static float X0 => HudTema.Novo ? 122f : 70f;
+
         void MontarCards()
         {
             // card de transmissão (tema aprovado): a VIDA enche o card inteiro na cor do time (o que perdeu fica escuro,
@@ -397,14 +400,21 @@ namespace CSM.View3D
                     c.hpBox = Painel("hp", t, lado, Vector2.zero, new Vector2(58, 56), CAIXA_TR, lado);
                     c.hpBox.sprite = null; c.hpBox.type = Image.Type.Simple;   // quadrado (usuário: o canto redondo do número ficava esquisito)
                     Raio(c.fundo, 3); Raio(c.borda, 3);                         // card com canto quase reto, casando com o número
-                    c.hp = Texto("hp txt", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(58, 56), "100", 30, Color.white, TextAnchor.MiddleCenter, true);
+                    if (HudTema.Novo)
+                    {
+                        // HUD novo: o quadrado do canto é o retrato do jogador (o mesmo rosto do manager) e a vida vem em número grande ao lado
+                        c.hpBox.rectTransform.sizeDelta = new Vector2(56, 56);
+                        c.foto = No("foto", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(56, 56)).gameObject.AddComponent<RawImage>(); c.foto.raycastTarget = false;
+                        c.hp = Texto("hp txt", t, lado, new Vector2(sx * 60, 0), new Vector2(54, 56), "100", 32, Color.white, TextAnchor.MiddleCenter, true, lado);
+                    }
+                    else c.hp = Texto("hp txt", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(58, 56), "100", 30, Color.white, TextAnchor.MiddleCenter, true);
                     c.caveira = No("caveira", c.hpBox.transform, new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(26, 27)).gameObject.AddComponent<RawImage>();
                     c.caveira.texture = Tex("ui_caveira"); c.caveira.color = CINZA; c.caveira.raycastTarget = false;
                     // número do slot (o mesmo da gota no radar, como na IEM), no canto de cima do quadrado da vida
                     var qs = new Vector2(a ? 0 : 1, 1);
                     c.slot = Texto("slot", c.hpBox.transform, qs, new Vector2(sx * 4, -1), new Vector2(14, 15), "", 13, CINZA, a ? TextAnchor.UpperLeft : TextAnchor.UpperRight, true, qs, false);
                     var al = a ? TextAnchor.MiddleLeft : TextAnchor.MiddleRight;
-                    c.nome = Texto("nome", t, new Vector2(a ? 0 : 1, 1), new Vector2(sx * 70, -3), new Vector2(230, 30), "Jogador", 25, CREME, al, false, new Vector2(a ? 0 : 1, 1));
+                    c.nome = Texto("nome", t, new Vector2(a ? 0 : 1, 1), new Vector2(sx * X0, -3), new Vector2(230, 30), "Jogador", 25, CREME, al, false, new Vector2(a ? 0 : 1, 1));
                     // kills do round = caveirinha por abate (como o CS2: icons/ui/kill embaixo do avatar); antes eram bolinhas
                     for (int k = 0; k < 5; k++)
                     {
@@ -412,7 +422,7 @@ namespace CSM.View3D
                         c.kills[k].texture = Tex("ui_caveira"); c.kills[k].raycastTarget = false;
                     }
                     var pe = new Vector2(a ? 0 : 1, 0);
-                    c.dinheiro = Texto("dinheiro", t, pe, new Vector2(sx * 70, 5), new Vector2(90, 24), "$0", 19, VERDE, al, true, pe, false);
+                    c.dinheiro = Texto("dinheiro", t, pe, new Vector2(sx * X0, 5), new Vector2(90, 24), "$0", 19, VERDE, al, true, pe, false);
                     c.capacete = No("capacete", t, pe, Vector2.zero, new Vector2(14, 17), new Vector2(0.5f, 0)).gameObject.AddComponent<RawImage>();
                     c.capacete.texture = Tex("ui_capacete"); c.capacete.raycastTarget = false;
                     c.tags = Texto("tags", t, pe, Vector2.zero, new Vector2(70, 24), "", 16, CREME, al, false, pe, false);
@@ -1036,6 +1046,15 @@ namespace CSM.View3D
                     c.flash = Mathf.Max(0, c.flash - dt * 3);
                     var cor = Lado(t);
                     c.hp.text = a.alive ? a.hp.ToString() : ""; c.caveira.gameObject.SetActive(!a.alive);
+                    if (c.foto != null)
+                    {
+                        if (c.fotoNome != a.name)
+                        {
+                            c.fotoNome = a.name; var ft = CSM.ManagerUI.Ui.FotoDoNome(a.name); c.foto.texture = ft; c.foto.gameObject.SetActive(ft != null);
+                            if (ft != null) { float asp = ft.width / (float)ft.height; c.foto.uvRect = asp < 1f ? new Rect(0, 1f - asp, 1, asp) : new Rect((1f - 1f / asp) / 2f, 0, 1f / asp, 1); }   // quadrado, alinhado ao topo (rosto)
+                        }
+                        c.foto.color = a.alive ? Color.white : new Color(0.3f, 0.3f, 0.32f, 0.9f);
+                    }
                     c.hpBox.color = a.alive ? (t ? CAIXA_TR : CAIXA_CT) : new Color(CREME.r, CREME.g, CREME.b, 0.1f);
                     c.hp.color = a.alive ? Color.white : CINZA;
                     // vida enche o card na cor do time (vermelho quando pouca); levou tiro: pisca claro
@@ -1046,7 +1065,7 @@ namespace CSM.View3D
                     c.nome.text = a.name.ToUpper();
                     c.nome.color = a.alive ? CREME : CINZA;
                     // kills do round: caveirinhas depois do nome
-                    float xn = 70 + c.nome.preferredWidth + 9;
+                    float xn = X0 + c.nome.preferredWidth + 9;
                     for (int k = 0; k < 5; k++)
                     {
                         bool tem = k < a.kills;
@@ -1066,7 +1085,7 @@ namespace CSM.View3D
                     c.dinheiro.text = $"${j.dinheiro:N0}".Replace(",", ".");
                     c.dinheiro.color = a.alive ? VERDE : Escurece(VERDE, 0.6f);
                     // linha de baixo: dinheiro, capacete, C4/KIT e granadas, um atrás do outro
-                    float xl = 70 + c.dinheiro.preferredWidth + 10;
+                    float xl = X0 + c.dinheiro.preferredWidth + 10;
                     c.capacete.gameObject.SetActive(a.alive && a.armor > 0);
                     if (a.alive && a.armor > 0)
                     {   // colete + capacete = um ícone só (como no CS); só o colete = colete
