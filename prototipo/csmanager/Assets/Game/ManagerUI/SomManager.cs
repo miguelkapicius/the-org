@@ -22,8 +22,31 @@ namespace CSM.ManagerUI
         public static bool Mudo
         {
             get { try { return PlayerPrefs.GetInt(CHAVE_MUDO, 0) == 1; } catch (System.Exception) { return false; } }
-            set { try { PlayerPrefs.SetInt(CHAVE_MUDO, value ? 1 : 0); PlayerPrefs.Save(); } catch (System.Exception) { } }
+            set
+            {
+                try { PlayerPrefs.SetInt(CHAVE_MUDO, value ? 1 : 0); PlayerPrefs.Save(); } catch (System.Exception) { }
+                if (value) { if (ambiente != null) ambiente.Stop(); } else if (ambienteAtivo) AmbienteLigar();   // o ambiente acompanha o botão de som
+            }
         }
+
+        // ---------------------------------------------------------------- ambiente (zumbido da sala de controle, em laço)
+        static AudioSource ambiente; static AudioClip ambienteClip; static bool ambienteAtivo;
+        /// <summary>Volume do ambiente em relação ao geral: bem baixo, para ser sentido e não ouvido.</summary>
+        public static float VolumeAmbiente = 0.12f;
+
+        /// <summary>Liga o ambiente enquanto o manager está aberto (não toca em modo batch nem com o som desligado).</summary>
+        public static void AmbienteLigar()
+        {
+            ambienteAtivo = true;
+            if (Application.isBatchMode || Mudo) return;
+            Iniciar();
+            if (ambiente == null) { ambiente = fontes[0].gameObject.AddComponent<AudioSource>(); ambiente.loop = true; ambiente.playOnAwake = false; ambiente.spatialBlend = 0f; }
+            if (ambienteClip == null) { var d = SomSintese.Ambiente(); ambienteClip = AudioClip.Create("ui_ambiente", d.Length, 1, SomSintese.TAXA, false); ambienteClip.SetData(d, 0); }
+            ambiente.clip = ambienteClip; ambiente.volume = Mathf.Clamp01(Volume * VolumeAmbiente * CSM.Audio.Som3D.volumeGeral);
+            if (!ambiente.isPlaying) ambiente.Play();
+        }
+
+        public static void AmbienteDesligar() { ambienteAtivo = false; if (ambiente != null) ambiente.Stop(); }
 
         static float ultimaChecagem = -10f;
 
@@ -39,7 +62,8 @@ namespace CSM.ManagerUI
         static void Iniciar()
         {
             GarantirOuvido();
-            if (fontes != null) return;
+            if (fontes != null && fontes[0] != null) return;   // (se a cena trocou e destruiu as fontes, cria de novo)
+            ambiente = null;
             var go = new GameObject("SomManager"); Object.DontDestroyOnLoad(go);
             fontes = new AudioSource[FONTES];
             for (int i = 0; i < FONTES; i++) { var f = go.AddComponent<AudioSource>(); f.playOnAwake = false; f.spatialBlend = 0f; fontes[i] = f; }

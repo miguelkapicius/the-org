@@ -125,6 +125,7 @@ namespace CSM.ManagerUI
 
             Mostrar();
             tela.Focus();
+            SomManager.AmbienteLigar();   // o zumbido da sala de controle (decisão 0029); some quando a partida começa
 
             if (rtCaptura != null) yield return Capturar(pastaCaptura, rtCaptura);
         }
@@ -134,6 +135,7 @@ namespace CSM.ManagerUI
             if (preview != null) Destroy(preview.gameObject);
             if (retratoRT != null) { retratoRT.Release(); Destroy(retratoRT); }
             RetratoBoneco = null; Ui.Dica = null;
+            SomManager.AmbienteDesligar();
         }
 
         void Salvar() { if (!captura && c != null) Salvamento.Salvar(c); }

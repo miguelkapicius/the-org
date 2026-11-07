@@ -10,7 +10,7 @@ _A preencher._
 
 ## Efeitos sonoros
 
-**Interface (decisão 0029):** 11 sons **autorais, sintetizados em código** (hover, clique, ação principal, troca de tela, alternar, sucesso, erro, dinheiro, aviso, resposta na negociação e avançar semana), com caráter limpo, seco e tátil. Cada toque varia a altura em até 4 %. O som liga e desliga no menu. São um rascunho para um designer de som refinar. Sons da partida (tiros, passos, utilitárias, ambiente) ainda não existem.
+**Interface (decisão 0029):** identidade de **sala de operações de uma transmissão tática**: 11 sons **autorais, sintetizados em código** (hover como tique de relé, clique como tecla mecânica, ação principal como ordem confirmada no rádio, troca de tela como painel que desliza, sucesso como vinheta de transmissão, erro como acesso negado, dinheiro como carimbo e moedas, aviso como ping de radar, resposta na negociação como rajada de dados cifrados e avançar semana como o tempo passando), com eco e reverb de sala, e um **zumbido de sala de controle** em laço, bem baixo, enquanto o manager está aberto. Cada toque varia a altura em até 4 %. O som (efeitos e ambiente) liga e desliga no menu. São um rascunho para um designer de som refinar. Sons da partida (tiros, passos, utilitárias, ambiente) já existem à parte (Som3D); os da interface do manager são estes.
 
 ## Voz
 
