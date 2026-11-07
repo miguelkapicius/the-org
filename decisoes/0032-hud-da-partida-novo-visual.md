@@ -19,7 +19,7 @@ Opção 3. O HUD tem dois temas, **Novo** (padrão) e **Clássico**, escolhidos 
 
 ## Detalhamento (proposta do agente, a validar)
 1. **Clássico:** exatamente o de antes (marrom, creme, cantos de 10 px, sombra, card preenchido pela vida na cor do time).
-2. **Novo:** grafite #0b0d10 com branco frio; laranja e azul só para os times; verde e vermelho só para estado; cantos de 3 px e **sem sombra**. O **card do jogador** é grafite, a vida enche só um tom escuro do time e a cor viva do time vira uma **linha fina embaixo** do card (vermelha com pouca vida). O minimapa, o killfeed, o C4 e o placar do fim (botões claros) seguem a mesma paleta.
+2. **Novo:** é a linguagem do menu do manager dentro da partida. Grafite #0b0d10 com branco frio; laranja e azul só para os times; verde e vermelho só para estado; cantos de 3 px e **sem sombra**; a **mesma fonte** do manager (Barlow Condensed SemiBold). O **card do jogador** é grafite e tem o **retrato do jogador** (o mesmo rosto do manager; nos adversários, um rosto do conjunto escolhido pelo nome), a vida em número grande ao lado, o nome e o dinheiro, e a cor viva do time vira uma **linha fina** embaixo do card que encolhe com a vida (vermelha com pouca vida); o jogador morto fica com o retrato escurecido e a caveira. A faixa do placar fica mais fina. O minimapa, o killfeed, o C4 e o placar do fim (botões claros) seguem a mesma paleta.
 3. **Como voltar atrás:** nas Opções, escolher Clássico. Para o padrão mudar de vez, trocar `HudNovo` em `Opcoes.cs` (valor padrão 1). Nenhuma peça do HUD foi apagada; as cores vêm de `HudTema.cs`.
 4. **Captura para comparar:** `HudCaptura.CapturarBatch -hud_tema novo` ou `-hud_tema classico` gera as imagens em `Logs/hud`.
 
