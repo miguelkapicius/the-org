@@ -1205,3 +1205,12 @@
 .gh-passo.atual .gh-passo-nome { color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .gh-passo.feito .gh-passo-nome { color: var(--suave); }
 .f22 { font-size: 22px; }
+
+/* ---- carregando a partida (decisão 0031) ---- */
+.carregando { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: #0b0d10; align-items: center; justify-content: center; opacity: 0; transition-property: opacity; transition-duration: 0.25s; }
+.carregando.visivel { opacity: 1; }
+.car-peq { font-size: 16px; color: #f5a524; letter-spacing: 3px; margin-bottom: 8px; }
+.car-tit { font-size: 72px; color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); white-space: normal; -unity-text-align: middle-center; }
+.car-sub { font-size: 20px; color: #9fa6b0; margin-top: 6px; -unity-text-align: middle-center; }
+.car-trilho { width: 360px; height: 3px; margin-top: 40px; margin-bottom: 14px; background-color: rgba(255, 255, 255, 0.02); overflow: hidden; }
+.car-seg { position: absolute; top: 0; width: 110px; height: 3px; background-color: #eceef1; }

@@ -169,7 +169,28 @@ namespace CSM.ManagerUI
             }
             Salvar();
             c.PrepararAssistir(1000 + c.numPartida * 17 + c.Semana);
-            SceneManager.LoadScene(CENA_PARTIDA);
+            CarregarPartida();
+        }
+
+        bool carregandoPartida;
+
+        /// <summary>Tela de carregando antes de entrar na simulação (decisão 0031): a Unity trava por alguns segundos ao montar a maquete, então a tela aparece
+        /// primeiro (com a barra correndo) e só então a cena da partida é carregada. A partida desenha a mesma tela e ela some num fade.</summary>
+        void CarregarPartida(bool entrar = true)
+        {
+            if (carregandoPartida) return;
+            carregandoPartida = true;
+            var s = c.serie;
+            var cv = E("carregando"); cv.pickingMode = PickingMode.Position;
+            cv.Add(L("PREPARANDO A PARTIDA", "car-peq"));
+            cv.Add(L(c.clube + "  ×  " + s.adv.nome, "car-tit"));
+            cv.Add(L(s.camp.nome + (s.MapaAtual >= 0 ? "  ·  " + Mapas.NOMES[s.MapaAtual] : ""), "car-sub"));
+            var trilho = E("car-trilho"); var seg = E("car-seg"); trilho.Add(seg); cv.Add(trilho);
+            cv.Add(L("Montando o mapa…", "car-sub", "car-estado"));
+            tela.Add(cv);
+            cv.schedule.Execute(() => cv.AddToClassList("visivel")).StartingIn(1);
+            seg.schedule.Execute(() => { float t = (Time.realtimeSinceStartup * 0.9f) % 1f; seg.style.left = (360f + 110f) * t - 110f; }).Every(16);
+            if (entrar) cv.schedule.Execute(() => SceneManager.LoadScene(CENA_PARTIDA)).StartingIn(450);   // dá tempo de o carregando aparecer antes da trava
         }
 
         // ================================================================================================ pré-partida

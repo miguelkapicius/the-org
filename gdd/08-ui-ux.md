@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031
 
 _Telas, HUD e fluxo de navegação._
 
@@ -41,6 +41,8 @@ _Telas, HUD e fluxo de navegação._
 **Primeiros passos** (decisão 0028): um tour guiado de 6 passos (Painel, Elenco, Treino, Mercado, Finanças e Série), sem bloqueio. Um cartão no canto mostra o passo e os botões Próximo (leva à tela do passo seguinte), Ir para a tela e Pular tutorial; o ícone da tela do passo **pulsa** no menu; os avisos temporários sobem para não cobrir o cartão. O botão de **ajuda** no fim do menu recomeça o tour. O passo fica salvo na carreira.
 
 **Som da interface** (decisão 0029): hover, cliques, avisos e a negociação têm sons autorais sintetizados, com a identidade de sala de operações (toques abafados e notas suaves), e um zumbido de ambiente bem baixo enquanto o manager está aberto; a regra é **tudo leve** (o jogador usa o mouse o tempo todo): toques curtos, macios e baixos, e passar o mouse não toca nada. O liga e desliga e os volumes ficam na tela de **Opções** (decisão 0030).
+
+**Carregando e volta ao manager** (decisão 0031): ao assistir um mapa, uma tela cheia grafite mostra "Preparando a partida", os dois times, o campeonato e o mapa, com uma barra que corre; a partida a desenha de novo enquanto monta a maquete e aquece a simulação (com as teclas da partida) e ela some num fade. A partida vinda do manager entra direto, sem o menu do protótipo, e no fim o placar tem o botão **VOLTAR AO MANAGER**, que fecha a série da carreira e abre a pós-partida.
 
 **Princípios de experiência do manager** (**[Sugestão]**, aplicados no protótipo): (1) o efeito de uma decisão aparece **antes** de confirmá-la (troca de escalação, contratação), ligando a gestão ao que se vê na partida (pilar 3); (2) o jogo diz **o que fazer agora** (avisos no painel), em vez de exigir que o jogador procure; (3) ações que custam dinheiro têm **desfazer** quando possível; (4) avisos de resultado são temporários e não tomam a tela; (5) dicas ao passar o mouse explicam cada atributo; (6) teclas 1 a 9 trocam de tela, Enter assiste e Esc volta na pré-partida; (7) a carreira é **salva sozinha** a cada ação. **Personalidade** (decisão 0019): o traço aparece como selo ao lado do nome (explicação ao passar o mouse; no mercado só depois do scout), a moral aparece embaixo do nome no elenco e como barra no cartão do painel, e o entrosamento do time fica no topo da escalação. Moral baixa e time pouco entrosado viram avisos no painel. **Rivalidades** (decisão 0021): a preparação da série mostra o retrospecto contra o adversário e o selo CLÁSSICO quando ele é rival; o painel do clube lista os rivais (o primeiro como ARQUIRRIVAL) com retrospecto e sequência.
 

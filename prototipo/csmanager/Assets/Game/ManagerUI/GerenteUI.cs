@@ -1011,6 +1011,7 @@ namespace CSM.ManagerUI
                 ("serie", () => { c.PrepararSerie(); aba = Aba.Serie; }, null),
                 ("serie-veto-auto", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.Serie; }, null),
                 ("prematch", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.PreMatch; }, null),
+                ("carregando", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.PreMatch; }, () => { carregandoPartida = false; CarregarPartida(false); }),
                 ("financas", () => aba = Aba.Financas, null),
                 ("gaminghouse", () => aba = Aba.GamingHouse, null),
                 ("pospartida", () => { c.PularMapa(); aba = Aba.Painel; }, null),
