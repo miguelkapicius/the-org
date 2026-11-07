@@ -27,6 +27,7 @@ namespace CSM.ManagerUI
             dir.Add(r.serieEncerrada
                 ? L(r.venceuSerie ? "Você venceu a série" : "Você perdeu a série", "f15", r.venceuSerie ? "verde" : "vermelho")
                 : L("A série continua no próximo mapa", "f15", "suave"));
+            dir.Add(L((r.fas >= 0 ? "+" : "−") + Fmt.Fas(System.Math.Abs(r.fas)) + " fãs", "f15", r.fas >= 0 ? "verde" : "vermelho"));
             if (r.mapasDaSerie.Count > 1)
             {
                 var mp = E("pp-mapas");

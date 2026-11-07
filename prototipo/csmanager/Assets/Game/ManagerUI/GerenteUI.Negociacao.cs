@@ -126,12 +126,15 @@ namespace CSM.ManagerUI
                 "Pago toda semana enquanto ele estiver no elenco."));
             var prom = BotaoMini("Garantir vaga de titular", () => { n.promessa = !n.promessa; Mostrar(); }, n.promessa);
             ComDica(prom, "Ele aceita pagar menos se tiver a vaga garantida, mas se não jogar por " + Negociador.PROMESSA_SEMANAS + " semanas a moral dele despenca.");
-            prom.style.alignSelf = Align.FlexEnd; prom.style.marginBottom = 12;
-            linha.Add(prom);
+            var anosAtual = n.ofertaAnos > 0 ? n.ofertaAnos : Contratos.AnosDesejados(j);
+            var prazo = BotaoMini("Prazo: " + Contratos.Prazo(anosAtual * Contratos.SEMANAS_ANO), () => { n.ofertaAnos = anosAtual % Contratos.ANOS_MAX + 1; Mostrar(); });
+            ComDica(prazo, "Quanto tempo vale o contrato (clique para mudar). " + (Contratos.AnosDesejados(j) == anosAtual ? "É o prazo que ele prefere." : "Ele prefere " + Contratos.Prazo(Contratos.AnosDesejados(j) * Contratos.SEMANAS_ANO) + "; fora disso ele cobra mais.") + " Antes do fim, rescindir custa multa; outro clube pode pagar a cláusula de " + Fmt.Dinheiro(Contratos.Clausula(j, anosAtual)) + " para levá-lo.");
+            var colExtra = E(); colExtra.style.alignSelf = Align.FlexEnd; colExtra.style.marginBottom = 12; prazo.style.marginBottom = 6; colExtra.Add(prazo); colExtra.Add(prom);
+            linha.Add(colExtra);
             cx.Add(linha);
 
             // quanto a proposta cobre do que ele pede (a conclusão antes do detalhe)
-            float cob = Negociador.Cobertura(c, n, n.ofertaLuvas, n.ofertaSalario, n.promessa);
+            float cob = Negociador.Cobertura(c, n, n.ofertaLuvas, n.ofertaSalario, n.promessa, n.ofertaAnos);
             var (pl, ps) = Negociador.Pedido(c, j, n.promessa);
             var rodape = E("neg-rodape");
             var res = E(); res.style.flexGrow = 1;
@@ -168,13 +171,13 @@ namespace CSM.ManagerUI
         {
             var sai = c.QuemSaiPara(j);   // antes de contratar: quem ele substituiria
             n.promessa = promessa;
-            var r = Negociador.Propor(c, n, luvas, salario, promessa);
+            var r = Negociador.Propor(c, n, luvas, salario, promessa, n.ofertaAnos);
             if (r.tipo == RespostaTipo.Contra) { n.ofertaLuvas = r.luvas; n.ofertaSalario = r.salario; }
             Salvar();
             if (r.tipo == RespostaTipo.Aceita)
             {
                 proximoSomToast = Som.Dinheiro;
-                Resposta(null, j.nome + " assinou: " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + "/sem.", sai != null ? "Escalar agora" : null, () =>
+                Resposta(null, j.nome + " assinou por " + Contratos.Prazo(j.contratoSemanas) + ": " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + "/sem.", sai != null ? "Escalar agora" : null, () =>
                 {
                     c.TornarTitular(j); Salvar(); Mostrar();
                     Toast(j.nome + " agora é titular. Força " + c.Forca + ", chance de vitória " + Pct(c.ChanceVitoria()) + ".");

@@ -21,7 +21,7 @@ namespace CSM.Manager
         public bool encerrada, fechou;                    // encerrada: ele cansou (volta depois); fechou: contrato assinado
         public int bloqueadoAte;                          // semana em que ele volta a conversar
         public int luvasPedida, salarioPedido;            // o que ele pede agora
-        public int ofertaLuvas, ofertaSalario; public bool promessa;   // a proposta que o manager está montando
+        public int ofertaLuvas, ofertaSalario, ofertaAnos; public bool promessa;   // a proposta que o manager está montando (ofertaAnos 0 = o prazo que ele prefere, decisão 0035)
         public bool contraPendente;                       // o último pedido dele é uma contraproposta que dá para aceitar
     }
 
@@ -90,10 +90,10 @@ namespace CSM.Manager
         }
 
         /// <summary>Quanto a proposta cobre do que ele pede agora (1,0 = aceita). Sem efeito colateral: serve para a tela mostrar antes de enviar.</summary>
-        public static float Cobertura(Carreira c, Negociacao n, int luvas, int salario, bool prometeVaga)
+        public static float Cobertura(Carreira c, Negociacao n, int luvas, int salario, bool prometeVaga, int anos = 0)
         {
             var (pl, ps) = Pedido(c, n.jogador, prometeVaga);
-            return 0.65f * salario / Math.Max(1f, ps) + 0.35f * (pl <= 0 ? 1f : luvas / (float)pl);
+            return (0.65f * salario / Math.Max(1f, ps) + 0.35f * (pl <= 0 ? 1f : luvas / (float)pl)) * Contratos.FatorPrazo(n.jogador, anos <= 0 ? Contratos.AnosDesejados(n.jogador) : anos);
         }
 
         public static Negociacao Abrir(Carreira c, Jogador j)
@@ -111,19 +111,19 @@ namespace CSM.Manager
         }
 
         /// <summary>O manager faz uma proposta. Devolve a resposta; se aceitou, já assina o contrato.</summary>
-        public static RespostaNeg Propor(Carreira c, Negociacao n, int luvas, int salario, bool prometeVaga)
+        public static RespostaNeg Propor(Carreira c, Negociacao n, int luvas, int salario, bool prometeVaga, int anos = 0)
         {
             var j = n.jogador;
             n.msgs.Add(new MsgNeg { nos = true, semana = c.Semana, texto = "Proposta: " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + " por semana" + (prometeVaga ? ", com a vaga de titular garantida." : ".") });
             var f = Fatores(c, j, prometeVaga);
             var (pl, ps) = Pedido(c, j, prometeVaga);
-            float r = Cobertura(c, n, luvas, salario, prometeVaga);
+            float r = Cobertura(c, n, luvas, salario, prometeVaga, anos);
             var pior = f.OrderBy(x => x.Efeito).First(); var melhor = f.OrderByDescending(x => x.Efeito).First();
 
             RespostaNeg resp;
             if (r >= 1f)
             {
-                string erro = c.Contratar(j, luvas, salario);
+                string erro = c.Contratar(j, luvas, salario, anos);
                 if (erro != null) { resp = new RespostaNeg { tipo = RespostaTipo.Recusa, texto = erro }; }
                 else
                 {
@@ -165,11 +165,11 @@ namespace CSM.Manager
         }
 
         /// <summary>Aceitar a contraproposta que ele fez (equivale a uma proposta igual ao pedido).</summary>
-        public static RespostaNeg AceitarContra(Carreira c, Negociacao n) => Propor(c, n, n.luvasPedida, n.salarioPedido, n.promessa);
+        public static RespostaNeg AceitarContra(Carreira c, Negociacao n) => Propor(c, n, n.luvasPedida, n.salarioPedido, n.promessa, n.ofertaAnos);
 
         static int Arredonda(float v, int passo) => (int)Math.Round(v / passo) * passo;
 
-        static string Reclamacao(Fator f) => f.nome switch
+        public static string Reclamacao(Fator f) => f.nome switch
         {
             "Prestígio" => "Quero jogar num clube maior; o seu ainda não me convence.",
             "Vaga" => "Quero ser titular, e hoje você já tem gente melhor na minha função.",

@@ -369,6 +369,16 @@ namespace CSM.ManagerUI
             u.Add(tx);
             ComDica(u, "Saldo do clube. Despesa fixa: " + Fmt.Dinheiro(c.DespesaFixaPorSemana) + " por semana (salários, manutenção e parcelas).");
             h.Add(u);
+
+            var fa = E("carteira");
+            var fic = E("carteira-ic"); fic.Add(new Icone("users", 18)); fa.Add(fic);
+            var ftx = E("carteira-txt");
+            ftx.Add(L("FÃS", "dado-rot"));
+            ftx.Add(L(Fmt.Fas(c.fas), "dado-val", "t"));
+            fa.Add(ftx);
+            string proxFas = c.nivelGH >= GamingHouse.MAX ? "A Gaming House já está no nível máximo." : "Próximo nível da Gaming House: " + Fmt.Fas(c.FasProximoNivelGH) + " fãs" + (c.FasBastam ? " (você já tem o bastante)." : " (faltam " + Fmt.Fas(c.FasProximoNivelGH - c.fas) + ").");
+            ComDica(fa, "Fãs do clube. Vitórias, séries e campeonatos trazem fãs (mais contra um favorito, num circuito maior e em sequência); derrotas, principalmente para times mais fracos, tiram. Os fãs não se gastam: liberam os níveis da Gaming House junto com o dinheiro.\n" + proxFas);
+            h.Add(fa);
             return h;
         }
 
@@ -737,7 +747,8 @@ namespace CSM.ManagerUI
             info.Add(NomeComTraco(j, "info-nome", true));
             var meta = L(j.idade + " anos · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", "suave", "info-meta");
             meta.pickingMode = PickingMode.Position;
-            ComDica(meta, "Potencial " + j.potencial + " (o teto de evolução). Salário pago toda semana. Vende por " + Fmt.Dinheiro(j.Venda) + ".");
+            ComDica(meta, "Potencial " + j.potencial + " (o teto de evolução). Salário pago toda semana. Vende por " + Fmt.Dinheiro(j.Venda) + ".\nContrato: " + Contratos.Prazo(j.contratoSemanas)
+                + ". Rescindir antes do fim custa " + Fmt.Dinheiro(Contratos.Multa(j)) + " de multa; outro clube pode pagar a cláusula de " + Fmt.Dinheiro(j.clausula) + " para levá-lo.");
             info.Add(meta);
 
             // estado: a conclusão primeiro; o número na dica
@@ -753,6 +764,18 @@ namespace CSM.ManagerUI
                 estado.Add(sm);
             }
             if (j.mvps > 0) { var sv = Selo("MVP " + j.mvps + "×", null); ComDica(sv, "Vezes que foi MVP de mapa pelo clube" + (j.jogadas.Count > 0 ? ".\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : ".")); estado.Add(sv); }
+            if (j.contratoSemanas > 0 && j.contratoSemanas <= 2 * Contratos.SEMANAS_AVISO)
+            {
+                // contrato perto do fim (decisão 0035): o selo é o botão de renovar; a conta e o motivo de uma recusa ficam na dica
+                var sj = j; var pr = c.PedirRenovacao(sj);
+                var sr = Selo("RENOVAR", j.contratoSemanas <= Contratos.SEMANAS_AVISO ? "laranja" : null);
+                sr.pickingMode = PickingMode.Position;
+                ComDica(sr, "Contrato termina em " + Contratos.Prazo(j.contratoSemanas) + "; depois ele sai de graça.\n" + (pr.aceita
+                    ? "Clique para renovar por " + Contratos.Prazo(pr.anos * Contratos.SEMANAS_ANO) + ": " + Fmt.Dinheiro(pr.luvas) + " de luvas e " + Fmt.Dinheiro(pr.salario) + " por semana."
+                    : sj.nome + " não quer renovar agora: " + pr.motivo));
+                sr.RegisterCallback<ClickEvent>(_ => RenovarJogador(sj));
+                estado.Add(sr);
+            }
             info.Add(estado);
 
             for (int k = 1; k <= 5; k++)
@@ -850,6 +873,14 @@ namespace CSM.ManagerUI
             return card;
         }
 
+        void RenovarJogador(Jogador j)
+        {
+            var p = c.PedirRenovacao(j);
+            var erro = c.Renovar(j);
+            if (erro == null) { proximoSomToast = Som.Dinheiro; Salvar(); Mostrar(); }
+            Toast(erro ?? j.nome + " renovou por " + Contratos.Prazo(j.contratoSemanas) + ": " + Fmt.Dinheiro(p.luvas) + " de luvas e " + Fmt.Dinheiro(p.salario) + " por semana.", erro != null);
+        }
+
         void Vender(Jogador j)
         {
             var erro = c.Vender(j);
@@ -905,7 +936,7 @@ namespace CSM.ManagerUI
         {
             Directory.CreateDirectory(pasta);
             // prepara um estado interessante: GH alta, scouts e treino em andamento, algumas semanas jogadas
-            c.dinheiro = 1500000; c.tutorial = Carreira.TUTORIAL_PASSOS; for (int k = 0; k < 3; k++) c.SubirGamingHouse();
+            c.dinheiro = 1500000; c.fas = 99999999; c.tutorial = Carreira.TUTORIAL_PASSOS; for (int k = 0; k < 3; k++) c.SubirGamingHouse();
             c.DefinirScout(0, 2, c.Proximo().adv != null ? c.Proximo().adv.id : 5); c.DefinirScout(1, 1);
             foreach (var j in c.elenco) c.DefinirTreino(j, (int)Atrib.Mira + (j.nome.Length % 5), 2 + j.nome.Length % 3);
             c.DefinirColetivas(2); c.DefinirEstudoMapa(0);

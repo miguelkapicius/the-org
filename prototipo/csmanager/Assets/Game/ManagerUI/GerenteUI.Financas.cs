@@ -151,7 +151,7 @@ namespace CSM.ManagerUI
                 if (n < GamingHouse.MAX) topo.Add(E("gh-liga"));
                 passo.Add(topo);
                 passo.Add(L(nv.nome, "gh-passo-nome"));
-                ComDica(passo, "Nível " + n + ": " + nv.nome + (n > 1 ? " · custa " + Fmt.Dinheiro(nv.custo) : "") + " · manutenção " + Fmt.Dinheiro(nv.manutencao) + "/sem\n" + string.Join("\n", nv.vantagens.Select(v => "• " + v)));
+                ComDica(passo, "Nível " + n + ": " + nv.nome + (n > 1 ? " · pede " + Fmt.Fas(nv.fas) + " fãs e custa " + Fmt.Dinheiro(nv.custo) : "") + " · manutenção " + Fmt.Dinheiro(nv.manutencao) + "/sem\n" + string.Join("\n", nv.vantagens.Select(v => "• " + v)));
                 trilha.Add(passo);
             }
             conteudo.Add(trilha);
@@ -186,15 +186,16 @@ namespace CSM.ManagerUI
                 prox.Add(L("PRÓXIMO · NÍVEL " + (c.nivelGH + 1), "cartao-tit"));
                 prox.Add(L(nv.nome, "f22", "negrito"));
                 int dif = nv.manutencao - c.GH.manutencao;
-                var custo = L("custa " + Fmt.Dinheiro(nv.custo) + " · a manutenção sobe " + Fmt.Dinheiro(dif) + " por semana (para " + Fmt.Dinheiro(nv.manutencao) + ")", "f14", "suave", "quebra"); custo.style.marginBottom = 10; prox.Add(custo);
+                var custo = L("pede " + Fmt.Fas(nv.fas) + " fãs e custa " + Fmt.Dinheiro(nv.custo) + " · a manutenção sobe " + Fmt.Dinheiro(dif) + " por semana (para " + Fmt.Dinheiro(nv.manutencao) + ")", "f14", "suave", "quebra"); custo.style.marginBottom = 10; prox.Add(custo);
                 prox.Add(L("O QUE VOCÊ GANHA", "dado-rot", "fin-pegar"));
                 foreach (var vnt in nv.vantagens) { var l = E("gh-vant"); l.Add(E("gh-ponto")); l.Add(L(vnt, "f15", "t", "quebra")); prox.Add(l); }
                 var rod = E("gh-rodape");
                 var res = E(); res.style.flexGrow = 1; res.style.flexShrink = 1; res.style.marginRight = 14;
-                if (c.dinheiro < nv.custo) res.Add(L("Faltam " + Fmt.Dinheiro(nv.custo - c.dinheiro), "f15", "laranja"));
+                if (!c.FasBastam) res.Add(L("Faltam " + Fmt.Fas(c.FasProximoNivelGH - c.fas) + " fãs (você tem " + Fmt.Fas(c.fas) + ")" + (c.dinheiro < nv.custo ? " e " + Fmt.Dinheiro(nv.custo - c.dinheiro) : ""), "f15", "laranja", "quebra"));
+                else if (c.dinheiro < nv.custo) res.Add(L("Faltam " + Fmt.Dinheiro(nv.custo - c.dinheiro), "f15", "laranja"));
                 else res.Add(L("Sobram " + Fmt.Dinheiro(c.dinheiro - nv.custo) + " · " + (int)Math.Max(0, (c.dinheiro - nv.custo) / (double)Math.Max(1, c.SalariosPorSemana + nv.manutencao)) + " semanas de despesas", "f14", "suave", "quebra"));
                 rod.Add(res);
-                rod.Add(Botao("Subir de nível", () => Resposta(c.SubirGamingHouse(), "Gaming House no nível " + c.nivelGH + " (" + c.GH.nome + ")."), c.dinheiro >= nv.custo, true));
+                rod.Add(Botao("Subir de nível", () => Resposta(c.SubirGamingHouse(), "Gaming House no nível " + c.nivelGH + " (" + c.GH.nome + ")."), c.dinheiro >= nv.custo && c.FasBastam, true));
                 prox.Add(rod);
             }
             cols.Add(prox);

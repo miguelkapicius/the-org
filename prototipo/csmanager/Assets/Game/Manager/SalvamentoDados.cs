@@ -15,6 +15,7 @@ namespace CSM.Manager
     [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio;
         public bool temPersonalidade; public int traco; public float moral, entrosamento;
         public int fotoId, salarioAcordado, promessaSemanas;   // decisão 0026 (0 = salário de tabela)
+        public bool temContrato; public int contratoSemanas, clausula;   // decisão 0035 (salvamento antigo: 2 temporadas)
         public bool temLados; public float ladoTR = 50, ladoCT = 50; public int ladoFoco = -1;   // decisão 0024; salvamento antigo = neutro nos dois lados
         public int mvps, mvpsSerie; public List<string> jogadas = new List<string>(); }   // decisão 0020   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
     [Serializable] public class LancD { public int semana, valor; public string descricao; }
@@ -47,6 +48,7 @@ namespace CSM.Manager
     [Serializable]
     public class CarreiraD
     {
+        public int fas, sequencia; public bool temFas;
         public int versao = 2, seed, dinheiro, numPartida, nivelGH, estilo, coletivas, estudoMapa, semanasNegativo, semana, temporada, proxId, mundoSeed;
         public bool falido, temSerie, temTutorial; public int tutorial; public string clube;
         public List<JogadorD> elenco = new List<JogadorD>(), mercado = new List<JogadorD>();
@@ -66,6 +68,7 @@ namespace CSM.Manager
         static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone(),
             temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento,
             fotoId = j.fotoId, salarioAcordado = j.salarioAcordado ?? 0, promessaSemanas = j.promessaSemanas,
+            temContrato = true, contratoSemanas = j.contratoSemanas, clausula = j.clausula,
             temLados = true, ladoTR = j.ladoTR, ladoCT = j.ladoCT, ladoFoco = j.ladoFoco,
             mvps = j.mvps, mvpsSerie = j.mvpsSerie, jogadas = j.jogadas.ToList() };
         static Jogador De(JogadorD d)
@@ -74,6 +77,7 @@ namespace CSM.Manager
             if (d.temPersonalidade) { j.traco = (Traco)d.traco; j.moral = d.moral; j.entrosamento = d.entrosamento; }   // antes da 0019: valores iniciais, sem traço
             j.fotoId = d.fotoId;
             if (d.salarioAcordado > 0) j.salarioAcordado = d.salarioAcordado; j.promessaSemanas = d.promessaSemanas;
+            if (d.temContrato) { j.contratoSemanas = d.contratoSemanas; j.clausula = d.clausula; } else Contratos.Assinar(j, 2);   // salvamento antigo: 2 temporadas
             if (d.temLados) { j.ladoTR = d.ladoTR; j.ladoCT = d.ladoCT; j.ladoFoco = d.ladoFoco; }
             j.mvps = d.mvps; j.mvpsSerie = d.mvpsSerie; if (d.jogadas != null) j.jogadas.AddRange(d.jogadas);
             return j;
@@ -83,7 +87,7 @@ namespace CSM.Manager
         {
             var d = new CarreiraD
             {
-                temTutorial = true, tutorial = c.tutorial, seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
+                temFas = true, fas = c.fas, sequencia = c.sequencia, temTutorial = true, tutorial = c.tutorial, seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
                 semanasNegativo = c.semanasNegativo, falido = c.falido, clube = c.clube, semana = c.mundo.semana, temporada = c.mundo.temporada, proxId = c.mundo.ProxId, mundoSeed = c.mundo.Seed,
             };
             d.elenco = c.elenco.Select(Para).ToList(); d.mercado = c.mercado.Select(Para).ToList();
@@ -135,6 +139,7 @@ namespace CSM.Manager
             if (d.favoritasTR != null) c.favoritasTR.AddRange(d.favoritasTR); if (d.proibidasTR != null) c.proibidasTR.AddRange(d.proibidasTR);
             if (d.favoritasCT != null) c.favoritasCT.AddRange(d.favoritasCT); if (d.proibidasCT != null) c.proibidasCT.AddRange(d.proibidasCT);
             c.semanasNegativo = d.semanasNegativo; c.falido = d.falido;
+            if (d.temFas) { c.fas = d.fas; c.sequencia = d.sequencia; } else c.fas = Math.Max(Fas.INICIAIS + d.numPartida * Fas.BASE_MAPA, Fas.ParaNivel(d.nivelGH));   // salvamento antigo: estima pelos mapas jogados
             c.elenco.AddRange(d.elenco.Select(De)); c.mercado.AddRange(d.mercado.Select(De));
             c.extrato.AddRange(d.extrato.Select(l => new Lancamento { semana = l.semana, valor = l.valor, descricao = l.descricao }));
             c.historico.AddRange(d.historico.Select(r => new Resultado
