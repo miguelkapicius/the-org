@@ -1214,3 +1214,22 @@
 .car-sub { font-size: 20px; color: #9fa6b0; margin-top: 6px; -unity-text-align: middle-center; }
 .car-trilho { width: 360px; height: 3px; margin-top: 40px; margin-bottom: 14px; background-color: rgba(255, 255, 255, 0.02); overflow: hidden; }
 .car-seg { position: absolute; top: 0; width: 110px; height: 3px; background-color: #eceef1; }
+
+/* ---- pós-partida e hub (decisão 0033) ---- */
+.hero { border-left-width: 4px; padding: 22px 30px; }
+.hero.venceu { border-left-color: var(--verde); }
+.hero.perdeu { border-left-color: var(--vermelho); }
+.hero-lado { flex-grow: 1; flex-basis: 0; min-width: 0; }
+.hero-dir { align-items: flex-end; }
+.hero-meio { flex-shrink: 0; margin: 0 24px; }
+.pp-mapas { flex-direction: row; margin-top: 8px; }
+.pp-mapas > .selo { margin-left: 6px; }
+.pp-dest { padding: 14px 20px; margin-bottom: 0; }
+.pp-dest .cartao-tit { margin-bottom: 8px; }
+.pp .c-j.largo { width: 300px; flex-shrink: 0; }
+.pp .c-n { width: auto; flex-grow: 1; flex-basis: 0; }
+.pp .tr { height: 50px; }
+.pp .tr.th { height: 38px; }
+.pp .tr.mvp { background-color: rgba(76, 195, 138, 0.02); }
+.hub-tit.longo { font-size: 28px; }
+.diario-sem { width: 44px; flex-shrink: 0; font-size: 13px; color: var(--apagado); }

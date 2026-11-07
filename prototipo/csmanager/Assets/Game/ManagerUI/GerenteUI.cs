@@ -446,7 +446,13 @@ namespace CSM.ManagerUI
             colN.Add(L("Notícias", "h2", avisos.Count == 0 ? "topo-h2" : "t"));
             var diario = E("diario");
             if (c.diario.Count == 0) diario.Add(L("Nada por enquanto.", "f15", "suave"));
-            foreach (var d in c.diario.Take(4)) { var l = E("diario-linha"); if (diario.childCount == 0) l.AddToClassList("primeiro"); var tx = L(d, "suave"); tx.style.overflow = Overflow.Hidden; tx.style.textOverflow = TextOverflow.Ellipsis; tx.style.flexShrink = 1; ComDica(tx, d); l.Add(tx); diario.Add(l); }
+            foreach (var d in c.diario.Take(4))
+            {
+                var l = E("diario-linha"); if (diario.childCount == 0) l.AddToClassList("primeiro");
+                // "Semana 12: texto" vira uma etiqueta "S12" e o texto: a semana não se repete em cada linha
+                string txt = d; int dp = d.StartsWith("Semana ") ? d.IndexOf(": ") : -1;
+                if (dp > 7) { l.Add(L("S" + d.Substring(7, dp - 7), "diario-sem")); txt = d.Substring(dp + 2); }
+                var tx = L(txt, "suave"); tx.style.overflow = Overflow.Hidden; tx.style.textOverflow = TextOverflow.Ellipsis; tx.style.flexShrink = 1; ComDica(tx, d); l.Add(tx); diario.Add(l); }
             colN.Add(diario);
 
             var colP = E("coluna", "ultima"); colunas.Add(colP);
@@ -494,7 +500,7 @@ namespace CSM.ManagerUI
             // 1) o compromisso: o único cartão com botão (a ação principal da semana)
             var cm = HubCartao(agora ? "SÉRIE" : p.camp != null ? p.camp.nome.ToUpperInvariant() : "FIM DA TEMPORADA",
                 agora ? "Contra " + p.adv.nome + " · " + Fmt.Serie(p.conf.md) + " · " + Pct(c.ChanceVitoria()) + " de chance" : p.camp != null ? "Começa " + Quando(p.semana, c.Semana) : "O ranking decide o circuito do ano que vem",
-                null, null, true, agora ? "serie" : "calendario");
+                null, null, true, "serie");
             var btn = E("hub-btn"); btn.Add(L(agora ? "PREPARAR SÉRIE" : "AVANÇAR SEMANA")); btn.Add(new Icone(agora ? "playf" : "skip", 18));
             if (agora ? !c.Falido : c.PodeAvancar) Clicavel(btn, agora ? (Action)(() => Ir(Aba.Serie)) : AvancarSemanaUI);
             cm.Q(null, "hub-corpo").Add(btn);
@@ -502,9 +508,12 @@ namespace CSM.ManagerUI
 
             // 2) treino, calendário e mercado: o cartão inteiro é o botão; o texto diz só o essencial
             int treinando = c.elenco.Count(j => j.sessoes > 0), camps = c.CampeonatosDoClube.Count(x => !x.terminado);
-            hub.Add(HubCartao("TREINO", treinando + " de " + c.elenco.Count + " treinando", null, () => Ir(Aba.Treino), false, "treino"));
-            hub.Add(HubCartao("CALENDÁRIO", camps + " campeonatos · ranking #" + c.PosicaoRanking, null, () => Ir(Aba.Calendario), false, "calendario"));
-            hub.Add(HubCartao("MERCADO", c.mercado.Count + " jogadores livres", null, () => Ir(Aba.Mercado), false, "mercado"));
+            // o selo no canto conta o que pede atenção naquela tela (a lista "O que merece atenção" traz o detalhe)
+            var avs = c.Avisos();
+            int? Pede(string destino) { int n = avs.Count(a => a.destino == destino); return n > 0 ? n : (int?)null; }
+            hub.Add(HubCartao("TREINO", treinando + " de " + c.elenco.Count + " treinando", Pede("treino"), () => Ir(Aba.Treino), false, "treino"));
+            hub.Add(HubCartao("CALENDÁRIO", camps + " campeonatos · ranking #" + c.PosicaoRanking, Pede("calendario"), () => Ir(Aba.Calendario), false, "calendario"));
+            hub.Add(HubCartao("MERCADO", c.mercado.Count + " jogadores livres", Pede("mercado"), () => Ir(Aba.Mercado), false, "mercado"));
             return hub;
         }
 
@@ -516,7 +525,8 @@ namespace CSM.ManagerUI
             var veu = E("hub-veu"); veu.style.backgroundImage = new StyleBackground(Ui.VeuInferior()); veu.pickingMode = PickingMode.Ignore; card.Add(veu);
             if (selo.HasValue) { var bd = E("hub-selo"); bd.Add(L(selo.Value.ToString())); card.Add(bd); }
             var corpo = E("hub-corpo");
-            corpo.Add(L(titulo, "hub-tit")); corpo.Add(L(sub, "hub-sub"));
+            var tt = L(titulo, "hub-tit"); if (titulo.Length > 14) tt.AddToClassList("longo");   // nomes de campeonato são longos: fonte menor, em vez de quebrar em três linhas
+            corpo.Add(tt); corpo.Add(L(sub, "hub-sub"));
             card.Add(corpo);
             if (acao != null) Clicavel(card, acao);
             return card;
@@ -638,90 +648,6 @@ namespace CSM.ManagerUI
             return cj;
         }
 
-        // ================================================================================================ pós-partida
-        void TelaPosPartida()
-        {
-            var r = resumoAberto ?? c.naoVisto;
-            if (r == null) { aba = Aba.Painel; Mostrar(); return; }
-
-            var hero = E("hero", r.venceu ? "venceu" : "perdeu");
-            var esq = E();
-            esq.Add(L(r.venceu ? "VITÓRIA NO MAPA" : "DERROTA NO MAPA", "hero-res", r.venceu ? "verde" : "vermelho"));
-            esq.Add(L(c.clube + " contra " + r.adversario, "f20", "negrito"));
-            esq.Add(L(r.mapa + " · " + (r.assistida ? "assistida" : "pulada"), "f15", "suave"));
-            hero.Add(esq);
-            var meio = E("hero-meio"); meio.Add(L(r.meus + "  x  " + r.deles, "hero-placar")); hero.Add(meio);
-            var dir = E(); dir.style.alignItems = Align.FlexEnd;
-            dir.Add(L("Série " + Fmt.Serie(r.serieMd) + ": " + r.PlacarSerie, "f18", "negrito", r.serieEncerrada ? (r.venceuSerie ? "verde" : "vermelho") : "t"));
-            if (r.serieEncerrada) dir.Add(L(r.venceuSerie ? "Você venceu a série" : "Você perdeu a série", "f15", r.venceuSerie ? "verde" : "vermelho"));
-            else dir.Add(L("A série continua no próximo mapa", "f15", "suave"));
-            dir.Add(L("Força " + r.forcaMinha + " contra " + r.forcaDeles, "f14", "suave"));
-            hero.Add(dir);
-            conteudo.Add(hero);
-
-            if (r.mapasDaSerie.Count > 1)
-            {
-                var mp = E("ordem-mapas");
-                foreach (var m in r.mapasDaSerie) mp.Add(Selo(m.mapa + " " + m.meus + " x " + m.deles, m.meus > m.deles ? "verde" : "vermelho"));
-                conteudo.Add(mp);
-            }
-
-            if (r.serieEncerrada)
-            {
-                var fim = c.titulos.FirstOrDefault(t => t.nome == r.campeonato);
-                if (fim != null) conteudo.Add(L("Campeonato encerrado: " + Fmt.Ordinal(fim.posicao) + " lugar, prêmio " + Fmt.Dinheiro(fim.premio) + ".", "f17", "negrito", "verde"));
-            }
-
-            // melhores momentos (decisão 0020)
-            if (r.assistida || r.jogada != null) conteudo.Add(L("Jogada da partida", "h2"));   // mapa pulado não tem jogada: a seção some
-            if (r.jogada != null)
-            {
-                var jg = E("linha-h"); jg.style.alignItems = Align.Center;
-                jg.Add(Selo(r.jogadaNossa ? "DO SEU TIME" : "DO ADVERSÁRIO", r.jogadaNossa ? "verde" : "vermelho"));
-                var tj = L(r.jogada, "f18", "negrito"); tj.style.marginLeft = 12; tj.style.whiteSpace = WhiteSpace.Normal; tj.style.flexShrink = 1; jg.Add(tj);
-                conteudo.Add(jg);
-            }
-            else if (r.assistida) conteudo.Add(L("Nenhum abate marcante nesta partida.", "f15", "suave"));
-            if (r.mvpSerie != null) { var mvs = L("MVP da série: " + r.mvpSerie, "f17", "negrito", "verde"); mvs.style.marginTop = 10; conteudo.Add(mvs); }
-
-            conteudo.Add(L("Desempenho dos jogadores", "h2"));
-            if (r.estimado) conteudo.Add(L("Números estimados: o mapa foi pulado.", "nota-estimada"));
-            var melhor = r.Melhor;
-            var tab = E();
-            var h = E("tr", "th");
-            h.Add(Celula("c-j", L("Jogador")).WithClass("largo"));
-            foreach (var n in new[] { "Abates", "Mortes", "K/D", "HS %", "Dano/round", "1º abate" }) { var cel = Celula("c-n", L(n)); cel.AddToClassList("cab"); h.Add(cel); }
-            tab.Add(h);
-            foreach (var d in r.desempenho)
-            {
-                var linha = E("tr");
-                var pessoa = E("linha-h");
-                pessoa.Add(Avatar(d.nome));
-                var nomes = E("pessoa-txt");
-                nomes.Add(L(d.nome, "f17", "negrito"));
-                nomes.Add(L(Fmt.Funcao(d.funcao), "f14", "suave"));
-                pessoa.Add(nomes);
-                if (d == melhor) { var s = Selo("MVP", "verde"); s.style.marginLeft = 12; ComDica(s, "MVP do mapa: a melhor nota de desempenho (abates, mortes e dano por round)."); pessoa.Add(s); }
-                linha.Add(Celula("c-j", pessoa).WithClass("largo"));
-                linha.Add(Celula("c-n", L(d.k.ToString(), "negrito")));
-                linha.Add(Celula("c-n", L(d.d.ToString())));
-                linha.Add(Celula("c-n", L(d.KD.ToString("0.00"), "negrito", d.KD >= 1.2f ? "verde" : d.KD >= 0.8f ? "t" : "vermelho")));
-                linha.Add(Celula("c-n", L(d.HsPct + "%")));
-                linha.Add(Celula("c-n", L(d.DanoPorRound.ToString())));
-                linha.Add(Celula("c-n", L(d.fk.ToString())));
-                tab.Add(linha);
-            }
-            conteudo.Add(tab);
-
-            var botoes = E("linha-h"); botoes.style.marginTop = 24;
-            bool eNovo = r == c.naoVisto;
-            bool continua = eNovo && c.serie != null && !c.serie.Encerrada && !c.Falido;
-            var cont = Botao(continua ? "Próximo mapa" : eNovo ? "Continuar" : "Voltar ao painel", Continuar, true, true, continua ? "play" : null);
-            cont.style.marginRight = 12; botoes.Add(cont);
-            if (continua) { var pularR = Botao("Pular o resto da série", () => { Continuar0(); PularSerieUI(); }); pularR.style.marginRight = 12; botoes.Add(pularR); }
-            botoes.Add(Botao("Ver finanças", () => { Continuar0(); Ir(Aba.Financas); }));
-            conteudo.Add(botoes);
-        }
 
         void Continuar0() { if (resumoAberto == null || resumoAberto == c.naoVisto) c.naoVisto = null; resumoAberto = null; }
 
@@ -1014,7 +940,7 @@ namespace CSM.ManagerUI
                 ("carregando", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.PreMatch; }, () => { carregandoPartida = false; CarregarPartida(false); }),
                 ("financas", () => aba = Aba.Financas, null),
                 ("gaminghouse", () => aba = Aba.GamingHouse, null),
-                ("pospartida", () => { c.PularMapa(); aba = Aba.Painel; }, null),
+                ("pospartida", () => { carregandoEl?.RemoveFromHierarchy(); carregandoPartida = false; c.PularMapa(); aba = Aba.Painel; }, null),
                 ("calendario-depois", () => { c.naoVisto = null; int g2 = 0; while (g2++ < 12) { if (c.TemJogoAgora) c.PularSerie(); c.AvancarSemana(); } c.naoVisto = null; campAberto = null; mesCal = -1; calAba = 0; aba = Aba.Calendario; }, null),
                 ("calendario-campeonatos", () => { campAberto = null; calAba = 1; aba = Aba.Calendario; }, null),
                 ("calendario-ranking", () => { campAberto = null; calAba = 2; aba = Aba.Calendario; }, null),
