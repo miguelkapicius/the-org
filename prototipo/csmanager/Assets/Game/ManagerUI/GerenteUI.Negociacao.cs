@@ -181,7 +181,7 @@ namespace CSM.ManagerUI
                 });
                 return;
             }
-            tela.schedule.Execute(() => SomUi.Tocar(r.tipo == RespostaTipo.Recusa || r.tipo == RespostaTipo.Cansado ? Som.Erro : Som.Receber, 0.8f)).StartingIn(260);   // a resposta dele chega um instante depois
+            tela.schedule.Execute(() => SomManager.Tocar(r.tipo == RespostaTipo.Recusa || r.tipo == RespostaTipo.Cansado ? Som.Erro : Som.Receber, 0.8f)).StartingIn(260);   // a resposta dele chega um instante depois
             Mostrar();
         }
 

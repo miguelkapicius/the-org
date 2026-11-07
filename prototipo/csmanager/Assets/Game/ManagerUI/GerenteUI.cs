@@ -173,7 +173,7 @@ namespace CSM.ManagerUI
         {
             toastEl?.RemoveFromHierarchy();
             var t = E("toast", erro ? "erro" : "ok");
-            SomUi.Tocar(proximoSomToast ?? (erro ? Som.Erro : Som.Aviso), 0.8f); proximoSomToast = null;
+            SomManager.Tocar(proximoSomToast ?? (erro ? Som.Erro : Som.Aviso), 0.8f); proximoSomToast = null;
             if (TutorialAtivo) t.style.bottom = 300;   // sobe para não cair em cima do cartão dos primeiros passos
             t.Add(L(texto));
             if (acaoRotulo != null)
@@ -303,9 +303,9 @@ namespace CSM.ManagerUI
             }
 
             // som da interface: liga e desliga (decisão 0029)
-            var som = E("item", "item-som"); som.Add(new Icone(SomUi.Mudo ? "mudo" : "som", 22));
-            ComDica(som, SomUi.Mudo ? "Som desligado: clique para ligar" : "Som ligado: clique para desligar");
-            Clicavel(som, () => { SomUi.Mudo = !SomUi.Mudo; Mostrar(); SomUi.Tocar(Som.Aviso); });
+            var som = E("item", "item-som"); som.Add(new Icone(SomManager.Mudo ? "mudo" : "som", 22));
+            ComDica(som, SomManager.Mudo ? "Som desligado: clique para ligar" : "Som ligado: clique para desligar");
+            Clicavel(som, () => { SomManager.Mudo = !SomManager.Mudo; Mostrar(); SomManager.Tocar(Som.Aviso); });
             rod.Add(som);
 
             // ajuda: reinicia o tour dos primeiros passos (decisão 0028)
@@ -393,7 +393,7 @@ namespace CSM.ManagerUI
         /// <summary>Passa uma semana (treino, finanças, campeonatos do mundo) e mostra o que aconteceu.</summary>
         void AvancarSemanaUI()
         {
-            SomUi.Tocar(Som.Semana);
+            SomManager.Tocar(Som.Semana);
             var r = c.AvancarSemana();
             if (r == null) { Toast(c.Falido ? "O clube faliu." : "Há uma série marcada para esta semana: prepare, jogue ou pule antes de avançar.", true); return; }
             Salvar();
