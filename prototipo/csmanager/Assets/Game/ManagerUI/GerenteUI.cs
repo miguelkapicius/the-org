@@ -42,7 +42,6 @@ namespace CSM.ManagerUI
         int filtroElenco;       // 0 todos, 1 titulares, 2 reservas
         int filtroFuncao;       // 0 todas, depois uma por função
         readonly List<Jogador> comparar = new List<Jogador>();
-        int colOrdem = -1; bool ordemAsc;   // ordenação das tabelas (-1 = ordem do elenco / do mercado)
         Resultado resumoAberto;             // resumo de partida antiga aberto pelo histórico
         bool confirmandoNova;
         BonecosPreview preview;
@@ -94,7 +93,11 @@ namespace CSM.ManagerUI
             RenderTexture rtCaptura = null;
             if (captura)
             {
-                rtCaptura = new RenderTexture(1600, 900, 24, RenderTextureFormat.ARGB32);
+                // CSM_CAPTURA_TAM=1024x768 testa outras proporções de janela (o padrão é 1600x900)
+                int cw = 1600, ch = 900;
+                var tam = Environment.GetEnvironmentVariable("CSM_CAPTURA_TAM");
+                if (!string.IsNullOrEmpty(tam)) { var pp = tam.Split('x'); if (pp.Length == 2) { int.TryParse(pp[0], out cw); int.TryParse(pp[1], out ch); } }
+                rtCaptura = new RenderTexture(Mathf.Max(320, cw), Mathf.Max(240, ch), 24, RenderTextureFormat.ARGB32);
                 ps.targetTexture = rtCaptura;
             }
             // O tema de runtime vem de Resources (e não do AssetDatabase, que só existe no Editor): sem ele o PanelSettings
@@ -252,20 +255,19 @@ namespace CSM.ManagerUI
             if (rolagemGuardada != Vector2.zero) { var alvo = rolagemGuardada; rolagem.schedule.Execute(() => rolagem.scrollOffset = alvo).StartingIn(1); }
         }
 
+        /// <summary>Menu lateral só de ícones (referência: barra estreita com o logo no alto, ícones em quadrinhos e o ativo destacado).
+        /// O nome de cada tela vai na dica; o ponto laranja no Painel avisa que há o que resolver.</summary>
         VisualElement MontarMenu()
         {
             var m = E("menu");
 
-            var h = E("clube");
+            var h = E("menu-logo");
             h.Add(Brasao(c.clube, "laranja"));
-            var nome = E("clube-nome");
-            nome.Add(L(c.clube, "f18", "negrito"));
-            nome.Add(L(Mundo.NomeCircuito(c.CircuitoClube) + " · ranking " + c.PosicaoRanking, "f13", "suave"));
-            h.Add(nome);
+            ComDica(h, c.clube + " · " + Mundo.NomeCircuito(c.CircuitoClube) + " · ranking " + c.PosicaoRanking);
             m.Add(h);
 
             var nav = E("menu-nav"); m.Add(nav);
-            int nAvisos = c.Avisos().Count(a => a.destino != "serie");   // a série da semana já tem o cartão do hub e o do menu
+            int nAvisos = c.Avisos().Count(a => a.destino != "serie");   // a série da semana já tem o cartão do hub e o botão do menu
             Item(nav, "Painel", "grid", Aba.Painel, nAvisos > 0 ? nAvisos.ToString() : null);
             Item(nav, "Calendário", "calendar", Aba.Calendario, null);
             Item(nav, "Elenco", "users", Aba.Elenco, c.elenco.Count.ToString());
@@ -278,31 +280,26 @@ namespace CSM.ManagerUI
             int nPlay = c.favoritasTR.Count + c.favoritasCT.Count + c.proibidasTR.Count + c.proibidasCT.Count;
             Item(nav, "Playbook", "tag", Aba.Playbook, nPlay > 0 ? nPlay.ToString() : null);
 
-            // o próximo passo do jogo: jogar a série marcada ou avançar o tempo
-            var prox = E("proxima");
-            var p = c.Proximo();
-            if (c.TemJogoAgora)
+            var rod = E("menu-rodape"); m.Add(rod);
+
+            // o próximo passo do jogo: jogar a série marcada ou avançar o tempo (no Painel isso já é o cartão do hub)
+            if (aba != Aba.Painel)
             {
-                prox.Add(L("SÉRIE ESTA SEMANA", "f12", "negrito", "apagado"));
-                var vs = E("proxima-vs");
-                var vsTxt = L("vs", "f16", "apagado"); vsTxt.style.marginLeft = 8; vsTxt.style.marginRight = 8;
-                vs.Add(L(c.clube, "f18", "negrito")); vs.Add(vsTxt); vs.Add(L(p.adv.nome, "f18", "negrito"));
-                prox.Add(vs);
-                prox.Add(L(Fmt.Serie(p.conf.md) + " · chance de vitória " + Pct(c.ChanceVitoria()), "f14", "suave", "info-meta"));
-                prox.Add(Botao("Preparar série", () => Ir(Aba.Serie), !c.Falido, true, "play", "cheio"));
+                var p = c.Proximo();
+                bool serie = c.TemJogoAgora;
+                bool ativa = serie ? !c.Falido : c.PodeAvancar;
+                var ab = E("menu-acao"); if (!ativa) ab.AddToClassList("desligado");
+                ab.Add(new Icone(serie ? "play" : "skip", 22));
+                if (ativa) Clicavel(ab, serie ? (Action)(() => Ir(Aba.Serie)) : AvancarSemanaUI);
+                ComDica(ab, serie ? "Preparar série contra " + p.adv.nome + " (" + Fmt.Serie(p.conf.md) + ", chance de vitória " + Pct(c.ChanceVitoria()) + ")"
+                                  : "Avançar semana" + (p.camp != null ? ". Próximo: " + p.camp.nome + " (" + Quando(p.semana, c.Semana) + ")" : ""));
+                rod.Add(ab);
             }
-            else
-            {
-                prox.Add(L("PRÓXIMO COMPROMISSO", "f12", "negrito", "apagado"));
-                var vs = E("proxima-vs"); vs.Add(L(p.camp != null ? p.camp.nome : "Sem campeonato à vista", "f16", "negrito", "quebra")); prox.Add(vs);
-                prox.Add(L(p.camp != null ? "Semana " + p.semana + " (" + Quando(p.semana, c.Semana) + ")" : "Fim da temporada", "f14", "suave", "info-meta"));
-                prox.Add(Botao("Avançar semana", AvancarSemanaUI, c.PodeAvancar, true, "skip", "cheio"));
-            }
-            if (aba != Aba.Painel) m.Add(prox);
 
             // recomeçar a carreira pede confirmação (apaga o salvamento)
-            var nova = E("aviso-btn"); nova.style.alignSelf = Align.FlexStart; nova.style.marginBottom = 10;
-            nova.Add(L(confirmandoNova ? "Apagar e recomeçar?" : "Nova carreira", confirmandoNova ? "vermelho" : "suave"));
+            var nova = E("item", "item-nova"); if (confirmandoNova) nova.AddToClassList("perigo");
+            nova.Add(new Icone("kebab", 22));
+            ComDica(nova, confirmandoNova ? "Clique de novo para apagar e recomeçar a carreira" : "Nova carreira");
             Clicavel(nova, () =>
             {
                 if (!confirmandoNova) { confirmandoNova = true; Mostrar(); return; }
@@ -310,7 +307,7 @@ namespace CSM.ManagerUI
                 comparar.Clear(); resumoAberto = null; campAberto = null; Salvar();
                 aba = Aba.Painel; Mostrar(); Toast("Carreira nova começada.");
             });
-            m.Add(nova);
+            rod.Add(nova);
             return m;
         }
 
@@ -318,8 +315,9 @@ namespace CSM.ManagerUI
         {
             var it = E("item"); if (aba == a) it.AddToClassList("ativo");
             it.Add(new Icone(icone, 22));
-            it.Add(L(texto));
-            if (contagem != null) { var ct = E("cont"); ct.Add(L(contagem)); it.Add(ct); }
+            if (a == Aba.Painel && contagem != null) it.Add(E("item-ponto"));
+            ComDica(it, a == Aba.Painel ? (contagem != null ? "Painel · " + contagem + (contagem == "1" ? " aviso" : " avisos") : "Painel")
+                                         : texto + (contagem != null ? " · " + contagem : ""));
             Clicavel(it, () => Ir(a));
             menu.Add(it);
         }
@@ -338,9 +336,12 @@ namespace CSM.ManagerUI
             ComDica(sem, "O tempo corre em semanas (52 por temporada). Temporada " + c.Temporada + ", semana " + c.Semana + ".");
             h.Add(sem);
 
-            var u = E("dado-topo");
-            u.Add(L("SALDO", "dado-rot"));
-            u.Add(L(Fmt.Dinheiro(c.dinheiro), "dado-val", c.dinheiro < 0 ? "vermelho" : "t"));
+            var u = E("carteira");
+            var ic = E("carteira-ic"); ic.Add(new Icone("dollar", 18)); u.Add(ic);
+            var tx = E("carteira-txt");
+            tx.Add(L("SALDO", "dado-rot"));
+            tx.Add(L(Fmt.Dinheiro(c.dinheiro), "dado-val", c.dinheiro < 0 ? "vermelho" : "t"));
+            u.Add(tx);
             ComDica(u, "Saldo do clube. Despesa fixa: " + Fmt.Dinheiro(c.DespesaFixaPorSemana) + " por semana (salários, manutenção e parcelas).");
             h.Add(u);
             return h;
@@ -358,7 +359,7 @@ namespace CSM.ManagerUI
         {
             if (a != Aba.Calendario) campAberto = null;
             if (a == Aba.Calendario && aba != Aba.Calendario) { mesCal = -1; calAba = 0; }   // abre sempre no mês atual
-            aba = a; colOrdem = -1; confirmandoNova = false;
+            aba = a; confirmandoNova = false;
             if (a == Aba.Treino) treinoJogador = null;   // o menu volta para a lista do time
             if (a != Aba.PosPartida) resumoAberto = null;
             Mostrar();
@@ -777,14 +778,7 @@ namespace CSM.ManagerUI
         {
             bool tit = c.Titular(j);
             var cj = E("card-j"); if (comparar.Contains(j)) cj.AddToClassList("comp");
-            var midia = E("midia");
-            midia.Add(Retrato(j.nome, "retrato-fill", FotoTR(j)));
-            var fn = Selo(Fmt.FuncaoCurta(j.funcao), null); fn.AddToClassList("midia-selo"); ComDica(fn, Fmt.Funcao(j.funcao)); midia.Add(fn);
-            var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); ComDica(ovr, COLS[0].dica); midia.Add(ovr);
-            var forte = j.LadoForte;   // a foto mostra o lado em que ele rende mais (decisão 0024)
-            var sl = Selo(forte == null ? "TR · CT" : forte.Value ? "MELHOR NO TR" : "MELHOR NO CT", forte == null ? null : forte.Value ? "laranja" : "azul"); sl.AddToClassList("midia-lado");
-            ComDica(sl, "Domínio de lado: TR " + (int)j.ladoTR + " · CT " + (int)j.ladoCT + ". " + (forte == null ? "Rende igual nos dois lados." : "Rende mais " + (forte.Value ? "no ataque (TR)." : "na defesa (CT).")) + "\n\nTreine um lado na tela de Treino.");
-            midia.Add(sl);
+            var midia = MidiaJogador(j);
             cj.Add(midia);
 
             var info = E("info");
@@ -904,86 +898,6 @@ namespace CSM.ManagerUI
             return card;
         }
 
-        // ------------------------------------------------------------------ tabela
-        /// <summary>Cabeçalho de coluna: clicar ordena (maior primeiro, depois menor primeiro, depois volta à ordem original).</summary>
-        VisualElement CelulaCab(string classe, string rotulo, int col, string dica)
-        {
-            var cel = E("c", classe);
-            if (col < 0) { var l = L(rotulo); cel.Add(l); if (dica != null) ComDica(l, dica); return cel; }
-            var cab = E("cab-ordem"); bool ativa = colOrdem == col; if (ativa) cab.AddToClassList("ativo");
-            cab.Add(L(rotulo));
-            if (ativa) cab.Add(new Icone(ordemAsc ? "up" : "down", 14));
-            Clicavel(cab, () =>
-            {
-                if (colOrdem == col) { if (!ordemAsc) ordemAsc = true; else colOrdem = -1; } else { colOrdem = col; ordemAsc = false; }
-                Mostrar();
-            });
-            if (dica != null) ComDica(cab, dica);
-            cel.Add(cab);
-            return cel;
-        }
-
-        /// <summary>Tabela de jogadores como a referência: sem cartão de fundo, só linhas finas. Devolve a tabela e a ordem final das linhas.
-        /// <paramref name="forma"/>: mostra o cansaço (só para quem já está no elenco).</summary>
-        (VisualElement, List<Jogador>) Tabela(IEnumerable<Jogador> jogadores, string tituloExtra, Func<Jogador, int> chaveExtra,
-            Func<Jogador, VisualElement> extra, Func<Jogador, VisualElement> acoes, Action<Jogador> aoPassar, bool forma)
-        {
-            var linhas = jogadores.ToList();
-            if (colOrdem >= 0)
-            {
-                Func<Jogador, int> chave = colOrdem < COLS.Length ? COLS[colOrdem].chave : colOrdem == COLS.Length + 1 ? (Func<Jogador, int>)(j => (int)j.cansaco) : chaveExtra;
-                if (chave != null) linhas = (ordemAsc ? linhas.OrderBy(chave) : linhas.OrderByDescending(chave)).ToList();
-            }
-
-            var tab = E();
-            var h = E("tr", "th");
-            h.Add(Celula("c-j", L("Jogador")));
-            h.Add(CelulaCab("c-g", COLS[0].rot, 0, COLS[0].dica));
-            for (int i = 1; i <= 5; i++) h.Add(CelulaCab("c-a", COLS[i].rot, i, COLS[i].dica));
-            h.Add(CelulaCab("c-s", COLS[6].rot, 6, COLS[6].dica));
-            if (forma) h.Add(CelulaCab("c-f", "Cansaço", COLS.Length + 1, "Desgaste por treino e partidas. Acima de 35 a habilidade na partida começa a cair."));
-            h.Add(CelulaCab("c-p", "Pot.", -1, "Potencial: o teto de evolução do jogador. No mercado só aparece depois que um scout estuda o jogador."));
-            h.Add(CelulaCab("c-st", tituloExtra, chaveExtra != null ? COLS.Length : -1, chaveExtra != null ? "Quanto custa contratar." : null));
-            h.Add(Celula("c-k"));
-            tab.Add(h);
-            foreach (var j in linhas)
-            {
-                var r = E("tr");
-                var pessoa = E("linha-h");
-                pessoa.Add(Avatar(j.nome));
-                var nomes = E("pessoa-txt");
-                bool doElenco = c.elenco.Contains(j);
-                nomes.Add(NomeComTraco(j, "f17", j.potencialRevelado || doElenco));
-                var meta = E(); meta.style.flexDirection = FlexDirection.Row;
-                meta.Add(L(Fmt.Funcao(j.funcao) + " · " + j.idade + " anos", "f14", "suave"));
-                if (doElenco) meta.Add(Moral(j, " · "));
-                if (doElenco && (j.mvps > 0 || j.jogadas.Count > 0)) meta.Add(Mvps(j, " · "));
-                nomes.Add(meta);
-                pessoa.Add(nomes);
-                r.Add(Celula("c-j", pessoa));
-                r.Add(Celula("c-g", L(j.Overall.ToString(), "geral", ClasseNota(j.Overall))));
-                r.Add(CelulaAtributo(j.Mira)); r.Add(CelulaAtributo(j.Reflexo)); r.Add(CelulaAtributo(j.Spray));
-                r.Add(CelulaAtributo(j.Utilitaria)); r.Add(CelulaAtributo(j.SangueFrio));
-                r.Add(Celula("c-s", L(Fmt.Dinheiro(j.Salario), "f16")));
-                if (forma)
-                {
-                    var cf = E("c", "c-f"); cf.Add(L(((int)j.cansaco).ToString(), "f16", "negrito", j.cansaco >= 60 ? "vermelho" : j.cansaco >= 35 ? "laranja" : "t")); cf.Add(BarraCansaco(j.cansaco)); r.Add(cf);
-                }
-                bool vePot = j.potencialRevelado || c.elenco.Contains(j);
-                r.Add(Celula("c-p", L(vePot ? j.potencial.ToString() : "?", "f16", vePot ? (j.potencial >= 85 ? "verde" : "t") : "apagado")));
-                r.Add(Celula("c-st", extra(j)));
-                r.Add(Celula("c-k", acoes != null ? acoes(j) : null));
-                if (aoPassar != null)
-                {
-                    r.RegisterCallback<PointerEnterEvent>(_ => aoPassar(j));
-                    r.RegisterCallback<PointerLeaveEvent>(_ => aoPassar(null));
-                }
-                tab.Add(r);
-            }
-            if (linhas.Count == 0) tab.Add(L("Nenhum jogador nesse filtro.", "f15", "suave"));
-            return (tab, linhas);
-        }
-
         void Vender(Jogador j)
         {
             var erro = c.Vender(j);
@@ -996,37 +910,7 @@ namespace CSM.ManagerUI
             });
         }
 
-        // ================================================================================================ mercado
-        void TelaMercado()
-        {
-            // prévia: ao passar o mouse num jogador, mostra o que muda no time se ele for contratado
-            previaCaixa = E("previa"); previaTxt = L("", "quebra"); previaCaixa.Add(previaTxt);
-            conteudo.Add(previaCaixa);
-            AtualizarPrevia(null);
-
-            var cmp = Comparacao(); if (cmp != null) conteudo.Add(cmp);
-
-            conteudo.Add(Abas(FUNCOES_NOMES, filtroFuncao, i => { filtroFuncao = i; Mostrar(); }));
-
-            bool cheio = c.elenco.Count >= c.ElencoMax;
-            var lista = c.mercado.Where(j => filtroFuncao == 0 || j.funcao == FUNCOES_ROLE[filtroFuncao]);
-            var (tabela, _) = Tabela(lista, "Preço", j => j.Preco,
-                j => L(Fmt.Dinheiro(j.Preco), "f16", "negrito", c.dinheiro >= j.Preco ? "t" : "vermelho"),
-                j =>
-                {
-                    var linha = E("linha-h");
-                    var cmpBtn = E("btn", "btn-ic"); if (comparar.Contains(j)) cmpBtn.AddToClassList("on");
-                    cmpBtn.Add(new Icone("swap", 18));
-                    Clicavel(cmpBtn, () => AlternarComparar(j));
-                    ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador (do mercado ou do seu elenco)");
-                    linha.Add(cmpBtn);
-                    linha.Add(Botao("Contratar", () => Contratar(j), !cheio && c.dinheiro >= j.Preco));
-                    return linha;
-                }, AtualizarPrevia, false);
-            conteudo.Add(tabela);
-            if (cheio) conteudo.Add(L("Elenco cheio (" + c.ElencoMax + "): venda alguém ou suba a Gaming House para ter mais vagas.", "f15", "laranja", "legenda"));
-        }
-
+        // ================================================================================================ mercado (vitrine em GerenteUI.Mercado.cs)
         void Contratar(Jogador j)
         {
             var erro = c.Contratar(j);
@@ -1098,7 +982,7 @@ namespace CSM.ManagerUI
                 ("treino", () => { aba = Aba.Treino; treinoJogador = null; comparar.Clear(); }, null),
                 ("treino-jogador", () => { aba = Aba.Treino; treinoJogador = c.elenco[1]; c.DefinirLadoTreino(treinoJogador, 0); }, null),
                 ("treino-jogador-ct", () => { aba = Aba.Treino; treinoJogador = c.elenco.FirstOrDefault(x => x.LadoForte == false) ?? c.elenco[2]; }, () => treinoJogador = null),
-                ("mercado", () => { aba = Aba.Mercado; colOrdem = -1; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
+                ("mercado", () => { aba = Aba.Mercado; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("scouts", () => aba = Aba.Scouts, null),
                 ("serie", () => { c.PrepararSerie(); aba = Aba.Serie; }, null),
                 ("serie-veto-auto", () => { c.PrepararSerie(); c.VetoAutomatico(); aba = Aba.Serie; }, null),

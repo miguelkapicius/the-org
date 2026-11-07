@@ -24,7 +24,7 @@ namespace CSM.ManagerUI
             for (int y = 0; y < h; y++)
             {
                 float v = y / (float)(h - 1);                       // 0 = embaixo
-                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.62f - v) / 0.62f)) * 0.94f;
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.78f - v) / 0.78f)) * 0.96f;
                 veu.SetPixel(0, y, new Color(cor.r, cor.g, cor.b, a));
             }
             veu.Apply(false, false);
@@ -42,7 +42,7 @@ namespace CSM.ManagerUI
             for (int x = 0; x < w; x++)
             {
                 float v = x / (float)(w - 1);                       // 0 = esquerda
-                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.78f - v) / 0.78f)) * 0.97f;
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.8f - v) / 0.66f));   // opaco na borda esquerda: sem emenda com o painel
                 veuLat.SetPixel(x, 0, new Color(cor.r, cor.g, cor.b, a));
             }
             veuLat.Apply(false, false);
@@ -55,6 +55,14 @@ namespace CSM.ManagerUI
         {
             if (tr) return fotoTR != null ? fotoTR : (fotoTR = Resources.Load<Texture2D>("ManagerUI/Retratos/tr"));
             return fotoCT != null ? fotoCT : (fotoCT = Resources.Load<Texture2D>("ManagerUI/Retratos/ct"));
+        }
+
+        /// <summary>Foto que cobre a caixa e fica alinhada ao topo (o rosto nunca é cortado, mesmo em caixa larga).</summary>
+        public static void AlinharAoTopo(VisualElement e)
+        {
+            e.style.backgroundSize = new BackgroundSize(BackgroundSizeType.Cover);
+            e.style.backgroundPositionX = new BackgroundPosition(BackgroundPositionKeyword.Center);
+            e.style.backgroundPositionY = new BackgroundPosition(BackgroundPositionKeyword.Top);
         }
 
         /// <summary>O lado da foto: o lado em que o jogador rende mais; se está equilibrado, um dos dois pelo nome (sempre o mesmo).</summary>
@@ -146,7 +154,7 @@ namespace CSM.ManagerUI
             var foto = tr.HasValue ? FotoLado(tr.Value) : null;
             if (foto != null)
             {
-                e.style.backgroundImage = new StyleBackground(foto); e.AddToClassList("foto");   // "cover" alinhado ao topo: o rosto não é cortado
+                e.style.backgroundImage = new StyleBackground(foto); e.AddToClassList("foto"); AlinharAoTopo(e);   // "cover" alinhado ao topo: o rosto não é cortado
                 int h = 0; foreach (char ch in nome) h = h * 17 + ch;
                 if (((h >> 4) & 1) == 1) e.style.scale = new Scale(new Vector3(-1f, 1f, 1f));   // espelha metade das fotos, para o elenco não parecer clonado
             }

@@ -856,3 +856,76 @@
 .seg-b:hover { background-color: rgba(255, 255, 255, 0.03); }
 .comecar { border-width: 0; border-radius: 4px; }
 .pm-tag-nome { border-radius: 3px; }
+
+
+/* ======================================================================================================
+   Segunda rodada: menu em barra de ícones, caixinha da conta, vitrine do mercado e correção de textos que se encavalavam
+   (as opacidades continuam escritas já convertidas para a mistura linear)
+   ====================================================================================================== */
+
+/* padrão de fundo (mapa topográfico com grade tática, gerado no Figma), bem apagado */
+.tela-raiz { background-image: url("/Assets/Resources/ManagerUI/fundo.jpg"); background-size: cover; background-position: center center; -unity-background-image-tint-color: rgb(80, 80, 84); }
+
+/* menu: barra estreita só de ícones */
+.menu { width: 76px; padding: 20px 0 16px 0; align-items: center; background-color: #08090c; border-right-width: 1px; border-right-color: rgba(255, 255, 255, 0.02); }
+.menu-logo { margin-bottom: 28px; }
+.menu-nav { flex-grow: 1; align-items: center; }
+.menu-rodape { align-items: center; }
+.item { width: 46px; height: 46px; padding: 0; margin-bottom: 8px; justify-content: center; align-items: center; border-radius: 6px; }
+.item > .ic { margin-right: 0; color: var(--apagado); }
+.item:hover > .ic { color: var(--texto); }
+.item.ativo { background-color: rgba(255, 255, 255, 0.02); }
+.item.ativo > .ic { color: #ffffff; }
+.item-ponto { position: absolute; top: 9px; right: 9px; width: 8px; height: 8px; border-radius: 4px; background-color: var(--laranja); }
+.sep { width: 28px; height: 1px; margin: 8px 0 16px 0; }
+.menu-acao { width: 46px; height: 46px; border-radius: 6px; background-color: #eceef1; align-items: center; justify-content: center; margin-bottom: 10px; }
+.menu-acao > .ic { color: #0b0d10; }
+.menu-acao:hover { background-color: #ffffff; }
+.menu-acao.desligado, .menu-acao.desligado:hover { background-color: rgba(255, 255, 255, 0.012); }
+.menu-acao.desligado > .ic { color: #565c66; }
+.item-nova.perigo > .ic { color: var(--vermelho); }
+
+/* saldo como uma "conta" dentro de uma caixinha (referência: Wallet connect) */
+.carteira { flex-direction: row; align-items: center; margin-left: 28px; padding: 6px 16px 6px 7px; border-width: 1px; border-color: rgba(255, 255, 255, 0.035); border-radius: 5px; background-color: rgba(255, 255, 255, 0.006); }
+.carteira-ic { width: 34px; height: 34px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.014); align-items: center; justify-content: center; margin-right: 12px; }
+.carteira-ic > .ic { color: var(--texto); }
+.carteira-txt { align-items: flex-start; }
+.carteira .dado-val { margin-top: 0; }
+
+/* mercado em vitrine */
+.vit-tops { flex-direction: row; flex-wrap: wrap; margin-bottom: 4px; }
+.vit-top { align-items: center; width: 92px; margin-right: 12px; margin-bottom: 8px; }
+.vit-top-foto { width: 68px; height: 68px; border-radius: 34px; margin-bottom: 8px; }
+.vit-filtros { flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; margin: 24px 0 14px 0; }
+.vit-ordem { align-items: center; }
+.vit-grade { flex-direction: row; flex-wrap: wrap; }
+.vit-card { width: 23.8%; margin-right: 1%; margin-bottom: 14px; background-color: rgba(255, 255, 255, 0.008); border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 4px; padding: 10px; }
+.vit-card:hover { border-color: rgba(255, 255, 255, 0.035); }
+.vit-card.comp { border-color: rgba(255, 255, 255, 0.12); }
+.vit-card .midia { height: 200px; }
+.vit-corpo { padding: 12px 4px 4px 4px; }
+.vit-attrs { flex-direction: row; margin: 12px 0 10px 0; }
+.vit-at { flex-grow: 1; flex-basis: 0; align-items: center; }
+.vit-at-rot { font-size: 11px; color: var(--apagado); -unity-text-align: middle-center; }
+.vit-at-num { font-size: 16px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.vit-preco { flex-direction: row; justify-content: space-between; align-items: center; padding: 8px 0 12px 0; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.012); }
+.vit-preco-v { font-size: 24px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.vit-acoes { flex-direction: row; align-items: center; }
+.vit-acoes > .btn-mini { padding: 8px 12px; }
+.vit-acoes > .btn-mini.grow { flex-grow: 1; }
+.vit-acoes > .btn-mini.so-ic { margin-left: 6px; padding: 8px 0; width: 38px; }
+
+/* tabela do treino: colunas que cabem na janela mais estreita (4:3) sem se encavalar */
+.c-j { width: 190px; } .c-foco { width: 130px; } .c-lado { width: 96px; } .c-sess { width: 128px; }
+.c-bar { width: 112px; padding-right: 14px; }
+.c-proj { flex-grow: 1; flex-shrink: 1; min-width: 0; }
+
+/* texto sobre foto precisa de fundo próprio */
+.midia .selo, .tj-foto .selo { background-color: rgba(8, 9, 12, 0.86); }
+.seg { background-color: rgba(10, 12, 15, 0.98); }
+.legenda-cal { margin-bottom: 10px; }
+
+/* pré-partida: bonecos menores para não invadir o centro (chance, nomes) em janelas mais estreitas; dicas no centro, livres do boneco */
+.pm-boneco { width: 440px; height: 591px; bottom: -215px; }
+.pm-boneco.esq { left: 0; } .pm-boneco.dir { right: 0; }
+.pm-dicas { left: 0; right: 0; justify-content: center; }

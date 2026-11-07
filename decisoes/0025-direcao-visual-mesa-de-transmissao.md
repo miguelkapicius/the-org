@@ -22,6 +22,9 @@ Opção 2, chamada **mesa de transmissão** (a interface parece a mesa de opera�
 - **Três vozes tipográficas** (todas livres, licença OFL): **Barlow Condensed** nos títulos, nomes e números grandes (cara de placar de transmissão); **Barlow** no texto; **IBM Plex Mono** nos números das tabelas (colunas alinhadas).
 - **Formas:** cantos de 2 a 4 px, barras finas (3 a 4 px), selos pequenos e retos; o número geral do jogador vira um selo quadrado, não um círculo.
 - **Artes** (hub e retratos TR/CT, decisões 0023 e 0024): saturação reduzida para combinar com o grafite; o título do cartão do hub é curto, para não cair em cima de rostos.
+- **Menu em barra de ícones** (referência: dashboard de jogo): estreito, só ícones em quadrinhos, o ativo mais claro; a ação da semana e a nova carreira ficam embaixo. O saldo do cabeçalho vira uma "conta" em caixinha.
+- **Fundo:** padrão de mapa topográfico com grade tática (gerado no Figma), bem apagado, no lugar do céu estrelado.
+- **Mercado em vitrine** de cartões (referência: marketplace), no lugar da tabela, que estourava em janelas estreitas.
 - **Ficha do jogador** (0024): a foto sangra à direita e some para o grafite à esquerda; o nome em condensado grande é a única ênfase da tela.
 
 ## Por quê
@@ -34,4 +37,4 @@ Opção 2, chamada **mesa de transmissão** (a interface parece a mesa de opera�
 - As fontes ficam em `Assets/Resources/ManagerUI/Fontes/` com os textos das licenças OFL.
 - O fundo estrelado gerado em código foi removido.
 - O mockup HTML (`prototipo/mockup-ui/`) continua no visual antigo (pergunta já aberta).
-- Os cartões do hub, o painel e as outras telas foram conferidos só por captura de tela, não com o mouse.
+- Os cartões do hub, o painel e as outras telas foram conferidos só por captura de tela (1600×900, 1280×800 e 1024×768), não com o mouse. `CSM_CAPTURA_TAM=LxA` muda o tamanho da captura.
