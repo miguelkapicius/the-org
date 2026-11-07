@@ -248,8 +248,7 @@ namespace CSM.ManagerUI
         public static VisualElement CelulaAtributo(int v)
         {
             var c = E("c", "c-a", "c-a-col");
-            c.Add(L(v.ToString(), "f16", "negrito", ClasseNota(v)));
-            c.Add(Barra(v, true));
+            c.Add(L(v.ToString(), "f17", "negrito", ClasseNota(v)));   // sem barra: na tabela, a cor já diz se é bom (decisão 0023)
             return c;
         }
     }

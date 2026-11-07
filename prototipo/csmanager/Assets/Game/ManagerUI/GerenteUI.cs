@@ -268,7 +268,7 @@ namespace CSM.ManagerUI
             m.Add(h);
 
             var nav = E("menu-nav"); m.Add(nav);
-            int nAvisos = c.Avisos().Count;
+            int nAvisos = c.Avisos().Count(a => a.destino != "serie");   // a série da semana já tem o cartão do hub e o do menu
             Item(nav, "Painel", "grid", Aba.Painel, nAvisos > 0 ? nAvisos.ToString() : null);
             Item(nav, "Calendário", "calendar", Aba.Calendario, null);
             Item(nav, "Elenco", "users", Aba.Elenco, c.elenco.Count.ToString());
@@ -641,7 +641,6 @@ namespace CSM.ManagerUI
                 conteudo.Add(mp);
             }
 
-            conteudo.Add(L("Campeonato: " + r.campeonato + (string.IsNullOrEmpty(r.rotulo) ? "" : " · " + Fmt.Rotulo(r.campeonato, r.rotulo)), "f16", "suave"));
             if (r.serieEncerrada)
             {
                 var fim = c.titulos.FirstOrDefault(t => t.nome == r.campeonato);
@@ -649,7 +648,7 @@ namespace CSM.ManagerUI
             }
 
             // melhores momentos (decisão 0020)
-            conteudo.Add(L("Jogada da partida", "h2"));
+            if (r.assistida || r.jogada != null) conteudo.Add(L("Jogada da partida", "h2"));   // mapa pulado não tem jogada: a seção some
             if (r.jogada != null)
             {
                 var jg = E("linha-h"); jg.style.alignItems = Align.Center;
@@ -657,11 +656,11 @@ namespace CSM.ManagerUI
                 var tj = L(r.jogada, "f18", "negrito"); tj.style.marginLeft = 12; tj.style.whiteSpace = WhiteSpace.Normal; tj.style.flexShrink = 1; jg.Add(tj);
                 conteudo.Add(jg);
             }
-            else conteudo.Add(L(r.assistida ? "Nenhum abate marcante nesta partida." : "O mapa foi pulado: só a partida assistida tem jogada da partida.", "f15", "suave"));
+            else if (r.assistida) conteudo.Add(L("Nenhum abate marcante nesta partida.", "f15", "suave"));
             if (r.mvpSerie != null) { var mvs = L("MVP da série: " + r.mvpSerie, "f17", "negrito", "verde"); mvs.style.marginTop = 10; conteudo.Add(mvs); }
 
             conteudo.Add(L("Desempenho dos jogadores", "h2"));
-            if (r.estimado) conteudo.Add(L("Números estimados: o mapa foi pulado, então não houve simulação. Assista para ver o desempenho real.", "nota-estimada"));
+            if (r.estimado) conteudo.Add(L("Números estimados: o mapa foi pulado.", "nota-estimada"));
             var melhor = r.Melhor;
             var tab = E();
             var h = E("tr", "th");
@@ -1019,12 +1018,11 @@ namespace CSM.ManagerUI
                     Clicavel(cmpBtn, () => AlternarComparar(j));
                     ComDica(cmpBtn, comparar.Contains(j) ? "Tirar da comparação" : "Comparar com outro jogador (do mercado ou do seu elenco)");
                     linha.Add(cmpBtn);
-                    linha.Add(Botao("Contratar", () => Contratar(j), !cheio && c.dinheiro >= j.Preco, true));
+                    linha.Add(Botao("Contratar", () => Contratar(j), !cheio && c.dinheiro >= j.Preco));
                     return linha;
                 }, AtualizarPrevia, false);
             conteudo.Add(tabela);
             if (cheio) conteudo.Add(L("Elenco cheio (" + c.ElencoMax + "): venda alguém ou suba a Gaming House para ter mais vagas.", "f15", "laranja", "legenda"));
-            if (c.scouts.Count == 0) conteudo.Add(L("O potencial dos jogadores aparece como \"?\" até um scout estudá-los (Gaming House nível 3).", "legenda"));
         }
 
         void Contratar(Jogador j)
@@ -1043,22 +1041,23 @@ namespace CSM.ManagerUI
         {
             if (previaTxt == null) return;
             bool bom = false;
+            // a conclusão em uma linha: melhora o time? quanto custa? (decisão 0023)
             if (j == null)
-                previaTxt.text = "Passe o mouse sobre um jogador para ver o que muda no seu time se você contratá-lo (força, chance de vitória, salários e saldo).";
+                previaTxt.text = "Passe o mouse num jogador para ver o que muda no seu time.";
             else
             {
                 var sai = c.QuemSaiPara(j);
-                string t = j.nome + " (" + Fmt.Funcao(j.funcao) + ", geral " + j.Overall + (j.potencialRevelado ? ", potencial " + j.potencial : "") + ") custa " + Fmt.Dinheiro(j.Preco) + ". Saldo depois: " + Fmt.Dinheiro(c.dinheiro - j.Preco)
-                    + "; salários por semana " + Fmt.Dinheiro(c.SalariosPorSemana) + " → " + Fmt.Dinheiro(c.SalariosPorSemana + j.Salario) + ".";
-                if (sai != null)
+                string t;
+                if (c.elenco.Count >= c.ElencoMax) t = "Elenco cheio: venda alguém antes de contratar.";
+                else if (c.dinheiro < j.Preco) t = "Falta dinheiro: " + j.nome + " custa " + Fmt.Dinheiro(j.Preco) + ".";
+                else if (sai != null)
                 {
                     int f = c.ForcaCom(j, sai);
-                    t += " Se ele for escalado no lugar de " + sai.nome + " (" + sai.Overall + "), a força vai de " + c.Forca + " para " + f + " e a chance de vitória de " + Pct(c.ChanceVitoria()) + " para " + Pct(c.ChanceVitoria(f)) + ".";
+                    t = j.nome + " no lugar de " + sai.nome + ":  força " + c.Forca + " → " + f + "  ·  chance " + Pct(c.ChanceVitoria()) + " → " + Pct(c.ChanceVitoria(f));
                     bom = true;
                 }
-                else t += " Não melhora a escalação: entraria só como reserva.";
-                if (c.elenco.Count >= c.ElencoMax) t += " Elenco cheio: venda alguém antes.";
-                else if (c.dinheiro < j.Preco) t += " Dinheiro insuficiente.";
+                else t = j.nome + " não melhora os titulares: entraria como reserva.";
+                t += "   |   saldo depois " + Fmt.Dinheiro(c.dinheiro - j.Preco) + " · salário +" + Fmt.Dinheiro(j.Salario) + "/sem";
                 previaTxt.text = t;
             }
             previaCaixa?.EnableInClassList("bom", bom);

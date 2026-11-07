@@ -25,7 +25,7 @@ namespace CSM.ManagerUI
             var esq = E();
             esq.Add(L(s.camp.nome.ToUpperInvariant(), "compromisso-tit"));
             esq.Add(L(c.clube + " contra " + adv.nome, "compromisso-nome"));
-            esq.Add(L(Fmt.Rotulo(s.camp.nome, s.conf.rotulo) + " · " + Fmt.Serie(s.Md) + " (melhor de " + s.Md + ") · ranking #" + c.mundo.PosicaoRanking(adv.id) + " · " + Mundo.NomeCircuito(adv.circuito), "compromisso-sub"));
+            esq.Add(L(Fmt.Serie(s.Md) + (s.MinhasVit + s.DelesVit > 0 ? " · série " + s.MinhasVit + " x " + s.DelesVit : "") + " · adversário #" + c.mundo.PosicaoRanking(adv.id) + " do ranking", "compromisso-sub"));
             // retrospecto e clássico (decisão 0021)
             var rt = c.Contra(adv.nome);
             var linhaRt = E(); linhaRt.style.flexDirection = FlexDirection.Row; linhaRt.style.alignItems = Align.Center; linhaRt.style.marginTop = 6;
@@ -33,20 +33,16 @@ namespace CSM.ManagerUI
             linhaRt.Add(L("Retrospecto: " + rt.Texto + (rt.ultimaEliminacao != null ? " · eliminou o clube na " + rt.ultimaEliminacao : ""), "f14", "suave"));
             esq.Add(linhaRt);
             hero.Add(esq);
-            var dir = E(); dir.style.alignItems = Align.FlexEnd;
-            dir.Add(L(intel >= 1 ? "Joga " + Estilos.Nome(adv.estilo).ToLowerInvariant() : "Estilo desconhecido", "f17", "negrito", intel >= 1 ? "azul" : "apagado"));
-            dir.Add(L("Informação " + intel + "/3" + (intel == 0 ? " · ponha um scout para estudá-lo" : ""), "f14", "suave"));
-            hero.Add(dir);
-            conteudo.Add(hero);
-
-            // números da série
             int mapaRef = s.MapaAtual >= 0 ? s.MapaAtual : -1;
             double chMapa = c.ChanceMapa(adv, mapaRef);
-            var resumos = E("resumo-serie");
-            resumos.Add(Resumo("Chance de vencer a série", Pct(Carreira.ChanceSerie(chMapa, s.Md)), chMapa >= 0.5 ? "verde" : "laranja"));
-            resumos.Add(Resumo("Força efetiva (nós x eles)", c.ForcaEfetiva(mapaRef, adv).ToString("0.0") + " x " + c.ForcaEfetivaAdv(adv, mapaRef).ToString("0.0"), "t"));
-            resumos.Add(Resumo("Série até agora", s.MinhasVit + " x " + s.DelesVit, "t"));
-            conteudo.Add(resumos);
+            var dir = E(); dir.style.alignItems = Align.FlexEnd;
+            var ch = L(Pct(Carreira.ChanceSerie(chMapa, s.Md)), "serie-chance", chMapa >= 0.5 ? "verde" : "laranja"); ch.pickingMode = PickingMode.Position;
+            ComDica(ch, "Força efetiva " + c.ForcaEfetiva(mapaRef, adv).ToString("0.0") + " contra " + c.ForcaEfetivaAdv(adv, mapaRef).ToString("0.0") + " (preparo, cansaço, afinidade e estratégia incluídos).");
+            dir.Add(ch);
+            dir.Add(L("de chance de vencer a série", "f14", "suave"));
+            dir.Add(L(intel >= 1 ? "Joga " + Estilos.Nome(adv.estilo).ToLowerInvariant() : "Estilo desconhecido: estude-o com um scout", "f14", intel >= 1 ? "azul" : "apagado"));
+            hero.Add(dir);
+            conteudo.Add(hero);
 
             // ------------------------------------------------------------------ veto
             conteudo.Add(L("Veto de mapas", "h2", "topo-h2"));
@@ -54,7 +50,7 @@ namespace CSM.ManagerUI
             if (!v.Completo)
             {
                 int minhas = 0; for (int i = v.i; i < v.passos.Count; i++) if (v.passos[i].quem == 0) minhas++;
-                instrucao = "Sua vez: " + (v.Atual.pick ? "ESCOLHA o mapa que você quer jogar." : "BANA um mapa que você não quer jogar.") + " Faltam " + minhas + " jogada(s) suas.";
+                instrucao = "Sua vez: " + (v.Atual.pick ? "clique no mapa que você quer JOGAR." : "clique no mapa que você quer BANIR.") + " Faltam " + minhas + ".";
             }
             else instrucao = "Veto concluído. Os mapas serão jogados nesta ordem:";
             var linhaIns = E("linha-h"); linhaIns.style.marginBottom = 12;
@@ -80,7 +76,7 @@ namespace CSM.ManagerUI
 
             // ------------------------------------------------------------------ estratégia
             conteudo.Add(L("Estratégia", "h2"));
-            if (intel == 0) conteudo.Add(L("Você não sabe como o adversário joga: sem scout, a escolha da estratégia é um palpite.", "f15", "laranja", "quebra"));
+            if (intel == 0) conteudo.Add(L("Sem scout, a estratégia é um palpite.", "f15", "laranja", "quebra"));
             var estilos = E("estilos");
             foreach (Estilo e in Enum.GetValues(typeof(Estilo)))
             {
@@ -96,7 +92,7 @@ namespace CSM.ManagerUI
                     else if (e != Estilo.Equilibrada) topo.Add(Selo("neutra contra ele"));
                 }
                 card.Add(topo);
-                card.Add(L(Estilos.Descricao(e), "estilo-desc"));
+                if (c.estilo == e) card.Add(L(Estilos.Descricao(e), "estilo-desc")); else ComDica(card, Estilos.Descricao(e));
                 Clicavel(card, () => { c.estilo = ee; Salvar(); Mostrar(); });
                 estilos.Add(card);
             }
@@ -105,10 +101,8 @@ namespace CSM.ManagerUI
             // ------------------------------------------------------------------ ações
             var botoes = E("linha-h"); botoes.style.marginTop = 16;
             var ir = Botao(v.Completo ? "Ir para a pré-partida" : "Termine o veto para continuar", () => Ir(Aba.PreMatch), v.Completo && !c.Falido, true, "play"); ir.style.marginRight = 12; botoes.Add(ir);
-            var pular = Botao("Pular série", PularSerieUI, !c.Falido); pular.style.marginRight = 12; botoes.Add(pular);
-            botoes.Add(Botao("Voltar ao painel", () => Ir(Aba.Painel)));
+            var pular = Botao("Pular série", PularSerieUI, !c.Falido); botoes.Add(pular);
             conteudo.Add(botoes);
-            conteudo.Add(L("Os mapas além do primeiro ainda não existem em 3D: a partida assistida roda na geometria disponível, mas a afinidade com o mapa vale na habilidade dos jogadores e no resultado de quem pula.", "legenda"));
         }
 
         VisualElement CartaoMapa(int m, Serie s)
@@ -136,7 +130,7 @@ namespace CSM.ManagerUI
             if (intel >= 2) { eles.Add(Barra(adv.afinidade[m], true)); eles.Add(L(adv.afinidade[m].ToString(), "num", "azul")); }
             else { var b = E("barra", "fina"); eles.Add(b); eles.Add(L("?", "num", "apagado")); }
             card.Add(eles);
-            if (estado != null) { var sel = Selo(estado, cor); sel.AddToClassList("mapa-estado"); card.Add(sel); }
+            if (estado != null && !minhaVez) { var sel = Selo(estado, cor); sel.AddToClassList("mapa-estado"); card.Add(sel); }   // "clique para banir" já está na instrução de cima
             if (minhaVez) Clicavel(card, () => VetarUI(m));
             return card;
         }

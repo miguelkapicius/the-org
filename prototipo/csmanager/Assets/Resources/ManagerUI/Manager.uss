@@ -629,3 +629,18 @@
 .btn-mini.so-ic > .ic { margin-right: 0; }
 .btn-mini.so-ic > .t { display: none; }
 .card-acoes > .btn-mini.so-ic { margin-right: 0; margin-left: 6px; }
+
+/* ======================================================================================================
+   Telas enxutas (decisão 0023): conclusão no topo do treino, níveis fechados da Gaming House, chance da série
+   ====================================================================================================== */
+.efeito-time { margin-top: 0; margin-bottom: 16px; border-left-width: 4px; }
+.efeito-time > .t { font-size: 17px; -unity-font-style: bold; }
+.efeito-time.bom { border-left-color: var(--verde); }
+.efeito-time.neutro { border-left-color: var(--azul); }
+.efeito-time.ruim { border-left-color: var(--vermelho); }
+.presets { align-items: center; }
+.gh-nivel.fechado { padding: 12px 22px; margin-bottom: 8px; }
+.gh-nivel.fechado > .gh-topo { margin-bottom: 0; }
+.gh-nivel.fechado .gh-num { width: 32px; height: 32px; border-radius: 16px; }
+.mapa-card { min-height: 0; }
+.serie-chance { font-size: 44px; -unity-font-style: bold; -unity-text-align: middle-right; }
