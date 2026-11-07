@@ -88,7 +88,7 @@ namespace CSM.ManagerUI
             var leg = E("legenda-cal");
             foreach (var (txt, cls) in new[] { ("série marcada", "pend"), ("vitória", "venceu"), ("derrota", "perdeu") }) { var ch = E("cal-chip", cls); ch.Add(L(txt)); leg.Add(ch); }
             var faixa = E("cal-chip", "camp-leg"); faixa.Add(L("semanas de campeonato")); leg.Add(faixa);
-            leg.Add(L("A semana atual tem a borda lima. As próximas rodadas aparecem conforme o campeonato avança.", "f13", "apagado"));
+            leg.Add(L("A semana atual tem a borda em destaque. As próximas rodadas aparecem conforme o campeonato avança.", "f13", "apagado"));
             esquerda.Add(leg);
             layout.Add(esquerda);
             layout.Add(ProximosCompromissos(temp));

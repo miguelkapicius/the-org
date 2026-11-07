@@ -12,6 +12,8 @@ namespace CSM.ManagerUI
     /// que se descobre aparece aqui. Com informação, o manager escolhe melhor o veto de mapas e a estratégia.</summary>
     public partial class GerenteUI
     {
+        int scoutAberto = -1;   // scout com a lista de "outro time" aberta (-1 = nenhum)
+
         /// <summary>Times que vale a pena estudar: o próximo adversário primeiro e depois os rivais do circuito.</summary>
         List<Equipe> AlvosDeEstudo()
         {
@@ -35,7 +37,9 @@ namespace CSM.ManagerUI
                 return;
             }
 
-            conteudo.Add(L("Seus scouts", "h2", "topo-h2"));
+            var tsc = L("Seus scouts", "h2", "topo-h2"); tsc.pickingMode = PickingMode.Position;
+            ComDica(tsc, "A informação sobe com as semanas de estudo (1 semana: estilo; 3: mapas; 6: estratégia e destaque) e é limitada pela Gaming House (nível atual: até " + c.MaxIntel + "). Ela envelhece pela metade a cada temporada.");
+            conteudo.Add(tsc);
             var alvos = AlvosDeEstudo();
             for (int i = 0; i < c.scouts.Count; i++)
             {
@@ -49,16 +53,18 @@ namespace CSM.ManagerUI
                 var tarefas = E("tarefas");
                 tarefas.Add(BotaoMini("Livre", () => { c.DefinirScout(k, 0); Salvar(); Mostrar(); }, s.tipo == 0));
                 tarefas.Add(BotaoMini("Procurar no mercado", () => { c.DefinirScout(k, 1); Salvar(); Mostrar(); }, s.tipo == 1, true, "search"));
+                bool abertoAqui = scoutAberto == k;
                 foreach (var a in alvos)
                 {
-                    var aa = a;
-                    string rot = (c.Adversario == a ? "Próximo: " : "") + a.nome;
-                    tarefas.Add(BotaoMini(rot, () => { c.DefinirScout(k, 2, aa.id); Salvar(); Mostrar(); }, s.tipo == 2 && s.alvo == a.id, true, "eye"));
+                    var aa = a; bool prox = c.Adversario == a, escolhido = s.tipo == 2 && s.alvo == a.id;
+                    if (!prox && !escolhido && !abertoAqui) continue;   // só o próximo adversário e o time escolhido à vista
+                    string rot = (prox ? "Próximo adversário: " : "") + a.nome;
+                    tarefas.Add(BotaoMini(rot, () => { c.DefinirScout(k, 2, aa.id); scoutAberto = -1; Salvar(); Mostrar(); }, escolhido, true, "eye"));
                 }
+                tarefas.Add(BotaoMini(abertoAqui ? "Menos" : "Outro time…", () => { scoutAberto = abertoAqui ? -1 : k; Mostrar(); }));
                 card.Add(tarefas);
                 conteudo.Add(card);
             }
-            conteudo.Add(L("A informação sobe com as semanas de estudo (1 semana: estilo; 3: mapas; 6: estratégia e destaque) e é limitada pela Gaming House (nível atual: até " + c.MaxIntel + "). Ela envelhece pela metade a cada temporada.", "legenda"));
 
             conteudo.Add(L("O que já sabemos", "h2"));
             var conhecidos = c.mundo.equipes.Where(e => !e.clube && (c.SemanasDeIntel(e.id) > 0 || e == c.Adversario)).OrderByDescending(e => e == c.Adversario).ThenByDescending(e => c.SemanasDeIntel(e.id)).Take(6).ToList();
@@ -80,10 +86,10 @@ namespace CSM.ManagerUI
             var nv = E("linha-h"); nv.Add(L("Informação " + n + "/3", "f14", "suave")); nv.Add(pips); topo.Add(nv);
             card.Add(topo);
 
-            if (n == 0) { card.Add(L("Sem informação. Um scout estudando este time por uma semana revela o estilo de jogo dele.", "oculto-txt")); return card; }
+            if (n == 0) { card.Add(L("Sem informação: 1 semana de estudo revela o estilo de jogo.", "oculto-txt")); return card; }
 
-            card.Add(L("Força aproximada: " + e.Forca + "  ·  Estilo: " + Estilos.Nome(e.estilo), "f17", "negrito"));
-            card.Add(L(Estilos.Descricao(e.estilo), "f14", "suave", "quebra"));
+            var est = L("Força aproximada " + e.Forca + "  ·  Estilo " + Estilos.Nome(e.estilo), "f17", "negrito"); est.pickingMode = PickingMode.Position;
+            ComDica(est, Estilos.Descricao(e.estilo)); card.Add(est);
             var contra = Estilos.ContraDe(e.estilo);
             if (e.estilo != Estilo.Equilibrada) card.Add(L("Estratégia que joga bem contra esse estilo: " + Estilos.Nome(contra) + ".", "f15", "verde", "quebra"));
 
@@ -102,14 +108,14 @@ namespace CSM.ManagerUI
                     card.Add(l);
                 }
             }
-            else card.Add(L("Nível 2 (3 semanas de estudo e Centro de performance) mostra os mapas fortes e fracos.", "oculto-txt"));
+            else card.Add(L("Com 3 semanas de estudo: os mapas fortes e fracos.", "oculto-txt"));
 
             if (n >= 3)
             {
                 var d = e.jogadores[(e.id + c.Temporada) % e.jogadores.Count];
                 var t = L("Jogador de destaque: " + d.nome + " (" + Fmt.Funcao(d.funcao) + ")", "f15", "negrito"); t.style.marginTop = 10; card.Add(t);
             }
-            else if (n >= 1) { var t = L("Nível 3 (6 semanas e Complexo de elite) revela a estratégia detalhada e o jogador de destaque.", "oculto-txt"); t.style.marginTop = 6; card.Add(t); }
+            else if (n >= 2) { var t = L("Com 6 semanas: a estratégia detalhada e o jogador de destaque.", "oculto-txt"); t.style.marginTop = 6; card.Add(t); }
             return card;
         }
     }
