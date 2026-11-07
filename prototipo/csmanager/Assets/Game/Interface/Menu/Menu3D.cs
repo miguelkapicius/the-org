@@ -23,9 +23,8 @@ namespace CSM.View3D
         public static bool Ligado => Application.isPlaying && !Application.isBatchMode
             && !System.Environment.GetCommandLineArgs().Any(s => s.StartsWith("-csm_") || s == "-sem_menu");
 
-        // placar e botões do fim leem o tema do HUD (decisão 0032); o menu da vitrine do protótipo continua como era
-        static Color ESCURO => new Color(HudTema.Escuro.r, HudTema.Escuro.g, HudTema.Escuro.b, 0.97f); static Color CREME => HudTema.Creme; static Color CINZA => new Color(HudTema.Cinza.r, HudTema.Cinza.g, HudTema.Cinza.b, 0.6f);
-        static readonly Color LARANJA = Hx("#F5A524"); static Color TR => HudTema.PlacarTR; static Color CT => HudTema.PlacarCT; static Color TINTA => HudTema.Tinta;
+        static readonly Color ESCURO = new Color(31 / 255f, 27 / 255f, 24 / 255f, 0.97f), CREME = Hx("#FFF4E2"), CINZA = new Color(1f, 0.957f, 0.886f, 0.5f);
+        static readonly Color LARANJA = Hx("#F5A524"), TR = Hx("#FFB43C"), CT = Hx("#6FA8FF"), TINTA = Hx("#1A1714");
         static Color Hx(string h) { ColorUtility.TryParseHtmlString(h, out var c); return c; }
         static Color Alfa(Color c, float a) => new Color(c.r, c.g, c.b, a);
 
@@ -80,9 +79,9 @@ namespace CSM.View3D
             im.raycastTarget = true;
             var b = im.gameObject.AddComponent<Button>();
             var c = b.colors;
-            Color baseC = principal ? HudTema.Acao : HudTema.Novo ? new Color(0.09f, 0.1f, 0.12f, 0.88f) : new Color(0.12f, 0.105f, 0.095f, 0.85f);
-            c.normalColor = baseC; c.highlightedColor = principal ? HudTema.AcaoRealce : HudTema.Novo ? new Color(0.18f, 0.2f, 0.23f, 0.95f) : new Color(0.24f, 0.21f, 0.19f, 0.95f);
-            c.pressedColor = principal ? HudTema.AcaoApertada : HudTema.Novo ? new Color(0.06f, 0.07f, 0.08f, 0.95f) : new Color(0.08f, 0.07f, 0.065f, 0.95f); c.selectedColor = c.normalColor; c.fadeDuration = 0.08f;
+            Color baseC = principal ? LARANJA : new Color(0.12f, 0.105f, 0.095f, 0.85f);
+            c.normalColor = baseC; c.highlightedColor = principal ? Hx("#FFC14D") : new Color(0.24f, 0.21f, 0.19f, 0.95f);
+            c.pressedColor = principal ? Hx("#C9831A") : new Color(0.08f, 0.07f, 0.065f, 0.95f); c.selectedColor = c.normalColor; c.fadeDuration = 0.08f;
             b.colors = c; b.targetGraphic = im;
             b.onClick.AddListener(() => acao());
             var t = Texto("txt", im.transform, new Vector2(0.5f, 0.5f), Vector2.zero, tam, txt, 34, principal ? TINTA : CREME, TextAnchor.MiddleCenter, false, null, false);

@@ -1,6 +1,6 @@
 # 0032 — HUD da partida no visual novo, com alternador para o clássico
 
-- **Status:** proposta (o autor escolheu o **Clássico** como padrão em 2026-11-07; o Novo fica como opção)
+- **Status:** rejeitada (2026-11-07: o autor validou os dois visuais e ficou com o HUD clássico; o HUD novo foi removido do código)
 - **Data:** 2026-11-07
 - **Autor:** miguelkapicius (com Claude)
 - **Seções afetadas:** gdd/08-ui-ux.md
@@ -31,3 +31,6 @@ Opção 3. O HUD tem dois temas, **Clássico** (padrão, escolhido pelo autor de
 - Mais uma opção a testar (duas caras do HUD). Quando uma for escolhida, a outra pode ser removida junto com `HudTema`.
 - A troca vale só ao começar uma partida; não há botão para trocar no meio dela.
 - O menu da vitrine do protótipo (INICIAR e SAIR) não foi redesenhado.
+
+## Resultado
+O HUD novo (grafite, retrato nos cards, linha fina da cor do time) foi implementado como tema, comparado lado a lado e **rejeitado**: o autor preferiu o HUD clássico (tons quentes, card preenchido pela vida). O tema e a opção nas Opções foram removidos; o HUD da partida segue como era. Fica registrada para a ideia não ser proposta de novo sem um motivo novo.

@@ -59,7 +59,6 @@ namespace CSM.View3D
         /// <summary>Monta a maquete e a partida (o Start chama; o editor chama direto pra tirar print sem Play).</summary>
         public void Iniciar()
         {
-            HudTema.Carregar();   // HUD clássico ou novo, conforme as Opções (decisão 0032)
             // semente da partida: no jogo é sorteada de verdade (~2 bilhões de valores, sem depender da hora), então não dá pra
             // repetir uma partida por acaso (antes era sempre 15 e toda partida saía igual, round por round). -csm_seed N é
             // ferramenta nossa pra repetir um bug; o jogador nunca escolhe. O editor (prints sem Play) segue na 15, pra comparar.

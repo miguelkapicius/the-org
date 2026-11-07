@@ -46,7 +46,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 ## 5. Para depois
 
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
-- [ ] **HUD novo (opcional):** o autor ficou com o HUD Clássico (decisão 0032). O Novo continua em Opções › Partida; manter ou remover o `HudTema`? → `gdd/08-ui-ux.md`
 - [ ] **Tutorial:** o tour de hoje é só uma visita às telas. Deve virar um guia por tarefas (por exemplo, "jogue a primeira série") que confere o que o jogador fez? → `gdd/08-ui-ux.md`
 - [ ] **Som final:** os sons de interface são sintetizados em código (decisão 0029). Quem faz a versão final (designer, biblioteca licenciada ou manter a síntese)? → `gdd/07-audio.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
