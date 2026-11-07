@@ -26,9 +26,9 @@ Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **
    | Hover | passar o mouse | tique de relé, quase só textura |
    | Clique | clique comum | tecla mecânica: estalo, plástico e o corpo batendo no fundo |
    | Principal | botão claro (ação principal) | ordem confirmada no rádio: chiado, dois bipes de rádio tático e uma pancada grave |
-   | Aba | trocar de tela ou aba | painel que desliza (sopro que abre e fecha) e o encaixe |
+   | Aba | trocar de tela ou aba | toque curto e macio, um "tum" surdo |
    | Alternar | chips, passos, opções | relé duplo: dois estalos e dois "tum" |
-   | Sucesso | concluir algo | vinheta de transmissão ao vivo: três sinos que sobem sobre um acorde grave |
+   | Sucesso | concluir algo | duas notas suaves e curtas, neutro |
    | Erro | aviso de erro, proposta recusada | acesso negado: dois pulsos graves arredondados |
    | Dinheiro | contrato assinado | carimbo (pancada surda) e duas moedas metálicas |
    | Aviso | aviso na tela | ping de radar com eco que se repete |

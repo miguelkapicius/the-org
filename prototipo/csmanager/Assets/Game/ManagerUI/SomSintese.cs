@@ -65,11 +65,10 @@ namespace CSM.ManagerUI
                     Nota(Onda.Quadrada, 0.115f, 0.08f, 1800f, -1f, 0.35f, 0.8f, 0.002f, Filtro.PassaBaixa, 3600f),
                     Nota(Onda.Seno, 0.05f, 0.12f, 90f, 45f, 0.7f, 0.4f, 0.002f) } };
 
-                // trocar de tela ou aba: um painel que desliza (sopro que abre e fecha) e o encaixe no fim
-                case Som.Aba: return new Definicao { pico = 0.3f, reverb = 0.1f, cauda = 0.2f, vozes = new[] {
-                    Ruido(0f, 0.14f, Filtro.PassaFaixa, 500f, 1.6f, 0.5f, 0.05f, 0.9f, 1800f),
-                    Ruido(0.13f, 0.008f, Filtro.PassaFaixa, 2200f, 2f, 0.5f),
-                    Nota(Onda.Seno, 0.09f, 0.05f, 200f, 140f, 0.25f, 0.4f) } };
+                // trocar de tela ou aba: um toque curto e macio, quase só um "tum" surdo
+                case Som.Aba: return new Definicao { pico = 0.22f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.07f, 240f, 170f, 0.6f, 0.35f, 0.003f),
+                    Ruido(0f, 0.02f, Filtro.PassaBaixa, 1200f, 0.8f, 0.15f, 0.004f) } };
 
                 // alternar uma opção: relé duplo (dois estalos e dois "tum" de triângulo)
                 case Som.Alternar: return new Definicao { pico = 0.34f, vozes = new[] {
@@ -78,11 +77,9 @@ namespace CSM.ManagerUI
                     Ruido(0.035f, 0.008f, Filtro.PassaFaixa, 2400f, 3f, 0.6f),
                     Nota(Onda.Triangulo, 0.035f, 0.03f, 300f, 240f, 0.3f, 0.4f) } };
 
-                // sucesso: vinheta de transmissão ao vivo (três sinos que sobem sobre um acorde grave e uma pancada)
-                case Som.Sucesso: return new Definicao { pico = 0.5f, reverb = 0.35f, cauda = 0.6f, vozes = new[] {
-                    Sino(0f, 0.5f, C5, 2.2f, 0.3f), Sino(0.09f, 0.55f, G5, 2f, 0.3f), Sino(0.18f, 0.8f, C6, 1.5f, 0.28f, 3.5f, 0.6f),
-                    Nota(Onda.Seno, 0f, 0.9f, C4, -1f, 0.15f, 0.8f, 0.08f), Nota(Onda.Seno, 0f, 0.9f, G4, -1f, 0.12f, 0.8f, 0.08f),
-                    Nota(Onda.Seno, 0f, 0.25f, 70f, 40f, 0.6f, 0.4f) } };
+                // sucesso: duas notas suaves e curtas, sem pancada nem brilho (neutro)
+                case Som.Sucesso: return new Definicao { pico = 0.3f, reverb = 0.12f, cauda = 0.25f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.22f, C5, -1f, 0.5f, 0.5f, 0.006f), Nota(Onda.Seno, 0.1f, 0.3f, G5, -1f, 0.4f, 0.55f, 0.006f) } };
 
                 // erro: acesso negado (dois pulsos graves de painel, arredondados) e um zumbido curto
                 case Som.Erro: return new Definicao { pico = 0.38f, reverb = 0.08f, cauda = 0.15f, vozes = new[] {
