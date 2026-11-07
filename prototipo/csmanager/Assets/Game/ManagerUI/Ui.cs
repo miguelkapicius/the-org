@@ -94,7 +94,7 @@ namespace CSM.ManagerUI
         {
             if (acao != null)
             {
-                e.RegisterCallback<PointerEnterEvent>(_ => SomManager.Tocar(Som.Hover, 0.5f));                       // passar o mouse
+                // (sem som ao passar o mouse: o cursor está sempre em movimento e o som cansa)
                 e.RegisterCallback<ClickEvent>(_ => { SomManager.Tocar(SomManager.DoClique(e)); acao(); });              // o som depende da função do elemento
             }
             return e;

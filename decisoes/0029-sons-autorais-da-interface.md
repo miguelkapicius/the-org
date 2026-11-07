@@ -1,4 +1,13 @@
-# 0029 — Sons autorais da interface (sintetizados em código) e identidade "sala de operações"
+dois toques suaves |
+
+
+
+
+
+
+
+
+
 
 - **Status:** proposta
 - **Data:** 2026-11-07
@@ -15,7 +24,7 @@ A interface não tinha nenhum som. O autor quer **efeitos sonoros autorais** (ho
 3. **Sons sintetizados em código** — autorais por construção (sem arquivo de terceiros), pequenos, ajustáveis em uma linha, e servem de rascunho até haver um designer.
 
 ## Decisão
-Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **sala de operações de uma transmissão tática**: relés e teclas mecânicas, rádio tático, ping de radar, carimbo e moedas, painéis que deslizam e um zumbido de sala de controle ao fundo. Sem bipes de videogame.
+Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **sala de operações** e uma regra: **tudo leve**. O jogador usa o mouse o tempo todo, então cada som é curto, macio e baixo, sem agudos nem pancadas, e passar o mouse não toca nada (testes iniciais com relés, rádio e sinos cansaram).
 
 ## Detalhamento (proposta do agente, a validar)
 1. **Motor:** cada som é uma receita de "vozes" (ruído filtrado, notas, timbres metálicos FM) com **eco e reverb de sala** e um pico de volume próprio; o som é gerado na primeira vez que é usado (`SomCatalogo` e `SomSintese`).
@@ -46,4 +55,4 @@ Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **
 ## Consequências
 - Sons sintetizados são um rascunho: a versão final pode vir de um designer, mantendo as mesmas ocasiões. O que o autor ouvir e quiser mudar vira ajuste direto na receita.
 - Falta a tela de opções com volume (hoje só liga e desliga). Música e sons da partida estão fora desta decisão.
-- Números provisórios (volume 0,6, ambiente a 12 % desse volume, variação de 4 %, intervalo do hover).
+- Números provisórios (volume 0,5, ambiente a 5 % desse volume, variação de 4 %, intervalo do hover).

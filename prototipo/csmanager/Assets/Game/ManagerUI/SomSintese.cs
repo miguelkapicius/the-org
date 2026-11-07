@@ -47,65 +47,55 @@ namespace CSM.ManagerUI
         {
             switch (s)
             {
-                // passar o mouse: tique de relé, quase só textura
-                case Som.Hover: return new Definicao { pico = 0.2f, vozes = new[] {
-                    Ruido(0f, 0.012f, Filtro.PassaFaixa, 4200f, 5f, 0.9f),
-                    Nota(Onda.Seno, 0f, 0.02f, 2600f, 2200f, 0.12f, 0.3f) } };
+                // Tudo é leve de propósito: o jogador usa o mouse o tempo todo, então cada som é curto, macio e baixo (sem agudos, sem pancadas).
+                // passar o mouse: um sopro quase inaudível (hoje desligado na interface)
+                case Som.Hover: return new Definicao { pico = 0.08f, vozes = new[] {
+                    Ruido(0f, 0.01f, Filtro.PassaBaixa, 2500f, 0.8f, 0.5f, 0.003f) } };
 
-                // clique: tecla mecânica (estalo agudo, plástico e o corpo grave batendo no fundo)
-                case Som.Clique: return new Definicao { pico = 0.4f, vozes = new[] {
-                    Ruido(0f, 0.008f, Filtro.PassaAlta, 2800f, 0.8f, 0.8f, 0.0003f, 0.3f),
-                    Ruido(0.004f, 0.02f, Filtro.PassaFaixa, 1400f, 2f, 0.3f),
-                    Nota(Onda.Seno, 0f, 0.06f, 150f, 85f, 0.9f, 0.3f, 0.001f) } };
+                // clique: um toque seco e abafado, como a ponta do dedo numa mesa
+                case Som.Clique: return new Definicao { pico = 0.16f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.04f, 210f, 150f, 0.7f, 0.3f, 0.002f),
+                    Ruido(0f, 0.008f, Filtro.PassaBaixa, 1800f, 0.8f, 0.2f, 0.002f) } };
 
-                // ação principal: confirmação firme e discreta (tecla pesada, com uma nota curta e redonda subindo)
-                case Som.Principal: return new Definicao { pico = 0.32f, reverb = 0.08f, cauda = 0.15f, vozes = new[] {
-                    Nota(Onda.Seno, 0f, 0.08f, 170f, 100f, 0.7f, 0.35f, 0.002f),
-                    Ruido(0f, 0.012f, Filtro.PassaBaixa, 2000f, 0.8f, 0.2f, 0.002f),
-                    Nota(Onda.Triangulo, 0.045f, 0.12f, 520f, 600f, 0.3f, 0.5f, 0.004f, Filtro.PassaBaixa, 1800f) } };
+                // ação principal: o mesmo toque, um pouco mais cheio, com uma nota baixa e curta
+                case Som.Principal: return new Definicao { pico = 0.2f, reverb = 0.05f, cauda = 0.1f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.06f, 190f, 130f, 0.7f, 0.3f, 0.002f),
+                    Nota(Onda.Seno, 0.03f, 0.1f, 400f, 450f, 0.2f, 0.5f, 0.005f) } };
 
-                // trocar de tela ou aba: um toque curto e macio, quase só um "tum" surdo
-                case Som.Aba: return new Definicao { pico = 0.22f, vozes = new[] {
-                    Nota(Onda.Seno, 0f, 0.07f, 240f, 170f, 0.6f, 0.35f, 0.003f),
-                    Ruido(0f, 0.02f, Filtro.PassaBaixa, 1200f, 0.8f, 0.15f, 0.004f) } };
+                // trocar de tela ou aba: quase o clique, mais curto
+                case Som.Aba: return new Definicao { pico = 0.13f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.05f, 230f, 170f, 0.7f, 0.3f, 0.003f) } };
 
-                // alternar uma opção: relé duplo (dois estalos e dois "tum" de triângulo)
-                case Som.Alternar: return new Definicao { pico = 0.34f, vozes = new[] {
-                    Ruido(0f, 0.008f, Filtro.PassaFaixa, 3200f, 3f, 0.8f),
-                    Nota(Onda.Triangulo, 0f, 0.04f, 420f, 300f, 0.5f, 0.4f),
-                    Ruido(0.035f, 0.008f, Filtro.PassaFaixa, 2400f, 3f, 0.6f),
-                    Nota(Onda.Triangulo, 0.035f, 0.03f, 300f, 240f, 0.3f, 0.4f) } };
+                // alternar uma opção: dois toques minúsculos
+                case Som.Alternar: return new Definicao { pico = 0.14f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.03f, 260f, 200f, 0.6f, 0.3f, 0.002f),
+                    Nota(Onda.Seno, 0.04f, 0.03f, 320f, 250f, 0.5f, 0.3f, 0.002f) } };
 
-                // sucesso: duas notas suaves e curtas, sem pancada nem brilho (neutro)
-                case Som.Sucesso: return new Definicao { pico = 0.3f, reverb = 0.12f, cauda = 0.25f, vozes = new[] {
-                    Nota(Onda.Seno, 0f, 0.22f, C5, -1f, 0.5f, 0.5f, 0.006f), Nota(Onda.Seno, 0.1f, 0.3f, G5, -1f, 0.4f, 0.55f, 0.006f) } };
+                // sucesso: duas notas suaves e curtas
+                case Som.Sucesso: return new Definicao { pico = 0.2f, reverb = 0.08f, cauda = 0.2f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.18f, C5, -1f, 0.5f, 0.5f, 0.008f), Nota(Onda.Seno, 0.09f, 0.24f, G5, -1f, 0.4f, 0.55f, 0.008f) } };
 
-                // erro: acesso negado (dois pulsos graves de painel, arredondados) e um zumbido curto
-                case Som.Erro: return new Definicao { pico = 0.38f, reverb = 0.08f, cauda = 0.15f, vozes = new[] {
-                    Nota(Onda.Quadrada, 0f, 0.09f, 130f, -1f, 0.5f, 1f, 0.002f, Filtro.PassaBaixa, 700f),
-                    Nota(Onda.Quadrada, 0.11f, 0.14f, 98f, -1f, 0.5f, 1f, 0.002f, Filtro.PassaBaixa, 600f),
-                    Ruido(0f, 0.05f, Filtro.PassaBaixa, 500f, 0.8f, 0.15f) } };
+                // erro: um toque grave e arredondado, sem zumbido
+                case Som.Erro: return new Definicao { pico = 0.2f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.1f, 140f, 105f, 0.7f, 0.4f, 0.004f),
+                    Nota(Onda.Seno, 0.09f, 0.12f, 110f, 85f, 0.6f, 0.4f, 0.004f) } };
 
                 // dinheiro: contrato carimbado (pancada surda do carimbo) e duas moedas metálicas, com eco curto
-                case Som.Dinheiro: return new Definicao { pico = 0.5f, reverb = 0.12f, eco = 0.15f, ecoTempo = 0.09f, ecoRealim = 0.3f, cauda = 0.35f, vozes = new[] {
+                case Som.Dinheiro: return new Definicao { pico = 0.28f, reverb = 0.1f, eco = 0.15f, ecoTempo = 0.09f, ecoRealim = 0.3f, cauda = 0.35f, vozes = new[] {
                     Nota(Onda.Seno, 0f, 0.12f, 110f, 55f, 0.9f, 0.3f, 0.001f), Ruido(0f, 0.03f, Filtro.PassaBaixa, 900f, 0.8f, 0.5f),
                     Sino(0.06f, 0.35f, 1046.5f, 2.2f, 0.3f, 2.76f, 0.35f), Sino(0.13f, 0.45f, 1568f, 2f, 0.25f, 2.76f, 0.4f) } };
 
-                // aviso: ping de radar (nota longa com eco que se repete, como um sonar)
-                case Som.Aviso: return new Definicao { pico = 0.35f, reverb = 0.15f, eco = 0.5f, ecoTempo = 0.22f, ecoRealim = 0.45f, cauda = 0.7f, vozes = new[] {
-                    Nota(Onda.Seno, 0f, 0.45f, 1480f, -1f, 0.5f, 0.3f), Nota(Onda.Seno, 0f, 0.2f, 2960f, -1f, 0.08f, 0.3f),
-                    Ruido(0f, 0.004f, Filtro.PassaFaixa, 5000f, 2f, 0.3f) } };
+                // aviso: uma nota suave com um eco discreto
+                case Som.Aviso: return new Definicao { pico = 0.2f, reverb = 0.08f, eco = 0.25f, ecoTempo = 0.2f, ecoRealim = 0.3f, cauda = 0.4f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.25f, 880f, -1f, 0.5f, 0.35f, 0.006f) } };
 
-                // mensagem recebida: rajada de dados cifrados (três chilreios curtos de rádio) e uma nota de confirmação
-                case Som.Receber: return new Definicao { pico = 0.3f, reverb = 0.1f, cauda = 0.15f, vozes = new[] {
-                    Ruido(0f, 0.015f, Filtro.PassaFaixa, 3000f, 2f, 0.2f),
-                    Nota(Onda.Quadrada, 0f, 0.028f, 1900f, -1f, 0.4f, 0.7f, 0.001f, Filtro.PassaBaixa, 3800f),
-                    Nota(Onda.Quadrada, 0.04f, 0.03f, 2500f, -1f, 0.4f, 0.7f, 0.001f, Filtro.PassaBaixa, 3800f),
-                    Nota(Onda.Quadrada, 0.08f, 0.03f, 2100f, -1f, 0.4f, 0.7f, 0.001f, Filtro.PassaBaixa, 3800f),
-                    Nota(Onda.Seno, 0.12f, 0.06f, 440f, -1f, 0.15f, 0.5f) } };
+                // mensagem recebida: dois toques suaves
+                case Som.Receber: return new Definicao { pico = 0.16f, reverb = 0.05f, cauda = 0.1f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.05f, 520f, -1f, 0.5f, 0.5f, 0.004f),
+                    Nota(Onda.Seno, 0.07f, 0.07f, 660f, -1f, 0.4f, 0.5f, 0.004f) } };
 
                 // avançar a semana: o tempo passando (tique-taque, um sopro grave que cresce e uma queda de grave)
-                default: return new Definicao { pico = 0.42f, reverb = 0.25f, cauda = 0.45f, vozes = new[] {
+                default: return new Definicao { pico = 0.25f, reverb = 0.25f, cauda = 0.45f, vozes = new[] {
                     Ruido(0f, 0.008f, Filtro.PassaFaixa, 3000f, 4f, 0.8f), Ruido(0.12f, 0.01f, Filtro.PassaFaixa, 1800f, 4f, 0.7f),
                     Ruido(0.05f, 0.32f, Filtro.PassaBaixa, 400f, 0.9f, 0.5f, 0.12f, 0.9f, 1400f),
                     Nota(Onda.Seno, 0.1f, 0.3f, 120f, 40f, 0.6f, 0.5f, 0.02f) } };

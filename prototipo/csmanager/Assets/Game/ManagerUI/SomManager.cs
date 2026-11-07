@@ -17,7 +17,7 @@ namespace CSM.ManagerUI
         static float ultimoHover; static bool avisou;
 
         /// <summary>Volume geral dos sons da interface (0 a 1).</summary>
-        public static float Volume = 0.6f;
+        public static float Volume = 0.5f;
 
         public static bool Mudo
         {
@@ -32,7 +32,7 @@ namespace CSM.ManagerUI
         // ---------------------------------------------------------------- ambiente (zumbido da sala de controle, em laço)
         static AudioSource ambiente; static AudioClip ambienteClip; static bool ambienteAtivo;
         /// <summary>Volume do ambiente em relação ao geral: bem baixo, para ser sentido e não ouvido.</summary>
-        public static float VolumeAmbiente = 0.12f;
+        public static float VolumeAmbiente = 0.05f;
 
         /// <summary>Liga o ambiente enquanto o manager está aberto (não toca em modo batch nem com o som desligado).</summary>
         public static void AmbienteLigar()
