@@ -29,7 +29,7 @@ namespace CSM.ManagerUI
             // foto à direita, com o véu escuro do lado do texto (a UI Toolkit não tem gradiente)
             var foto = E("tj-foto"); foto.pickingMode = PickingMode.Ignore;
             var tex = FotoLado(tr);
-            if (tex != null) { foto.style.backgroundImage = new StyleBackground(tex); foto.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop; }
+            if (tex != null) foto.style.backgroundImage = new StyleBackground(tex);
             var veu = E("tj-veu"); veu.pickingMode = PickingMode.Ignore;
             veu.style.backgroundImage = new StyleBackground(VeuLateral()); veu.style.unityBackgroundScaleMode = ScaleMode.StretchToFill;
             foto.Add(veu);

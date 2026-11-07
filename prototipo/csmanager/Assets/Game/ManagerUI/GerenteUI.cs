@@ -110,8 +110,6 @@ namespace CSM.ManagerUI
             var estilo = Resources.Load<StyleSheet>("ManagerUI/Manager");
             if (estilo != null) tela.styleSheets.Add(estilo);
             else Debug.LogError("Falta Assets/Resources/ManagerUI/Manager.uss: a interface do manager fica sem estilo.");
-            tela.style.backgroundImage = new StyleBackground(Ui.FundoNoite());
-            tela.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
             doc.rootVisualElement.Add(tela);
             tela.focusable = true;
             tela.RegisterCallback<KeyDownEvent>(AoTeclar);
@@ -264,7 +262,6 @@ namespace CSM.ManagerUI
             nome.Add(L(c.clube, "f18", "negrito"));
             nome.Add(L(Mundo.NomeCircuito(c.CircuitoClube) + " · ranking " + c.PosicaoRanking, "f13", "suave"));
             h.Add(nome);
-            h.Add(new Icone("chev", 16));
             m.Add(h);
 
             var nav = E("menu-nav"); m.Add(nav);
@@ -335,15 +332,15 @@ namespace CSM.ManagerUI
             esq.Add(L(sub, "f15", "suave"));
             h.Add(esq);
 
-            var sem = E("chip-semana"); sem.Add(new Icone("calendar", 18)); sem.Add(L("Semana " + c.Semana + " · T" + c.Temporada));
+            // dois dados à direita, sem caixa: rótulo pequeno em cima, número embaixo
+            var sem = E("dado-topo");
+            sem.Add(L("SEMANA", "dado-rot")); sem.Add(L(c.Semana + " · T" + c.Temporada, "dado-val"));
             ComDica(sem, "O tempo corre em semanas (52 por temporada). Temporada " + c.Temporada + ", semana " + c.Semana + ".");
             h.Add(sem);
 
-            var u = E("usuario");
-            u.Add(Brasao(c.clube, "laranja", true));
-            var tx = E("usuario-txt");
-            tx.Add(L(Fmt.Dinheiro(c.dinheiro), "f17", "negrito", c.dinheiro < 0 ? "vermelho" : "t"));
-            u.Add(tx);
+            var u = E("dado-topo");
+            u.Add(L("SALDO", "dado-rot"));
+            u.Add(L(Fmt.Dinheiro(c.dinheiro), "dado-val", c.dinheiro < 0 ? "vermelho" : "t"));
             ComDica(u, "Saldo do clube. Despesa fixa: " + Fmt.Dinheiro(c.DespesaFixaPorSemana) + " por semana (salários, manutenção e parcelas).");
             h.Add(u);
             return h;
@@ -468,8 +465,8 @@ namespace CSM.ManagerUI
             var p = c.Proximo(); bool agora = c.TemJogoAgora;
 
             // 1) o compromisso: o único cartão com botão (a ação principal da semana)
-            var cm = HubCartao(agora ? "SÉRIE CONTRA " + p.adv.nome.ToUpperInvariant() : p.camp != null ? p.camp.nome.ToUpperInvariant() : "FIM DA TEMPORADA",
-                agora ? Fmt.Serie(p.conf.md) + " · chance de vitória " + Pct(c.ChanceVitoria()) : p.camp != null ? "Começa " + Quando(p.semana, c.Semana) : "O ranking decide o circuito do ano que vem",
+            var cm = HubCartao(agora ? "SÉRIE" : p.camp != null ? p.camp.nome.ToUpperInvariant() : "FIM DA TEMPORADA",
+                agora ? "Contra " + p.adv.nome + " · " + Fmt.Serie(p.conf.md) + " · " + Pct(c.ChanceVitoria()) + " de chance" : p.camp != null ? "Começa " + Quando(p.semana, c.Semana) : "O ranking decide o circuito do ano que vem",
                 null, null, true, agora ? "serie" : "calendario");
             var btn = E("hub-btn"); btn.Add(L(agora ? "PREPARAR SÉRIE" : "AVANÇAR SEMANA")); btn.Add(new Icone(agora ? "playf" : "skip", 18));
             if (agora ? !c.Falido : c.PodeAvancar) Clicavel(btn, agora ? (Action)(() => Ir(Aba.Serie)) : AvancarSemanaUI);

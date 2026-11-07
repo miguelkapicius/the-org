@@ -76,7 +76,7 @@ namespace CSM.ManagerUI
 
             // ------------------------------------------------------------------ estratégia
             conteudo.Add(L("Estratégia", "h2"));
-            if (intel == 0) conteudo.Add(L("Sem scout, a estratégia é um palpite.", "f15", "laranja", "quebra"));
+            if (intel == 0) conteudo.Add(L("Sem scout, a estratégia é um palpite.", "f15", "laranja", "quebra", "aviso-linha"));
             var estilos = E("estilos");
             foreach (Estilo e in Enum.GetValues(typeof(Estilo)))
             {

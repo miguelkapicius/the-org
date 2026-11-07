@@ -1,6 +1,6 @@
 # Direção de arte
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004, 0024
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004, 0024, 0025
 
 _Estilo visual e referências._
 
@@ -24,3 +24,4 @@ _A definir: mapas, modelos de jogadores, armas, efeitos._
 
 - Estilo realista, estilizado ou low-poly?
 - Retratos dos jogadores: hoje são só duas imagens ilustrativas geradas por IA (operador TR e operador CT, decisão 0024). Arte final: um retrato por jogador, ilustrado à mão, ou gerado em volume? Qual é o estilo?
+- Tipografia da interface: hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL, decisão 0025). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo?

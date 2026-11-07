@@ -1,17 +1,19 @@
 /* Interface do manager — estilos (USS, o "CSS" da UI Toolkit).
-   Portado de prototipo/mockup-ui/style.css: mesmos nomes de classe, mesmas cores, mesmo palco de 1600x900.
-   Visual "vidro noturno": painéis translúcidos com borda fina sobre um fundo azul-noite, cantos pouco arredondados.
-   Índigo (destaque) = só a ação principal e a aba escolhida; laranja = nosso time; azul-claro = adversário. */
+   Direção "mesa de transmissão" (decisão 0025): grafite neutro, superfícies de preenchimento sem borda, tipografia em três vozes
+   (Barlow Condensed nos títulos e números grandes, Barlow no texto, IBM Plex Mono nos números de tabela) e UMA cor de ação: claro sobre escuro.
+   Laranja = TR e nosso time; azul = CT e o adversário; verde, laranja e vermelho = só estado. Sem gradiente colorido, sem brilho, sem barra lateral.
+   ATENÇÃO: a Unity mistura transparência em espaço linear. Um branco escrito com 4 % de opacidade aparece como cinza de 18 %; por isso as
+   opacidades deste arquivo já estão convertidas (0,04 vira 0,004). Cor nova com transparência: conferir na captura (CapturarBatch). */
 
 :root {
-    --fundo: #070b1a; --janela: rgba(10, 15, 36, 0.55); --cartao: rgba(150, 170, 255, 0.055); --cartao2: rgba(150, 170, 255, 0.035); --midia: rgba(150, 170, 255, 0.07); --item: rgba(110, 130, 255, 0.18);
-    --linha: rgba(180, 195, 255, 0.08); --linha2: rgba(180, 195, 255, 0.15);
-    --texto: #ffffff; --suave: #b4bad6; --apagado: #8089ad;
-    --destaque: #5b7bff; --destaque-claro: #7f98ff; --laranja: #f0aa46; --azul: #6eb4ff; --verde: #4cc38a; --vermelho: #ef6b63;
+    --fundo: #0b0d10; --janela: rgba(0, 0, 0, 0); --cartao: rgba(255, 255, 255, 0.004); --cartao2: rgba(255, 255, 255, 0.002); --midia: rgba(255, 255, 255, 0.005); --item: rgba(255, 255, 255, 0.009);
+    --linha: rgba(255, 255, 255, 0.008); --linha2: rgba(255, 255, 255, 0.021);
+    --texto: #eceef1; --suave: #a4aab4; --apagado: #6f7681;
+    --destaque: #eceef1; --destaque-claro: #ffffff; --laranja: #f0a640; --azul: #62a8ee; --verde: #4bbf8c; --vermelho: #ec6a5f;
 }
 
 /* ---------- base ---------- */
-.t { margin: 0; padding: 0; color: var(--texto); font-size: 16px; white-space: nowrap; -unity-text-align: middle-left; }
+.t { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); margin: 0; padding: 0; color: var(--texto); font-size: 16px; white-space: nowrap; -unity-text-align: middle-left; }
 .quebra { white-space: normal; }
 .suave { color: var(--suave); }
 .apagado { color: var(--apagado); }
@@ -19,7 +21,7 @@
 .azul { color: var(--azul); }
 .laranja { color: var(--laranja); }
 .vermelho { color: var(--vermelho); }
-.negrito { -unity-font-style: bold; }
+.negrito { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .centro { -unity-text-align: middle-center; }
 .direita { -unity-text-align: middle-right; }
 .f12 { font-size: 12px; } .f13 { font-size: 13px; } .f14 { font-size: 14px; } .f15 { font-size: 15px; } .f16 { font-size: 16px; }
@@ -37,11 +39,11 @@
 .brasao.mini-b { width: 38px; height: 38px; border-radius: 19px; }
 .brasao.laranja-bg { background-color: #f0a339; }
 .brasao.azul-bg { background-color: #6eb4ff; }
-.brasao > .t { color: #15151a; font-size: 23px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.brasao > .t { color: #15151a; font-size: 23px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .mini-b > .t { font-size: 17px; }
 
 .av { width: 42px; height: 42px; border-radius: 21px; align-items: center; justify-content: center; flex-shrink: 0; }
-.av > .t { color: #14141a; font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.av > .t { color: #14141a; font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .av.grande { width: 92px; height: 92px; border-radius: 46px; }
 .av.grande > .t { font-size: 40px; }
 .av0 { background-color: #e07a5f; } .av1 { background-color: #3d85c6; } .av2 { background-color: #81b29a; }
@@ -54,14 +56,14 @@
 .menu-nav { flex-grow: 1; }
 .item { flex-direction: row; align-items: center; height: 46px; padding: 0 12px 0 10px; border-left-width: 2px; border-left-color: rgba(0, 0, 0, 0); border-radius: 3px; margin-bottom: 3px; }
 .item > .ic { margin-right: 12px; }
-.item > .t { color: var(--suave); font-size: 17px; -unity-font-style: bold; }
-.item:hover { background-color: rgba(255, 255, 255, 0.06); }
+.item > .t { color: var(--suave); font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.item:hover { background-color: rgba(255, 255, 255, 0.007); }
 .item.ativo { background-color: var(--item); border-left-color: var(--destaque); }
 .item.ativo > .ic { color: var(--destaque-claro); }
 .item.ativo > .t { color: var(--texto); }
-.cont { margin-left: auto; min-width: 30px; background-color: rgba(255, 255, 255, 0.08); border-radius: 3px; padding: 2px 9px; align-items: center; }
-.item.ativo .cont { background-color: rgba(255, 255, 255, 0.07); }
-.cont > .t { font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.cont { margin-left: auto; min-width: 30px; background-color: rgba(255, 255, 255, 0.01); border-radius: 3px; padding: 2px 9px; align-items: center; }
+.item.ativo .cont { background-color: rgba(255, 255, 255, 0.008); }
+.cont > .t { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .sep { height: 1px; background-color: var(--linha); margin: 10px 4px; }
 .proxima { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 14px; margin-bottom: 14px; }
 .proxima-vs { flex-direction: row; margin: 6px 0 12px 0; }
@@ -71,74 +73,74 @@
 .tela { flex-grow: 1; min-width: 0; }
 .topo { height: 88px; flex-shrink: 0; flex-direction: row; align-items: center; padding: 0 16px 0 20px; border-bottom-width: 1px; border-bottom-color: var(--linha); }
 .titulo { flex-grow: 1; }
-.titulo-h { font-size: 30px; -unity-font-style: bold; }
+.titulo-h { font-size: 30px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .usuario { flex-direction: row; align-items: center; }
 .usuario-txt { margin-left: 10px; }
 .mini-info { align-items: flex-end; margin-right: 20px; }
 .corpo { flex-grow: 1; padding: 24px 20px; }
-.h2 { font-size: 24px; -unity-font-style: bold; margin: 30px 0 14px 0; }
+.h2 { font-size: 24px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); margin: 30px 0 14px 0; }
 .h2.topo-h2 { margin-top: 0; }
 .legenda { color: var(--apagado); font-size: 14px; margin-top: 12px; white-space: normal; }
 .secao-linha { flex-direction: row; justify-content: space-between; align-items: center; }
 
 /* ---------- botões, abas, selos ---------- */
 .btn { flex-direction: row; align-items: center; justify-content: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 3px; padding: 10px 18px; }
-.btn > .t { font-size: 16px; -unity-font-style: bold; }
+.btn > .t { font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .btn > .ic { margin-right: 8px; color: var(--texto); }
-.btn:hover { background-color: rgba(255, 255, 255, 0.09); }
+.btn:hover { background-color: rgba(255, 255, 255, 0.012); }
 .btn.destaque { background-color: var(--destaque); border-color: var(--destaque); }
 .btn.destaque > .t { color: #ffffff; }
 .btn.destaque > .ic { color: #ffffff; }
 .btn.destaque:hover { background-color: var(--destaque-claro); }
 .btn.cheio { padding: 12px 10px; }
 .btn.cheio > .t { font-size: 17px; }
-.btn.desligado { background-color: rgba(255, 255, 255, 0.025); border-color: rgba(255, 255, 255, 0.06); }
-.btn.desligado > .t { color: #6b7396; }
-.btn.desligado:hover { background-color: rgba(255, 255, 255, 0.025); }
+.btn.desligado { background-color: rgba(255, 255, 255, 0.002); border-color: rgba(255, 255, 255, 0.007); }
+.btn.desligado > .t { color: #565c66; }
+.btn.desligado:hover { background-color: rgba(255, 255, 255, 0.002); }
 
 .abas { flex-direction: row; align-self: stretch; border-bottom-width: 1px; border-bottom-color: var(--linha2); margin-bottom: 16px; }
 .aba { padding: 9px 2px; margin-right: 26px; margin-bottom: -1px; border-bottom-width: 2px; border-bottom-color: rgba(0, 0, 0, 0); }
-.aba > .t { color: var(--suave); font-size: 15px; -unity-font-style: bold; }
+.aba > .t { color: var(--suave); font-size: 15px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .aba:hover > .t { color: var(--texto); }
 .aba.ativo > .t { color: var(--texto); }
 
-.selo { padding: 4px 10px; border-radius: 4px; align-self: flex-start; background-color: rgba(255, 255, 255, 0.08); }
-.selo > .t { font-size: 12px; -unity-font-style: bold; color: var(--suave); }
-.selo.verde-bg { background-color: rgba(76, 195, 138, 0.18); } .selo.verde-bg > .t { color: var(--verde); }
-.selo.laranja-bg { background-color: rgba(240, 170, 70, 0.18); } .selo.laranja-bg > .t { color: var(--laranja); }
-.selo.vermelho-bg { background-color: rgba(239, 107, 99, 0.18); } .selo.vermelho-bg > .t { color: var(--vermelho); }
+.selo { padding: 4px 10px; border-radius: 4px; align-self: flex-start; background-color: rgba(255, 255, 255, 0.01); }
+.selo > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); }
+.selo.verde-bg { background-color: rgba(76, 195, 138, 0.035); } .selo.verde-bg > .t { color: var(--verde); }
+.selo.laranja-bg { background-color: rgba(240, 170, 70, 0.035); } .selo.laranja-bg > .t { color: var(--laranja); }
+.selo.vermelho-bg { background-color: rgba(239, 107, 99, 0.035); } .selo.vermelho-bg > .t { color: var(--vermelho); }
 
 .banner { flex-direction: row; align-items: center; padding: 14px 20px; border-radius: 4px; border-left-width: 5px; margin-bottom: 20px; }
-.banner > .t { font-size: 17px; -unity-font-style: bold; white-space: normal; }
-.banner.ok { background-color: rgba(76, 195, 138, 0.16); border-left-color: var(--verde); }
-.banner.erro { background-color: rgba(239, 107, 99, 0.16); border-left-color: var(--vermelho); }
+.banner > .t { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); white-space: normal; }
+.banner.ok { background-color: rgba(76, 195, 138, 0.029); border-left-color: var(--verde); }
+.banner.erro { background-color: rgba(239, 107, 99, 0.029); border-left-color: var(--vermelho); }
 
 /* ---------- atalhos ---------- */
 .atalhos { flex-direction: row; margin-right: -14px; }
 .atalho { flex-grow: 1; flex-basis: 0; height: 120px; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 16px; margin-right: 14px; justify-content: space-between; }
-.atalho:hover { background-color: rgba(255, 255, 255, 0.07); }
+.atalho:hover { background-color: rgba(255, 255, 255, 0.008); }
 .atalho.destaque { border-color: var(--destaque); }
 .atalho.destaque > .ic { color: var(--destaque); }
 .atalho-mais { position: absolute; top: 14px; right: 14px; color: var(--apagado); }
 .atalho.destaque > .atalho-mais { color: var(--apagado); }
 .info-meta { margin-bottom: 10px; }
 .pm-aviso { position: absolute; left: 380px; right: 380px; bottom: 140px; margin-bottom: 0; }
-.atalho-rot { font-size: 18px; -unity-font-style: bold; }
+.atalho-rot { font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 
 /* ---------- cartões de jogador ---------- */
 .fila-cards { flex-direction: row; margin-bottom: 14px; margin-right: -14px; }
 .card-j { flex-grow: 1; flex-basis: 0; background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 10px; margin-right: 14px; }
 .card-j.vazio { background-color: rgba(0, 0, 0, 0); border-color: rgba(0, 0, 0, 0); }
 .midia { height: 170px; background-color: var(--midia); border-radius: 4px; align-items: center; justify-content: center; }
-.ovr { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 20px; background-color: rgba(10, 14, 32, 0.85); border-width: 1px; border-color: var(--linha2); align-items: center; justify-content: center; }
-.ovr > .t { font-size: 17px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.ovr { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 20px; background-color: rgba(13, 15, 19, 0.85); border-width: 1px; border-color: var(--linha2); align-items: center; justify-content: center; }
+.ovr > .t { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .info { padding: 12px 4px 4px 4px; }
-.info-nome { font-size: 19px; -unity-font-style: bold; }
+.info-nome { font-size: 19px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .attr { flex-direction: row; align-items: center; height: 26px; }
 .attr-nome { width: 64px; font-size: 14px; color: var(--suave); }
-.attr-num { width: 32px; font-size: 15px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.attr-num { width: 32px; font-size: 15px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-right; }
 
-.barra { height: 8px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.10); flex-grow: 1; }
+.barra { height: 8px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.014); flex-grow: 1; }
 .barra.fina { height: 6px; border-radius: 3px; }
 .fill { height: 100%; border-radius: 4px; }
 .fill.verde { background-color: var(--verde); } .fill.azul { background-color: var(--azul); }
@@ -149,10 +151,10 @@
 
 /* ---------- tabela ---------- */
 .tr { flex-direction: row; align-items: center; height: 68px; padding: 0 8px; border-bottom-width: 1px; border-bottom-color: var(--linha); }
-.tr:hover { background-color: rgba(255, 255, 255, 0.05); }
+.tr:hover { background-color: rgba(255, 255, 255, 0.005); }
 .tr.th { height: 44px; }
 .tr.th:hover { background-color: rgba(0, 0, 0, 0); }
-.tr.th .t { font-size: 14px; color: var(--apagado); -unity-font-style: normal; }
+.tr.th .t { font-size: 14px; color: var(--apagado); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
 .c { flex-direction: row; align-items: center; flex-shrink: 0; }
 .c-j { width: 220px; } .c-g { width: 80px; } .c-a { width: 96px; padding-right: 16px; } .c-s { width: 110px; } .c-st { width: 110px; }
 .slot.vazio.oculto { border-color: rgba(0, 0, 0, 0); }
@@ -160,32 +162,32 @@
 .c-a-col { flex-direction: column; align-items: stretch; justify-content: center; }
 .c-a-col > .barra { flex-grow: 0; margin-top: 5px; }
 .pessoa-txt { margin-left: 12px; }
-.geral { font-size: 24px; -unity-font-style: bold; }
+.geral { font-size: 24px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .kebab { width: 36px; height: 36px; border-radius: 4px; align-items: center; justify-content: center; }
 .kebab:hover { background-color: var(--item); }
 .kebab:hover > .ic { color: var(--texto); }
 .kebab.on { background-color: var(--item); }
-.dropdown { position: absolute; right: 44px; top: 4px; width: 260px; background-color: rgba(10, 14, 32, 0.92); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 6px; }
+.dropdown { position: absolute; right: 44px; top: 4px; width: 260px; background-color: rgba(13, 15, 19, 0.92); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 6px; }
 .dd-item { flex-direction: row; align-items: center; height: 42px; padding: 0 12px; border-radius: 4px; }
 .dd-item > .ic { margin-right: 12px; }
-.dd-item > .t { font-size: 16px; -unity-font-style: bold; }
+.dd-item > .t { font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .dd-item:hover { background-color: var(--item); }
 .dd-item.perigo > .ic { color: var(--vermelho); }
 .dd-item.perigo > .t { color: var(--vermelho); }
-.dd-item.off > .t { color: #6b7396; }
+.dd-item.off > .t { color: #565c66; }
 .dd-item.off:hover { background-color: rgba(0, 0, 0, 0); }
 
 /* ---------- finanças e gaming house ---------- */
 .resumos { flex-direction: row; margin-bottom: 8px; margin-right: -14px; }
 .resumo { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 18px; margin-right: 14px; }
-.resumo-valor { font-size: 30px; -unity-font-style: bold; margin-top: 8px; }
+.resumo-valor { font-size: 30px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); margin-top: 8px; }
 .cartao { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 22px; margin-bottom: 18px; }
-.cartao-tit { font-size: 14px; -unity-font-style: bold; color: var(--suave); margin-bottom: 16px; letter-spacing: 1px; }
+.cartao-tit { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); margin-bottom: 16px; letter-spacing: 1px; }
 .linha-extrato { flex-direction: row; align-items: center; height: 38px; }
 .niveis { flex-direction: row; margin-bottom: 20px; }
 .nivel { width: 92px; height: 68px; border-radius: 4px; background-color: var(--item); align-items: center; justify-content: center; margin-right: 12px; }
 .nivel.tem { background-color: var(--destaque); }
-.nivel > .t { font-size: 28px; -unity-font-style: bold; color: var(--apagado); -unity-text-align: middle-center; }
+.nivel > .t { font-size: 28px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--apagado); -unity-text-align: middle-center; }
 .nivel.tem > .t { color: #ffffff; }
 .lib { flex-direction: row; align-items: center; height: 46px; }
 .lib > .selo { align-self: center; }
@@ -194,20 +196,20 @@
 .unity-scroll-view__vertical-scroller { width: 10px; background-color: rgba(0, 0, 0, 0); border-width: 0; margin-left: 6px; }
 .unity-scroller__low-button, .unity-scroller__high-button { display: none; }
 .unity-base-slider--vertical .unity-base-slider__tracker, .unity-scroller__slider .unity-base-slider__tracker { background-color: rgba(0, 0, 0, 0); border-width: 0; }
-.unity-scroller__slider .unity-base-slider__dragger { background-color: rgba(255, 255, 255, 0.16); border-width: 0; border-radius: 3px; width: 8px; margin-left: 1px; }
-.unity-scroller__slider .unity-base-slider__dragger:hover { background-color: rgba(255, 255, 255, 0.26); }
-.lib-nome { width: 190px; font-size: 18px; -unity-font-style: bold; }
+.unity-scroller__slider .unity-base-slider__dragger { background-color: rgba(255, 255, 255, 0.029); border-width: 0; border-radius: 3px; width: 8px; margin-left: 1px; }
+.unity-scroller__slider .unity-base-slider__dragger:hover { background-color: rgba(255, 255, 255, 0.066); }
+.lib-nome { width: 190px; font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 
 /* ---------- pré-partida ---------- */
-.prematch { flex-grow: 1; background-color: #070b1a; border-radius: 4px; border-width: 2px; border-color: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.prematch { flex-grow: 1; background-color: #0b0d10; border-radius: 4px; border-width: 2px; border-color: rgba(255, 255, 255, 0.01); overflow: hidden; }
 .pm-pixels { position: absolute; left: 0; top: 0; right: 0; height: 260px; }
 .pm-relogio { position: absolute; top: 22px; left: 0; right: 0; flex-direction: row; justify-content: center; align-items: center; }
 .pm-relogio > .ic { margin-right: 8px; color: var(--texto); }
-.pm-relogio > .t { font-size: 20px; -unity-font-style: bold; }
+.pm-relogio > .t { font-size: 20px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .pm-tag { position: absolute; top: 74px; align-items: center; }
 .pm-tag.esq { left: 190px; } .pm-tag.dir { right: 190px; }
-.pm-tag-nome { flex-direction: row; align-items: center; background-color: rgba(10, 14, 32, 0.85); border-width: 1px; border-color: rgba(255, 255, 255, 0.10); border-radius: 3px; padding: 4px 10px; margin-bottom: 8px; }
-.pm-tag-nome > .t { font-size: 17px; -unity-font-style: bold; }
+.pm-tag-nome { flex-direction: row; align-items: center; background-color: rgba(13, 15, 19, 0.85); border-width: 1px; border-color: rgba(255, 255, 255, 0.014); border-radius: 3px; padding: 4px 10px; margin-bottom: 8px; }
+.pm-tag-nome > .t { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .pm-tag-sub { flex-direction: row; align-items: center; }
 .pm-tag-sub > .ic { margin-right: 6px; }
 .pm-tag-sub > .t { font-size: 13px; color: var(--suave); }
@@ -219,30 +221,30 @@
 .pm-time { width: 270px; align-items: center; }
 .crest { width: 168px; height: 168px; border-radius: 84px; border-width: 8px; border-color: #f4f4f4; align-items: center; justify-content: center; }
 .crest.laranja-bg { background-color: #f0a339; } .crest.azul-bg { background-color: #5aa4f0; }
-.crest > .t { font-size: 92px; -unity-font-style: bold; color: #15151a; -unity-text-align: middle-center; }
+.crest > .t { font-size: 92px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #15151a; -unity-text-align: middle-center; }
 .forca { position: absolute; bottom: -22px; flex-direction: row; align-items: center; background-color: var(--destaque); border-radius: 3px; padding: 2px 10px; }
-.forca > .t { font-size: 20px; -unity-font-style: bold; color: #ffffff; }
+.forca > .t { font-size: 20px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #ffffff; }
 .forca > .ic { margin-left: 4px; color: #ffffff; }
-.pm-nome { margin: 30px 0 18px 0; font-size: 38px; -unity-font-style: bold; -unity-text-align: middle-center; letter-spacing: 1px; }
+.pm-nome { margin: 30px 0 18px 0; font-size: 38px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; letter-spacing: 1px; }
 .pm-j { flex-direction: row; align-items: center; height: 31px; }
-.pm-j-fn { width: 42px; border-width: 1px; border-color: rgba(255, 255, 255, 0.26); border-radius: 4px; margin-right: 10px; align-items: center; }
-.pm-j-fn > .t { font-size: 11px; -unity-font-style: bold; color: #cfcfd6; -unity-text-align: middle-center; }
+.pm-j-fn { width: 42px; border-width: 1px; border-color: rgba(255, 255, 255, 0.066); border-radius: 4px; margin-right: 10px; align-items: center; }
+.pm-j-fn > .t { font-size: 11px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #cfcfd6; -unity-text-align: middle-center; }
 .pm-j > .t { font-size: 19px; color: #a9a9b0; letter-spacing: 1px; }
-.pm-bola { width: 18px; height: 18px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.10); margin: 76px 8px 0 8px; }
+.pm-bola { width: 18px; height: 18px; border-radius: 9px; background-color: rgba(255, 255, 255, 0.014); margin: 76px 8px 0 8px; }
 
 .pm-barra { position: absolute; left: 36px; right: 36px; bottom: 56px; flex-direction: row; justify-content: center; align-items: stretch; }
-.seg { flex-direction: row; flex-grow: 1; flex-basis: 0; max-width: 480px; padding: 5px; background-color: rgba(10, 14, 32, 0.85); border-width: 3px; border-color: rgba(255, 255, 255, 0.10); border-radius: 5px; margin: 0 7px; }
-.seg-b { flex-grow: 1; flex-basis: 0; height: 58px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.05); border-width: 2px; border-color: rgba(255, 255, 255, 0.10); align-items: center; justify-content: center; margin: 0 2px; }
-.seg-b > .t { font-size: 21px; -unity-font-style: bold; letter-spacing: 1px; -unity-text-align: middle-center; }
-.seg-b:hover { background-color: rgba(255, 255, 255, 0.10); }
-.seg-b.desligado > .t { color: #6b7396; }
-.seg-b.desligado:hover { background-color: rgba(255, 255, 255, 0.05); }
-.comecar { width: 290px; flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--destaque); border-width: 3px; border-color: rgba(255, 255, 255, 0.10); border-radius: 5px; padding: 0 24px; margin: 0 7px; }
+.seg { flex-direction: row; flex-grow: 1; flex-basis: 0; max-width: 480px; padding: 5px; background-color: rgba(13, 15, 19, 0.85); border-width: 3px; border-color: rgba(255, 255, 255, 0.014); border-radius: 5px; margin: 0 7px; }
+.seg-b { flex-grow: 1; flex-basis: 0; height: 58px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.005); border-width: 2px; border-color: rgba(255, 255, 255, 0.014); align-items: center; justify-content: center; margin: 0 2px; }
+.seg-b > .t { font-size: 21px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1px; -unity-text-align: middle-center; }
+.seg-b:hover { background-color: rgba(255, 255, 255, 0.014); }
+.seg-b.desligado > .t { color: #565c66; }
+.seg-b.desligado:hover { background-color: rgba(255, 255, 255, 0.005); }
+.comecar { width: 290px; flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--destaque); border-width: 3px; border-color: rgba(255, 255, 255, 0.014); border-radius: 5px; padding: 0 24px; margin: 0 7px; }
 .comecar:hover { background-color: var(--destaque-claro); }
-.comecar > .t { font-size: 21px; -unity-font-style: bold; color: #ffffff; letter-spacing: 1px; }
+.comecar > .t { font-size: 21px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #ffffff; letter-spacing: 1px; }
 .quad { width: 30px; height: 30px; border-width: 3px; border-color: #ffffff; border-radius: 4px; align-items: center; justify-content: center; }
 .quad > .ic { color: #ffffff; }
-.comecar.desligado { background-color: rgba(91, 123, 255, 0.25); }
+.comecar.desligado { background-color: rgba(255, 255, 255, 0.062); }
 
 /* ======================================================================================================
    Experiência do manager: avisos, escalação, comparação, prévia, pós-partida, avisos temporários, dicas
@@ -257,16 +259,16 @@
 .entra.visivel { opacity: 1; }
 
 /* aviso temporário (no lugar da faixa fixa) */
-.toast { position: absolute; right: 36px; bottom: 36px; flex-direction: row; align-items: center; background-color: rgba(10, 14, 32, 0.92); border-width: 1px; border-color: var(--linha2); border-left-width: 5px; border-radius: 4px; padding: 14px 18px; max-width: 620px; }
+.toast { position: absolute; right: 36px; bottom: 36px; flex-direction: row; align-items: center; background-color: rgba(13, 15, 19, 0.92); border-width: 1px; border-color: var(--linha2); border-left-width: 5px; border-radius: 4px; padding: 14px 18px; max-width: 620px; }
 .toast.ok { border-left-color: var(--verde); }
 .toast.erro { border-left-color: var(--vermelho); }
-.toast > .t { font-size: 16px; -unity-font-style: bold; white-space: normal; }
+.toast > .t { font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); white-space: normal; }
 .toast-acao { margin-left: 18px; padding: 6px 14px; border-radius: 4px; background-color: var(--item); }
-.toast-acao:hover { background-color: rgba(255, 255, 255, 0.16); }
-.toast-acao > .t { font-size: 14px; -unity-font-style: bold; }
+.toast-acao:hover { background-color: rgba(255, 255, 255, 0.029); }
+.toast-acao > .t { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 
 /* dica ao passar o mouse */
-.dica { position: absolute; background-color: rgba(10, 14, 32, 0.92); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 8px 12px; max-width: 340px; }
+.dica { position: absolute; background-color: rgba(13, 15, 19, 0.92); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 8px 12px; max-width: 340px; }
 .dica > .t { font-size: 14px; white-space: normal; }
 
 /* avisos do painel */
@@ -278,8 +280,8 @@
 .aviso-ponto.critico { background-color: var(--vermelho); }
 .aviso-txt { flex-grow: 1; font-size: 16px; }
 .aviso-btn { padding: 6px 14px; border-radius: 4px; border-width: 1px; border-color: var(--linha2); background-color: var(--cartao); }
-.aviso-btn:hover { background-color: rgba(255, 255, 255, 0.09); }
-.aviso-btn > .t { font-size: 14px; -unity-font-style: bold; }
+.aviso-btn:hover { background-color: rgba(255, 255, 255, 0.012); }
+.aviso-btn > .t { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .tudo-ok { flex-direction: row; align-items: center; height: 50px; }
 
 /* escalação visual */
@@ -287,35 +289,35 @@
 .escala-topo { flex-direction: row; align-items: center; justify-content: space-between; min-height: 34px; }
 .escala-res { flex-direction: row; align-items: center; }
 .escala-res > .t { margin-right: 18px; }
-.escala-forca { font-size: 26px; -unity-font-style: bold; }
+.escala-forca { font-size: 26px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .chips-func { flex-direction: row; }
-.chip-f { padding: 4px 10px; border-radius: 4px; margin-left: 6px; background-color: rgba(255, 255, 255, 0.08); }
-.chip-f > .t { font-size: 12px; -unity-font-style: bold; color: var(--suave); }
-.chip-f.ok { background-color: rgba(76, 195, 138, 0.16); }
+.chip-f { padding: 4px 10px; border-radius: 4px; margin-left: 6px; background-color: rgba(255, 255, 255, 0.01); }
+.chip-f > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); }
+.chip-f.ok { background-color: rgba(76, 195, 138, 0.029); }
 .chip-f.ok > .t { color: var(--verde); }
-.chip-f.falta { background-color: rgba(239, 107, 99, 0.18); }
+.chip-f.falta { background-color: rgba(239, 107, 99, 0.035); }
 .chip-f.falta > .t { color: var(--vermelho); }
 .fila-slots { flex-direction: row; margin-right: -12px; }
 .slot { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 12px; margin-right: 12px; align-items: center; }
-.slot:hover { background-color: rgba(255, 255, 255, 0.07); }
-.slot.sel { border-color: var(--destaque); background-color: rgba(91, 123, 255, 0.14); }
+.slot:hover { background-color: rgba(255, 255, 255, 0.008); }
+.slot.sel { border-color: var(--destaque); background-color: rgba(255, 255, 255, 0.023); }
 .slot.vazio { background-color: rgba(0, 0, 0, 0); border-color: var(--linha); }
 .slot.vazio:hover { background-color: rgba(0, 0, 0, 0); }
 .slot-topo { flex-direction: row; justify-content: space-between; align-self: stretch; align-items: center; margin-bottom: 8px; }
-.slot-fn { border-width: 1px; border-color: rgba(255, 255, 255, 0.26); border-radius: 4px; padding: 1px 7px; }
-.slot-fn > .t { font-size: 12px; -unity-font-style: bold; color: #cfcfd6; }
-.slot-ovr { font-size: 22px; -unity-font-style: bold; }
-.slot-nome { font-size: 18px; -unity-font-style: bold; margin-top: 8px; }
+.slot-fn { border-width: 1px; border-color: rgba(255, 255, 255, 0.066); border-radius: 4px; padding: 1px 7px; }
+.slot-fn > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #cfcfd6; }
+.slot-ovr { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.slot-nome { font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); margin-top: 8px; }
 .banco-tit { margin: 18px 0 10px 0; }
-.dica-troca { font-size: 15px; -unity-font-style: bold; color: var(--suave); -unity-text-align: middle-right; flex-shrink: 1; }
+.dica-troca { font-size: 15px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); -unity-text-align: middle-right; flex-shrink: 1; }
 
 /* retratos (render 3D do boneco sobre um fundo colorido) */
 .retrato { border-radius: 3px; -unity-background-scale-mode: scale-to-fit; align-items: center; justify-content: center; }
 .retrato-p { width: 92px; height: 92px; }
 .retrato-fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; border-radius: 4px; }
-.retrato > .t { font-size: 36px; -unity-font-style: bold; color: #14141a; -unity-text-align: middle-center; }
-.rt0 { background-color: rgba(224, 122, 95, 0.30); } .rt1 { background-color: rgba(61, 133, 198, 0.30); } .rt2 { background-color: rgba(129, 178, 154, 0.30); }
-.rt3 { background-color: rgba(155, 114, 207, 0.30); } .rt4 { background-color: rgba(242, 204, 143, 0.30); } .rt5 { background-color: rgba(95, 168, 163, 0.30); }
+.retrato > .t { font-size: 36px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #14141a; -unity-text-align: middle-center; }
+.rt0 { background-color: rgba(224, 122, 95, 0.086); } .rt1 { background-color: rgba(61, 133, 198, 0.086); } .rt2 { background-color: rgba(129, 178, 154, 0.086); }
+.rt3 { background-color: rgba(155, 114, 207, 0.086); } .rt4 { background-color: rgba(242, 204, 143, 0.086); } .rt5 { background-color: rgba(95, 168, 163, 0.086); }
 
 /* comparação de dois jogadores */
 .compara { background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 18px 22px; margin-bottom: 22px; }
@@ -326,7 +328,7 @@
 .cmp-lado > .t { margin: 0 12px; }
 .cmp-meio { width: 130px; }
 .cmp-linha { flex-direction: row; align-items: center; height: 34px; border-top-width: 1px; border-top-color: var(--linha); }
-.cmp-v { flex-grow: 1; flex-basis: 0; font-size: 18px; -unity-font-style: bold; }
+.cmp-v { flex-grow: 1; flex-basis: 0; font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .cmp-v.a { -unity-text-align: middle-right; padding-right: 20px; }
 .cmp-v.b { -unity-text-align: middle-left; padding-left: 20px; }
 .cmp-rot { width: 130px; font-size: 14px; color: var(--suave); -unity-text-align: middle-center; }
@@ -334,11 +336,11 @@
 /* prévia do efeito no time (mercado) */
 .previa { flex-direction: row; align-items: center; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 14px 18px; margin-bottom: 16px; min-height: 64px; }
 .previa > .t { white-space: normal; font-size: 16px; flex-grow: 1; flex-shrink: 1; }
-.previa.bom { border-color: rgba(76, 195, 138, 0.55); }
+.previa.bom { border-color: rgba(76, 195, 138, 0.282); }
 
 /* cabeçalhos de coluna clicáveis (ordenar) */
 .cab-ordem { flex-direction: row; align-items: center; border-radius: 3px; padding: 2px 4px; margin-left: -4px; }
-.cab-ordem:hover { background-color: rgba(255, 255, 255, 0.06); }
+.cab-ordem:hover { background-color: rgba(255, 255, 255, 0.007); }
 .cab-ordem > .ic { margin-left: 3px; color: var(--destaque); }
 .cab-ordem.ativo > .t { color: var(--texto); }
 
@@ -349,10 +351,10 @@
 
 /* pós-partida */
 .hero { flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 26px 32px; margin-bottom: 18px; }
-.hero.venceu { border-color: rgba(76, 195, 138, 0.6); }
-.hero.perdeu { border-color: rgba(239, 107, 99, 0.6); }
-.hero-res { font-size: 14px; -unity-font-style: bold; letter-spacing: 1.5px; }
-.hero-placar { font-size: 58px; -unity-font-style: bold; }
+.hero.venceu { border-color: rgba(76, 195, 138, 0.337); }
+.hero.perdeu { border-color: rgba(239, 107, 99, 0.337); }
+.hero-res { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1.5px; }
+.hero-placar { font-size: 58px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .hero-meio { align-items: center; }
 .c-j.largo { width: 320px; }
 .hero-res { margin-bottom: 4px; }
@@ -363,17 +365,17 @@
 
 /* chance de vitória e dicas de teclado na pré-partida */
 .pm-chance { position: absolute; left: 50%; margin-left: -260px; width: 520px; top: 545px; align-items: center; }
-.pm-chance-tit { font-size: 13px; -unity-font-style: bold; color: var(--suave); letter-spacing: 2px; }
-.pm-chance-num { font-size: 44px; -unity-font-style: bold; -unity-text-align: middle-center; }
-.pm-chance-barra { flex-direction: row; height: 10px; align-self: stretch; border-radius: 3px; overflow: hidden; margin: 8px 0 10px 0; background-color: rgba(255, 255, 255, 0.10); }
+.pm-chance-tit { font-size: 13px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); letter-spacing: 2px; }
+.pm-chance-num { font-size: 44px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
+.pm-chance-barra { flex-direction: row; height: 10px; align-self: stretch; border-radius: 3px; overflow: hidden; margin: 8px 0 10px 0; background-color: rgba(255, 255, 255, 0.014); }
 .pm-chance-a { background-color: var(--laranja); }
 .pm-chance-b { background-color: var(--azul); }
 .pm-chance-sub { font-size: 14px; color: var(--suave); -unity-text-align: middle-center; white-space: normal; }
 .pm-dicas { position: absolute; left: 40px; bottom: 20px; flex-direction: row; }
 .pm-dicas-item { flex-direction: row; align-items: center; margin-right: 26px; }
-.pm-dicas-item > .t { font-size: 14px; color: #6b7396; letter-spacing: 1px; }
-.tecla { border-width: 1px; border-color: rgba(255, 255, 255, 0.18); border-radius: 3px; padding: 0 6px; margin-right: 8px; }
-.tecla > .t { font-size: 12px; color: #8089ad; }
+.pm-dicas-item > .t { font-size: 14px; color: #565c66; letter-spacing: 1px; }
+.tecla { border-width: 1px; border-color: rgba(255, 255, 255, 0.035); border-radius: 3px; padding: 0 6px; margin-right: 8px; }
+.tecla > .t { font-size: 12px; color: #6f7681; }
 
 /* ======================================================================================================
    Calendário, campeonatos, treino, scouts, preparação da série, Gaming House e finanças (decisões 0012 a 0016)
@@ -394,15 +396,15 @@
 
 /* cabeçalho: semana e ação principal */
 .chip-semana { flex-direction: row; align-items: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 8px 16px; margin-right: 14px; }
-.chip-semana > .t { font-size: 16px; -unity-font-style: bold; }
+.chip-semana > .t { font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .chip-semana > .ic { margin-right: 8px; color: var(--suave); }
 .topo-acao { margin-right: 14px; }
 
 /* compromisso (painel) */
 .compromisso { flex-direction: row; align-items: center; justify-content: space-between; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 20px 26px; margin-bottom: 22px; }
 .compromisso.agora { border-color: var(--destaque); }
-.compromisso-tit { font-size: 13px; -unity-font-style: bold; letter-spacing: 1.5px; color: var(--apagado); margin-bottom: 4px; }
-.compromisso-nome { font-size: 24px; -unity-font-style: bold; }
+.compromisso-tit { font-size: 13px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1.5px; color: var(--apagado); margin-bottom: 4px; }
+.compromisso-nome { font-size: 24px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .compromisso-sub { font-size: 15px; color: var(--suave); margin-top: 3px; }
 .compromisso-acoes { flex-direction: row; }
 .compromisso-acoes > .btn { margin-left: 10px; }
@@ -411,14 +413,14 @@
 .diario { background-color: var(--cartao2); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 6px 18px; }
 .diario-linha { flex-direction: row; align-items: center; height: 42px; border-top-width: 1px; border-top-color: var(--linha); overflow: hidden; }
 .diario-linha.primeiro { border-top-width: 0; }
-.diario-linha.clicavel-l:hover { background-color: rgba(150, 170, 255, 0.06); }
+.diario-linha.clicavel-l:hover { background-color: rgba(255, 255, 255, 0.007); }
 .diario-linha > .t { font-size: 15px; }
 
 /* faixa das 52 semanas */
 .faixa-semanas { flex-direction: row; margin-right: -3px; margin-bottom: 8px; }
-.sem-cel { flex-grow: 1; flex-basis: 0; height: 26px; margin-right: 3px; border-radius: 3px; background-color: rgba(255, 255, 255, 0.07); border-width: 1px; border-color: rgba(0, 0, 0, 0); }
-.sem-cel.evento { background-color: rgba(255, 255, 255, 0.14); }
-.sem-cel.meu { background-color: rgba(240, 170, 70, 0.55); }
+.sem-cel { flex-grow: 1; flex-basis: 0; height: 26px; margin-right: 3px; border-radius: 3px; background-color: rgba(255, 255, 255, 0.008); border-width: 1px; border-color: rgba(0, 0, 0, 0); }
+.sem-cel.evento { background-color: rgba(255, 255, 255, 0.023); }
+.sem-cel.meu { background-color: rgba(240, 170, 70, 0.282); }
 .sem-cel.passada { opacity: 0.45; }
 .sem-cel.atual { border-color: var(--destaque); }
 .legenda-faixa { flex-direction: row; margin-bottom: 20px; }
@@ -426,8 +428,8 @@
 
 /* lista de campeonatos */
 .cal-linha { flex-direction: row; align-items: center; height: 66px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 10px; }
-.cal-linha:hover { background-color: rgba(255, 255, 255, 0.05); }
-.cal-linha.agora { background-color: rgba(91, 123, 255, 0.10); }
+.cal-linha:hover { background-color: rgba(255, 255, 255, 0.005); }
+.cal-linha.agora { background-color: rgba(255, 255, 255, 0.014); }
 .cal-sem { width: 120px; }
 .cal-nome { width: 330px; }
 .cal-fmt { width: 190px; }
@@ -435,14 +437,14 @@
 .cal-pos { width: 140px; }
 
 /* detalhe de campeonato */
-.rodada-tit { font-size: 15px; -unity-font-style: bold; color: var(--suave); margin: 18px 0 8px 0; }
+.rodada-tit { font-size: 15px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); margin: 18px 0 8px 0; }
 .cf-linha { flex-direction: row; align-items: center; height: 42px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 12px; }
-.cf-linha.meu { background-color: rgba(240, 170, 70, 0.10); }
+.cf-linha.meu { background-color: rgba(240, 170, 70, 0.014); }
 .cf-a { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-right; }
 .cf-b { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-left; }
-.cf-placar { width: 90px; -unity-text-align: middle-center; -unity-font-style: bold; font-size: 17px; }
+.cf-placar { width: 90px; -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); font-size: 17px; }
 .rk-linha { flex-direction: row; align-items: center; height: 38px; border-bottom-width: 1px; border-bottom-color: var(--linha); padding: 0 12px; }
-.rk-linha.meu { background-color: rgba(240, 170, 70, 0.10); }
+.rk-linha.meu { background-color: rgba(240, 170, 70, 0.014); }
 .rk-pos { width: 50px; color: var(--suave); }
 .rk-nome { flex-grow: 1; }
 .rk-pts { width: 100px; -unity-text-align: middle-right; }
@@ -452,20 +454,20 @@
 
 /* controles pequenos */
 .btn-mini { flex-direction: row; align-items: center; justify-content: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 5px 12px; }
-.btn-mini > .t { font-size: 14px; -unity-font-style: bold; }
-.btn-mini:hover { background-color: rgba(255, 255, 255, 0.09); }
-.btn-mini.on { border-color: var(--destaque); background-color: rgba(91, 123, 255, 0.16); }
-.btn-mini.desligado > .t { color: #6b7396; }
+.btn-mini > .t { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.btn-mini:hover { background-color: rgba(255, 255, 255, 0.012); }
+.btn-mini.on { border-color: var(--destaque); background-color: rgba(255, 255, 255, 0.029); }
+.btn-mini.desligado > .t { color: #565c66; }
 .btn-mini.desligado:hover { background-color: var(--cartao); }
 .stepper { flex-direction: row; align-items: center; }
-.stepper > .t { width: 34px; font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.stepper > .t { width: 34px; font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .stepper > .btn-ic { margin-right: 0; width: 34px; padding: 6px 0; }
 
 /* treino */
 .treino-topo { flex-direction: row; margin-bottom: 20px; margin-right: -14px; }
 .treino-card { flex-grow: 1; flex-basis: 0; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 16px 18px; margin-right: 14px; }
 .treino-card.bloq { opacity: 0.55; }
-.treino-card-tit { font-size: 13px; -unity-font-style: bold; letter-spacing: 1.2px; color: var(--apagado); margin-bottom: 8px; }
+.treino-card-tit { font-size: 13px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1.2px; color: var(--apagado); margin-bottom: 8px; }
 .efeito-time { flex-direction: row; align-items: center; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 14px 18px; margin-top: 16px; }
 .efeito-time > .t { white-space: normal; font-size: 16px; }
 .presets { flex-direction: row; margin-bottom: 14px; }
@@ -479,37 +481,37 @@
 .intel-card { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 18px 20px; margin-bottom: 14px; }
 .intel-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .intel-nivel { flex-direction: row; }
-.intel-nivel > .pip { width: 22px; height: 8px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.10); margin-left: 4px; }
+.intel-nivel > .pip { width: 22px; height: 8px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.014); margin-left: 4px; }
 .intel-nivel > .pip.on { background-color: var(--destaque); }
 .mb-linha { flex-direction: row; align-items: center; height: 28px; }
 .mb-nome { width: 110px; font-size: 14px; color: var(--suave); }
-.mb-num { width: 36px; font-size: 14px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.mb-num { width: 36px; font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-right; }
 .oculto-txt { color: var(--apagado); font-size: 15px; }
 
 /* preparação da série: veto de mapas e estratégia */
 .pool { flex-direction: row; margin-right: -12px; margin-bottom: 18px; }
 .mapa-card { flex-grow: 1; flex-basis: 0; background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 12px; margin-right: 12px; min-height: 170px; }
-.mapa-card.livre:hover { background-color: rgba(255, 255, 255, 0.09); }
+.mapa-card.livre:hover { background-color: rgba(255, 255, 255, 0.012); }
 .mapa-card.clicavel { border-color: var(--suave); }
 .mapa-card.banido { opacity: 0.4; }
-.mapa-card.escolha-nos { border-color: var(--laranja); background-color: rgba(240, 170, 70, 0.08); }
-.mapa-card.escolha-eles { border-color: var(--azul); background-color: rgba(110, 180, 255, 0.08); }
+.mapa-card.escolha-nos { border-color: var(--laranja); background-color: rgba(240, 170, 70, 0.01); }
+.mapa-card.escolha-eles { border-color: var(--azul); background-color: rgba(110, 180, 255, 0.01); }
 .mapa-card.decisivo { border-color: var(--destaque); }
-.mapa-nome { font-size: 18px; -unity-font-style: bold; margin-bottom: 2px; }
+.mapa-nome { font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); margin-bottom: 2px; }
 .mapa-tag { font-size: 12px; color: var(--apagado); margin-bottom: 10px; }
 .mapa-af { flex-direction: row; align-items: center; height: 22px; }
 .mapa-af > .t { font-size: 13px; color: var(--suave); width: 38px; }
 .mapa-af > .barra { height: 6px; }
-.mapa-af > .num { width: 30px; font-size: 13px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.mapa-af > .num { width: 30px; font-size: 13px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-right; }
 .mapa-estado { margin-top: 10px; }
 .ordem-mapas { flex-direction: row; margin-bottom: 18px; }
 .ordem-mapas > .selo { margin-right: 8px; }
 .estilos { margin-bottom: 14px; }
 .estilo-card { background-color: var(--cartao); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 12px 16px; margin-bottom: 8px; }
-.estilo-card:hover { background-color: rgba(255, 255, 255, 0.08); }
-.estilo-card.sel { border-color: var(--destaque); background-color: rgba(91, 123, 255, 0.14); }
+.estilo-card:hover { background-color: rgba(255, 255, 255, 0.01); }
+.estilo-card.sel { border-color: var(--destaque); background-color: rgba(255, 255, 255, 0.023); }
 .estilo-topo { flex-direction: row; align-items: center; justify-content: space-between; }
-.estilo-nome { font-size: 17px; -unity-font-style: bold; }
+.estilo-nome { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .estilo-desc { font-size: 14px; color: var(--suave); white-space: normal; margin-top: 3px; }
 .resumo-serie { flex-direction: row; margin-right: -14px; margin-bottom: 18px; }
 .resumo-serie > .resumo { margin-right: 14px; }
@@ -520,7 +522,7 @@
 .gh-nivel.feito { opacity: 0.75; }
 .gh-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .gh-num { width: 40px; height: 40px; border-radius: 20px; background-color: var(--item); align-items: center; justify-content: center; margin-right: 14px; }
-.gh-num > .t { font-size: 18px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.gh-num > .t { font-size: 18px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .gh-nivel.atual .gh-num { background-color: var(--destaque); }
 .gh-nivel.atual .gh-num > .t { color: #ffffff; }
 .gh-vant { flex-direction: row; align-items: center; height: 28px; }
@@ -537,7 +539,7 @@
 .fluxo { flex-direction: row; align-items: center; height: 36px; }
 .fluxo > .t { font-size: 16px; }
 .fluxo-rot { width: 260px; }
-.fluxo-val { width: 130px; margin-right: 22px; -unity-text-align: middle-right; -unity-font-style: bold; }
+.fluxo-val { width: 130px; margin-right: 22px; -unity-text-align: middle-right; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .resumo-valor.menor { font-size: 21px; white-space: normal; margin-top: 12px; }
 
 
@@ -546,18 +548,18 @@
    ====================================================================================================== */
 .hub { flex-direction: row; margin-right: -16px; margin-bottom: 30px; }
 .hub-card { flex-grow: 1; flex-basis: 0; height: 340px; background-color: var(--cartao); -unity-background-scale-mode: scale-and-crop; border-width: 1px; border-color: var(--linha2); border-radius: 6px; margin-right: 16px; overflow: hidden; transition-property: border-color, translate; transition-duration: 160ms; }
-.hub-card:hover { border-color: rgba(127, 152, 255, 0.7); translate: 0 -3px; }
+.hub-card:hover { border-color: rgba(255, 255, 255, 0.149); translate: 0 -3px; }
 .hub-card.destaque { border-width: 2px; border-color: var(--destaque); }
 .hub-card.destaque:hover { border-color: var(--destaque-claro); }
 .hub-veu { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .hub-card .ic { color: #ffffff; }
-.hub-selo { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 30px; border-radius: 4px; background-color: rgba(10, 14, 32, 0.85); align-items: center; justify-content: center; padding: 0 9px; }
-.hub-selo > .t { color: #ffffff; font-size: 16px; -unity-font-style: bold; -unity-text-align: middle-center; }
+.hub-selo { position: absolute; top: 12px; right: 12px; min-width: 34px; height: 30px; border-radius: 4px; background-color: rgba(13, 15, 19, 0.85); align-items: center; justify-content: center; padding: 0 9px; }
+.hub-selo > .t { color: #ffffff; font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-center; }
 .hub-corpo { flex-grow: 1; justify-content: flex-end; padding: 0 20px 20px 20px; }
-.hub-tit { color: #ffffff; font-size: 25px; -unity-font-style: bold; white-space: normal; letter-spacing: 1px; }
-.hub-sub { color: #c9cfea; font-size: 15px; white-space: normal; margin-top: 4px; }
+.hub-tit { color: #ffffff; font-size: 25px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); white-space: normal; letter-spacing: 1px; }
+.hub-sub { color: #b9bec7; font-size: 15px; white-space: normal; margin-top: 4px; }
 .hub-btn { flex-direction: row; align-items: center; justify-content: space-between; margin-top: 16px; background-color: var(--destaque); border-radius: 4px; padding: 12px 16px; }
-.hub-btn > .t { color: #ffffff; font-size: 16px; -unity-font-style: bold; letter-spacing: 1px; }
+.hub-btn > .t { color: #ffffff; font-size: 16px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1px; }
 .hub-btn > .ic { color: #ffffff; }
 .hub-btn:hover { background-color: var(--destaque-claro); }
 
@@ -571,37 +573,37 @@
 .cal-topo { flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 .cal-nav { flex-direction: row; align-items: center; }
 .cal-nav > .btn-ic { margin-right: 0; }
-.cal-mes { font-size: 28px; -unity-font-style: bold; min-width: 250px; -unity-text-align: middle-center; }
+.cal-mes { font-size: 28px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); min-width: 250px; -unity-text-align: middle-center; }
 .gira-esq > .ic, .gira-dir > .ic { rotate: -90deg; }   /* a seta para cima vira esquerda; a para baixo vira direita */
 .cal-grade { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; overflow: hidden; }
 .cal-dias-sem { flex-direction: row; height: 38px; border-bottom-width: 1px; border-bottom-color: var(--linha); background-color: var(--cartao2); }
-.cal-dias-sem > .t { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; color: var(--apagado); font-size: 13px; -unity-font-style: bold; letter-spacing: 1px; }
+.cal-dias-sem > .t { flex-grow: 1; flex-basis: 0; -unity-text-align: middle-center; color: var(--apagado); font-size: 13px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); letter-spacing: 1px; }
 .cal-semana { flex-direction: row; height: 96px; border-bottom-width: 1px; border-bottom-color: var(--linha); border-left-width: 3px; border-left-color: rgba(0, 0, 0, 0); }
 .cal-semana.atual { border-left-color: var(--destaque); }
-.cal-semana.atual .cal-dia { background-color: rgba(91, 123, 255, 0.07); }
-.cal-semana.atual .cal-dia.camp { background-color: rgba(91, 123, 255, 0.12); }
+.cal-semana.atual .cal-dia { background-color: rgba(255, 255, 255, 0.008); }
+.cal-semana.atual .cal-dia.camp { background-color: rgba(255, 255, 255, 0.018); }
 .cal-dia { flex-grow: 1; flex-basis: 0; padding: 6px 7px; border-right-width: 1px; border-right-color: var(--linha); overflow: hidden; }
 .cal-dia.fora { opacity: 0.32; }
 .cal-dia.passada { opacity: 0.62; }
-.cal-dia.camp { background-color: rgba(240, 170, 70, 0.07); }
-.cal-num { font-size: 14px; -unity-font-style: bold; color: var(--suave); margin-right: 6px; }
-.cal-tag { font-size: 11px; color: var(--laranja); -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+.cal-dia.camp { background-color: rgba(240, 170, 70, 0.008); }
+.cal-num { font-size: 14px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: var(--suave); margin-right: 6px; }
+.cal-tag { font-size: 11px; color: var(--laranja); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
 .cal-chip { flex-direction: row; align-items: center; border-radius: 3px; padding: 2px 7px; margin-top: 4px; border-width: 1px; border-color: rgba(0, 0, 0, 0); }
-.cal-chip > .t { font-size: 12px; -unity-font-style: bold; overflow: hidden; text-overflow: ellipsis; }
-.cal-chip.pend { background-color: rgba(240, 170, 70, 0.20); border-color: var(--laranja); }
+.cal-chip > .t { font-size: 12px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); overflow: hidden; text-overflow: ellipsis; }
+.cal-chip.pend { background-color: rgba(240, 170, 70, 0.042); border-color: var(--laranja); }
 .cal-chip.pend > .t { color: var(--laranja); }
-.cal-chip.venceu { background-color: rgba(76, 195, 138, 0.20); }
+.cal-chip.venceu { background-color: rgba(76, 195, 138, 0.042); }
 .cal-chip.venceu > .t { color: var(--verde); }
-.cal-chip.perdeu { background-color: rgba(239, 107, 99, 0.20); }
+.cal-chip.perdeu { background-color: rgba(239, 107, 99, 0.042); }
 .cal-chip.perdeu > .t { color: var(--vermelho); }
-.cal-chip.camp-leg { background-color: rgba(240, 170, 70, 0.07); border-color: rgba(240, 170, 70, 0.25); }
+.cal-chip.camp-leg { background-color: rgba(240, 170, 70, 0.008); border-color: rgba(240, 170, 70, 0.062); }
 .cal-chip.camp-leg > .t { color: var(--suave); }
 .legenda-cal { flex-direction: row; align-items: center; flex-wrap: wrap; margin-top: 12px; }
 .legenda-cal > .cal-chip { margin-top: 0; margin-right: 10px; }
 .legenda-cal > .t { font-size: 13px; color: var(--apagado); }
 .cal-lateral { width: 310px; flex-shrink: 0; margin-left: 20px; background-color: var(--cartao2); border-width: 1px; border-color: var(--linha2); border-radius: 4px; padding: 16px 16px 10px 16px; }
 .prox-item { background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 3px; padding: 10px 12px; margin-bottom: 8px; }
-.prox-item:hover { background-color: rgba(255, 255, 255, 0.09); }
+.prox-item:hover { background-color: rgba(255, 255, 255, 0.012); }
 .prox-resumo { margin-top: 6px; padding-top: 10px; border-top-width: 1px; border-top-color: var(--linha); }
 
 
@@ -614,7 +616,7 @@
 .card-acoes > .btn-mini { margin-right: 6px; }
 .btn-mini.perigo > .t { color: var(--vermelho); }
 .btn-mini.perigo > .ic { color: var(--vermelho); }
-.btn-mini.perigo.desligado > .t { color: #6b7396; }
+.btn-mini.perigo.desligado > .t { color: #565c66; }
 
 
 /* ======================================================================================================
@@ -634,7 +636,7 @@
    Telas enxutas (decisão 0023): conclusão no topo do treino, níveis fechados da Gaming House, chance da série
    ====================================================================================================== */
 .efeito-time { margin-top: 0; margin-bottom: 16px; border-left-width: 4px; }
-.efeito-time > .t { font-size: 17px; -unity-font-style: bold; }
+.efeito-time > .t { font-size: 17px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .efeito-time.bom { border-left-color: var(--verde); }
 .efeito-time.neutro { border-left-color: var(--azul); }
 .efeito-time.ruim { border-left-color: var(--vermelho); }
@@ -643,37 +645,214 @@
 .gh-nivel.fechado > .gh-topo { margin-bottom: 0; }
 .gh-nivel.fechado .gh-num { width: 32px; height: 32px; border-radius: 16px; }
 .mapa-card { min-height: 0; }
-.serie-chance { font-size: 44px; -unity-font-style: bold; -unity-text-align: middle-right; }
+.serie-chance { font-size: 44px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); -unity-text-align: middle-right; }
 
 /* ---- treino do jogador (decisão 0024): foto grande à direita, números à esquerda, tabela por lado embaixo ---- */
 .c-lado { width: 110px; }
 .tj-nav { flex-direction: row; flex-wrap: wrap; margin-bottom: 14px; }
 .tj-nav > .btn-mini { margin-right: 8px; margin-bottom: 6px; }
-.tj-hero { flex-shrink: 0; height: 580px; background-color: rgba(8, 12, 28, 0.6); border-width: 1px; border-color: var(--linha2); border-radius: 4px; overflow: hidden; }
+.tj-hero { flex-shrink: 0; height: 580px; background-color: rgba(255, 255, 255, 0.002); border-width: 1px; border-color: var(--linha2); border-radius: 4px; overflow: hidden; }
 .tj-foto { position: absolute; right: 0; top: 0; bottom: 0; width: 46%; -unity-background-scale-mode: scale-and-crop; }
 .tj-veu { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
 .tj-lado-foto { position: absolute; right: 18px; top: 18px; }
 .tj-info { position: absolute; left: 34px; top: 26px; width: 44%; }
 .tj-pre { font-size: 15px; color: var(--suave); letter-spacing: 1px; }
-.tj-nome { font-size: 58px; -unity-font-style: bold; color: #ffffff; letter-spacing: 1px; margin-top: 2px; }
+.tj-nome { font-size: 58px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); color: #ffffff; letter-spacing: 1px; margin-top: 2px; }
 .tj-sub { width: 200px; height: 2px; background-color: var(--destaque); margin-top: 12px; margin-bottom: 14px; }
 .tj-nums { flex-direction: row; }
 .tj-num { margin-right: 36px; }
-.tj-num-v { font-size: 38px; -unity-font-style: bold; }
+.tj-num-v { font-size: 38px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .tj-dado { flex-direction: row; align-items: center; margin-bottom: 7px; }
 .tj-dado-rot { width: 100px; }
-.tj-faixa { position: absolute; left: 0; right: 0; bottom: 0; background-color: rgba(6, 9, 22, 0.78); border-top-width: 1px; border-top-color: var(--linha2); }
+.tj-faixa { position: absolute; left: 0; right: 0; bottom: 0; background-color: rgba(9, 11, 14, 0.84); border-top-width: 1px; border-top-color: var(--linha2); }
 .tj-linha-tab { flex-direction: row; align-items: center; height: 54px; padding: 0 28px; border-bottom-width: 1px; border-bottom-color: var(--linha); }
 .tj-linha-tab.cab { height: 36px; }
-.tj-linha-tab.cab .t { font-size: 13px; color: var(--apagado); -unity-font-style: normal; }
-.tj-linha-tab:hover { background-color: rgba(255, 255, 255, 0.04); }
+.tj-linha-tab.cab .t { font-size: 13px; color: var(--apagado); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
+.tj-linha-tab:hover { background-color: rgba(255, 255, 255, 0.004); }
 .tj-linha-tab.cab:hover { background-color: rgba(0, 0, 0, 0); }
 .tj-c-rot { width: 210px; }
 .tj-c-num { width: 118px; justify-content: center; }
-.tj-valor { font-size: 22px; -unity-font-style: bold; }
+.tj-valor { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
 .tj-rot-lado { justify-content: center; }
 .tj-plano-linha { flex-direction: row; align-items: center; margin-bottom: 8px; }
 .tj-plano-rot { width: 90px; }
 .midia-lado { position: absolute; left: 8px; bottom: 8px; }
 .tj-plano { flex-grow: 0; flex-basis: auto; flex-shrink: 0; margin-right: 0; }
 .efeito-time { flex-shrink: 0; }
+
+
+/* ======================================================================================================
+   Refino "mesa de transmissão" (decisão 0025). Esta camada vem por último e vale sobre as regras acima.
+   ====================================================================================================== */
+
+/* ---- as três vozes tipográficas ---- */
+.titulo-h, .h2, .hub-tit, .compromisso-nome, .tj-nome, .hero-placar, .serie-chance, .escala-forca, .resumo-valor, .pm-nome, .cal-mes,
+.info-nome, .slot-nome, .tj-num-v, .pm-chance-num, .ovr > .t, .lib-nome, .mapa-nome, .estilo-nome, .nivel > .t, .gh-num > .t, .crest > .t, .brasao > .t, .atalho-rot {
+    -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf");
+}
+.attr-num, .tj-valor, .c-n > .t, .cf-placar, .rk-pts, .fluxo-val, .cont > .t, .mb-num, .mapa-af > .num, .stepper > .t, .slot-ovr, .geral, .dado-val, .cal-num {
+    -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf");
+}
+.c-n.cab > .t { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
+.titulo-h { font-size: 40px; }
+.h2 { font-size: 27px; margin: 36px 0 14px 0; }
+.hub-tit { font-size: 36px; letter-spacing: 0.5px; }
+.compromisso-nome { font-size: 31px; }
+.tj-nome { font-size: 76px; letter-spacing: 0; }
+.hero-placar { font-size: 76px; }
+.serie-chance { font-size: 60px; }
+.escala-forca { font-size: 36px; }
+.resumo-valor { font-size: 38px; }
+.pm-nome { font-size: 48px; }
+.cal-mes { font-size: 36px; }
+.info-nome { font-size: 25px; }
+.slot-nome { font-size: 23px; }
+.tj-num-v { font-size: 46px; }
+.pm-chance-num { font-size: 58px; }
+.mapa-nome, .estilo-nome, .lib-nome { font-size: 22px; }
+.nivel > .t { font-size: 36px; }
+.gh-num > .t { font-size: 22px; }
+.crest > .t { font-size: 104px; }
+.brasao > .t { font-size: 27px; }
+.attr-num { font-size: 15px; width: 34px; }
+.geral, .slot-ovr { font-size: 20px; }
+.tj-valor { font-size: 21px; }
+.cal-num { font-size: 13px; }
+
+/* rótulos pequenos em caixa-alta */
+.compromisso-tit, .treino-card-tit, .cartao-tit, .pm-chance-tit, .hero-res, .dado-rot, .rodada-tit {
+    font-size: 11px; letter-spacing: 1.6px; color: var(--apagado);
+    -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf");
+}
+.tr.th .t, .tj-linha-tab.cab .t { font-size: 12px; letter-spacing: 0.8px; color: var(--apagado); }
+
+/* ---- estrutura: o app ocupa a tela, sem janela dentro de moldura ---- */
+.tela-raiz { padding: 0; }
+.janela { background-color: rgba(0, 0, 0, 0); border-width: 0; border-radius: 0; padding: 0; }
+.menu { width: 252px; background-color: rgba(255, 255, 255, 0.002); border-width: 0; border-right-width: 1px; border-right-color: var(--linha); border-radius: 0; padding: 24px 14px 16px 14px; margin-right: 0; }
+.clube { padding: 0 8px 28px 8px; }
+.brasao { width: 40px; height: 40px; border-radius: 3px; }
+.item { height: 40px; padding: 0 10px; border-left-width: 0; border-radius: 3px; margin-bottom: 2px; }
+.item > .t { font-size: 16px; color: var(--suave); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
+.item > .ic { margin-right: 12px; color: var(--apagado); }
+.item:hover > .t { color: var(--texto); }
+.item.ativo { background-color: rgba(255, 255, 255, 0.009); }
+.item.ativo > .t { color: #ffffff; }
+.item.ativo > .ic { color: #ffffff; }
+.cont, .item.ativo .cont { background-color: rgba(0, 0, 0, 0); padding: 0; min-width: 0; }
+.cont > .t { font-size: 13px; color: var(--apagado); }
+.sep { margin: 12px 10px; }
+.proxima { background-color: rgba(255, 255, 255, 0.004); border-color: rgba(0, 0, 0, 0); }
+.topo { height: 88px; padding: 0 32px; }
+.corpo { padding: 30px 32px 40px 32px; }
+.dado-topo { align-items: flex-end; margin-left: 38px; }
+.dado-val { font-size: 21px; color: var(--texto); margin-top: 2px; }
+
+/* ---- botões: uma ação principal clara; o resto é contorno ---- */
+.btn { background-color: rgba(0, 0, 0, 0); border-color: var(--linha2); border-radius: 3px; padding: 9px 18px; }
+.btn > .t { font-size: 15px; }
+.btn:hover { background-color: rgba(255, 255, 255, 0.008); border-color: rgba(255, 255, 255, 0.086); }
+.btn.destaque, .btn-mini.destaque { background-color: #eceef1; border-color: #eceef1; }
+.btn.destaque > .t, .btn.destaque > .ic, .btn-mini.destaque > .t, .btn-mini.destaque > .ic { color: #0b0d10; }
+.btn.destaque:hover, .btn-mini.destaque:hover { background-color: #ffffff; border-color: #ffffff; }
+.btn.cheio > .t { font-size: 16px; }
+.btn.desligado, .btn.desligado:hover { background-color: rgba(255, 255, 255, 0.002); border-color: rgba(255, 255, 255, 0.007); }
+.btn-mini { background-color: rgba(0, 0, 0, 0); border-color: var(--linha2); border-radius: 3px; padding: 4px 11px; }
+.btn-mini > .t { font-size: 14px; color: var(--suave); -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
+.btn-mini > .ic { color: var(--suave); }
+.btn-mini:hover { background-color: rgba(255, 255, 255, 0.008); }
+.btn-mini:hover > .t, .btn-mini:hover > .ic { color: var(--texto); }
+.btn-mini.on { border-color: rgba(255, 255, 255, 0.282); background-color: rgba(255, 255, 255, 0.014); }
+.btn-mini.on > .t, .btn-mini.on > .ic { color: #ffffff; }
+.btn-mini.destaque > .t { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.btn-mini.desligado:hover { background-color: rgba(0, 0, 0, 0); }
+.btn-mini.desligado > .t, .btn-mini.desligado:hover > .t, .btn-mini.desligado > .ic { color: #565c66; }
+.btn-mini.perigo > .t, .btn-mini.perigo > .ic { color: var(--vermelho); }
+.btn-ic.on { border-color: rgba(255, 255, 255, 0.282); background-color: rgba(255, 255, 255, 0.014); }
+.aba > .t { -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-Medium.ttf"); }
+.aba.ativo { border-bottom-color: #eceef1; }
+
+/* ---- selos e barras ---- */
+.selo { padding: 3px 8px; border-radius: 2px; background-color: rgba(255, 255, 255, 0.008); }
+.selo > .t { font-size: 11px; letter-spacing: 1px; }
+.selo.verde-bg { background-color: rgba(75, 191, 140, 0.026); } .selo.laranja-bg { background-color: rgba(240, 166, 64, 0.026); } .selo.vermelho-bg { background-color: rgba(236, 106, 95, 0.026); }
+.selo.azul-bg { background-color: rgba(98, 168, 238, 0.026); } .selo.azul-bg > .t { color: var(--azul); }
+.barra { height: 4px; border-radius: 2px; background-color: rgba(255, 255, 255, 0.012); }
+.barra.fina { height: 3px; border-radius: 2px; }
+.fill { border-radius: 2px; }
+
+/* ---- superfícies: preenchimento sem borda; borda só quando algo está escolhido ---- */
+.cartao, .card-j, .treino-card, .scout-card, .intel-card, .gh-nivel, .escala, .compara, .hero, .compromisso, .previa, .efeito-time, .resumo, .atalho,
+.cal-lateral, .avisos, .diario, .slot, .estilo-card, .mapa-card, .cal-grade, .prox-item, .tj-hero, .chip-semana, .aviso-btn { border-color: rgba(0, 0, 0, 0); }
+.card-j, .treino-card, .scout-card, .intel-card, .gh-nivel, .escala, .compara, .hero, .compromisso, .previa, .efeito-time, .cartao { background-color: rgba(255, 255, 255, 0.004); }
+.slot, .estilo-card, .mapa-card { background-color: rgba(255, 255, 255, 0.004); }
+.card-j.comp { border-color: rgba(255, 255, 255, 0.232); }
+.slot.sel, .estilo-card.sel { border-color: rgba(255, 255, 255, 0.282); background-color: rgba(255, 255, 255, 0.01); }
+.mapa-card.clicavel { border-color: rgba(255, 255, 255, 0.115); }
+.mapa-card.decisivo, .gh-nivel.atual, .compromisso.agora { border-color: rgba(255, 255, 255, 0.232); }
+.hero.venceu { border-color: rgba(75, 191, 140, 0.337); } .hero.perdeu { border-color: rgba(236, 106, 95, 0.337); }
+.previa.bom { border-color: rgba(75, 191, 140, 0.232); }
+.cal-semana.atual { border-left-color: #eceef1; }
+.cal-semana.atual .cal-dia { background-color: rgba(255, 255, 255, 0.004); }
+.cal-linha.agora { background-color: rgba(255, 255, 255, 0.005); }
+.card-j .midia, .retrato-fill { border-radius: 3px; }
+.ovr { width: 38px; height: 38px; border-radius: 3px; border-width: 0; background-color: rgba(9, 11, 14, 0.78); }
+.ovr > .t { font-size: 25px; }
+
+/* conclusões em faixa de cor suave, sem barra lateral */
+.efeito-time { border-left-width: 1px; }
+.efeito-time.bom { background-color: rgba(75, 191, 140, 0.014); border-color: rgba(75, 191, 140, 0.115); }
+.efeito-time.neutro { background-color: rgba(98, 168, 238, 0.014); border-color: rgba(98, 168, 238, 0.115); }
+.efeito-time.ruim { background-color: rgba(236, 106, 95, 0.014); border-color: rgba(236, 106, 95, 0.149); }
+.efeito-time > .t { font-size: 17px; }
+.banner { border-left-width: 0; }
+.toast { border-left-width: 1px; border-radius: 3px; }
+.toast.ok { border-color: rgba(75, 191, 140, 0.282); } .toast.erro { border-color: rgba(236, 106, 95, 0.337); }
+
+/* pessoas: sem cor de enfeite, o avatar é neutro */
+.av0, .av1, .av2, .av3, .av4, .av5 { background-color: rgba(255, 255, 255, 0.012); }
+.av > .t { color: var(--suave); }
+.rt0, .rt1, .rt2, .rt3, .rt4, .rt5 { background-color: rgba(255, 255, 255, 0.007); }
+
+/* ---- hub: arte limpa, título condensado, sem "pulo" no hover ---- */
+.hub-card { height: 360px; border-width: 1px; border-color: rgba(0, 0, 0, 0); border-radius: 4px; }
+.hub-card:hover { border-color: rgba(255, 255, 255, 0.149); translate: 0 0; }
+.hub-card.destaque { border-width: 1px; border-color: rgba(255, 255, 255, 0.232); }
+.hub-card.destaque:hover { border-color: #ffffff; }
+.hub-sub { font-size: 15px; color: #b9bec7; margin-top: 2px; }
+.hub-btn { background-color: #eceef1; border-radius: 3px; padding: 11px 16px; }
+.hub-card .hub-btn > .t, .hub-card .hub-btn > .ic { color: #0b0d10; }
+.hub-btn:hover { background-color: #ffffff; }
+
+/* ---- onde havia cor de marca, agora claro sobre escuro ---- */
+.nivel.tem, .gh-nivel.atual .gh-num { background-color: #eceef1; }
+.nivel.tem > .t, .gh-nivel.atual .gh-num > .t { color: #0b0d10; }
+.gh-nivel.atual .gh-ponto, .intel-nivel > .pip.on { background-color: #eceef1; }
+.forca { background-color: #eceef1; }
+.forca > .t, .forca > .ic { color: #0b0d10; }
+.comecar { background-color: #eceef1; }
+.comecar:hover { background-color: #ffffff; }
+.comecar > .t, .quad > .ic { color: #0b0d10; }
+.quad { border-color: #0b0d10; }
+.comecar.desligado { background-color: rgba(236, 238, 241, 0.049); }
+.cab-ordem > .ic { color: var(--texto); }
+
+/* ---- ficha do jogador ---- */
+.tj-hero { background-color: rgba(255, 255, 255, 0.002); }
+.tj-sub { width: 44px; height: 2px; background-color: rgba(255, 255, 255, 0.282); }
+.tj-pre { font-size: 15px; letter-spacing: 1.2px; }
+.tj-info { top: 30px; }
+.tj-linha-tab { height: 52px; }
+
+/* ---- acertos depois da primeira captura ---- */
+.selo > .t { letter-spacing: 0; font-size: 12px; }
+.aviso-linha { margin-bottom: 10px; }
+.retrato.foto, .tj-foto { background-size: cover; background-position: center top; -unity-background-scale-mode: scale-and-crop; }
+.tj-hero { background-color: rgba(0, 0, 0, 0); border-color: var(--linha2); }
+.mapa-card.clicavel { border-color: rgba(255, 255, 255, 0.12); }
+.compromisso.agora, .mapa-card.decisivo, .gh-nivel.atual { border-color: rgba(255, 255, 255, 0.14); }
+.seg { border-width: 1px; padding: 4px; border-radius: 4px; }
+.seg-b { border-width: 0; background-color: rgba(255, 255, 255, 0.012); border-radius: 3px; }
+.seg-b:hover { background-color: rgba(255, 255, 255, 0.03); }
+.comecar { border-width: 0; border-radius: 4px; }
+.pm-tag-nome { border-radius: 3px; }
