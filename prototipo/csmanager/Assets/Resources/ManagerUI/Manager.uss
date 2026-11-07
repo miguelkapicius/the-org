@@ -1171,3 +1171,37 @@
 .opc-chips-g { flex-direction: row; flex-shrink: 0; }
 .opc-chips-g > .btn-mini { margin-left: 8px; }
 .opc-chips > .btn-mini { margin-left: 8px; }
+
+/* ---- duas colunas (finanças, Gaming House, scouts) ---- */
+.cols2 { flex-direction: row; margin-right: -18px; margin-bottom: 0px; }
+.cols2 > * { flex-grow: 1; flex-basis: 0; margin-right: 18px; }
+.fin-pecas { flex-direction: row; margin-right: -14px; margin-bottom: 18px; }
+.fin-peca { flex-grow: 1; flex-basis: 0; margin-right: 14px; padding: 16px 18px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.004); border-width: 1px; border-color: rgba(255, 255, 255, 0.02); }
+.fin-valor { font-size: 30px; margin-top: 6px; margin-bottom: 4px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.fin-cartao { padding: 20px 22px; }
+.fin-fluxo { flex-direction: row; align-items: center; height: 40px; }
+.fin-fluxo.total { margin-top: 6px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.02); }
+.fin-rot { width: 190px; font-size: 15px; }
+.fin-trilho { flex-grow: 1; height: 6px; margin-left: 10px; margin-right: 14px; }
+.fin-barra { height: 6px; border-radius: 3px; }
+.fin-barra.pos { background-color: rgba(75, 191, 140, 0.337); }
+.fin-barra.neg { background-color: rgba(236, 106, 95, 0.337); }
+.fin-val { width: 100px; -unity-text-align: middle-right; font-size: 15px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.fin-emp { flex-direction: row; align-items: center; padding-top: 10px; padding-bottom: 10px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.02); }
+.fin-pegar { margin-top: 16px; margin-bottom: 8px; }
+.fin-lin { flex-direction: row; align-items: center; height: 40px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.02); }
+.fin-lin > .t { white-space: normal; }
+.gh-trilha { flex-direction: row; margin-bottom: 22px; padding: 18px 22px 14px 22px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.004); border-width: 1px; border-color: rgba(255, 255, 255, 0.02); }
+.gh-passo { flex-grow: 1; flex-basis: 0; }
+.gh-passo.ultimo { flex-grow: 0; flex-basis: auto; width: 120px; }
+.gh-passo-topo { flex-direction: row; align-items: center; }
+.gh-passo .gh-num { margin-right: 0px; }
+.gh-liga { flex-grow: 1; height: 2px; margin-left: 8px; margin-right: 8px; background-color: rgba(255, 255, 255, 0.02); }
+.gh-passo.feito .gh-liga { background-color: #eceef1; }
+.gh-passo.feito .gh-num { background-color: rgba(255, 255, 255, 0.04); }
+.gh-passo.atual .gh-num { background-color: #eceef1; }
+.gh-passo.atual .gh-num > .t { color: #0b0d10; }
+.gh-passo-nome { margin-top: 8px; font-size: 14px; color: var(--apagado); white-space: normal; }
+.gh-passo.atual .gh-passo-nome { color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/Barlow-SemiBold.ttf"); }
+.gh-passo.feito .gh-passo-nome { color: var(--suave); }
+.f22 { font-size: 22px; }

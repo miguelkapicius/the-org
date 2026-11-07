@@ -41,30 +41,34 @@ namespace CSM.ManagerUI
             ComDica(tsc, "A informação sobe com as semanas de estudo (1 semana: estilo; 3: mapas; 6: estratégia e destaque) e é limitada pela Gaming House (nível atual: até " + c.MaxIntel + "). Ela envelhece pela metade a cada temporada.");
             conteudo.Add(tsc);
             var alvos = AlvosDeEstudo();
+            var fileira = E("cols2");
             for (int i = 0; i < c.scouts.Count; i++)
             {
                 int k = i; var s = c.scouts[i];
                 var card = E("scout-card");
                 var topo = E("scout-topo");
                 topo.Add(L("Scout " + (i + 1), "f18", "negrito"));
-                string estado = s.tipo == 0 ? "Sem tarefa" : s.tipo == 1 ? "Procurando talentos no mercado" : "Estudando " + c.mundo.equipes[s.alvo].nome + " (" + (int)c.SemanasDeIntel(s.alvo) + " semana(s))";
-                topo.Add(L(estado, "f15", s.tipo == 0 ? "laranja" : "verde"));
+                int sem = s.tipo == 2 ? (int)c.SemanasDeIntel(s.alvo) : 0;
+                string estado = s.tipo == 0 ? "Sem tarefa: escolha uma" : s.tipo == 1 ? "Procurando talentos no mercado" : "Estudando " + c.mundo.equipes[s.alvo].nome + " · " + sem + (sem == 1 ? " semana" : " semanas");
+                var est = L(estado, "f14", s.tipo == 0 ? "laranja" : "verde", "quebra"); est.style.flexShrink = 1; est.style.unityTextAlign = TextAnchor.MiddleRight; est.style.marginLeft = 12;
+                topo.Add(est);
                 card.Add(topo);
                 var tarefas = E("tarefas");
-                tarefas.Add(BotaoMini("Livre", () => { c.DefinirScout(k, 0); Salvar(); Mostrar(); }, s.tipo == 0));
+                tarefas.Add(BotaoMini("Sem tarefa", () => { c.DefinirScout(k, 0); Salvar(); Mostrar(); }, s.tipo == 0));
                 tarefas.Add(BotaoMini("Procurar no mercado", () => { c.DefinirScout(k, 1); Salvar(); Mostrar(); }, s.tipo == 1, true, "search"));
                 bool abertoAqui = scoutAberto == k;
                 foreach (var a in alvos)
                 {
                     var aa = a; bool prox = c.Adversario == a, escolhido = s.tipo == 2 && s.alvo == a.id;
                     if (!prox && !escolhido && !abertoAqui) continue;   // só o próximo adversário e o time escolhido à vista
-                    string rot = (prox ? "Próximo adversário: " : "") + a.nome;
+                    string rot = (prox ? "Próximo: " : "") + a.nome;
                     tarefas.Add(BotaoMini(rot, () => { c.DefinirScout(k, 2, aa.id); scoutAberto = -1; Salvar(); Mostrar(); }, escolhido, true, "eye"));
                 }
                 tarefas.Add(BotaoMini(abertoAqui ? "Menos" : "Outro time…", () => { scoutAberto = abertoAqui ? -1 : k; Mostrar(); }));
                 card.Add(tarefas);
-                conteudo.Add(card);
+                fileira.Add(card);
             }
+            conteudo.Add(fileira);
 
             conteudo.Add(L("O que já sabemos", "h2"));
             var conhecidos = c.mundo.equipes.Where(e => !e.clube && (c.SemanasDeIntel(e.id) > 0 || e == c.Adversario)).OrderByDescending(e => e == c.Adversario).ThenByDescending(e => c.SemanasDeIntel(e.id)).Take(6).ToList();
@@ -83,7 +87,11 @@ namespace CSM.ManagerUI
             topo.Add(nome);
             var pips = E("intel-nivel");
             for (int i = 0; i < 3; i++) pips.Add(E("pip", i < n ? "on" : "off"));
-            var nv = E("linha-h"); nv.Add(L("Informação " + n + "/3", "f14", "suave")); nv.Add(pips); topo.Add(nv);
+            var nv = E("linha-h"); nv.Add(L("Informação " + n + "/3", "f14", "suave")); nv.Add(pips);
+            int estudando = c.scouts.FindIndex(sc => sc.tipo == 2 && sc.alvo == e.id), livre = c.scouts.FindIndex(sc => sc.tipo == 0);
+            if (estudando >= 0) { var em = L("EM ESTUDO", "f12", "verde"); em.style.marginLeft = 14; nv.Add(em); }
+            else if (n < 3 && livre >= 0) { var bt = BotaoMini("Estudar", () => { c.DefinirScout(livre, 2, e.id); Salvar(); Mostrar(); }, false, true, "eye"); bt.style.marginLeft = 14; nv.Add(bt); }
+            topo.Add(nv);
             card.Add(topo);
 
             if (n == 0) { card.Add(L("Sem informação: 1 semana de estudo revela o estilo de jogo.", "oculto-txt")); return card; }
