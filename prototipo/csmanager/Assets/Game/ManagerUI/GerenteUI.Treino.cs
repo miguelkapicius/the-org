@@ -27,6 +27,8 @@ namespace CSM.ManagerUI
 
         void TelaTreino()
         {
+            if (treinoJogador != null && c.elenco.Contains(treinoJogador)) { TelaTreinoJogador(treinoJogador); return; }
+            treinoJogador = null;
             // a conclusão primeiro (decisão 0023): o treino desta semana ajuda ou atrapalha o time na partida?
             var tit = c.Titulares.ToList();
             float bonus = tit.Average(j => j.preparo) / 100f * Provisorio.PREPARO_MAX_BONUS * 100f;
@@ -89,6 +91,7 @@ namespace CSM.ManagerUI
             var h = E("tr", "th");
             h.Add(Celula("c-j", L("Jogador")));
             h.Add(Celula("c-foco", L("Foco")));
+            var hl = Celula("c-lado", L("Lado")); ComDica(hl, "Treinar um lado (TR ou CT) sobe o domínio dele, e o jogador rende mais nesse lado. As sessões desse lado dão menos atributo."); h.Add(hl);
             var hs = Celula("c-sess", L("Sessões/semana")); ComDica(hs, "Até " + c.MaxSessoes + " por jogador na sua Gaming House (" + c.GH.nome + "). Recuperação x" + Dec(c.GH.recuperacao) + (c.GH.bootcamp ? ", bootcamp (+20% de ganho)." : ".")); h.Add(hs);
             var hc = Celula("c-bar", L("Cansaço")); ComDica(hc, "0 a 100. Acima de 35 reduz a habilidade na partida."); h.Add(hc);
             var hp = Celula("c-bar", L("Preparo")); ComDica(hp, "Bônus temporário na partida, que vem do treino."); h.Add(hp);
@@ -104,6 +107,9 @@ namespace CSM.ManagerUI
                 nomes.Add(L(j.nome, "f17", "negrito"));
                 nomes.Add(L(Fmt.Funcao(j.funcao), "f14", "suave"));
                 pessoa.Add(nomes);
+                var jx = j;
+                Clicavel(pessoa, () => { treinoJogador = jx; Mostrar(); }); pessoa.AddToClassList("clicavel-l");
+                ComDica(pessoa, "Abrir o plano de " + j.nome + ": fotos, atributos por lado e treino.");
                 r.Add(Celula("c-j", pessoa));
 
                 // foco: clicar troca de atributo (descanso, mira, reflexo, spray, utilitária, sangue-frio)
@@ -114,6 +120,17 @@ namespace CSM.ManagerUI
                     DefinirTreinoUI(jj, prox, prox < 0 ? 0 : Math.Max(1, jj.sessoes));
                 }, j.foco >= 0, true, "bolt"));
                 r.Add(foco);
+
+                // lado: clicar alterna entre os dois lados, TR e CT
+                string nomeLado = j.ladoFoco < 0 ? "Os dois" : j.ladoFoco == 0 ? "TR" : "CT";
+                var lado = Celula("c-lado", BotaoMini(nomeLado, () =>
+                {
+                    int prox = jj.ladoFoco + 1; if (prox > 1) prox = -1;
+                    var er = c.DefinirLadoTreino(jj, prox);
+                    if (er != null) { Toast(er, true); return; }
+                    Salvar(); Mostrar();
+                }, j.ladoFoco >= 0, j.sessoes > 0));
+                r.Add(lado);
 
                 var st = E("stepper");
                 st.Add(BotaoIcone("minus", () => DefinirTreinoUI(jj, jj.foco, jj.sessoes - 1), j.sessoes > 0));

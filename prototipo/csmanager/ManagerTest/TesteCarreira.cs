@@ -40,14 +40,14 @@ class TesteCarreira
         Ok(c.DefinirTreino(jov, (int)Atrib.Mira, 2) == null, "nível 1: 2 sessões podem");
         Ok(c.DefinirColetivas(1) != null, "sessões coletivas bloqueadas no nível 1");
         Ok(c.DefinirEstudoMapa(2) != null, "estudo de mapa bloqueado no nível 1");
-        c.dinheiro = 5000000; Ok(c.SubirGamingHouse() == null && c.nivelGH == 2, "sobe a Gaming House para o nível 2");
+        c.dinheiro = 5000000; c.fas = 99999999; Ok(c.SubirGamingHouse() == null && c.nivelGH == 2, "sobe a Gaming House para o nível 2");
         Ok(c.DefinirTreino(jov, (int)Atrib.Mira, 4) == null && c.DefinirEstudoMapa(2) == null, "nível 2: 4 sessões e estudo de mapa liberados");
         c.SubirGamingHouse(); c.SubirGamingHouse(); c.SubirGamingHouse();
         Ok(c.nivelGH == 5 && c.scouts.Count == 3 && c.ElencoMax == 10, "nível 5: 3 scouts e elenco de 10");
 
         // ---------- treino x cansaço x preparo
         var c2 = Carreira.Nova(4);
-        c2.dinheiro = 9000000; for (int i = 0; i < 4; i++) c2.SubirGamingHouse();
+        c2.dinheiro = 9000000; c2.fas = 99999999; for (int i = 0; i < 4; i++) c2.SubirGamingHouse();
         var j2 = c2.elenco[0];
         float mira0 = j2.Valor((int)Atrib.Mira);
         c2.DefinirTreino(j2, (int)Atrib.Mira, 2);
@@ -58,7 +58,7 @@ class TesteCarreira
         Console.WriteLine("  2 sessões: cansaço por semana: " + string.Join(", ", sem.Select(x => x.ToString("0"))));
         Ok(c2.MultEfetivo(j2) > 1f, "2 sessões por semana: bônus líquido positivo (x" + c2.MultEfetivo(j2).ToString("0.000") + ")");
         // exagero: 5 sessões + coletivas
-        var c3 = Carreira.Nova(4); c3.dinheiro = 9000000; for (int i = 0; i < 4; i++) c3.SubirGamingHouse();
+        var c3 = Carreira.Nova(4); c3.dinheiro = 9000000; c3.fas = 99999999; for (int i = 0; i < 4; i++) c3.SubirGamingHouse();
         var j3 = c3.elenco[0]; c3.DefinirTreino(j3, (int)Atrib.Mira, 5); c3.DefinirColetivas(3);
         var sem3 = new List<float>(); for (int i = 0; i < 12; i++) { Avanca(c3); sem3.Add(j3.cansaco); }
         Console.WriteLine("  5 sessões + 3 coletivas: cansaço por semana: " + string.Join(", ", sem3.Select(x => x.ToString("0"))));
@@ -127,7 +127,7 @@ class TesteCarreira
         Ok(Estilos.Relacao(Estilo.Agressiva, Estilo.Defensiva) == -1 && Estilos.Relacao(Estilo.Defensiva, Estilo.Agressiva) == 1, "o ciclo de contra-estratégias é coerente");
         // informação do adversário
         var c9 = Carreira.Nova(9); Ok(c9.NivelIntel(5) == 0 && c9.SugestaoContra(c9.mundo.equipes[5]) == null, "sem scout não há informação nem sugestão");
-        c9.dinheiro = 9000000; for (int i = 0; i < 4; i++) c9.SubirGamingHouse();
+        c9.dinheiro = 9000000; c9.fas = 99999999; for (int i = 0; i < 4; i++) c9.SubirGamingHouse();
         c9.DefinirScout(0, 2, 5); c9.DefinirScout(1, 1);
         Avanca(c9);
         Ok(c9.NivelIntel(5) == 1 && c9.SugestaoContra(c9.mundo.equipes[5]) != null, "1 semana de scout dá informação nível 1 e a sugestão de contra");
@@ -147,7 +147,7 @@ class TesteCarreira
             ("treino moderado (2 sessões em Mira)", cc => { foreach (var j in cc.elenco) if (j.sessoes == 0) cc.DefinirTreino(j, (int)Atrib.Mira, 2); }) })
         {
             var ce = Carreira.Nova(21); var din0 = ce.dinheiro;
-            if (pol != null) { ce.dinheiro += 100000; ce.SubirGamingHouse(); }
+            if (pol != null) { ce.dinheiro += 100000; ce.fas = 99999999; ce.SubirGamingHouse(); }
             var pontos = new List<string>();
             for (int t = 1; t <= 3; t++) { int ini = ce.Temporada; int guard2 = 0; while (ce.Temporada == ini && !ce.Falido && guard2++ < 400) Anda(ce, 1, pol); pontos.Add("T" + t + ": " + Fmt.Dinheiro(ce.dinheiro) + " rank " + ce.PosicaoRanking + " " + Mundo.NomeCircuito(ce.CircuitoClube) + " F" + ce.Forca); }
             Console.WriteLine("  economia [" + nome + "]: " + string.Join(" | ", pontos));
@@ -156,7 +156,7 @@ class TesteCarreira
 
         // ---------- salvar e carregar (no meio de uma série)
         {
-            var cs = Carreira.Nova(31); cs.dinheiro = 3000000; cs.SubirGamingHouse(); cs.SubirGamingHouse(); cs.SubirGamingHouse();
+            var cs = Carreira.Nova(31); cs.dinheiro = 3000000; cs.fas = 99999999; cs.SubirGamingHouse(); cs.SubirGamingHouse(); cs.SubirGamingHouse();
             cs.DefinirTreino(cs.elenco[0], (int)Atrib.Reflexo, 3); cs.DefinirScout(0, 2, 7); cs.estilo = Estilo.Agressiva; cs.DefinirEstudoMapa(3); cs.PegarEmprestimo(50000);
             int g = 0; Anda(cs, 18);
             while (!(cs.TemJogoAgora && cs.Proximo().conf.md >= 3) && g++ < 120) Avanca(cs);
@@ -373,6 +373,95 @@ class TesteCarreira
             Ok(rotasOk && pontos > 1000, "toda jogada tem as 5 rotas saindo da base e dentro do mapa (" + pontos + " pontos)");
             Ok(jt.Concat(jc).All(x => x.fortes.Count > 0 && x.fracos.Count > 0), "toda jogada tem pelo menos um ponto forte e um fraco");
             Ok(Estrategias.ResumoRota(jt[0].exemplos[0], 0).StartsWith("base TR →"), "o resumo da rota começa na base: " + Estrategias.ResumoRota(jt[0].exemplos[0], 0));
+        }
+
+        // ---------- contratos (decisão 0035)
+        {
+            Console.WriteLine("------ contratos ------");
+            var ct = Carreira.Nova(11);
+            Ok(ct.elenco.All(j => j.contratoSemanas >= 52 && j.contratoSemanas <= 156 && j.clausula > j.Preco), "elenco inicial com contrato de 1 a 3 temporadas e cláusula acima do preço");
+            Ok(Contratos.AnosDesejados(new Jogador { idade = 20 }) == 3 && Contratos.AnosDesejados(new Jogador { idade = 31 }) == 1 && Contratos.AnosDesejados(new Jogador { idade = 25 }) == 2, "jovem quer 3 anos, veterano 1, o resto 2");
+            Ok(Contratos.FatorPrazo(new Jogador { idade = 20 }, 3) == 1f && Contratos.FatorPrazo(new Jogador { idade = 20 }, 1) < 1f, "prazo fora do que ele quer baixa a cobertura da proposta");
+
+            // contratar com prazo escolhido
+            var alvo = ct.mercado[ct.mercado.Count / 2]; ct.dinheiro = 9000000;
+            Ok(ct.Contratar(alvo, null, null, 2) == null && alvo.contratoSemanas == 104 && alvo.clausula == Contratos.Clausula(alvo, 2), "contratar por 2 temporadas: contrato de 104 semanas e cláusula");
+
+            // venda: contrato curto vale menos
+            var rvd = ct.elenco[^1]; rvd.contratoSemanas = 100; int cheio = rvd.Venda; rvd.contratoSemanas = 10; int curto = rvd.Venda;
+            Ok(curto < cheio, "contrato perto do fim vale menos na venda (" + cheio + " → " + curto + ")");
+
+            // rescisão paga multa de metade dos salários que faltam
+            var rs = ct.elenco[^1]; rs.contratoSemanas = 40; int multa = Contratos.Multa(rs); int antes = ct.dinheiro;
+            Ok(multa == (int)(rs.Salario * 40 * 0.5f) && ct.Rescindir(rs) == null && ct.dinheiro == antes - multa && !ct.elenco.Contains(rs), "rescindir paga a multa (" + multa + ") e tira o jogador");
+            var fraco = Carreira.Nova(12); fraco.dinheiro = 0; fraco.elenco[^1].contratoSemanas = 100;
+            Ok(fraco.Rescindir(fraco.elenco[^1]) != null, "sem dinheiro para a multa, não rescinde");
+            var cinco = Carreira.Nova(13); cinco.elenco.RemoveRange(5, cinco.elenco.Count - 5);
+            Ok(cinco.Rescindir(cinco.elenco[0]) != null, "não rescinde abaixo de 5 jogadores");
+
+            // renovação: depende do que ele acha do clube e da moral
+            var rn = Carreira.Nova(14); rn.dinheiro = 9000000; var jr = rn.elenco[0]; jr.moral = 80;
+            var pr = rn.PedirRenovacao(jr);
+            Ok(pr.salario > 0 && pr.luvas >= 0 && pr.anos == Contratos.AnosDesejados(jr), "renovação pede salário, luvas e o prazo que ele prefere (" + Fmt.Dinheiro(pr.salario) + ", " + pr.anos + " anos)");
+            jr.moral = 10; Ok(!rn.PedirRenovacao(jr).aceita && rn.Renovar(jr) != null, "jogador desmotivado recusa renovar");
+            jr.moral = 80; jr.contratoSemanas = 5;
+            if (rn.PedirRenovacao(jr).aceita) Ok(rn.Renovar(jr) == null && jr.contratoSemanas == rn.PedirRenovacao(jr).anos * 52 && jr.salarioAcordado.HasValue, "renovar recomeça o contrato");
+            else Console.WriteLine("(jogador recusou renovar com o clube de agora: " + rn.PedirRenovacao(jr).motivo + ")");
+
+            // vencimento: reserva sai de graça; sem reserva para pôr no lugar, fica a contragosto com aumento
+            var vc = Carreira.Nova(15); var res0 = vc.elenco[^1]; res0.contratoSemanas = 1; int n0 = vc.elenco.Count;
+            vc.AvancarSemana(); Ok(vc.elenco.Count == n0 - 1 && !vc.elenco.Contains(res0), "contrato que vence faz o reserva sair de graça");
+            var ficar = Carreira.Nova(16); ficar.elenco.RemoveRange(5, ficar.elenco.Count - 5); var tit = ficar.elenco[0]; tit.contratoSemanas = 1; int salAntes = tit.Salario;
+            ficar.AvancarSemana(); Ok(ficar.elenco.Contains(tit) && tit.contratoSemanas == 52 && tit.Salario > salAntes, "sem reserva, o titular fica mais um ano por um salário maior (" + salAntes + " → " + tit.Salario + ")");
+
+            // aviso de vencimento
+            var av = Carreira.Nova(17); av.elenco[0].contratoSemanas = 9;
+            Ok(av.Avisos().Any(a => a.texto.Contains("termina o contrato")), "aviso quando o contrato está para acabar");
+
+            // salvamento guarda o contrato
+            var opt2 = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var vol = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(ct), opt2), opt2));
+            Ok(vol.elenco.Select(j => j.contratoSemanas).SequenceEqual(ct.elenco.Select(j => j.contratoSemanas)) && vol.elenco[0].clausula == ct.elenco[0].clausula, "o salvamento guarda prazo e cláusula");
+
+            // 3 temporadas: ninguém fica sem contrato nem some com o elenco abaixo de 5
+            var longa = Carreira.Nova(18); longa.dinheiro = 90000000; int gl = 0;
+            while (longa.Temporada < 4 && gl++ < 400 && !longa.Falido) { Avanca(longa); longa.dinheiro = Math.Max(longa.dinheiro, 90000000); }
+            Ok(longa.elenco.Count >= 5 && longa.elenco.All(j => j.contratoSemanas > 0), "depois de 3 temporadas o elenco tem 5+ jogadores, todos com contrato (" + longa.elenco.Count + ")");
+
+        // fãs do clube (decisão 0037)
+        {
+            var cf = Carreira.Nova(9);
+            Ok(cf.fas == Fas.INICIAIS, "começa com " + Fas.INICIAIS + " fãs");
+            cf.dinheiro = 5000000;
+            var errF = cf.SubirGamingHouse();
+            Ok(errF != null && errF.Contains("fãs") && cf.nivelGH == 1, "sem fãs suficientes não sobe a Gaming House: " + errF);
+            cf.fas = Fas.ParaNivel(2); Ok(cf.SubirGamingHouse() == null && cf.nivelGH == 2, "com fãs e dinheiro sobe");
+            Ok(cf.fas == Fas.ParaNivel(2), "fãs não são gastos ao subir de nível");
+            Ok(Fas.Mapa(true, 70, 70, Circuito.Amador, 0) > 0 && Fas.Mapa(false, 70, 70, Circuito.Amador, 0) < 0, "vitória rende e derrota tira fãs");
+            Ok(Fas.Mapa(true, 70, 70, Circuito.Elite, 0) > Fas.Mapa(true, 70, 70, Circuito.Amador, 0), "circuito maior rende mais fãs");
+            Ok(Fas.Mapa(true, 70, 90, Circuito.Pro, 0) > Fas.Mapa(true, 70, 50, Circuito.Pro, 0), "vencer o favorito rende mais que vencer o fraco");
+            Ok(Fas.Mapa(true, 70, 70, Circuito.Pro, 4) > Fas.Mapa(true, 70, 70, Circuito.Pro, 0), "sequência de vitórias rende mais");
+            Ok(Fas.Mapa(false, 70, 50, Circuito.Pro, 0) < Fas.Mapa(false, 70, 90, Circuito.Pro, 0), "perder para o fraco tira mais fãs");
+            Ok(Fas.Titulo(1, Circuito.Pro) > Fas.Titulo(2, Circuito.Pro) && Fas.Titulo(4, Circuito.Pro) == 0, "título rende mais que vice; fora do pódio nada");
+            Ok(Fas.Texto(950) == "950" && Fas.Texto(12400) == "12,4 mil" && Fas.Texto(1250000) == "1,25 mi", "formato curto dos fãs");
+            var cg = Carreira.Nova(12); int f0 = cg.fas; int g = 0;
+            while (cg.Semana < 12 && g++ < 60) { if (cg.TemJogoAgora) cg.PularSerie(); else cg.AvancarSemana(); }
+            Ok(cg.fas != f0 && cg.fas >= 0, "jogar as primeiras semanas muda os fãs (" + f0 + " → " + cg.fas + ")");
+            var optf = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cr = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cg), optf), optf));
+            Ok(cr != null && cr.fas == cg.fas && cr.sequencia == cg.sequencia, "fãs e sequência vão para o salvamento");
+        }
+
+        // partida pulada calibrada (decisão 0036)
+        {
+            var rp = new Random(5); int n = 4000, prorr = 0, largo = 0; double soma = 0;
+            for (int i = 0; i < n; i++) { int l = Carreira.PlacarPerdedor(rp, 0.55); soma += l; if (l == 12) prorr++; }
+            Ok(Math.Abs(soma / n - 8.0) < 0.5, "equilibrado: perdedor faz ~8 rounds (" + (soma / n).ToString("0.0") + ")");
+            Ok(prorr > n * 0.08 && prorr < n * 0.16, "equilibrado: 13x12 em ~12% dos mapas (" + prorr * 100 / n + "%)");
+            for (int i = 0; i < n; i++) if (Carreira.PlacarPerdedor(rp, 0.97) <= 6) largo++;
+            Ok(largo > n * 0.5, "folgado: a maioria dos placares é larga (" + largo * 100 / n + "%)");
+            Ok(Math.Abs(Mundo.Chance(70, 60) - 0.731) < 0.01, "10 pontos de força dão ~73% (escala 10)");
+        }
         }
 
         Console.WriteLine(falhas == 0 ? "TODOS OS TESTES PASSARAM" : falhas + " FALHA(S)");

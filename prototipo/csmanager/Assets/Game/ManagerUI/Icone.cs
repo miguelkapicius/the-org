@@ -98,6 +98,10 @@ namespace CSM.ManagerUI
                 case "minus": Linha(5, 12, 19, 12); break;
                 case "trophy":
                     Linha(7, 4, 17, 4, 17, 10, 12, 14, 7, 10, 7, 4); Linha(12, 14, 12, 18); Linha(8, 20, 16, 20); Linha(7, 6, 4, 6, 4, 8.5f, 7, 10); Linha(17, 6, 20, 6, 20, 8.5f, 17, 10); break;
+                case "engrenagem": Circulo(12, 12, 3.2f, false); Circulo(12, 12, 7f, false); for (int i = 0; i < 8; i++) { float an = i * Mathf.PI / 4f; Linha(12 + 7f * Mathf.Cos(an), 12 + 7f * Mathf.Sin(an), 12 + 9.8f * Mathf.Cos(an), 12 + 9.8f * Mathf.Sin(an)); } break;
+                case "help": Circulo(12, 12, 9.5f, false); Linha(9.5f, 9.3f, 9.7f, 7.8f, 11, 6.9f, 12.4f, 6.9f, 14, 7.6f, 14.7f, 9, 14.3f, 10.6f, 12, 12.2f, 12, 13.6f); Circulo(12, 16.8f, 1.1f, true); break;
+                case "som": Linha(4, 9.5f, 8, 9.5f, 12.5f, 5.5f, 12.5f, 18.5f, 8, 14.5f, 4, 14.5f, 4, 9.5f); Linha(15.5f, 9, 17, 12, 15.5f, 15); Linha(18, 6.5f, 20.5f, 12, 18, 17.5f); break;
+                case "mudo": Linha(4, 9.5f, 8, 9.5f, 12.5f, 5.5f, 12.5f, 18.5f, 8, 14.5f, 4, 14.5f, 4, 9.5f); Linha(16, 9.5f, 21, 14.5f); Linha(21, 9.5f, 16, 14.5f); break;
                 case "kebab": Circulo(12, 5.5f, 1.5f, true); Circulo(12, 12, 1.5f, true); Circulo(12, 18.5f, 1.5f, true); break;
             }
         }

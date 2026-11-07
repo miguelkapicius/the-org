@@ -1,6 +1,6 @@
 # Interface × jogo: o que a interface promete e o jogo ainda não faz
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0008, 0011, 0013, 0014, 0016, 0017
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0008, 0011, 0013, 0014, 0016, 0017, 0036
 
 _Lista de trabalho. A interface do manager (decisão 0011) já mostra mapas, estratégias, funções, scouts e outras coisas que a partida ainda não tem de verdade. Este arquivo diz o que é real, o que é aproximado e o que só existe na tela, e o que precisa ser feito no jogo para a interface corresponder._
 
@@ -19,8 +19,8 @@ Levantamento feito no código de `prototipo/csmanager` em 2026-11-06. Caminhos d
 
 1. **Só existe um mapa jogável.** O veto e a afinidade usam 7 mapas, mas toda partida assistida roda no mesmo mapa (seção 1). Fazer um segundo mapa exige primeiro tirar o mapa "fixo no código" (item M1).
 2. ~~A estratégia muda menos do que a descrição promete.~~ **Resolvido (item E2, decisão 0017):** os planos de round do banco foram classificados nos 5 estilos e o IGL prefere os do estilo escolhido. Falta medir o ciclo de contra (item E3).
-3. **Os adversários não têm jogadores de verdade.** São um número de força copiado nos 5 bonecos; "jogador de destaque" do scout é sorteado (itens J3 e S2).
-4. **A partida pulada não é calibrada com a simulação** e nunca dá 13 x 12 nem prorrogação (item P1).
+3. **Os adversários não têm jogadores de verdade — de propósito, por enquanto.** São um número de força copiado nos 5 bonecos; "jogador de destaque" do scout é sorteado (itens J3 e S2). **Decisão dos autores (2026-11-07):** nesta fase o foco é testar o **comportamento dos bonecos**, então os nossos e os adversários são genéricos. Mais para a frente o jogo terá uma **base grande de jogadores**, com atributos variados, e os adversários usarão jogadores dessa base. Não é um defeito a corrigir agora.
+4. A partida pulada foi calibrada com a simulação (decisão 0036, item P1); falta refazer a medição quando a IA mudar.
 5. ~~Timeout não existe.~~ **Resolvido (item E5, decisão 0018):** 3 timeouts na partida assistida, com chance de funcionar.
 
 ## 1. Mapas
@@ -83,7 +83,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 | J4 | Retrato de cada jogador | Todos usam o mesmo boneco 3D (pergunta de arte) | 🟡 |
 | J5 | Brasão dos times | Só a inicial do nome | 🟡 |
 
-**Para a interface corresponder:** jogadores do adversário com atributos próprios (gerados como os do mercado) e escalados por função; decidir se o manager escolhe a função de CT; ligar o estilo por função quando os atributos dos jogadores estiverem estáveis.
+**Para a interface corresponder (fase posterior, depois de afinar o comportamento dos bonecos; os autores vão popular uma base grande de jogadores com atributos variados):** jogadores do adversário com atributos próprios (tirados dessa base, como os do mercado) e escalados por função; decidir se o manager escolhe a função de CT; ligar o estilo por função quando os atributos dos jogadores estiverem estáveis.
 
 ## 4. Scouts e informação do adversário
 
@@ -98,7 +98,7 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 
 | # | O que a interface mostra | O que o jogo faz hoje | Status |
 |---|---|---|---|
-| P1 | Chance de vencer o mapa e a série; o resultado pulado usa "os mesmos fatores" da assistida (decisão 0008) | A chance é uma curva sobre a força efetiva (`Mundo.Chance`), **não calibrada** com partidas reais da simulação (sugestão em `09-tecnico.md`). O placar pulado é sempre 13 x 3 a 13 x 11: nunca 13 x 12, nunca prorrogação | 🟡 |
+| P1 | Chance de vencer o mapa e a série; o resultado pulado usa "os mesmos fatores" da assistida (decisão 0008) | Calibrado com 280 partidas simuladas (decisão 0036): escala da curva 10 (era 6) e placar sorteado da distribuição medida, com 13 x 12 em ~12 % dos mapas. Medição com erro de vários pontos e um viés do lado A a investigar | 🟢 |
 | P2 | Desempenho de cada jogador no pós-partida | Assistida: números da simulação. Pulada: estimados e avisados como tal | ✅ |
 | P3 | Partidas dos outros times e campeonatos | Resolvidas por probabilidade, só com a força (sem afinidade nem estilo) | 🟡 (ok para o protótipo) |
 
@@ -117,5 +117,6 @@ Hoje a IA depende de dados feitos **para a Vila**. Cada mapa novo precisa de tud
 
 - O mapa jogável de hoje entra no pool com qual nome: "Vila" (como no código) ou "Forja" (como na interface)? E o "Vila Velha" do pool continua?
 - De onde vêm as estratégias de um mapa novo? Hoje o banco vem de rounds pro de um mapa da Valve; para mapas próprios (decisão 0004), gerar pela própria simulação, montar à mão ou outro caminho?
-- Os jogadores dos times adversários têm atributos próprios (como os do mercado) ou o adversário continua sendo só um número de força?
+- Base de jogadores (fase posterior): quantos jogadores, e como será feita (à mão, gerada ou mista)? Os adversários passam a usar jogadores dessa base.
 - O manager escolhe a função de CT de cada titular (âncora, rotação, qual bomb) ou ela sai da função de TR?
+- **Viés do lado A:** na medição da decisão 0036, com força igual o time A venceu 67 % de 40 partidas. É ruído, ou o slot A (ou o lado em que começa) tem vantagem na simulação?

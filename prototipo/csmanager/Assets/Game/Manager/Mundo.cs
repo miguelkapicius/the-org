@@ -166,7 +166,9 @@ namespace CSM.Manager
 
         // ------------------------------------------------------------------ temporada
         public Func<int, int, double> ChanceMapaIA => (a, b) => Chance(equipes[a].forca, equipes[b].forca);
-        public static double Chance(double fa, double fb) => 1.0 / (1.0 + Math.Exp(-(fa - fb) / 6.0));
+        /// <summary>Escala da curva logística, medida com partidas simuladas (decisão 0036; antes 6,0).</summary>
+        public const double ESCALA_CHANCE = 10.0;
+        public static double Chance(double fa, double fb) => 1.0 / (1.0 + Math.Exp(-(fa - fb) / ESCALA_CHANCE));
 
         void CriarTemporada()
         {

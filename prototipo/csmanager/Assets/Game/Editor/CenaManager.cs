@@ -105,6 +105,30 @@ namespace CSM.EditorTools
             EditorApplication.Exit(falhas == 0 ? 0 : 1);
         }
 
+        /// <summary>Batch: sintetiza os sons da interface (decisão 0029), confere que nenhum estoura, tem NaN, passa de 1 s ou estala no começo e no fim,
+        /// e grava um .wav de cada em Logs/sons para ouvir. Unity -batchmode -nographics -executeMethod CSM.EditorTools.CenaManager.TestarSonsBatch.</summary>
+        public static void TestarSonsBatch()
+        {
+            int falhas = 0; Directory.CreateDirectory("Logs/sons");
+            foreach (CSM.ManagerUI.Som s in System.Enum.GetValues(typeof(CSM.ManagerUI.Som)))
+            {
+                var d = CSM.ManagerUI.SomSintese.Renderizar(s);
+                float pico = 0f; bool nan = false; foreach (var x in d) { if (float.IsNaN(x) || float.IsInfinity(x)) nan = true; pico = Mathf.Max(pico, Mathf.Abs(x)); }
+                float seg = d.Length / (float)CSM.ManagerUI.SomSintese.TAXA;
+                bool ok = !nan && pico > 0.08f && pico < 0.99f && seg > 0.03f && seg < 1.8f && Mathf.Abs(d[0]) < 0.05f && Mathf.Abs(d[d.Length - 1]) < 0.01f;
+                if (!ok) { falhas++; Debug.LogError("FALHOU: som " + s + " (pico " + pico.ToString("0.00") + ", " + seg.ToString("0.00") + " s, nan " + nan + ")"); }
+                else Debug.Log("ok: som " + s + " (pico " + pico.ToString("0.00") + ", " + (seg * 1000f).ToString("0") + " ms)");
+                CSM.ManagerUI.SomSintese.GravarWav("Logs/sons/" + s + ".wav", d);
+            }
+            var amb = CSM.ManagerUI.SomSintese.Ambiente(); float ap = 0f, passo = 0f; for (int i = 0; i < amb.Length; i++) { ap = Mathf.Max(ap, Mathf.Abs(amb[i])); if (i > 0 && i < 4000) passo += Mathf.Abs(amb[i] - amb[i - 1]) / 3999f; }
+            float emenda = Mathf.Abs(amb[amb.Length - 1] - amb[0]);
+            if (ap < 0.1f || ap > 0.99f || emenda > passo * 8f) { falhas++; Debug.LogError("FALHOU: ambiente (pico " + ap.ToString("0.00") + ", emenda " + emenda.ToString("0.0000") + " contra passo " + passo.ToString("0.0000") + ")"); }
+            else Debug.Log("ok: ambiente (" + amb.Length / (float)CSM.ManagerUI.SomSintese.TAXA + " s, emenda do laço " + emenda.ToString("0.0000") + ")");
+            CSM.ManagerUI.SomSintese.GravarWav("Logs/sons/Ambiente.wav", amb);
+            Debug.Log(falhas == 0 ? "TODOS OS SONS PASSARAM" : falhas + " SOM(NS) FALHARAM");
+            EditorApplication.Exit(falhas == 0 ? 0 : 1);
+        }
+
         /// <summary>Batch: cria a cena e sai (Unity -batchmode -executeMethod CSM.EditorTools.CenaManager.CriarBatch).</summary>
         public static void CriarBatch()
         {
