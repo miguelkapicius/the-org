@@ -1,6 +1,6 @@
 # Direção de arte
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0004, 0024
 
 _Estilo visual e referências._
 
@@ -23,3 +23,4 @@ _A definir: mapas, modelos de jogadores, armas, efeitos._
 ## Perguntas em aberto
 
 - Estilo realista, estilizado ou low-poly?
+- Retratos dos jogadores: hoje são só duas imagens ilustrativas geradas por IA (operador TR e operador CT, decisão 0024). Arte final: um retrato por jogador, ilustrado à mão, ou gerado em volume? Qual é o estilo?

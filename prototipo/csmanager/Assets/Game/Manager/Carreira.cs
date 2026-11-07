@@ -31,7 +31,9 @@ namespace CSM.Manager
 
         // treino e cansaço (decisão 0013)
         public const float GANHO_POR_SESSAO = 0.08f;                // pontos de atributo por sessão por semana (antes de idade e teto)
-        public const float PREPARO_MAX_BONUS = 0.05f;               // até +5% de habilidade com o preparo cheio
+        // lados TR/CT (decisão 0024): domínio 0..100 por lado; a diferença entre os dois lados vale até LADO_MAX de habilidade a cada 50 pontos
+        public const float LADO_MAX = 0.08f, GANHO_LADO = 1.8f, LADO_SORTEIO = 20f, LADO_FOCO_ATRIB = 0.6f;   // ganho por sessão no lado em foco; o atributo rende 60% nessas sessões
+        public const float PREPARO_MAX_BONUS = 0.05f;              // até +5% de habilidade com o preparo cheio
         public const float CANSACO_LIMIAR = 35f, CANSACO_MAX_PENALIDADE = 0.12f;   // acima do limiar, até -12% em 100 de cansaço
         public const float AFINIDADE_MAX = 0.03f, ESTRATEGIA_CONTRA = 0.02f;       // efeito de afinidade e de contra-estratégia
         public static readonly int[] INTEL_SEMANAS = { 1, 3, 6 };   // semanas de estudo para os níveis 1, 2 e 3 de informação
@@ -230,7 +232,7 @@ namespace CSM.Manager
             {
                 var j = new Jogador { nome = nome, idade = 21 + c.rng.Next(0, 8), funcao = role, skill = new Skill() };
                 c.DefinirPotencial(j, 8, 18);
-                c.SortearTraco(j);
+                c.SortearTraco(j); c.SortearLados(j);
                 c.elenco.Add(j);
             }
             for (int i = 0; i < 2; i++) c.elenco.Add(c.Gerar(0.35f, 0.65f));   // duas reservas, um pouco abaixo
@@ -263,6 +265,14 @@ namespace CSM.Manager
             j.traco = rng.NextDouble() < Provisorio.CHANCE_TRACO ? (Traco)rng.Next(1, 7) : Traco.Nenhum;
         }
 
+        /// <summary>Cada jogador tem um lado de preferência: um domina o TR, outro o CT (decisão 0024).</summary>
+        void SortearLados(Jogador j)
+        {
+            float d = ((float)rng.NextDouble() - 0.5f) * 2f * Provisorio.LADO_SORTEIO;   // -20..+20
+            float base50 = 50f + ((float)rng.NextDouble() - 0.5f) * 8f;
+            j.ladoTR = Math.Clamp(base50 + d, 20f, 95f); j.ladoCT = Math.Clamp(base50 - d, 20f, 95f);
+        }
+
         void GuardarInicio(Jogador j) { for (int a = 0; a < 5; a++) j.inicioTemporada[a] = j.Valor(a); }
 
         /// <summary>Jogador novo com qualidade entre qMin e qMax (0..1); os atributos variam um pouco em volta.</summary>
@@ -279,7 +289,7 @@ namespace CSM.Manager
             };
             var j = new Jogador { nome = NomeLivre(), idade = 17 + rng.Next(0, 15), funcao = FUNCOES[rng.Next(FUNCOES.Length)], skill = sk };
             DefinirPotencial(j, 3, 24);
-            SortearTraco(j);
+            SortearTraco(j); SortearLados(j);
             GuardarInicio(j);
             return j;
         }
@@ -579,7 +589,28 @@ namespace CSM.Manager
             if (sessoes > MaxSessoes) return "A Gaming House atual permite no máximo " + MaxSessoes + " sessões por semana.";
             if (sessoes > 0 && nivelGH < 2 && sessoes > 2) return "Suba a Gaming House para treinar mais.";
             j.sessoes = Math.Max(0, sessoes); j.foco = sessoes == 0 ? -1 : foco;
+            if (sessoes == 0) j.ladoFoco = -1;
             return null;
+        }
+
+        /// <summary>Treino por lado (decisão 0024): -1 = os dois lados, 0 = TR, 1 = CT. Sem sessões, não há o que treinar.</summary>
+        public string DefinirLadoTreino(Jogador j, int lado)
+        {
+            if (!elenco.Contains(j)) return "Esse jogador não está no elenco.";
+            if (lado >= 0 && j.sessoes == 0) return "Ponha ao menos uma sessão por semana para treinar um lado.";
+            j.ladoFoco = Math.Clamp(lado, -1, 1);
+            return null;
+        }
+
+        /// <summary>Quanto o domínio do lado em foco sobe numa semana (0 se o treino é dos dois lados). Cansaço alto rende menos.</summary>
+        public float PreverLado(Jogador j)
+        {
+            if (j.ladoFoco < 0 || j.sessoes <= 0) return 0f;
+            int sess = Math.Min(j.sessoes, MaxSessoes);
+            float atual = j.Lado(j.ladoFoco == 0);
+            float teto = Math.Clamp((100f - atual) / 40f, 0f, 1f);
+            float fadiga = 1f - 0.4f * Math.Clamp((j.cansaco - 60f) / 40f, 0f, 1f);
+            return Provisorio.GANHO_LADO * sess * teto * GH.ganhoTreino * fadiga;
         }
 
         public string DefinirColetivas(int n)
@@ -610,7 +641,7 @@ namespace CSM.Manager
             {
                 float teto = Math.Clamp((j.potencial - j.Valor(j.foco)) / 25f, 0f, 1f);
                 float fadiga = 1f - 0.4f * Math.Clamp((cansaco - 60f) / 40f, 0f, 1f);
-                ganho = Provisorio.GANHO_POR_SESSAO * sess * FatorIdade(j.idade) * teto * GH.ganhoTreino * fadiga;
+                ganho = Provisorio.GANHO_POR_SESSAO * sess * FatorIdade(j.idade) * teto * GH.ganhoTreino * fadiga * (j.ladoFoco >= 0 ? Provisorio.LADO_FOCO_ATRIB : 1f);
             }
             return (ganho, preparo, cansaco);
         }
@@ -621,6 +652,10 @@ namespace CSM.Manager
             {
                 var (ganho, preparo, cansaco) = PreverSemana(j);
                 if (j.foco >= 0 && ganho > 0) j.Definir(j.foco, Math.Min(j.potencial, j.Valor(j.foco) + ganho));
+                float gl = PreverLado(j);
+                if (gl > 0) { if (j.ladoFoco == 0) j.ladoTR = Math.Min(100f, j.ladoTR + gl); else j.ladoCT = Math.Min(100f, j.ladoCT + gl); }
+                // o lado que ninguém treina esfria devagar para a média (50): especializar tem preço
+                j.ladoTR += (50f - j.ladoTR) * 0.01f; j.ladoCT += (50f - j.ladoCT) * 0.01f;
                 // evolução natural pela idade: jovens crescem um pouco sozinhos, veteranos declinam (o reflexo cai antes)
                 if (j.idade <= 24)
                 {
@@ -912,6 +947,7 @@ namespace CSM.Manager
             {
                 var j = porVaga[v];
                 vagas[v].nome = j.nome; vagas[v].traco = j.traco;
+                vagas[v].bonusTR = j.BonusLado(true); vagas[v].bonusCT = j.BonusLado(false);
                 vagas[v].skill = j.SkillEfetiva(MultEfetivo(j, mapa, adv));
                 float e = EntrosamentoTime - (j.traco == Traco.Estrela ? Provisorio.ENTROSAMENTO_ESTRELA : 0f);
                 vagas[v].skill.entrosamento = Math.Clamp(e / 100f, 0f, 1f);

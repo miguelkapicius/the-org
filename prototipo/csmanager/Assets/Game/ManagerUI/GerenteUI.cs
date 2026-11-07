@@ -221,7 +221,7 @@ namespace CSM.ManagerUI
             {
                 case Aba.Calendario: titulo = "Calendário"; sub = campAberto != null ? campAberto.nome : "Temporada " + c.Temporada + " · campeonatos do circuito " + Mundo.NomeCircuito(c.CircuitoClube); break;
                 case Aba.Elenco: titulo = "Elenco"; sub = "Escale os 5 titulares. Passe o mouse para ver o efeito antes de trocar."; break;
-                case Aba.Treino: titulo = "Treino"; sub = "Treino evolui, mas cansa. Ache o equilíbrio."; break;
+                case Aba.Treino: titulo = "Treino"; sub = treinoJogador != null && c.elenco.Contains(treinoJogador) ? "Plano da semana de " + treinoJogador.nome + "." : "Treino evolui, mas cansa. Ache o equilíbrio."; break;
                 case Aba.Mercado: titulo = "Mercado"; sub = "Jogadores livres. A lista muda toda semana."; break;
                 case Aba.GamingHouse: titulo = "Gaming House"; sub = "Cada nível libera vantagens para o time."; break;
                 case Aba.Financas: titulo = "Finanças"; sub = "O que entra e o que sai toda semana."; break;
@@ -362,6 +362,7 @@ namespace CSM.ManagerUI
             if (a != Aba.Calendario) campAberto = null;
             if (a == Aba.Calendario && aba != Aba.Calendario) { mesCal = -1; calAba = 0; }   // abre sempre no mês atual
             aba = a; colOrdem = -1; confirmandoNova = false;
+            if (a == Aba.Treino) treinoJogador = null;   // o menu volta para a lista do time
             if (a != Aba.PosPartida) resumoAberto = null;
             Mostrar();
         }
@@ -597,7 +598,7 @@ namespace CSM.ManagerUI
         {
             var cj = E("card-j");
             var midia = E("midia");
-            midia.Add(Retrato(j.nome, "retrato-fill"));
+            midia.Add(Retrato(j.nome, "retrato-fill", FotoTR(j)));
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); midia.Add(ovr);
             cj.Add(midia);
             var info = E("info");
@@ -780,9 +781,13 @@ namespace CSM.ManagerUI
             bool tit = c.Titular(j);
             var cj = E("card-j"); if (comparar.Contains(j)) cj.AddToClassList("comp");
             var midia = E("midia");
-            midia.Add(Retrato(j.nome, "retrato-fill"));
+            midia.Add(Retrato(j.nome, "retrato-fill", FotoTR(j)));
             var fn = Selo(Fmt.FuncaoCurta(j.funcao), null); fn.AddToClassList("midia-selo"); ComDica(fn, Fmt.Funcao(j.funcao)); midia.Add(fn);
             var ovr = E("ovr"); ovr.Add(L(j.Overall.ToString(), ClasseNota(j.Overall))); ComDica(ovr, COLS[0].dica); midia.Add(ovr);
+            var forte = j.LadoForte;   // a foto mostra o lado em que ele rende mais (decisão 0024)
+            var sl = Selo(forte == null ? "TR · CT" : forte.Value ? "MELHOR NO TR" : "MELHOR NO CT", forte == null ? null : forte.Value ? "laranja" : "azul"); sl.AddToClassList("midia-lado");
+            ComDica(sl, "Domínio de lado: TR " + (int)j.ladoTR + " · CT " + (int)j.ladoCT + ". " + (forte == null ? "Rende igual nos dois lados." : "Rende mais " + (forte.Value ? "no ataque (TR)." : "na defesa (CT).")) + "\n\nTreine um lado na tela de Treino.");
+            midia.Add(sl);
             cj.Add(midia);
 
             var info = E("info");
@@ -1093,7 +1098,9 @@ namespace CSM.ManagerUI
                 ("calendario-detalhe", () => { aba = Aba.Calendario; campAberto = c.CampeonatosDoClube.FirstOrDefault(x => x.iniciado) ?? c.CampeonatosDoClube.First(); }, null),
                 ("elenco", () => { aba = Aba.Elenco; comparar.Clear(); }, () => PreverTroca(c.elenco[5])),
                 ("elenco-comparar", () => { aba = Aba.Elenco; comparar.Clear(); comparar.Add(c.elenco[1]); comparar.Add(c.elenco[5]); }, null),
-                ("treino", () => { aba = Aba.Treino; comparar.Clear(); }, null),
+                ("treino", () => { aba = Aba.Treino; treinoJogador = null; comparar.Clear(); }, null),
+                ("treino-jogador", () => { aba = Aba.Treino; treinoJogador = c.elenco[1]; c.DefinirLadoTreino(treinoJogador, 0); }, null),
+                ("treino-jogador-ct", () => { aba = Aba.Treino; treinoJogador = c.elenco.FirstOrDefault(x => x.LadoForte == false) ?? c.elenco[2]; }, () => treinoJogador = null),
                 ("mercado", () => { aba = Aba.Mercado; colOrdem = -1; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("scouts", () => aba = Aba.Scouts, null),
                 ("serie", () => { c.PrepararSerie(); aba = Aba.Serie; }, null),

@@ -50,6 +50,8 @@ namespace CSM.Manager
         public float cansaco = 10, preparo;         // 0..100
         public int foco = -1, sessoes;              // plano de treino da semana: atributo em foco (-1 = descanso) e quantas sessões
         public float[] inicioTemporada = new float[5];   // valor dos atributos no começo da temporada (para mostrar a evolução)
+        public float ladoTR = 50, ladoCT = 50;      // domínio de cada lado, 0..100 (50 = neutro; decisão 0024). Muda a habilidade só naquele lado
+        public int ladoFoco = -1;                   // treino da semana por lado: -1 = os dois, 0 = TR, 1 = CT
         public int mapasNaSemana;                   // partidas jogadas nesta semana (alimenta o cansaço)
         public Traco traco;                         // personalidade (decisão 0019): no mercado só se vê com scout, como o potencial
         public float moral = Provisorio.MORAL_INICIAL, entrosamento = Provisorio.ENTROSAMENTO_INICIAL;   // 0..100
@@ -77,6 +79,17 @@ namespace CSM.Manager
 
         public static float OverallDe(float mira, float reflexo, float spray, float util, float frio) => (2f * mira + 2f * reflexo + spray + util + frio) / 7f;
         public int Overall => (int)Math.Round(OverallDe(Valor(0), Valor(1), Valor(2), Valor(3), Valor(4)));
+
+        /// <summary>Domínio do lado (0..100): <paramref name="tr"/> true = TR, false = CT.</summary>
+        public float Lado(bool tr) => tr ? ladoTR : ladoCT;
+        public float LadoMedio => (ladoTR + ladoCT) / 2f;
+        /// <summary>O lado em que ele rende mais; "Equilibrado" quando a diferença é pequena (menos de 6 pontos).</summary>
+        public bool? LadoForte => Math.Abs(ladoTR - ladoCT) < 6f ? (bool?)null : ladoTR > ladoCT;
+        /// <summary>Quanto o lado muda a habilidade (fração, ex.: +0,03 = +3%) em relação à média dos dois lados.</summary>
+        public float BonusLado(bool tr) => (Lado(tr) - LadoMedio) / 50f * Provisorio.LADO_MAX;
+        /// <summary>Atributo (0..100) como ele rende naquele lado.</summary>
+        public float ValorNoLado(int a, bool tr) => Math.Min(100f, Valor(a) * (1f + BonusLado(tr)));
+        public int OverallNoLado(bool tr) => (int)Math.Round(OverallEfetivo(1f + BonusLado(tr)));
 
         /// <summary>O geral que o jogador "rende" com um multiplicador de forma (preparo, cansaço, afinidade...) sobre todos os atributos.</summary>
         public float OverallEfetivo(float mult) =>

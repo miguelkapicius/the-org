@@ -36,6 +36,35 @@ namespace CSM.ManagerUI
             return veu;
         }
 
+        static Texture2D veuLat;
+        /// <summary>Véu horizontal: escuro à esquerda e transparente à direita, para o texto ficar legível sobre a foto do jogador.</summary>
+        public static Texture2D VeuLateral()
+        {
+            if (veuLat != null) return veuLat;
+            const int w = 128;
+            veuLat = new Texture2D(w, 1, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear, name = "VeuLateral", hideFlags = HideFlags.DontUnloadUnusedAsset };
+            var cor = new Color(0.027f, 0.043f, 0.102f);
+            for (int x = 0; x < w; x++)
+            {
+                float v = x / (float)(w - 1);                       // 0 = esquerda
+                float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.78f - v) / 0.78f)) * 0.97f;
+                veuLat.SetPixel(x, 0, new Color(cor.r, cor.g, cor.b, a));
+            }
+            veuLat.Apply(false, false);
+            return veuLat;
+        }
+
+        static Texture2D fotoTR, fotoCT;
+        /// <summary>Foto do jogador no lado TR ou CT (Resources/ManagerUI/Retratos); null se o arquivo não existir.</summary>
+        public static Texture2D FotoLado(bool tr)
+        {
+            if (tr) return fotoTR != null ? fotoTR : (fotoTR = Resources.Load<Texture2D>("ManagerUI/Retratos/tr"));
+            return fotoCT != null ? fotoCT : (fotoCT = Resources.Load<Texture2D>("ManagerUI/Retratos/ct"));
+        }
+
+        /// <summary>O lado da foto: o lado em que o jogador rende mais; se está equilibrado, um dos dois pelo nome (sempre o mesmo).</summary>
+        public static bool FotoTR(CSM.Manager.Jogador j) => j.LadoForte ?? ((IndiceCor(j.nome) & 1) == 0);
+
         public static Texture2D FundoNoite()
         {
             const int w = 480, h = 270;
@@ -149,10 +178,17 @@ namespace CSM.ManagerUI
 
         /// <summary>Retrato do jogador: o boneco 3D sobre um fundo da cor dele (sem o render, cai para a inicial).
         /// <paramref name="tamanho"/>: "retrato-p" (caixa pequena) ou "retrato-fill" (preenche o pai).</summary>
-        public static VisualElement Retrato(string nome, string tamanho)
+        public static VisualElement Retrato(string nome, string tamanho, bool? tr = null)
         {
             var e = E("retrato", tamanho, "rt" + IndiceCor(nome));
-            if (RetratoBoneco is RenderTexture rt) e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
+            var foto = tr.HasValue ? FotoLado(tr.Value) : null;
+            if (foto != null)
+            {
+                e.style.backgroundImage = new StyleBackground(foto); e.style.unityBackgroundScaleMode = ScaleMode.ScaleAndCrop;
+                int h = 0; foreach (char ch in nome) h = h * 17 + ch;
+                if (((h >> 4) & 1) == 1) e.style.scale = new Scale(new Vector3(-1f, 1f, 1f));   // espelha metade das fotos, para o elenco não parecer clonado
+            }
+            else if (RetratoBoneco is RenderTexture rt) e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
             else e.Add(L(nome.Substring(0, 1)));
             e.pickingMode = PickingMode.Ignore;
             return e;

@@ -33,6 +33,7 @@ namespace CSM.Sim
             public string nome; public Role roleT, roleCT; public char siteCT = 'M'; public Skill skill = new Skill();
             public int dinheiro; public string arma, pistola; public bool colete, capacete, kit; public List<string> nades = new List<string>();
             public int k, d, hs, dano, fk, rounds, guardou;
+            public float bonusTR, bonusCT;   // quanto o lado muda a habilidade (decisão 0024), em relação à média dos dois lados
             public Traco traco; public bool morreuPrimeiro;   // traço de personalidade (decisão 0019) e se morreu primeiro no último round
             public Role Role(bool t) => t ? roleT : roleCT;
         }
@@ -81,6 +82,8 @@ namespace CSM.Sim
                 case Traco.Pistoleiro: if (r == 0 || r == 12) { mira += PISTOLEIRO; reflexo += PISTOLEIRO; } break;
                 case Traco.Embalado: if (VenceuUltimos(t, 3)) reflexo += EMBALADO; break;
             }
+            float lado = t == tAtual ? j.bonusTR : j.bonusCT;   // o lado do round: quem joga de TR ou de CT agora
+            if (lado != 0f) { mira += lado; reflexo += lado; frio += lado; }
             if (frio == 0 && mira == 0 && reflexo == 0 && agr == 0) return j.skill;
             var s = j.skill.Copia();
             s.composure = MathX.Clamp(s.composure * (1 + frio), 0, 1);

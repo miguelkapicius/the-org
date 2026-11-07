@@ -37,6 +37,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar? → `gdd/01-core-loop.md`
 - [ ] Curva de custo por nível da Gaming House → `gdd/03-progressao.md`
 - [ ] Quanto pesa cada fator (treino, experiência, idade) na evolução dos jogadores? → `gdd/03-progressao.md`
+- [ ] Quanto deve valer o **domínio de lado** (hoje até ±8 % de habilidade) e quanto custa treinar um lado (hoje 1,8 ponto por sessão, atributo a 60 %)? → `gdd/03-progressao.md`
 - [ ] Calendário: quantos campeonatos por temporada em cada circuito, premiações e pontos do ranking → `gdd/01-core-loop.md`
 - [ ] Salários, juros, limite de empréstimo, prazo de falência e manutenção da Gaming House → `gdd/03-progressao.md`
 
@@ -44,11 +45,12 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "vidro noturno" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
+- [ ] **Retratos:** hoje são só duas imagens (operador TR e operador CT) geradas por IA para o protótipo. Arte final: um retrato por jogador, ilustrado à mão ou gerado em volume? → `gdd/06-arte.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 
 ## 6. Validar sugestões do agente
 
-- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) **0018** (timeout do manager), **0019** (traços, moral e entrosamento), **0020** (jogada da partida e MVP), **0021** (rivalidades e notícias) e **0022** (playbook do manager): confirmar os detalhes marcados como proposta do agente.
+- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) **0018** (timeout do manager), **0019** (traços, moral e entrosamento), **0020** (jogada da partida e MVP), **0021** (rivalidades e notícias), **0022** (playbook do manager) e **0024** (força por lado TR e CT): confirmar os detalhes marcados como proposta do agente.
 
 - [ ] Revisar os trechos marcados **[Sugestão]** no GDD (principalmente `00-visao.md` e `02-mecanicas.md`): confirmar (tirar a marca) ou apagar.

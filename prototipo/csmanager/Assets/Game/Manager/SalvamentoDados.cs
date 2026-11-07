@@ -14,6 +14,7 @@ namespace CSM.Manager
     [Serializable] public class SkillD { public float reaction, aimSigma, flick, spray, crosshair, pitchErr, aggression, composure, utilitaria; }
     [Serializable] public class JogadorD { public string nome; public int idade, funcao, potencial, foco, sessoes; public bool revelado; public float cansaco, preparo; public SkillD skill; public float[] inicio;
         public bool temPersonalidade; public int traco; public float moral, entrosamento;
+        public bool temLados; public float ladoTR = 50, ladoCT = 50; public int ladoFoco = -1;   // decisão 0024; salvamento antigo = neutro nos dois lados
         public int mvps, mvpsSerie; public List<string> jogadas = new List<string>(); }   // decisão 0020   // decisão 0019 (salvamentos antigos: temPersonalidade = false)
     [Serializable] public class LancD { public int semana, valor; public string descricao; }
     [Serializable] public class DesempD { public string nome; public int funcao, k, d, hs, dano, fk, rounds; }
@@ -63,11 +64,13 @@ namespace CSM.Manager
         static Skill De(SkillD d) => new Skill { reaction = d.reaction, aimSigma = d.aimSigma, flick = d.flick, spray = d.spray, crosshair = d.crosshair, pitchErr = d.pitchErr, aggression = d.aggression, composure = d.composure, utilitaria = d.utilitaria };
         static JogadorD Para(Jogador j) => new JogadorD { nome = j.nome, idade = j.idade, funcao = (int)j.funcao, potencial = j.potencial, foco = j.foco, sessoes = j.sessoes, revelado = j.potencialRevelado, cansaco = j.cansaco, preparo = j.preparo, skill = Para(j.skill), inicio = (float[])j.inicioTemporada.Clone(),
             temPersonalidade = true, traco = (int)j.traco, moral = j.moral, entrosamento = j.entrosamento,
+            temLados = true, ladoTR = j.ladoTR, ladoCT = j.ladoCT, ladoFoco = j.ladoFoco,
             mvps = j.mvps, mvpsSerie = j.mvpsSerie, jogadas = j.jogadas.ToList() };
         static Jogador De(JogadorD d)
         {
             var j = new Jogador { nome = d.nome, idade = d.idade, funcao = (Role)d.funcao, potencial = d.potencial, foco = d.foco, sessoes = d.sessoes, potencialRevelado = d.revelado, cansaco = d.cansaco, preparo = d.preparo, skill = De(d.skill), inicioTemporada = d.inicio != null && d.inicio.Length == 5 ? (float[])d.inicio.Clone() : new float[5] };
             if (d.temPersonalidade) { j.traco = (Traco)d.traco; j.moral = d.moral; j.entrosamento = d.entrosamento; }   // antes da 0019: valores iniciais, sem traço
+            if (d.temLados) { j.ladoTR = d.ladoTR; j.ladoCT = d.ladoCT; j.ladoFoco = d.ladoFoco; }
             j.mvps = d.mvps; j.mvpsSerie = d.mvpsSerie; if (d.jogadas != null) j.jogadas.AddRange(d.jogadas);
             return j;
         }

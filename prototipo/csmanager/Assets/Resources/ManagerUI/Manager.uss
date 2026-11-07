@@ -129,7 +129,7 @@
 .fila-cards { flex-direction: row; margin-bottom: 14px; margin-right: -14px; }
 .card-j { flex-grow: 1; flex-basis: 0; background-color: var(--cartao); border-width: 1px; border-color: var(--linha); border-radius: 4px; padding: 10px; margin-right: 14px; }
 .card-j.vazio { background-color: rgba(0, 0, 0, 0); border-color: rgba(0, 0, 0, 0); }
-.midia { height: 130px; background-color: var(--midia); border-radius: 4px; align-items: center; justify-content: center; }
+.midia { height: 170px; background-color: var(--midia); border-radius: 4px; align-items: center; justify-content: center; }
 .ovr { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border-radius: 20px; background-color: rgba(10, 14, 32, 0.85); border-width: 1px; border-color: var(--linha2); align-items: center; justify-content: center; }
 .ovr > .t { font-size: 17px; -unity-font-style: bold; -unity-text-align: middle-center; }
 .info { padding: 12px 4px 4px 4px; }
@@ -644,3 +644,36 @@
 .gh-nivel.fechado .gh-num { width: 32px; height: 32px; border-radius: 16px; }
 .mapa-card { min-height: 0; }
 .serie-chance { font-size: 44px; -unity-font-style: bold; -unity-text-align: middle-right; }
+
+/* ---- treino do jogador (decisão 0024): foto grande à direita, números à esquerda, tabela por lado embaixo ---- */
+.c-lado { width: 110px; }
+.tj-nav { flex-direction: row; flex-wrap: wrap; margin-bottom: 14px; }
+.tj-nav > .btn-mini { margin-right: 8px; margin-bottom: 6px; }
+.tj-hero { flex-shrink: 0; height: 580px; background-color: rgba(8, 12, 28, 0.6); border-width: 1px; border-color: var(--linha2); border-radius: 4px; overflow: hidden; }
+.tj-foto { position: absolute; right: 0; top: 0; bottom: 0; width: 46%; -unity-background-scale-mode: scale-and-crop; }
+.tj-veu { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+.tj-lado-foto { position: absolute; right: 18px; top: 18px; }
+.tj-info { position: absolute; left: 34px; top: 26px; width: 44%; }
+.tj-pre { font-size: 15px; color: var(--suave); letter-spacing: 1px; }
+.tj-nome { font-size: 58px; -unity-font-style: bold; color: #ffffff; letter-spacing: 1px; margin-top: 2px; }
+.tj-sub { width: 200px; height: 2px; background-color: var(--destaque); margin-top: 12px; margin-bottom: 14px; }
+.tj-nums { flex-direction: row; }
+.tj-num { margin-right: 36px; }
+.tj-num-v { font-size: 38px; -unity-font-style: bold; }
+.tj-dado { flex-direction: row; align-items: center; margin-bottom: 7px; }
+.tj-dado-rot { width: 100px; }
+.tj-faixa { position: absolute; left: 0; right: 0; bottom: 0; background-color: rgba(6, 9, 22, 0.78); border-top-width: 1px; border-top-color: var(--linha2); }
+.tj-linha-tab { flex-direction: row; align-items: center; height: 54px; padding: 0 28px; border-bottom-width: 1px; border-bottom-color: var(--linha); }
+.tj-linha-tab.cab { height: 36px; }
+.tj-linha-tab.cab .t { font-size: 13px; color: var(--apagado); -unity-font-style: normal; }
+.tj-linha-tab:hover { background-color: rgba(255, 255, 255, 0.04); }
+.tj-linha-tab.cab:hover { background-color: rgba(0, 0, 0, 0); }
+.tj-c-rot { width: 210px; }
+.tj-c-num { width: 118px; justify-content: center; }
+.tj-valor { font-size: 22px; -unity-font-style: bold; }
+.tj-rot-lado { justify-content: center; }
+.tj-plano-linha { flex-direction: row; align-items: center; margin-bottom: 8px; }
+.tj-plano-rot { width: 90px; }
+.midia-lado { position: absolute; left: 8px; bottom: 8px; }
+.tj-plano { flex-grow: 0; flex-basis: auto; flex-shrink: 0; margin-right: 0; }
+.efeito-time { flex-shrink: 0; }

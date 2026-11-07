@@ -1,6 +1,6 @@
 # Progressão e economia
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024
 
 _Como o jogador evolui e quais recursos circulam._
 
@@ -36,6 +36,7 @@ A evolução dos jogadores é **multifatorial**: o jogo mistura vários dados, c
 
 - **Idade:** jovens evoluem mais e ainda têm potencial a descobrir; o auge fica por volta dos 21 a 26 anos; depois há declínio gradual (o reflexo cai antes).
 - **Treino configurável:** o manager escolhe o foco e a frequência de cada jogador por semana. Treinar evolui o atributo (permanente, com teto no **potencial**) e dá um **preparo** (bônus temporário nas partidas), mas gera **cansaço**, que reduz a habilidade na partida. É um contrapeso.
+- **Treino por lado (decisão 0024):** além do foco, o manager escolhe se a semana treina **os dois lados, só o TR ou só o CT**. Treinar um lado sobe o **domínio** dele (até 1,8 ponto por sessão), mas o atributo em foco rende só 60 % nessas sessões; o lado que ninguém treina esfria 1 % por semana em direção ao neutro. Assim um jogador pode virar especialista no TR ou ficar completo.
 - Todos os números são provisórios; os pesos finais ficam para o balanceamento.
 
 ## Curva de dificuldade
@@ -60,4 +61,5 @@ O nível da Gaming House **libera** outras coisas que o manager pode melhorar, c
 - Qual a curva de custo por nível (para ficar balanceada)?
 - Elenco: os jogadores têm **contrato** (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)?
 - Evolução: quanto pesa cada fator (treino, experiência, idade)? (o pico de idade e o declínio já estão decididos)
+- Lados: o quanto o domínio de lado deve valer (hoje até ±8 % de habilidade) e quanto custa treinar um lado (hoje 1,8 ponto por sessão, atributo a 60 %)? (decisão 0024)
 - Balancear salários, juros, limite de empréstimo, prazo de falência e manutenção da Gaming House (valores provisórios das decisões 0015 e 0016).
