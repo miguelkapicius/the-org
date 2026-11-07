@@ -209,6 +209,18 @@ namespace CSM.ManagerUI
             return t;
         }
 
+        /// <summary>Retrato de alguém que não é jogador do elenco (os times adversários): o rosto sai do conjunto pelo nome, sempre o mesmo.</summary>
+        public static VisualElement RetratoNome(string nome, string tamanho)
+        {
+            var e = E("retrato", tamanho, "rt" + IndiceCor(nome));
+            int total = FotosTotal(); Texture2D foto = null;
+            if (total > 0) { int h = 11; foreach (char ch in nome) h = h * 31 + ch; foto = CarregaFoto((h & 0x7fffffff) % total + 1); }
+            if (foto != null) { e.style.backgroundImage = new StyleBackground(foto); e.AddToClassList("foto"); AlinharAoTopo(e); }
+            else e.Add(L(nome.Substring(0, 1)));
+            e.pickingMode = PickingMode.Ignore;
+            return e;
+        }
+
         /// <summary>Acrescenta a luz de contorno do lado forte do jogador (nada se ele rende igual nos dois lados).</summary>
         public static void AddRim(VisualElement foto, CSM.Manager.Jogador j)
         {
@@ -270,28 +282,6 @@ namespace CSM.ManagerUI
             var c = E("c", classe);
             if (filho != null) c.Add(filho);
             return c;
-        }
-
-        /// <summary>Textura de quadrados do topo da pré-partida (some para baixo); a UI Toolkit não tem gradiente em USS.</summary>
-        public class Quadriculado : VisualElement
-        {
-            public Quadriculado()
-            {
-                pickingMode = PickingMode.Ignore;
-                generateVisualContent += mgc =>
-                {
-                    var p = mgc.painter2D; float h = contentRect.height, w = contentRect.width; const float T = 56;
-                    for (int iy = 0; iy * T < h; iy++)
-                        for (int ix = 0; ix * T < w; ix++)
-                        {
-                            float a = Mathf.Clamp01(1f - (iy * T + T / 2) / h) * 0.8f;
-                            p.fillColor = (ix + iy) % 2 == 0 ? new Color(0.078f, 0.078f, 0.086f, a) : new Color(0.047f, 0.047f, 0.055f, a);
-                            p.BeginPath(); p.MoveTo(new Vector2(ix * T, iy * T)); p.LineTo(new Vector2((ix + 1) * T, iy * T));
-                            p.LineTo(new Vector2((ix + 1) * T, (iy + 1) * T)); p.LineTo(new Vector2(ix * T, (iy + 1) * T)); p.ClosePath(); p.Fill();
-                        }
-                };
-                RegisterCallback<GeometryChangedEvent>(_ => MarkDirtyRepaint());
-            }
         }
 
         /// <summary>Barra de cansaço (0..100): ao contrário das notas, mais alto é pior (verde, laranja, vermelho).</summary>

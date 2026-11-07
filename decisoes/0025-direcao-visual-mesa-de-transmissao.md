@@ -35,6 +35,6 @@ Opção 2, chamada **mesa de transmissão** (a interface parece a mesa de opera�
 ## Consequências
 - `Manager.uss` ganha uma camada de refino no fim do arquivo; as cores com transparência foram **convertidas para a mistura linear da Unity** (branco a 4 % aparecia como cinza de 18 %); quem criar cor nova com transparência deve conferir na captura.
 - As fontes ficam em `Assets/Resources/ManagerUI/Fontes/` com os textos das licenças OFL.
-- O fundo estrelado gerado em código foi removido.
+- O fundo estrelado gerado em código foi removido. A pré-partida foi refeita como quadro de confronto, sem os bonecos 3D (a classe `Quadriculado` saiu).
 - O mockup HTML (`prototipo/mockup-ui/`) continua no visual antigo (pergunta já aberta).
 - Os cartões do hub, o painel e as outras telas foram conferidos só por captura de tela (1600×900, 1280×800 e 1024×768), não com o mouse. `CSM_CAPTURA_TAM=LxA` muda o tamanho da captura.

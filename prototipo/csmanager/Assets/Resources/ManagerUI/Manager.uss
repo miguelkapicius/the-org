@@ -1103,3 +1103,48 @@
 /* retratos: rosto de estúdio com a luz do lado forte por cima */
 .retrato { overflow: hidden; }
 .retrato-rim { position: absolute; left: 0; top: 0; right: 0; bottom: 0; }
+
+/* ======================================================================================================
+   Pré-partida como quadro de confronto: times lado a lado com retratos, anel de chance no centro
+   ====================================================================================================== */
+.prematch { background-color: #0b0d10; border-width: 0; border-radius: 0; background-image: url("/Assets/Resources/ManagerUI/fundo.jpg"); background-size: cover; background-position: center center; -unity-background-image-tint-color: rgb(80, 80, 84); }
+.pm2-topo { align-items: center; padding: 28px 0 0 0; }
+.pm2-rel { flex-direction: row; align-items: center; padding: 9px 20px; border-radius: 4px; background-color: rgba(255, 255, 255, 0.008); }
+.pm2-rel > .ic { margin-right: 10px; color: var(--suave); }
+.pm2-rel > .t { font-size: 20px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pm2-corpo { flex-grow: 1; flex-direction: row; justify-content: center; align-items: flex-start; padding: 30px 48px 0 48px; }
+.pm2-lado { width: 410px; flex-shrink: 1; }
+.pm2-cab { flex-direction: row; align-items: center; margin-bottom: 20px; }
+.pm2-lado.dir .pm2-cab { flex-direction: row-reverse; }
+.pm2-brasao { width: 66px; height: 66px; border-radius: 4px; }
+.pm2-brasao > .t { font-size: 40px; }
+.pm2-tx { margin: 0 16px; flex-grow: 1; flex-shrink: 1; min-width: 0; }
+.pm2-lado.dir .pm2-tx { align-items: flex-end; }
+.pm2-nome { font-size: 48px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pm2-sub { font-size: 13px; letter-spacing: 1.2px; color: var(--apagado); }
+.pm2-forca { align-items: center; }
+.pm2-forca-v { font-size: 50px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pm2-j { flex-direction: row; align-items: center; padding: 8px 14px; margin-bottom: 7px; border-radius: 6px; background-color: rgba(255, 255, 255, 0.006); }
+.pm2-lado.dir .pm2-j { flex-direction: row-reverse; }
+.pm2-foto { width: 54px; height: 54px; border-radius: 27px; flex-shrink: 0; }
+.pm2-j-tx { flex-grow: 1; margin: 0 16px; }
+.pm2-lado.dir .pm2-j-tx { align-items: flex-end; }
+.pm2-j-nome { font-size: 30px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pm2-j-ovr { font-size: 22px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.pm2-centro { width: 330px; flex-shrink: 0; align-items: center; margin: 0 34px; padding-top: 18px; }
+.pm2-anel-v { font-size: 74px; color: var(--texto); -unity-text-align: middle-center; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.pm2-duelo { flex-direction: row; align-items: center; justify-content: space-between; align-self: stretch; margin-top: 22px; }
+.pm2-duelo-v { font-size: 30px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/IBMPlexMono-Medium.ttf"); }
+.pm2-centro .pm-chance-barra { align-self: stretch; margin: 10px 0 12px 0; }
+.pm2-chance-sub { font-size: 15px; color: var(--suave); -unity-text-align: middle-center; }
+.pm2-barra { flex-direction: row; justify-content: center; align-items: center; flex-wrap: wrap; padding: 0 48px 18px 48px; }
+.pm2-acoes { flex-direction: row; }
+.pm2-acoes > .btn { margin: 0 6px; }
+.pm2-comecar { min-width: 320px; margin: 0 26px; }
+.prematch .pm-dicas { position: relative; left: 0; right: 0; bottom: auto; justify-content: center; padding-bottom: 20px; }
+.pm2-j { padding: 11px 20px; margin-bottom: 11px; }
+.pm2-foto { width: 74px; height: 74px; border-radius: 37px; }
+.pm2-j-nome { font-size: 36px; }
+.pm2-j-ovr { font-size: 28px; }
+.pm2-anel-v { font-size: 84px; }
+.pm2-lado { width: 430px; }

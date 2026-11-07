@@ -189,13 +189,13 @@ namespace CSM.ManagerUI
     /// <summary>Indicador em anel (0 a 1) com o valor no centro; o anel cresce até o valor ao aparecer.</summary>
     public class Anel : VisualElement
     {
-        readonly float alvo; readonly Color cor; float atual;
+        readonly float alvo; readonly Color cor; readonly float tam; float atual;
 
-        public Anel(float valor01, Color cor, string centro)
+        public Anel(float valor01, Color cor, string centro, float tamanho = 92f, string classeValor = "pb-anel-v")
         {
-            alvo = Mathf.Clamp01(valor01); this.cor = cor;
-            style.width = 92; style.height = 92; style.alignItems = Align.Center; style.justifyContent = Justify.Center; style.flexShrink = 0;
-            var v = new Label(centro); v.AddToClassList("pb-anel-v"); v.pickingMode = PickingMode.Ignore; Add(v);
+            alvo = Mathf.Clamp01(valor01); this.cor = cor; tam = tamanho;
+            style.width = tamanho; style.height = tamanho; style.alignItems = Align.Center; style.justifyContent = Justify.Center; style.flexShrink = 0;
+            var v = new Label(centro); v.AddToClassList("t"); v.AddToClassList(classeValor); v.pickingMode = PickingMode.Ignore; Add(v);
             generateVisualContent += Desenhar;
             float t0 = Time.realtimeSinceStartup;
             var tarefa = schedule.Execute(() =>
@@ -210,14 +210,14 @@ namespace CSM.ManagerUI
 
         void Desenhar(MeshGenerationContext mgc)
         {
-            var p = mgc.painter2D; var c = new Vector2(contentRect.width / 2f, contentRect.height / 2f); const float raio = 38f;
+            var p = mgc.painter2D; var c = new Vector2(contentRect.width / 2f, contentRect.height / 2f); float k = tam / 92f, raio = 38f * k;
             p.lineCap = LineCap.Round;
-            p.strokeColor = new Color(1f, 1f, 1f, 0.05f); p.lineWidth = 7f;
+            p.strokeColor = new Color(1f, 1f, 1f, 0.05f); p.lineWidth = 7f * k;
             p.BeginPath(); p.Arc(c, raio, Angle.Degrees(0), Angle.Degrees(360)); p.Stroke();
             if (atual <= 0.001f) return;
-            p.strokeColor = new Color(cor.r, cor.g, cor.b, 0.22f); p.lineWidth = 12f;
+            p.strokeColor = new Color(cor.r, cor.g, cor.b, 0.22f); p.lineWidth = 12f * k;
             p.BeginPath(); p.Arc(c, raio, Angle.Degrees(-90), Angle.Degrees(-90 + 360f * atual)); p.Stroke();
-            p.strokeColor = cor; p.lineWidth = 7f;
+            p.strokeColor = cor; p.lineWidth = 7f * k;
             p.BeginPath(); p.Arc(c, raio, Angle.Degrees(-90), Angle.Degrees(-90 + 360f * atual)); p.Stroke();
         }
     }

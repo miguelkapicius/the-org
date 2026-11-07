@@ -173,64 +173,58 @@ namespace CSM.ManagerUI
         }
 
         // ================================================================================================ pré-partida
-        /// <summary>Tela cheia como a referência de pré-partida: os dois times no centro (brasão, força, lista), os bonecos 3D
-        /// do jogo nas laterais, a chance de vitória do mapa e a barra de ações embaixo.</summary>
+        /// <summary>Tela cheia de confronto (decisão 0025): os dois times lado a lado com as escalações em retratos, a chance de vencer o mapa
+        /// num anel grande no centro e, embaixo, a ação principal (assistir) entre as secundárias.</summary>
         void TelaPreMatch()
         {
             var s = c.serie; var adv = s.adv; int mapa = Math.Max(0, s.MapaAtual);
+            if (preview != null) { Destroy(preview.gameObject); preview = null; }
             var raiz = E("prematch");
-            try { raiz.style.unityFontDefinition = FontDefinition.FromFont(Font.CreateDynamicFontFromOSFont(new[] { "Bahnschrift", "Arial Narrow", "Segoe UI" }, 40)); }
-            catch (Exception) { /* sem a fonte condensada, fica a padrão */ }
             janela.Add(raiz);
 
-            raiz.Add(new Quadriculado { name = "pixels" }.WithClass("pm-pixels"));
+            var topo = E("pm2-topo");
+            var rel = E("pm2-rel"); rel.Add(new Icone("clock", 20));
+            rel.Add(L(Mapas.NOMES[mapa] + " · " + Fmt.Serie(s.Md) + " · série " + s.MinhasVit + " x " + s.DelesVit));
+            topo.Add(rel);
+            raiz.Add(topo);
 
-            // bonecos 3D reais (RenderTexture); sem eles a tela funciona do mesmo jeito
-            if (preview != null) Destroy(preview.gameObject);
-            preview = BonecosPreview.Criar();
-            if (preview != null)
-            {
-                raiz.Add(BonecoImagem(preview.rtEsq, "esq"));
-                raiz.Add(BonecoImagem(preview.rtDir, "dir"));
-            }
-
-            var rel = E("pm-relogio"); rel.Add(new Icone("clock", 22));
-            rel.Add(L(Mapas.NOMES[mapa] + " · " + Fmt.Serie(s.Md) + " · série " + s.MinhasVit + " x " + s.DelesVit)); raiz.Add(rel);
-            raiz.Add(TagTime(c.clube, "VOCÊ · " + Estilos.Nome(c.estilo).ToUpperInvariant(), "esq"));
-            raiz.Add(TagTime(adv.nome, c.NivelIntel(adv.id) >= 1 ? Estilos.Nome(adv.estilo).ToUpperInvariant() : "ESTILO ?", "dir"));
-
-            var centro = E("pm-centro");
+            var corpo = E("pm2-corpo");
             int fa = c.Forca, fb = adv.Forca;
-            centro.Add(LadoPreMatch(c.clube, fa, fa > fb ? "up" : fa < fb ? "down" : null, "laranja", c.Titulares.Select(j => (j.nome, j.funcao)).ToList()));
-            centro.Add(E("pm-bola"));
-            centro.Add(LadoPreMatch(adv.nome, fb, fb > fa ? "up" : fb < fa ? "down" : null, "azul", adv.jogadores));
-            raiz.Add(centro);
+            corpo.Add(LadoPreMatch(c.clube, "VOCÊ · " + Estilos.Nome(c.estilo).ToUpperInvariant(), fa, fa > fb ? "up" : fa < fb ? "down" : null, true,
+                c.Titulares.Select(j => (j.nome, j.funcao, j)).ToList()));
 
-            // chance de vitória do mapa e da série (as mesmas usadas ao pular: decisão 0008)
+            // o centro: a chance de vencer este mapa (as mesmas contas de pular: decisão 0008)
             double chMapa = c.ChanceMapa(adv, mapa); int pct = (int)Math.Round(chMapa * 100);
-            var ch = E("pm-chance");
-            ch.Add(L("CHANCE DE VENCER ESTE MAPA", "pm-chance-tit"));
-            ch.Add(L(pct + "%", "pm-chance-num"));
+            var centro = E("pm2-centro");
+            centro.Add(L("CHANCE DE VENCER ESTE MAPA", "dado-rot"));
+            var anel = new Anel(pct / 100f, pct >= 55 ? new Color(0.294f, 0.749f, 0.549f) : pct >= 45 ? new Color(0.384f, 0.659f, 0.933f) : new Color(0.925f, 0.416f, 0.373f), pct + "%", 250f, "pm2-anel-v");
+            anel.style.marginTop = 14; centro.Add(anel);
+            var duelo = E("pm2-duelo");
+            var fe = L(c.ForcaEfetiva(mapa, adv).ToString("0.0"), "pm2-duelo-v", "laranja"); var fd = L(c.ForcaEfetivaAdv(adv, mapa).ToString("0.0"), "pm2-duelo-v", "azul");
+            duelo.Add(fe); duelo.Add(L("força efetiva", "f13", "apagado", "centro")); duelo.Add(fd);
+            ComDica(duelo, "Força efetiva de cada time neste mapa: preparo, cansaço, afinidade e estratégia incluídos.");
+            centro.Add(duelo);
             var barra0 = E("pm-chance-barra");
             var ba = E("pm-chance-a"); ba.style.flexGrow = Mathf.Max(1, pct); barra0.Add(ba);
             var bb = E("pm-chance-b"); bb.style.flexGrow = Mathf.Max(1, 100 - pct); barra0.Add(bb);
-            ch.Add(barra0);
-            ch.Add(L("Série: " + Pct(Carreira.ChanceSerie(chMapa, s.Md)) + " · força efetiva " + c.ForcaEfetiva(mapa, adv).ToString("0.0") + " contra " + c.ForcaEfetivaAdv(adv, mapa).ToString("0.0") + " (preparo, cansaço, afinidade e estratégia incluídos)", "pm-chance-sub"));
-            raiz.Add(ch);
+            centro.Add(barra0);
+            centro.Add(L("Chance de vencer a série: " + Pct(Carreira.ChanceSerie(chMapa, s.Md)), "pm2-chance-sub"));
+            corpo.Add(centro);
 
-            var barra = E("pm-barra");
-            var esq = E("seg");
-            esq.Add(BotaoSeg("Voltar", () => Ir(Aba.Serie)));
-            esq.Add(BotaoSeg("Estratégia", () => Ir(Aba.Serie)));
+            corpo.Add(LadoPreMatch(adv.nome, c.NivelIntel(adv.id) >= 1 ? Estilos.Nome(adv.estilo).ToUpperInvariant() : "ESTILO ?", fb, fb > fa ? "up" : fb < fa ? "down" : null, false,
+                adv.jogadores.Select(x => (x.nome, x.funcao, (Jogador)null)).ToList()));
+            raiz.Add(corpo);
+
+            var barra = E("pm2-barra");
+            var esq = E("pm2-acoes");
+            esq.Add(Botao("Voltar", () => Ir(Aba.Serie)));
+            esq.Add(Botao("Estratégia", () => Ir(Aba.Serie)));
             barra.Add(esq);
-            var comecar = E("comecar"); if (c.Falido) comecar.AddToClassList("desligado");
-            comecar.Add(L("ASSISTIR MAPA"));
-            var quad = E("quad"); quad.Add(new Icone("playf", 14)); comecar.Add(quad);
-            if (!c.Falido) Clicavel(comecar, Assistir);
+            var comecar = Botao("Assistir mapa", Assistir, !c.Falido, true, "playf", "cheio"); comecar.AddToClassList("pm2-comecar");
             barra.Add(comecar);
-            var dir = E("seg");
-            dir.Add(BotaoSeg("Pular mapa", PularMapaUI, !c.Falido));
-            dir.Add(BotaoSeg("Pular série", PularSerieUI, !c.Falido));
+            var dir = E("pm2-acoes");
+            dir.Add(Botao("Pular mapa", PularMapaUI, !c.Falido));
+            dir.Add(Botao("Pular série", PularSerieUI, !c.Falido));
             barra.Add(dir);
             raiz.Add(barra);
 
@@ -242,43 +236,29 @@ namespace CSM.ManagerUI
             raiz.Add(dicas);
         }
 
-        static VisualElement BonecoImagem(RenderTexture rt, string lado)
+        /// <summary>Um time na pré-partida: brasão, nome, estilo, força e os 5 jogadores com retrato (os nossos mostram o geral).</summary>
+        static VisualElement LadoPreMatch(string nome, string sub, int forca, string seta, bool nosso, List<(string nome, Role funcao, Jogador j)> jogadores)
         {
-            var e = E("pm-boneco", lado);
-            e.style.backgroundImage = new StyleBackground(Background.FromRenderTexture(rt));
-            e.pickingMode = PickingMode.Ignore;
-            return e;
-        }
-
-        static VisualElement TagTime(string nome, string sub, string lado)
-        {
-            var t = E("pm-tag", lado);
-            var n = E("pm-tag-nome"); n.Add(L(nome.ToUpperInvariant())); t.Add(n);
-            var s = E("pm-tag-sub"); s.Add(new Icone("house", 16)); s.Add(L(sub)); t.Add(s);
-            return t;
-        }
-
-        static VisualElement BotaoSeg(string texto, Action acao, bool ativo = true)
-        {
-            var b = E("seg-b"); if (!ativo) b.AddToClassList("desligado");
-            b.Add(L(texto.ToUpperInvariant()));
-            if (ativo) Clicavel(b, acao);
-            return b;
-        }
-
-        static VisualElement LadoPreMatch(string nome, int forca, string seta, string cor, List<(string nome, Role funcao)> jogadores)
-        {
-            var l = E("pm-time");
-            var crest = E("crest", cor + "-bg"); crest.Add(L(nome.Substring(0, 1)));
-            var f = E("forca"); f.Add(L(forca.ToString())); if (seta != null) f.Add(new Icone(seta, 16));
-            crest.Add(f);
-            l.Add(crest);
-            l.Add(L(nome.ToUpperInvariant(), "pm-nome"));
-            foreach (var (jn, jf) in jogadores)
+            var l = E("pm2-lado"); if (!nosso) l.AddToClassList("dir");
+            var cab = E("pm2-cab");
+            var br = Brasao(nome, nosso ? "laranja" : "azul"); br.AddToClassList("pm2-brasao"); cab.Add(br);
+            var tx = E("pm2-tx");
+            tx.Add(L(nome.ToUpperInvariant(), "pm2-nome")); tx.Add(L(sub, "pm2-sub"));
+            cab.Add(tx);
+            var f = E("pm2-forca");
+            f.Add(L("FORÇA", "dado-rot"));
+            var fv = E("linha-h"); fv.Add(L(forca.ToString(), "pm2-forca-v", nosso ? "laranja" : "azul")); if (seta != null) { var ic = new Icone(seta, 18); ic.style.marginLeft = 4; fv.Add(ic); }
+            f.Add(fv);
+            cab.Add(f);
+            l.Add(cab);
+            foreach (var (jn, jf, j) in jogadores)
             {
-                var r = E("pm-j");
-                var fn = E("pm-j-fn"); fn.Add(L(Fmt.FuncaoCurta(jf))); r.Add(fn);
-                r.Add(L(jn.ToUpperInvariant()));
+                var r = E("pm2-j");
+                r.Add(j != null ? Retrato(j, "pm2-foto") : RetratoNome(jn, "pm2-foto"));
+                var t = E("pm2-j-tx");
+                t.Add(L(jn.ToUpperInvariant(), "pm2-j-nome")); t.Add(L(Fmt.Funcao(jf), "f13", "suave"));
+                r.Add(t);
+                if (j != null) r.Add(L(j.Overall.ToString(), "pm2-j-ovr", ClasseNota(j.Overall)));
                 l.Add(r);
             }
             return l;
