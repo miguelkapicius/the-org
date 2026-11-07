@@ -58,12 +58,11 @@ namespace CSM.ManagerUI
                     Ruido(0.004f, 0.02f, Filtro.PassaFaixa, 1400f, 2f, 0.3f),
                     Nota(Onda.Seno, 0f, 0.06f, 150f, 85f, 0.9f, 0.3f, 0.001f) } };
 
-                // ação principal: ordem confirmada no rádio (chiado, dois bipes de rádio tático e uma pancada grave que dá peso)
-                case Som.Principal: return new Definicao { pico = 0.5f, reverb = 0.12f, cauda = 0.25f, vozes = new[] {
-                    Ruido(0f, 0.045f, Filtro.PassaFaixa, 1700f, 1.2f, 0.5f, 0.004f, 0.6f, 3200f),
-                    Nota(Onda.Quadrada, 0.05f, 0.06f, 1200f, -1f, 0.35f, 0.8f, 0.002f, Filtro.PassaBaixa, 3200f),
-                    Nota(Onda.Quadrada, 0.115f, 0.08f, 1800f, -1f, 0.35f, 0.8f, 0.002f, Filtro.PassaBaixa, 3600f),
-                    Nota(Onda.Seno, 0.05f, 0.12f, 90f, 45f, 0.7f, 0.4f, 0.002f) } };
+                // ação principal: confirmação firme e discreta (tecla pesada, com uma nota curta e redonda subindo)
+                case Som.Principal: return new Definicao { pico = 0.32f, reverb = 0.08f, cauda = 0.15f, vozes = new[] {
+                    Nota(Onda.Seno, 0f, 0.08f, 170f, 100f, 0.7f, 0.35f, 0.002f),
+                    Ruido(0f, 0.012f, Filtro.PassaBaixa, 2000f, 0.8f, 0.2f, 0.002f),
+                    Nota(Onda.Triangulo, 0.045f, 0.12f, 520f, 600f, 0.3f, 0.5f, 0.004f, Filtro.PassaBaixa, 1800f) } };
 
                 // trocar de tela ou aba: um toque curto e macio, quase só um "tum" surdo
                 case Som.Aba: return new Definicao { pico = 0.22f, vozes = new[] {
