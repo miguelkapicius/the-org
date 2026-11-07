@@ -191,12 +191,13 @@ namespace CSM.ManagerUI
     {
         readonly float alvo; readonly Color cor; readonly float tam; float atual;
 
-        public Anel(float valor01, Color cor, string centro, float tamanho = 92f, string classeValor = "pb-anel-v")
+        public Anel(float valor01, Color cor, string centro, float tamanho = 92f, string classeValor = "pb-anel-v", bool animar = true)
         {
             alvo = Mathf.Clamp01(valor01); this.cor = cor; tam = tamanho;
             style.width = tamanho; style.height = tamanho; style.alignItems = Align.Center; style.justifyContent = Justify.Center; style.flexShrink = 0;
             var v = new Label(centro); v.AddToClassList("t"); v.AddToClassList(classeValor); v.pickingMode = PickingMode.Ignore; Add(v);
             generateVisualContent += Desenhar;
+            if (!animar) { atual = alvo; return; }   // já cheio: não recomeça do zero
             float t0 = Time.realtimeSinceStartup;
             var tarefa = schedule.Execute(() =>
             {

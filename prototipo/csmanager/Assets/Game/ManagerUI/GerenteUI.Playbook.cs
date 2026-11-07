@@ -16,9 +16,14 @@ namespace CSM.ManagerUI
     {
         string jogadaAberta; int exemploAberto;   // a jogada em foco e qual dos planos dela está no quadro
         bool ladoPlaybookTR = true;
-        float rolagemPlaybook;                    // posição da lista de jogadas (não volta ao topo a cada clique)
+
+        // As peças da tela ficam guardadas para atualizar só a que mudou. Reconstruir a tela inteira (Mostrar) a cada clique fazia a rolagem
+        // voltar ao topo por um instante, a lista piscar e os anéis recomeçarem do zero.
+        VisualElement pbBarra, pbVagas, pbCorpo, pbPainel; ScrollView pbLista; bool pbAnimarAneis = true;
 
         static string Mmss(float s) => (int)s / 60 + ":" + ((int)s % 60).ToString("00");
+
+        void EscondeDica() { if (dicaEl != null) dicaEl.style.display = DisplayStyle.None; }   // o elemento sob o mouse pode sumir sem avisar
 
         void TelaPlaybook()
         {
@@ -27,36 +32,68 @@ namespace CSM.ManagerUI
                            Estrategias.PREFERENCIA_PLAYBOOK.ToString("0") + "x na escolha; proibida nunca é escolhida. Vale para o mapa jogável de hoje; cada mapa novo terá o seu playbook.");
             conteudo.Add(intro);
 
-            bool tr = ladoPlaybookTR;
-            var fav = tr ? c.favoritasTR : c.favoritasCT; var proi = tr ? c.proibidasTR : c.proibidasCT;
-
             // alternador de lado e vagas
-            var barra = E("pb-barra");
+            pbBarra = E("pb-barra");
             var seg = E("pb-seg");
             seg.Add(SegLado("ATAQUE · TR", true)); seg.Add(SegLado("DEFESA · CT", false));
-            barra.Add(seg);
+            pbBarra.Add(seg);
+            pbVagas = VagasPlaybook(); pbBarra.Add(pbVagas);
+            conteudo.Add(pbBarra);
+
+            var jogadas = Estrategias.Jogadas(ladoPlaybookTR);
+            if (jogadas.Count == 0) { conteudo.Add(L("Não há jogadas com dados suficientes nesse lado.", "f15", "suave")); pbCorpo = null; pbPainel = null; return; }
+            if (jogadaAberta == null || !jogadas.Any(x => x.nome == jogadaAberta))
+            {
+                jogadaAberta = (jogadas.FirstOrDefault(x => c.Marca(x.nome, ladoPlaybookTR) == Carreira.MarcaJogada.Favorita) ?? jogadas[0]).nome; exemploAberto = 0;
+            }
+
+            pbCorpo = E("pb-corpo");
+            pbLista = new ScrollView(ScrollViewMode.Vertical); pbLista.AddToClassList("pb-lista"); pbLista.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            PreencherListaPlaybook();
+            pbCorpo.Add(pbLista);
+            pbPainel = PainelJogada(JogadaAtual(), ladoPlaybookTR); pbCorpo.Add(pbPainel);
+            conteudo.Add(pbCorpo);
+        }
+
+        Estrategias.InfoJogada JogadaAtual() => Estrategias.Jogadas(ladoPlaybookTR).First(x => x.nome == jogadaAberta);
+
+        VisualElement VagasPlaybook()
+        {
+            bool tr = ladoPlaybookTR;
+            var fav = tr ? c.favoritasTR : c.favoritasCT; var proi = tr ? c.proibidasTR : c.proibidasCT;
             var vg = E("pb-vagas");
             vg.Add(Vagas("FAVORITAS", fav.Count, c.VagasPlaybook, "fav"));
             vg.Add(Vagas("PROIBIDAS", proi.Count, c.VagasPlaybook, "proib"));
             ComDica(vg, "Vagas por lado no nível " + c.nivelGH + " da Gaming House (+1 por nível, até " + Carreira.VAGAS_PLAYBOOK_MAX + ").");
-            barra.Add(vg);
-            conteudo.Add(barra);
+            return vg;
+        }
 
-            var jogadas = Estrategias.Jogadas(tr);
-            if (jogadas.Count == 0) { conteudo.Add(L("Não há jogadas com dados suficientes nesse lado.", "f15", "suave")); return; }
-            if (jogadaAberta == null || !jogadas.Any(x => x.nome == jogadaAberta))
-            {
-                jogadaAberta = (jogadas.FirstOrDefault(x => c.Marca(x.nome, tr) == Carreira.MarcaJogada.Favorita) ?? jogadas[0]).nome; exemploAberto = 0;
-            }
-            var atual = jogadas.First(x => x.nome == jogadaAberta);
+        /// <summary>Refaz as linhas da lista dentro do mesmo ScrollView: a rolagem da lista não se mexe.</summary>
+        void PreencherListaPlaybook()
+        {
+            pbLista.contentContainer.Clear();
+            foreach (var j in Estrategias.Jogadas(ladoPlaybookTR)) pbLista.Add(LinhaJogada(j, ladoPlaybookTR, j.nome == jogadaAberta));
+        }
 
-            var corpo = E("pb-corpo");
-            var lista = new ScrollView(ScrollViewMode.Vertical); lista.AddToClassList("pb-lista"); lista.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
-            foreach (var j in jogadas) lista.Add(LinhaJogada(j, tr, j.nome == jogadaAberta, () => rolagemPlaybook = lista.scrollOffset.y));
-            var yr = rolagemPlaybook; lista.schedule.Execute(() => lista.scrollOffset = new Vector2(0, yr)).StartingIn(1);
-            corpo.Add(lista);
-            corpo.Add(PainelJogada(atual, tr));
-            conteudo.Add(corpo);
+        /// <summary>Troca só o painel da jogada (título, anéis, mapa e rotas). Os anéis só crescem do zero quando a jogada muda, não ao trocar de exemplo.</summary>
+        void AtualizarPainelPlaybook(bool animarAneis)
+        {
+            if (pbCorpo == null || pbPainel == null) { Mostrar(); return; }
+            EscondeDica();
+            pbAnimarAneis = animarAneis;
+            var novo = PainelJogada(JogadaAtual(), ladoPlaybookTR);
+            pbAnimarAneis = true;
+            int i = pbCorpo.IndexOf(pbPainel); pbCorpo.Remove(pbPainel); pbCorpo.Insert(i, novo); pbPainel = novo;
+        }
+
+        /// <summary>Depois de favoritar ou proibir: as vagas, os selos da lista e o painel mudam; o resto da tela fica quieto.</summary>
+        void AtualizarMarcasPlaybook()
+        {
+            if (pbBarra == null || pbVagas == null || pbLista == null) { Mostrar(); return; }
+            EscondeDica();
+            pbBarra.Remove(pbVagas); pbVagas = VagasPlaybook(); pbBarra.Add(pbVagas);
+            PreencherListaPlaybook();
+            AtualizarPainelPlaybook(false);
         }
 
         VisualElement SegLado(string texto, bool tr)
@@ -64,7 +101,12 @@ namespace CSM.ManagerUI
             var b = E("pb-seg-b"); if (ladoPlaybookTR == tr) b.AddToClassList("ativo");
             var q = E("pb-seg-q", tr ? "lado-tr" : "lado-ct"); b.Add(q);
             b.Add(L(texto));
-            Clicavel(b, () => { ladoPlaybookTR = tr; jogadaAberta = null; exemploAberto = 0; rolagemPlaybook = 0; Mostrar(); });
+            Clicavel(b, () =>
+            {
+                if (ladoPlaybookTR == tr) return;
+                ladoPlaybookTR = tr; jogadaAberta = null; exemploAberto = 0;
+                EscondeDica(); conteudo.Clear(); TelaPlaybook();   // só o conteúdo: o menu e a rolagem da página não se mexem
+            });
             return b;
         }
 
@@ -79,7 +121,7 @@ namespace CSM.ManagerUI
             return v;
         }
 
-        VisualElement LinhaJogada(Estrategias.InfoJogada j, bool tr, bool sel, Action antes)
+        VisualElement LinhaJogada(Estrategias.InfoJogada j, bool tr, bool sel)
         {
             var jj = j; var marca = c.Marca(j.nome, tr);
             var r = E("pb-linha"); if (sel) r.AddToClassList("sel");
@@ -95,7 +137,13 @@ namespace CSM.ManagerUI
             nums.Add(L(Mathf.RoundToInt(j.vitoriaPro * 100) + "%", "pb-linha-num", j.vitoriaPro >= 0.55f ? "verde" : j.vitoriaPro < 0.45f ? "vermelho" : "t"));
             nums.Add(L("vitória pro", "pb-linha-rot"));
             r.Add(nums);
-            Clicavel(r, () => { antes?.Invoke(); jogadaAberta = jj.nome; exemploAberto = 0; Mostrar(); });
+            Clicavel(r, () =>
+            {
+                if (jogadaAberta == jj.nome) return;
+                jogadaAberta = jj.nome; exemploAberto = 0;
+                PreencherListaPlaybook();           // só move a seleção na lista (a rolagem fica onde está)
+                AtualizarPainelPlaybook(true);      // e troca o painel: aqui os anéis crescem de novo
+            });
             return r;
         }
 
@@ -128,9 +176,9 @@ namespace CSM.ManagerUI
             // indicadores
             var st = E("pb-stats");
             st.Add(BlocoAnel(j.vitoriaPro, "Vitória do time pro", Mathf.RoundToInt(j.vitoriaPro * 100) + "%", CorNota(j.vitoriaPro, 0.55f, 0.45f),
-                "Quanto o time profissional venceu os rounds com essa jogada."));
+                "Quanto o time profissional venceu os rounds com essa jogada.", pbAnimarAneis));
             st.Add(BlocoAnel(Mathf.Clamp01(j.forca / 1.6f), "Força na simulação", j.forca.ToString("0.00"), CorNota(j.forca, 1.05f, 0.95f),
-                "O quanto a jogada rende na nossa simulação (1,00 é a média)."));
+                "O quanto a jogada rende na nossa simulação (1,00 é a média).", pbAnimarAneis));
             st.Add(BlocoNumero("Planos no banco", j.planos.ToString(), "Rounds de times profissionais que formam essa jogada."));
             st.Add(tr ? BlocoNumero("Entra no bomb", Mmss(j.horaEntrada), "Hora média em que o time entra no bomb.")
                       : BlocoNumero("Mortes até 25 s", j.mortesCedo.ToString("0.0"), "Mortes médias do time nos primeiros 25 s."));
@@ -156,7 +204,7 @@ namespace CSM.ManagerUI
             rod.Add(L("Exemplo " + (exemploAberto % j.exemplos.Count + 1) + " de " + j.exemplos.Count, "f14", "suave"));
             var res = Selo(plano.ganhou ? "O TIME PRO VENCEU" : "O TIME PRO PERDEU", plano.ganhou ? "verde" : "vermelho"); res.style.marginLeft = 10; rod.Add(res);
             var fl = E(); fl.style.flexGrow = 1; rod.Add(fl);
-            if (j.exemplos.Count > 1) { var b1 = BotaoMini("Outro exemplo", () => { exemploAberto++; Mostrar(); }); rod.Add(b1); }
+            if (j.exemplos.Count > 1) { var b1 = BotaoMini("Outro exemplo", () => { exemploAberto++; AtualizarPainelPlaybook(false); }); rod.Add(b1); }
             quadro.Add(rod);
             quadro.Add(L("Animação ilustrativa: a velocidade é constante; o trajeto e onde cada um para vêm de um round real.", "f13", "apagado", "quebra"));
             miolo.Add(quadro);
@@ -193,10 +241,10 @@ namespace CSM.ManagerUI
 
         static Color CorNota(float v, float bom, float ruim) => v >= bom ? new Color(0.294f, 0.749f, 0.549f) : v < ruim ? new Color(0.925f, 0.416f, 0.373f) : new Color(0.384f, 0.659f, 0.933f);
 
-        static VisualElement BlocoAnel(float valor, string rotulo, string centro, Color cor, string dica)
+        static VisualElement BlocoAnel(float valor, string rotulo, string centro, Color cor, string dica, bool animar)
         {
             var b = E("pb-bloco"); b.pickingMode = PickingMode.Position;
-            b.Add(new Anel(valor, cor, centro));
+            b.Add(new Anel(valor, cor, centro, 92f, "pb-anel-v", animar));
             var r = L(rotulo, "f13", "suave", "centro", "quebra"); r.style.marginTop = 6; b.Add(r);
             ComDica(b, dica);
             return b;
@@ -214,7 +262,7 @@ namespace CSM.ManagerUI
         void Marcar(string jogada, bool tr, Carreira.MarcaJogada m)
         {
             var erro = c.MarcarJogada(jogada, tr, m);
-            Salvar(); Mostrar();
+            Salvar(); AtualizarMarcasPlaybook();
             if (erro != null) Toast(erro, true);
         }
 
