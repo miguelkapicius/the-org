@@ -1162,3 +1162,12 @@
 .tut-botoes { flex-direction: row; align-items: center; }
 .item.pulso { border-width: 1px; border-color: rgba(0, 0, 0, 0); transition-property: border-color, background-color; transition-duration: 500ms; }
 .item.pulso.pulso-alto { border-color: rgba(255, 255, 255, 0.12); background-color: rgba(255, 255, 255, 0.012); }
+
+/* ---- opções (decisão 0030) ---- */
+.opc-linha { flex-direction: row; align-items: center; justify-content: space-between; padding-top: 14px; padding-bottom: 14px; border-top-width: 1px; border-top-color: rgba(255, 255, 255, 0.02); }
+.opc-linha:first-child { border-top-width: 0; }
+.opc-esq { flex-shrink: 1; flex-grow: 1; margin-right: 24px; }
+.opc-chips { flex-direction: row; flex-shrink: 0; }
+.opc-chips-g { flex-direction: row; flex-shrink: 0; }
+.opc-chips-g > .btn-mini { margin-left: 8px; }
+.opc-chips > .btn-mini { margin-left: 8px; }

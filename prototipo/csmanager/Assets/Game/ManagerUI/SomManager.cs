@@ -16,8 +16,8 @@ namespace CSM.ManagerUI
         static readonly Dictionary<Som, AudioClip> clips = new Dictionary<Som, AudioClip>();
         static float ultimoHover; static bool avisou;
 
-        /// <summary>Volume geral dos sons da interface (0 a 1).</summary>
-        public static float Volume = 0.5f;
+        /// <summary>Volume dos efeitos da interface (0 a 1), escolhido na tela de opções (decisão 0030).</summary>
+        public static float Volume => Opcoes.VolumeEfeitos;
 
         public static bool Mudo
         {
@@ -31,8 +31,12 @@ namespace CSM.ManagerUI
 
         // ---------------------------------------------------------------- ambiente (zumbido da sala de controle, em laço)
         static AudioSource ambiente; static AudioClip ambienteClip; static bool ambienteAtivo;
-        /// <summary>Volume do ambiente em relação ao geral: bem baixo, para ser sentido e não ouvido.</summary>
-        public static float VolumeAmbiente = 0.05f;
+        /// <summary>Teto do zumbido de fundo: bem baixo, para ser sentido e não ouvido. A escolha do jogador (0 a 100 %) escala isso; 50 % é o padrão.</summary>
+        const float TETO_AMBIENTE = 0.1f;
+        static float VolAmbiente() => Mathf.Clamp01(Opcoes.VolumeAmbiente * TETO_AMBIENTE * CSM.Audio.Som3D.volumeGeral);
+
+        /// <summary>Aplica na hora os volumes escolhidos nas opções ao zumbido de fundo.</summary>
+        public static void AplicarVolumes() { if (ambiente != null) { ambiente.volume = VolAmbiente(); if (VolAmbiente() <= 0f) ambiente.Stop(); else if (ambienteAtivo && !Mudo && !ambiente.isPlaying) ambiente.Play(); } else if (ambienteAtivo) AmbienteLigar(); }
 
         /// <summary>Liga o ambiente enquanto o manager está aberto (não toca em modo batch nem com o som desligado).</summary>
         public static void AmbienteLigar()
@@ -42,8 +46,8 @@ namespace CSM.ManagerUI
             Iniciar();
             if (ambiente == null) { ambiente = fontes[0].gameObject.AddComponent<AudioSource>(); ambiente.loop = true; ambiente.playOnAwake = false; ambiente.spatialBlend = 0f; }
             if (ambienteClip == null) { var d = SomSintese.Ambiente(); ambienteClip = AudioClip.Create("ui_ambiente", d.Length, 1, SomSintese.TAXA, false); ambienteClip.SetData(d, 0); }
-            ambiente.clip = ambienteClip; ambiente.volume = Mathf.Clamp01(Volume * VolumeAmbiente * CSM.Audio.Som3D.volumeGeral);
-            if (!ambiente.isPlaying) ambiente.Play();
+            ambiente.clip = ambienteClip; ambiente.volume = VolAmbiente();
+            if (!ambiente.isPlaying && ambiente.volume > 0f) ambiente.Play();
         }
 
         public static void AmbienteDesligar() { ambienteAtivo = false; if (ambiente != null) ambiente.Stop(); }

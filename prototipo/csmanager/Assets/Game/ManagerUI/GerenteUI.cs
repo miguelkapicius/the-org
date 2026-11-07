@@ -27,7 +27,7 @@ namespace CSM.ManagerUI
         public int seed = 7;
         public const string CENA_PARTIDA = "Partida3D";
 
-        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Playbook, Serie, PreMatch, PosPartida }
+        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Playbook, Serie, PreMatch, PosPartida, Opcoes }
         Aba aba = Aba.Painel, abaAnterior = Aba.Painel;
         Carreira c;
         VisualElement tela, janela, conteudo, toastEl, dicaEl;
@@ -84,10 +84,11 @@ namespace CSM.ManagerUI
             if (Carreira.Atual == null) Carreira.Atual = (captura ? null : Salvamento.Carregar()) ?? Carreira.Nova(seed);
             c = Carreira.Atual;
 
-            var ps = ScriptableObject.CreateInstance<PanelSettings>();
+            var ps = ScriptableObject.CreateInstance<PanelSettings>(); painel = ps;
             ps.scaleMode = PanelScaleMode.ScaleWithScreenSize;
             // 1600x900: a mesma referência do mockup; telas maiores escalam proporcionalmente, sem borrar o texto
-            ps.referenceResolution = new Vector2Int(1600, 900);
+            ps.referenceResolution = captura ? new Vector2Int(1600, 900) : Opcoes.Referencia();   // o jogador escolhe o tamanho da interface nas opções
+            Opcoes.AplicarTela();
             ps.screenMatchMode = PanelScreenMatchMode.MatchWidthOrHeight;
             ps.match = 0.5f;
             RenderTexture rtCaptura = null;
@@ -234,6 +235,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: titulo = "Gaming House"; sub = "Cada nível libera vantagens para o time."; break;
                 case Aba.Financas: titulo = "Finanças"; sub = "O que entra e o que sai toda semana."; break;
                 case Aba.Scouts: titulo = "Scouts"; sub = "Descubra como o adversário joga e quem vale contratar."; break;
+                case Aba.Opcoes: titulo = "Opções"; sub = "Som, tamanho da interface e janela. Vale na hora e fica guardado."; break;
                 case Aba.Playbook: titulo = "Playbook"; sub = "As jogadas que o time prefere e as que nunca faz."; break;
                 case Aba.Serie: titulo = "Preparar série"; sub = c.serie != null ? c.serie.camp.nome + " · " + Fmt.Rotulo(c.serie.camp.nome, c.serie.conf.rotulo) : ""; break;
                 case Aba.PosPartida: { var r = resumoAberto ?? c.naoVisto; titulo = "Pós-partida"; sub = r != null ? r.campeonato + " · " + r.mapa + " · contra " + r.adversario : ""; break; }
@@ -255,6 +257,7 @@ namespace CSM.ManagerUI
                 case Aba.Financas: TelaFinancas(); break;
                 case Aba.Scouts: TelaScouts(); break;
                 case Aba.Playbook: TelaPlaybook(); break;
+                case Aba.Opcoes: TelaOpcoes(); break;
                 case Aba.Serie: TelaSerie(); break;
                 case Aba.PosPartida: TelaPosPartida(); break;
                 default: TelaPainel(); break;
@@ -304,11 +307,8 @@ namespace CSM.ManagerUI
                 rod.Add(ab);
             }
 
-            // som da interface: liga e desliga (decisão 0029)
-            var som = E("item", "item-som"); som.Add(new Icone(SomManager.Mudo ? "mudo" : "som", 22));
-            ComDica(som, SomManager.Mudo ? "Som desligado: clique para ligar" : "Som ligado: clique para desligar");
-            Clicavel(som, () => { SomManager.Mudo = !SomManager.Mudo; Mostrar(); SomManager.Tocar(Som.Aviso); });
-            rod.Add(som);
+            // opções: som, tamanho da interface e janela (decisão 0030); o liga e desliga do som fica lá dentro
+            Item(rod, "Opções", "engrenagem", Aba.Opcoes, null);
 
             // ajuda: reinicia o tour dos primeiros passos (decisão 0028)
             var ajuda = E("item", "item-ajuda"); ajuda.Add(new Icone("help", 22));
@@ -1004,6 +1004,7 @@ namespace CSM.ManagerUI
                 ("mercado", () => { aba = Aba.Mercado; mercadoChat = false; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("mercado-negociacao", () => { mercadoChat = true; var jj = c.mercado.OrderByDescending(x => x.Overall).Skip(2).First(); chatJogador = jj; var n = Negociador.Abrir(c, jj); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.6), (int)(n.salarioPedido * 0.7), false); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.95), (int)(n.salarioPedido * 0.95), true); aba = Aba.Mercado; }, null),
                 ("scouts", () => aba = Aba.Scouts, null),
+                ("opcoes", () => aba = Aba.Opcoes, null),
                 ("playbook", () => { PlantaJogada.InicioDaCaptura = 0.62f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); c.MarcarJogada(js[0].nome, true, Carreira.MarcaJogada.Favorita); c.MarcarJogada(js[2].nome, true, Carreira.MarcaJogada.Proibida); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),
                 ("playbook-troca", () => { PlantaJogada.InicioDaCaptura = 0.5f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, () => { var js = Estrategias.Jogadas(true); exemploAberto++; AtualizarPainelPlaybook(false); jogadaAberta = js[3].nome; exemploAberto = 0; PreencherListaPlaybook(); AtualizarPainelPlaybook(true); Marcar(js[3].nome, true, Carreira.MarcaJogada.Favorita); }),
                 ("playbook-ct", () => { ladoPlaybookTR = false; jogadaAberta = Estrategias.Jogadas(false)[0].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),

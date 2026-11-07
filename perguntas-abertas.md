@@ -47,10 +47,11 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
 - [ ] **Tutorial:** o tour de hoje é só uma visita às telas. Deve virar um guia por tarefas (por exemplo, "jogue a primeira série") que confere o que o jogador fez? → `gdd/08-ui-ux.md`
-- [ ] **Som final:** os sons de interface são sintetizados em código (decisão 0029). Quem faz a versão final (designer, biblioteca licenciada ou manter a síntese)? E haverá volumes separados na tela de opções? → `gdd/07-audio.md`
+- [ ] **Som final:** os sons de interface são sintetizados em código (decisão 0029). Quem faz a versão final (designer, biblioteca licenciada ou manter a síntese)? → `gdd/07-audio.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
 - [ ] **Retratos:** hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA (decisão 0027). Arte final: manter esse caminho, ilustrar à mão ou usar fotografia de referência? E expressões por estado (cansado, motivado)? → `gdd/06-arte.md`
 - [ ] **Tipografia da interface:** hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo? → `gdd/06-arte.md`
+- [ ] **Backlog de arte (precisa gerar imagens, ficou para depois):** brasões dos times (hoje o protótipo usa a inicial no menu, na pré-partida, no ranking e no campeonato) e expressões nos retratos por estado do jogador (cansado, motivado, em alta). → `gdd/06-arte.md`
 - [ ] Mundo e narrativa: o jogo tem história? → `gdd/04-mundo-narrativa.md`
 - [ ] Áudio: direção musical, efeitos, voz → `gdd/07-audio.md`
 

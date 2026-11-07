@@ -20,6 +20,13 @@ _A definir._
 
 _A definir: mapas, modelos de jogadores, armas, efeitos._
 
+## Pendências de arte (dependem de gerar imagens)
+
+Ficaram para depois, a pedido do autor (2026-11-07), por exigirem gerar imagens:
+
+- **Brasões dos times:** hoje o protótipo usa a inicial do time no menu, na pré-partida, no ranking e nas telas de campeonato. Faltam 48 brasões (e o do clube do jogador, que pode ser personalizável).
+- **Expressões nos retratos:** cada jogador tem um rosto fixo (decisão 0027). Falta uma variação por estado (cansado, motivado, em alta, frustrado), mantendo o mesmo rosto.
+
 ## Perguntas em aberto
 
 - Estilo realista, estilizado ou low-poly?

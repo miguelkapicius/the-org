@@ -1,13 +1,4 @@
-dois toques suaves |
-
-
-
-
-
-
-
-
-
+# 0029 — Sons autorais da interface (sintetizados em código) e identidade "sala de operações"
 
 - **Status:** proposta
 - **Data:** 2026-11-07
@@ -24,7 +15,7 @@ A interface não tinha nenhum som. O autor quer **efeitos sonoros autorais** (ho
 3. **Sons sintetizados em código** — autorais por construção (sem arquivo de terceiros), pequenos, ajustáveis em uma linha, e servem de rascunho até haver um designer.
 
 ## Decisão
-Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **sala de operações** e uma regra: **tudo leve**. O jogador usa o mouse o tempo todo, então cada som é curto, macio e baixo, sem agudos nem pancadas, e passar o mouse não toca nada (testes iniciais com relés, rádio e sinos cansaram).
+Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **sala de operações** e uma regra: **tudo leve**. O jogador usa o mouse o tempo todo, então cada som é curto, macio e baixo, sem agudos nem pancadas, e passar o mouse não toca nada (a primeira versão, com relés, rádio e sinos, cansou).
 
 ## Detalhamento (proposta do agente, a validar)
 1. **Motor:** cada som é uma receita de "vozes" (ruído filtrado, notas, timbres metálicos FM) com **eco e reverb de sala** e um pico de volume próprio; o som é gerado na primeira vez que é usado (`SomCatalogo` e `SomSintese`).
@@ -32,20 +23,20 @@ Opção 3, como **rascunho autoral** da identidade sonora, com a ideia de uma **
 
    | Som | Quando | Caráter |
    |---|---|---|
-   | Hover | passar o mouse | tique de relé, quase só textura |
-   | Clique | clique comum | tecla mecânica: estalo, plástico e o corpo batendo no fundo |
-   | Principal | botão claro (ação principal) | confirmação firme e discreta: tecla pesada e uma nota curta e redonda subindo |
-   | Aba | trocar de tela ou aba | toque curto e macio, um "tum" surdo |
-   | Alternar | chips, passos, opções | relé duplo: dois estalos e dois "tum" |
-   | Sucesso | concluir algo | duas notas suaves e curtas, neutro |
-   | Erro | aviso de erro, proposta recusada | acesso negado: dois pulsos graves arredondados |
-   | Dinheiro | contrato assinado | carimbo (pancada surda) e duas moedas metálicas |
-   | Aviso | aviso na tela | ping de radar com eco que se repete |
-   | Receber | resposta do jogador na negociação | rajada de dados cifrados: três chilreios de rádio |
-   | Semana | avançar a semana | tique-taque, sopro grave que cresce e uma queda de grave |
+   | Hover | passar o mouse | sem som (o cursor está sempre em movimento) |
+   | Clique | clique comum | toque seco e abafado, como a ponta do dedo numa mesa |
+   | Principal | botão claro (ação principal) | o mesmo toque, mais cheio, com uma nota baixa e curta |
+   | Aba | trocar de tela ou aba | quase o clique, mais curto |
+   | Alternar | chips, passos, opções | dois toques minúsculos |
+   | Sucesso | concluir algo | duas notas suaves e curtas |
+   | Erro | aviso de erro, proposta recusada | dois toques graves e arredondados |
+   | Dinheiro | contrato assinado | carimbo (pancada surda) e duas moedas, bem baixos |
+   | Aviso | aviso na tela | uma nota suave com eco discreto |
+   | Receber | resposta do jogador na negociação | dois toques suaves |
+   | Semana | avançar a semana | tique-taque e um sopro grave, baixo |
 3. **Ambiente:** um zumbido de sala de controle em laço de 8 s (55 Hz, uma ventilação que respira e um murmúrio distante), bem baixo, que toca enquanto o manager está aberto e para quando a partida começa. Fecha o laço sem emenda.
 4. **Cada toque varia a altura em até 4 %** e o hover tem intervalo mínimo de 50 ms, para não cansar.
-5. **O som se liga e desliga** pelo botão do menu (efeitos e ambiente juntos; a escolha fica guardada). Em modo batch (capturas e testes) não toca. A interface do manager não tem câmera, então o som garante o ouvinte de áudio pelo `Som3D`.
+5. **O som se liga e desliga e tem volume** na tela de Opções (decisão 0030): efeitos e zumbido de fundo à parte, e a escolha fica guardada. Em modo batch (capturas e testes) não toca. A interface do manager não tem câmera, então o som garante o ouvinte de áudio pelo `Som3D`.
 6. **Teste e escuta:** `TestarSonsBatch` confere cada som (sem NaN, pico seguro, duração, sem estalo no começo e no fim, emenda do ambiente) e grava um `.wav` de cada em `Logs/sons`, para ouvir fora do jogo.
 
 ## Por quê
