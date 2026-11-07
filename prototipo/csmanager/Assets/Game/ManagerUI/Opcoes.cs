@@ -27,8 +27,8 @@ namespace CSM.ManagerUI
         /// <summary>0 = pequena, 1 = normal, 2 = grande.</summary>
         public static int Tamanho { get => Mathf.Clamp(LerI(K_TAMANHO, 1), 0, 2); set => Gravar(K_TAMANHO, Mathf.Clamp(value, 0, 2)); }
         public static bool TelaCheia { get => LerI(K_TELA_CHEIA, 0) == 1; set => Gravar(K_TELA_CHEIA, value ? 1 : 0); }
-        /// <summary>HUD da partida no visual novo (grafite) ou no clássico (decisão 0032). O padrão é o novo; a escolha fica nas Opções.</summary>
-        public static bool HudNovo { get => LerI(K_HUD, 1) == 1; set => Gravar(K_HUD, value ? 1 : 0); }
+        /// <summary>HUD da partida no visual novo (grafite) ou no clássico (decisão 0032). O padrão é o clássico (o autor escolheu o clássico em 2026-11-07); o novo segue disponível nas Opções.</summary>
+        public static bool HudNovo { get => LerI(K_HUD, 0) == 1; set => Gravar(K_HUD, value ? 1 : 0); }
         public static int Janela { get => LerI(K_JANELA, -1); set => Gravar(K_JANELA, value); }
 
         /// <summary>Referência da interface: quanto maior a escala, menor a referência (e mais a interface cresce na tela).</summary>

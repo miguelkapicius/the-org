@@ -9,7 +9,7 @@ namespace CSM.View3D
     /// peça do HUD foi apagada, as duas caras só leem cores diferentes daqui.</summary>
     public static class HudTema
     {
-        static bool novo = true;
+        static bool novo = false;   // o padrão é o clássico (decisão 0032)
 
         /// <summary>O HUD novo está ligado.</summary>
         public static bool Novo => novo;

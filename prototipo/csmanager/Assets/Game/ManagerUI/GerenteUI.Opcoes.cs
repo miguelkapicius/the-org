@@ -84,9 +84,9 @@ namespace CSM.ManagerUI
             conteudo.Add(L("Partida", "h2"));
             var par = E("cartao");
             var hud = E("opc-chips-g");
-            hud.Add(BotaoMini("Novo", () => { Opcoes.HudNovo = true; AtualizarOpcoes(); }, Opcoes.HudNovo));
             hud.Add(BotaoMini("Clássico", () => { Opcoes.HudNovo = false; AtualizarOpcoes(); }, !Opcoes.HudNovo));
-            par.Add(LinhaOpcao("Visual do HUD da partida", "O Novo segue o visual do manager (grafite, cantos retos). O Clássico é o de antes, em tons quentes. Vale na próxima partida.", hud));
+            hud.Add(BotaoMini("Novo", () => { Opcoes.HudNovo = true; AtualizarOpcoes(); }, Opcoes.HudNovo));
+            par.Add(LinhaOpcao("Visual do HUD da partida", "O Clássico é o de sempre, em tons quentes. O Novo segue o visual do manager (grafite, retratos nos cards). Vale na próxima partida.", hud));
             conteudo.Add(par);
 
             // ---- geral
