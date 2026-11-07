@@ -1148,3 +1148,17 @@
 .pm2-j-ovr { font-size: 28px; }
 .pm2-anel-v { font-size: 84px; }
 .pm2-lado { width: 430px; }
+
+/* ======================================================================================================
+   Primeiros passos (tour guiado): cartão no canto e brilho no menu
+   ====================================================================================================== */
+.tut { position: absolute; right: 30px; bottom: 30px; width: 410px; padding: 20px 22px 18px 22px; background-color: #0e1013; border-radius: 6px; border-width: 1px; border-color: rgba(255, 255, 255, 0.05); }
+.tut-topo { flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tut-pips { flex-direction: row; }
+.tut-pip { width: 16px; height: 4px; border-radius: 2px; margin-left: 4px; background-color: rgba(255, 255, 255, 0.012); }
+.tut-pip.on { background-color: #eceef1; }
+.tut-titulo { font-size: 32px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.tut-texto { font-size: 15px; color: var(--suave); margin: 6px 0 16px 0; }
+.tut-botoes { flex-direction: row; align-items: center; }
+.item.pulso { border-width: 1px; border-color: rgba(0, 0, 0, 0); transition-property: border-color, background-color; transition-duration: 500ms; }
+.item.pulso.pulso-alto { border-color: rgba(255, 255, 255, 0.12); background-color: rgba(255, 255, 255, 0.012); }

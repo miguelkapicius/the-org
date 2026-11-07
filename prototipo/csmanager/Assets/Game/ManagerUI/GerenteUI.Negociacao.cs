@@ -173,6 +173,7 @@ namespace CSM.ManagerUI
             Salvar();
             if (r.tipo == RespostaTipo.Aceita)
             {
+                proximoSomToast = Som.Dinheiro;
                 Resposta(null, j.nome + " assinou: " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + "/sem.", sai != null ? "Escalar agora" : null, () =>
                 {
                     c.TornarTitular(j); Salvar(); Mostrar();
@@ -180,6 +181,7 @@ namespace CSM.ManagerUI
                 });
                 return;
             }
+            tela.schedule.Execute(() => SomUi.Tocar(r.tipo == RespostaTipo.Recusa || r.tipo == RespostaTipo.Cansado ? Som.Erro : Som.Receber, 0.8f)).StartingIn(260);   // a resposta dele chega um instante depois
             Mostrar();
         }
 

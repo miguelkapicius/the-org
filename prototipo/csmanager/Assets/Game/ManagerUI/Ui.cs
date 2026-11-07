@@ -92,7 +92,11 @@ namespace CSM.ManagerUI
         /// <summary>Elemento clicável (o USS cuida do :hover).</summary>
         public static VisualElement Clicavel(VisualElement e, Action acao)
         {
-            if (acao != null) e.RegisterCallback<ClickEvent>(_ => acao());
+            if (acao != null)
+            {
+                e.RegisterCallback<PointerEnterEvent>(_ => SomUi.Tocar(Som.Hover, 0.5f));                       // passar o mouse
+                e.RegisterCallback<ClickEvent>(_ => { SomUi.Tocar(SomUi.DoClique(e)); acao(); });              // o som depende da função do elemento
+            }
             return e;
         }
 

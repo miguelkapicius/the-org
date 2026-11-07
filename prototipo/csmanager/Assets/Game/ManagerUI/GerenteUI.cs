@@ -167,10 +167,14 @@ namespace CSM.ManagerUI
 
         // ================================================================================================ avisos temporários e dicas
         /// <summary>Aviso que some sozinho (no canto), com um botão opcional (ex.: Desfazer). Não é refeito quando a tela é redesenhada.</summary>
+        Som? proximoSomToast;   // um som específico para o próximo aviso (ex.: contrato assinado)
+
         void Toast(string texto, bool erro = false, string acaoRotulo = null, Action acao = null)
         {
             toastEl?.RemoveFromHierarchy();
             var t = E("toast", erro ? "erro" : "ok");
+            SomUi.Tocar(proximoSomToast ?? (erro ? Som.Erro : Som.Aviso), 0.8f); proximoSomToast = null;
+            if (TutorialAtivo) t.style.bottom = 300;   // sobe para não cair em cima do cartão dos primeiros passos
             t.Add(L(texto));
             if (acaoRotulo != null)
             {
@@ -253,6 +257,7 @@ namespace CSM.ManagerUI
                 case Aba.PosPartida: TelaPosPartida(); break;
                 default: TelaPainel(); break;
             }
+            var tut = CartaoTutorial(); if (tut != null) janela.Add(tut);
             if (rolagemGuardada != Vector2.zero) { var alvo = rolagemGuardada; rolagem.schedule.Execute(() => rolagem.scrollOffset = alvo).StartingIn(1); }
         }
 
@@ -297,6 +302,18 @@ namespace CSM.ManagerUI
                 rod.Add(ab);
             }
 
+            // som da interface: liga e desliga (decisão 0029)
+            var som = E("item", "item-som"); som.Add(new Icone(SomUi.Mudo ? "mudo" : "som", 22));
+            ComDica(som, SomUi.Mudo ? "Som desligado: clique para ligar" : "Som ligado: clique para desligar");
+            Clicavel(som, () => { SomUi.Mudo = !SomUi.Mudo; Mostrar(); SomUi.Tocar(Som.Aviso); });
+            rod.Add(som);
+
+            // ajuda: reinicia o tour dos primeiros passos (decisão 0028)
+            var ajuda = E("item", "item-ajuda"); ajuda.Add(new Icone("help", 22));
+            ComDica(ajuda, TutorialAtivo ? "Tutorial em andamento" : "Rever o tutorial dos primeiros passos");
+            Clicavel(ajuda, () => { c.tutorial = 0; Salvar(); Ir(AlvoTutorial(0)); });
+            rod.Add(ajuda);
+
             // recomeçar a carreira pede confirmação (apaga o salvamento)
             var nova = E("item", "item-nova"); if (confirmandoNova) nova.AddToClassList("perigo");
             nova.Add(new Icone("kebab", 22));
@@ -315,6 +332,11 @@ namespace CSM.ManagerUI
         void Item(VisualElement menu, string texto, string icone, Aba a, string contagem)
         {
             var it = E("item"); if (aba == a) it.AddToClassList("ativo");
+            if (TutorialAtivo && AlvoTutorial(c.tutorial) == a)   // o tour aponta a tela do passo com um brilho que pulsa
+            {
+                it.AddToClassList("pulso");
+                it.schedule.Execute(() => it.ToggleInClassList("pulso-alto")).Every(800);
+            }
             it.Add(new Icone(icone, 22));
             if (a == Aba.Painel && contagem != null) it.Add(E("item-ponto"));
             ComDica(it, a == Aba.Painel ? (contagem != null ? "Painel · " + contagem + (contagem == "1" ? " aviso" : " avisos") : "Painel")
@@ -371,6 +393,7 @@ namespace CSM.ManagerUI
         /// <summary>Passa uma semana (treino, finanças, campeonatos do mundo) e mostra o que aconteceu.</summary>
         void AvancarSemanaUI()
         {
+            SomUi.Tocar(Som.Semana);
             var r = c.AvancarSemana();
             if (r == null) { Toast(c.Falido ? "O clube faliu." : "Há uma série marcada para esta semana: prepare, jogue ou pule antes de avançar.", true); return; }
             Salvar();
@@ -954,7 +977,7 @@ namespace CSM.ManagerUI
         {
             Directory.CreateDirectory(pasta);
             // prepara um estado interessante: GH alta, scouts e treino em andamento, algumas semanas jogadas
-            c.dinheiro = 1500000; for (int k = 0; k < 3; k++) c.SubirGamingHouse();
+            c.dinheiro = 1500000; c.tutorial = Carreira.TUTORIAL_PASSOS; for (int k = 0; k < 3; k++) c.SubirGamingHouse();
             c.DefinirScout(0, 2, c.Proximo().adv != null ? c.Proximo().adv.id : 5); c.DefinirScout(1, 1);
             foreach (var j in c.elenco) c.DefinirTreino(j, (int)Atrib.Mira + (j.nome.Length % 5), 2 + j.nome.Length % 3);
             c.DefinirColetivas(2); c.DefinirEstudoMapa(0);
@@ -991,6 +1014,9 @@ namespace CSM.ManagerUI
                 ("calendario-campeonatos", () => { campAberto = null; calAba = 1; aba = Aba.Calendario; }, null),
                 ("calendario-ranking", () => { campAberto = null; calAba = 2; aba = Aba.Calendario; }, null),
                 ("painel-depois", () => { c.naoVisto = null; aba = Aba.Painel; }, () => Toast(c.elenco[5].nome + " foi vendido por + " + Fmt.Dinheiro(c.elenco[5].Venda) + ".", false, "Desfazer", () => { })),
+                ("tutorial-painel", () => { c.tutorial = 0; aba = Aba.Painel; }, null),
+                ("tutorial-treino", () => { c.tutorial = 2; aba = Aba.Treino; treinoJogador = null; }, null),
+                ("tutorial-mercado", () => { c.tutorial = 3; mercadoChat = false; aba = Aba.Mercado; }, null),
             };
             foreach (var (nome, preparar, depois) in passos)
             {

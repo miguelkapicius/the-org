@@ -184,6 +184,8 @@ namespace CSM.Manager
         public static Carreira Atual;
 
         public string clube = "VULCÃO";
+        public const int TUTORIAL_PASSOS = 6;    // primeiros passos (decisão 0028)
+        public int tutorial;                      // passo atual do tour; TUTORIAL_PASSOS = concluído ou pulado
         public int dinheiro, numPartida, nivelGH = 1;   // numPartida: quantos mapas já foram jogados na carreira
         public readonly List<Jogador> elenco = new List<Jogador>();      // os 5 primeiros são os titulares
         public readonly List<Jogador> mercado = new List<Jogador>();

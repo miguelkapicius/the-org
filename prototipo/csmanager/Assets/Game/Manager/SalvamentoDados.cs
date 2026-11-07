@@ -48,7 +48,7 @@ namespace CSM.Manager
     public class CarreiraD
     {
         public int versao = 2, seed, dinheiro, numPartida, nivelGH, estilo, coletivas, estudoMapa, semanasNegativo, semana, temporada, proxId, mundoSeed;
-        public bool falido, temSerie; public string clube;
+        public bool falido, temSerie, temTutorial; public int tutorial; public string clube;
         public List<JogadorD> elenco = new List<JogadorD>(), mercado = new List<JogadorD>();
         public List<LancD> extrato = new List<LancD>(); public List<ResultadoD> historico = new List<ResultadoD>(); public List<TituloD> titulos = new List<TituloD>();
         public List<string> diario = new List<string>(); public List<ScoutD> scouts = new List<ScoutD>(); public List<IntelD> intel = new List<IntelD>(); public List<EmprestimoD> emprestimos = new List<EmprestimoD>();
@@ -83,7 +83,7 @@ namespace CSM.Manager
         {
             var d = new CarreiraD
             {
-                seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
+                temTutorial = true, tutorial = c.tutorial, seed = c.Seed, dinheiro = c.dinheiro, numPartida = c.numPartida, nivelGH = c.nivelGH, estilo = (int)c.estilo, coletivas = c.sessoesColetivas, estudoMapa = c.estudoMapa,
                 semanasNegativo = c.semanasNegativo, falido = c.falido, clube = c.clube, semana = c.mundo.semana, temporada = c.mundo.temporada, proxId = c.mundo.ProxId, mundoSeed = c.mundo.Seed,
             };
             d.elenco = c.elenco.Select(Para).ToList(); d.mercado = c.mercado.Select(Para).ToList();
@@ -130,6 +130,7 @@ namespace CSM.Manager
         {
             if (d == null || d.versao != VERSAO || d.elenco == null || d.elenco.Count < Provisorio.TITULARES || d.equipes == null || d.equipes.Count < 2) return null;
             var c = Carreira.ParaRestaurar(d.seed, d.numPartida);
+            c.tutorial = d.temTutorial ? d.tutorial : Carreira.TUTORIAL_PASSOS;   // salvamento antigo: sem tour
             c.clube = d.clube; c.dinheiro = d.dinheiro; c.numPartida = d.numPartida; c.nivelGH = d.nivelGH; c.estilo = (Estilo)d.estilo; c.sessoesColetivas = d.coletivas; c.estudoMapa = d.estudoMapa;
             if (d.favoritasTR != null) c.favoritasTR.AddRange(d.favoritasTR); if (d.proibidasTR != null) c.proibidasTR.AddRange(d.proibidasTR);
             if (d.favoritasCT != null) c.favoritasCT.AddRange(d.favoritasCT); if (d.proibidasCT != null) c.proibidasCT.AddRange(d.proibidasCT);

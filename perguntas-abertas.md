@@ -46,6 +46,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 ## 5. Para depois
 
 - [ ] O HUD de transmissão é fixo ou configurável? → `gdd/08-ui-ux.md`
+- [ ] **Tutorial:** o tour de hoje é só uma visita às telas. Deve virar um guia por tarefas (por exemplo, "jogue a primeira série") que confere o que o jogador fez? → `gdd/08-ui-ux.md`
+- [ ] **Som final:** os sons de interface são sintetizados em código (decisão 0029). Quem faz a versão final (designer, biblioteca licenciada ou manter a síntese)? E haverá volumes separados na tela de opções? → `gdd/07-audio.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
 - [ ] **Retratos:** hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA (decisão 0027). Arte final: manter esse caminho, ilustrar à mão ou usar fotografia de referência? E expressões por estado (cansado, motivado)? → `gdd/06-arte.md`
 - [ ] **Tipografia da interface:** hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo? → `gdd/06-arte.md`
@@ -54,6 +56,6 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 
 ## 6. Validar sugestões do agente
 
-- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) **0018** (timeout do manager), **0019** (traços, moral e entrosamento), **0020** (jogada da partida e MVP), **0021** (rivalidades e notícias), **0022** (playbook do manager), **0024** (força por lado TR e CT), **0025** (direção visual "mesa de transmissão"), **0026** (contratação por negociação) e **0027** (retratos individuais): confirmar os detalhes marcados como proposta do agente.
+- [ ] Validar as propostas das decisões **0012** (calendário e formatos), **0013** (treino, cansaço e evolução), **0014** (veto e estratégia), **0015** (salários, empréstimo e falência), **0016** (níveis da Gaming House e scouts) **0017** (estratégia escolhe os planos de round pelo estilo) **0018** (timeout do manager), **0019** (traços, moral e entrosamento), **0020** (jogada da partida e MVP), **0021** (rivalidades e notícias), **0022** (playbook do manager), **0024** (força por lado TR e CT), **0025** (direção visual "mesa de transmissão"), **0026** (contratação por negociação) **0027** (retratos individuais), **0028** (primeiros passos) e **0029** (sons da interface): confirmar os detalhes marcados como proposta do agente.
 
 - [ ] Revisar os trechos marcados **[Sugestão]** no GDD (principalmente `00-visao.md` e `02-mecanicas.md`): confirmar (tirar a marca) ou apagar.

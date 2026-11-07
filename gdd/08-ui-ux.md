@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029
 
 _Telas, HUD e fluxo de navegação._
 
@@ -36,6 +36,10 @@ _Telas, HUD e fluxo de navegação._
 **Regras de simplicidade** (decisão 0023, pilar 5: complexo por dentro, simples de entender): uma informação, um lugar (nada repetido na mesma tela); uma ação principal por tela, o botão sólido claro; conclusão antes do número (o detalhe vai para a dica ou para a tela própria); texto curto, sem termos internos (nada de "decisão 0016" na tela do jogador); subtítulo de tela em uma frase curta; o saldo no cabeçalho, a despesa na dica.
 
 **Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 12 px na resolução de referência (1600×900) e o corrente em 14 a 16 px; texto secundário com contraste mínimo de ~4,5:1 sobre o fundo; camadas separadas pelo preenchimento (fundo < menu < cartão < item escolhido), com borda só no que está escolhido; a ação principal é sempre o botão sólido claro e as secundárias têm contorno; números de tabela em fonte monoespaçada para alinhar; conteúdo rola em vez de ser cortado.
+
+**Primeiros passos** (decisão 0028): um tour guiado de 6 passos (Painel, Elenco, Treino, Mercado, Finanças e Série), sem bloqueio. Um cartão no canto mostra o passo e os botões Próximo (leva à tela do passo seguinte), Ir para a tela e Pular tutorial; o ícone da tela do passo **pulsa** no menu; os avisos temporários sobem para não cobrir o cartão. O botão de **ajuda** no fim do menu recomeça o tour. O passo fica salvo na carreira.
+
+**Som da interface** (decisão 0029): hover, cliques, avisos e a negociação têm sons autorais sintetizados; o botão de **som** no menu liga e desliga. A ação principal, a troca de tela, o erro e o dinheiro têm sons diferentes.
 
 **Princípios de experiência do manager** (**[Sugestão]**, aplicados no protótipo): (1) o efeito de uma decisão aparece **antes** de confirmá-la (troca de escalação, contratação), ligando a gestão ao que se vê na partida (pilar 3); (2) o jogo diz **o que fazer agora** (avisos no painel), em vez de exigir que o jogador procure; (3) ações que custam dinheiro têm **desfazer** quando possível; (4) avisos de resultado são temporários e não tomam a tela; (5) dicas ao passar o mouse explicam cada atributo; (6) teclas 1 a 9 trocam de tela, Enter assiste e Esc volta na pré-partida; (7) a carreira é **salva sozinha** a cada ação. **Personalidade** (decisão 0019): o traço aparece como selo ao lado do nome (explicação ao passar o mouse; no mercado só depois do scout), a moral aparece embaixo do nome no elenco e como barra no cartão do painel, e o entrosamento do time fica no topo da escalação. Moral baixa e time pouco entrosado viram avisos no painel. **Rivalidades** (decisão 0021): a preparação da série mostra o retrospecto contra o adversário e o selo CLÁSSICO quando ele é rival; o painel do clube lista os rivais (o primeiro como ARQUIRRIVAL) com retrospecto e sequência.
 
