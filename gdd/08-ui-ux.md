@@ -56,7 +56,7 @@ Todos os números da interface (salários, preços, prêmios, custo da Gaming Ho
 
 HUD da partida no estilo **transmissão competitiva** (decisão 0002):
 
-**Dois visuais** (decisão 0032): **Clássico** (padrão, o escolhido pelo autor) e **Novo**, no visual do manager (grafite neutro, cantos de 3 px, sem sombra, card do jogador grafite com o retrato do jogador, a vida em número grande e uma linha fina da cor do time embaixo, e a mesma fonte do manager), ; o Clássico é o de antes (tons quentes e card preenchido pela vida). A escolha fica em Opções › Partida e vale na próxima partida.
+**Dois visuais** (decisão 0032): **Clássico** (padrão, o escolhido pelo autor) e **Novo**, no visual do manager (grafite neutro, cantos de 3 px, sem sombra, card do jogador grafite com o retrato do jogador, a vida em número grande e uma linha fina da cor do time embaixo, e a mesma fonte do manager); o Clássico é o de antes (tons quentes e card preenchido pela vida). A escolha fica em Opções › Partida e vale na próxima partida.
 
 - visão em primeira pessoa do jogador acompanhado;
 - vida (e colete) do jogador acompanhado;
