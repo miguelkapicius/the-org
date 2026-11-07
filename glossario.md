@@ -63,3 +63,8 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Modo resumo | Forma de assistir só os rounds decisivos de uma partida e pular o resto. | modo rápido | 11-ideias |
 | Jogada da partida | O lance de maior nota de uma partida assistida (abates de um jogador, com destaque para clutch, multi-kill, AWP, na cabeça...). | jogada do jogo, play of the game | 08-ui-ux |
 | MVP | O jogador do clube com a melhor nota de desempenho num mapa (MVP do mapa) ou na soma dos mapas de uma série (MVP da série). | craque do jogo, melhor em campo | 08-ui-ux |
+| Contrato | Acordo de 1 a 3 temporadas entre o clube e o jogador, com salário e cláusula de rescisão. Vence sozinho no fim; antes disso só acaba por venda, rescisão ou cláusula paga por um rival. | vínculo, passe | 03-progressao |
+| Cláusula de rescisão | Valor que outro clube paga para levar o jogador no meio do contrato; fixado na assinatura e pago ao nosso caixa. | multa (multa é a que o nosso clube paga) | 03-progressao |
+| Multa de rescisão | O que o nosso clube paga para dispensar o jogador antes do fim do contrato: metade dos salários que faltam. | cláusula | 03-progressao |
+| Renovação | Novo contrato com um jogador do elenco que o jogador pode recusar (moral baixa ou pouco desejo de ficar). Pede salário e 30 % das luvas. | prorrogação | 03-progressao |
+| Fãs | Base de torcida do clube, uma moeda de progressão: sobe com vitórias, séries e campeonatos e cai com derrotas. Não se gasta; libera os níveis da Gaming House junto com o dinheiro. | seguidores, torcida, reputação | 03-progressao |

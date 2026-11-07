@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022, 0024
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022, 0024, 0034
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -32,7 +32,7 @@ Os bots devem jogar como profissionais jogariam. Comportamentos que precisam exi
 - **[Sugestão]** Uso de utilitárias: smoke, flash, molotov em lugares que fazem sentido taticamente.
 - **[Sugestão]** Jogo em equipe: trade kill, rotação, execução de estratégias, retake.
 - **[Sugestão]** Erro humano crível: tempo de reação, mira imperfeita, decisões ruins sob pressão.
-- **[Sugestão]** Atributos do jogador mudam como o bot joga (mira, reação, posicionamento, utilitária, comunicação).
+- **[Sugestão]** Atributos do jogador mudam como o bot joga: os **5 atributos** são mira, reflexo, spray, utilitária e sangue-frio, leitura direta do que a IA usa (decisão 0034, proposta). Atributo novo só entra quando a IA tiver um comportamento que ele mude.
 
 ### Gestão do time
 - **Economia do time** (dinheiro do clube, salários, prêmios).
@@ -103,4 +103,3 @@ Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos.
 
 ## Perguntas em aberto
 
-- Quais atributos um jogador tem e como cada um afeta a IA?

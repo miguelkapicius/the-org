@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031, 0035, 0037
 
 _Telas, HUD e fluxo de navegação._
 
@@ -38,6 +38,10 @@ _Telas, HUD e fluxo de navegação._
 
 **Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 12 px na resolução de referência (1600×900) e o corrente em 14 a 16 px; texto secundário com contraste mínimo de ~4,5:1 sobre o fundo; camadas separadas pelo preenchimento (fundo < menu < cartão < item escolhido), com borda só no que está escolhido; a ação principal é sempre o botão sólido claro e as secundárias têm contorno; números de tabela em fonte monoespaçada para alinhar; conteúdo rola em vez de ser cortado.
 
+**Contratos na interface** (decisão 0035, **[Sugestão]**): na negociação do Mercado, um botão **Prazo** alterna 1, 2 e 3 temporadas (a dica diz o que ele prefere, a cláusula de rescisão e a multa). No cartão do Elenco, a dica do nome mostra o prazo, a multa e a cláusula; quando faltam 26 semanas ou menos aparece o selo **RENOVAR** (laranja nas últimas 13), que renova ao clicar, e a dica diz o preço ou por que ele recusa. O painel avisa contratos para acabar, rivais que pagaram a cláusula e jogadores bons que saíram do mercado. Não há botão de rescisão: vender cobre o caso. Ainda não conferido na tela.
+
+**Fãs na interface** (decisão 0037, **[Sugestão]**): um chip **FÃS** na barra do topo, ao lado do saldo, com o mesmo formato (número curto: 12,4 mil). A dica explica como ganhar fãs e quanto falta para o próximo nível da Gaming House; a tela da Gaming House mostra o requisito de fãs junto do custo e, quando faltam fãs, o botão de subir fica desligado; o pós-partida mostra "+N fãs" (ou "−N"). Ainda não conferido na tela.
+
 **Primeiros passos** (decisão 0028): um tour guiado de 6 passos (Painel, Elenco, Treino, Mercado, Finanças e Série), sem bloqueio. Um cartão no canto mostra o passo e os botões Próximo (leva à tela do passo seguinte), Ir para a tela e Pular tutorial; o ícone da tela do passo **pulsa** no menu; os avisos temporários sobem para não cobrir o cartão. O botão de **ajuda** no fim do menu recomeça o tour. O passo fica salvo na carreira.
 
 **Som da interface** (decisão 0029): hover, cliques, avisos e a negociação têm sons autorais sintetizados, com a identidade de sala de operações (toques abafados e notas suaves), e um zumbido de ambiente bem baixo enquanto o manager está aberto; a regra é **tudo leve** (o jogador usa o mouse o tempo todo): toques curtos, macios e baixos, e passar o mouse não toca nada. O liga e desliga e os volumes ficam na tela de **Opções** (decisão 0030).
@@ -62,17 +66,33 @@ HUD da partida no estilo **transmissão competitiva** (decisão 0002):
 - minimapa;
 - **[Sugestão]** placar, tempo do round, dinheiro de cada jogador, arma equipada, killfeed.
 - **[Sugestão]** **Timeout** (decisão 0018): botão "Timeout (T)" com quantos restam; abre um painel que pausa a partida, mostra a chance de o time absorver (e de onde ela vem) e os 5 estilos com a descrição; o resultado aparece num aviso no alto da tela por alguns segundos.
+- **Espectadores da transmissão** (decisão 0037, **[Sugestão]**): o HUD mostra quantas pessoas estão assistindo, e o número é ditado pelos **fãs do clube** (mais fãs, mais gente na transmissão), variando com o momento da partida e a importância do campeonato. Ainda não implementado; a fórmula e onde fica no HUD estão em aberto.
 
 ## Feedback ao jogador
 
-_A definir._
+**[Sugestão]** O que o protótipo já faz, escrito como regra:
+
+- **Ação feita:** aviso temporário no canto (some sozinho), com **Desfazer** quando custa dinheiro; som leve de sucesso (decisão 0029).
+- **Ação impossível:** o botão fica desligado e a **dica diz o motivo** ("elenco cheio", "falta dinheiro"); nunca um botão que não responde sem explicação.
+- **Erro:** aviso vermelho em frase curta dizendo o que fazer ("Saldo insuficiente: falta $ 12 mil"), nunca um código.
+- **Efeito antes de confirmar:** prévia da troca no Elenco e no Mercado (princípio 1).
+- **Coisa nova que pede atenção:** selo com número no hub e ponto no menu; some quando o aviso é resolvido.
+- **Salvamento:** automático e silencioso; só avisa se falhar.
 
 ## Acessibilidade
 
-_A definir._
+**[Sugestão]** Metas para o protótipo, a conferir no código ou nas capturas:
+
+- **Cor nunca é a única pista.** Verde/laranja/vermelho (estado e nota) sempre vêm com texto ou ícone (EM FORMA, CANSADO, EXAUSTO); laranja/azul (TR e CT) sempre com a sigla.
+- **Texto:** mínimo de 12 px na resolução de referência e contraste de ~4,5:1 (as regras de nitidez acima). O texto "apagado" foi clareado para cumprir isso e o tamanho da interface (Opções) vai de 90 % a 115 %.
+- **Teclado:** teclas 1 a 9, Enter e Esc já funcionam. Falta navegar pelos botões com Tab, acioná-los com Enter/Espaço e mostrar qual está em foco.
+- **Mouse não é obrigatório para ler:** tudo que está numa dica também precisa estar acessível pelo teclado (hoje só aparece ao passar o mouse).
+- **Sons:** nenhum som carrega informação sozinho; o liga e desliga fica em Opções (decisão 0030).
+- **Movimento:** as animações (rotas do Playbook, pulso do tutorial) são decorativas; uma opção para reduzi-las é pergunta em aberto.
 
 ## Perguntas em aberto
 
 - O HUD de transmissão é fixo ou o jogador pode configurar? (o visual do HUD ficou o clássico; a alternativa em grafite foi testada e rejeitada, decisão 0032)
 - Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011)
 - Pré-partida: o manager também configura as **compras padrão** do time? (veto de mapas e estratégia já estão decididos, decisão 0014)
+- **Acessibilidade:** o jogo terá navegação completa por teclado (Tab/foco) e opção de reduzir animações? Dicas só no mouse precisam de alternativa?

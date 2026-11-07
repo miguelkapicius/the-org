@@ -1,6 +1,6 @@
 # Progressão e economia
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024, 0026
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024, 0026, 0035, 0037
 
 _Como o jogador evolui e quais recursos circulam._
 
@@ -43,6 +43,14 @@ A evolução dos jogadores é **multifatorial**: o jogo mistura vários dados, c
 
 Os jogadores do mercado **não têm preço fixo**. Cada um pede **luvas** (pagamento único) e **salário por semana**, e o quanto pede depende do que pesa para ele: **prestígio** do clube (circuito e ranking), se terá **vaga** de titular, a **estrutura** (Gaming House), as **finanças** (semanas de despesa no caixa) e o **clima** do time (moral e entrosamento). O manager negocia numa conversa: propõe luvas e salário (e pode garantir a vaga de titular), e o jogador aceita, faz contraproposta ou recusa, perdendo a paciência a cada resposta ruim. O salário acordado passa a ser o salário do jogador. Números provisórios.
 
+## Contratos (decisão 0035)
+
+**[Sugestão]** Todo jogador do elenco tem **contrato** de 1 a 3 temporadas (o prazo é escolhido na negociação; jovem prefere 3, veterano 1). Cada contrato tem uma **cláusula de rescisão** (preço de tabela × (1 + 0,5 por ano)) que um rival pode pagar para levar o jogador cobiçado, mais fácil se ele está infeliz ou parado no banco. **Rescindir** antes do fim custa **metade dos salários que faltam**. A **venda** rende menos quando o contrato está perto do fim. Com 13 semanas para acabar, o painel avisa; no fim, o jogador **sai de graça**, a não ser que o elenco ficasse com menos de 5 (aí ele fica mais um ano por +15 % de salário). A **renovação** é uma resposta calculada: ele pede salário e 30 % das luvas e **recusa** se a moral está abaixo de 30 ou se não quer ficar (prestígio, vaga, estrutura, finanças, clima). Números provisórios.
+
+## Fãs do clube (decisão 0037)
+
+**[Sugestão]** Os **fãs** são uma moeda de progressão, mostrada ao lado do saldo. O clube começa com 1.000. Cada **mapa ganho** rende fãs (mais num circuito maior, contra um favorito e em sequência de vitórias); cada **mapa perdido** tira (mais se o rival era mais fraco); vencer a **série** vale 3 mapas e ficar no pódio de um **campeonato** rende muito mais (campeão 40 mapas, vice 15, terceiro 6). Os fãs **não se gastam**: cada nível da **Gaming House** pede um mínimo (2: 1.500, 3: 4.000, 4: 12.000, 5: 35.000), além do dinheiro. Números provisórios.
+
 ## Curva de dificuldade
 
 _A definir._
@@ -63,9 +71,10 @@ O nível da Gaming House **libera** outras coisas que o manager pode melhorar, c
 ## Perguntas em aberto
 
 - Qual a curva de custo por nível (para ficar balanceada)?
-- Elenco: os jogadores têm **contrato** (duração, renovação, cláusula)? Quantos jogadores no elenco (titulares + reservas)?
+- Contratos (decisão 0035, proposta): pesos da cláusula de rescisão, da multa, da chance de um rival levar o jogador, da recusa de renovar, e se o jogador pode pedir para sair.
+- Fãs (decisão 0037, proposta): os pesos de ganho e perda, os mínimos de cada nível da Gaming House e o que mais os fãs devem liberar (patrocínio, atrair contratados). Fãs devem ser gastos como moeda, em vez de só liberar?
+- Espectadores da transmissão (decisão 0037): fórmula do número de pessoas assistindo a partir dos fãs (e do campeonato e do momento), onde aparece no HUD e se o adversário também tem o seu.
 - Evolução: quanto pesa cada fator (treino, experiência, idade)? (o pico de idade e o declínio já estão decididos)
 - Lados: o quanto o domínio de lado deve valer (hoje até ±8 % de habilidade) e quanto custa treinar um lado (hoje 1,8 ponto por sessão, atributo a 60 %)? (decisão 0024)
 - Negociação: os pesos dos fatores, o quanto o desejo muda luvas e salário e a paciência (valores provisórios da decisão 0026).
-- Concorrência: outros clubes podem disputar o mesmo jogador (e a duração do contrato)?
 - Balancear salários, juros, limite de empréstimo, prazo de falência e manutenção da Gaming House (valores provisórios das decisões 0015 e 0016).
