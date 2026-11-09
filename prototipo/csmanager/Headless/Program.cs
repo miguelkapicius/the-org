@@ -666,6 +666,7 @@ namespace CSM.Headless
                 return 0;
             }
             if (Array.IndexOf(a, "-chance") >= 0) return MedirChance.Rodar(int.Parse(Arg(a, "-chance", "60")), seed0, int.Parse(Arg(a, "-base", "65")));
+            if (Array.IndexOf(a, "-micro") >= 0) return MedirMicro.Rodar(int.Parse(Arg(a, "-micro", "12")), seed0);
             if (Array.IndexOf(a, "-estilos") >= 0) return MedirEstilos.Rodar(int.Parse(Arg(a, "-estilos", "18")), seed0);
             if (Array.IndexOf(a, "-partidas") >= 0) return Partidas(int.Parse(Arg(a, "-partidas", "100")), seed0, Arg(a, "-modoA", ""), Arg(a, "-modoB", ""), Arg(a, "-saida", "adapta"));
             if (Array.IndexOf(a, "-treino") >= 0) return Treino(int.Parse(Arg(a, "-passos", "60")), n, seed0);
