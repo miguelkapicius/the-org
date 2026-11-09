@@ -73,3 +73,5 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Psicólogo | Profissional que o clube contrata, com salário e qualidade; cuida do mental dos jogadores e escreve o relatório de cada um (ideia 6, a definir). | coach mental, terapeuta | 11-ideias |
 | Macro | O jogo do time: tática do round, execução, rotação e retake (decidido pelo IGL). | — | 12-ia-micro |
 | Micro | O jogo de cada bot: rota, ângulo que confere, onde mira, peek e reação a uma ameaça. | — | 12-ia-micro |
+| Wishlist | Lista de desejos da Steam: o jogador marca o jogo para ser avisado quando ele lançar. Conta para aparecer em "Populares em breve". | lista de espera | marketing |
+| Next Fest | Festival da Steam em que jogos ainda não lançados mostram uma demo; cada jogo participa uma vez antes de lançar. | — | marketing |
