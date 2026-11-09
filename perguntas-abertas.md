@@ -18,6 +18,13 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] **Contratos:** pesos da cláusula de rescisão, da multa, da chance de um rival levar o jogador e da recusa de renovar; o jogador pode pedir para sair? (decisão 0035, proposta) → `gdd/03-progressao.md`
 - [ ] **Fãs:** pesos de ganho e perda, mínimos de cada nível da Gaming House e o que mais eles liberam (patrocínio, atrair contratados); fãs devem ser gastos como moeda ou só liberar? (decisão 0037, proposta) → `gdd/03-progressao.md`
 - [ ] **Espectadores da transmissão:** o HUD da partida mostra quantas pessoas assistem, ditado pelos fãs. Fórmula (fãs, campeonato, momento), posição no HUD e se o adversário também tem o seu? (decisão 0037) → `gdd/08-ui-ux.md`
+- [ ] **Psicólogo** (ideia 6 do autor): de quanto em quanto tempo sai o relatório de cada jogador (semanal, quinzenal, mensal)? → `gdd/11-ideias.md`
+- [ ] **Psicólogo:** além da moral, quais emoções/estados o relatório mostra e como cada um muda a partida e o time? → `gdd/11-ideias.md`
+- [ ] **Psicólogo:** o manager pode agir a partir do relatório (conversa, folga, promessa de vaga)? Com que custo? → `gdd/11-ideias.md`
+- [ ] **Psicólogo:** pode ser contratado desde o início ou só com o nível 4 da Gaming House (onde o psicólogo já está)? → `gdd/11-ideias.md`
+- [ ] **Psicólogo:** quanto o melhor psicólogo vale a mais que o pior (o tamanho do efeito de cada nível de qualidade) e quanto custa cada nível? → `gdd/11-ideias.md`
+- [ ] **Psicólogo:** tem contrato (duração, multa para demitir) como os jogadores? Dá para ter mais de um? → `gdd/11-ideias.md`
+- [ ] **Notificações** (ideia 7 do autor): a central substitui a lista "O que merece atenção" do painel ou fica ao lado dela? Guarda histórico e lida/não lida? → `gdd/11-ideias.md`
 
 ## 3. Escopo e produto
 
