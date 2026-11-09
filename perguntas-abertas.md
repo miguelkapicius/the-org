@@ -10,6 +10,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Validar a decisão **0009** (NavMesh + IA própria, recomendação do agente) → `decisoes/0009-ia-navmesh-mais-ia-propria.md`
 - [ ] Estilo de arte: realista, estilizado ou low-poly? → `gdd/06-arte.md`
 - [ ] Versão da Unity e pipeline de render (URP ou HDRP)? → `gdd/09-tecnico.md`
+- [ ] **IA no micro:** quanto de eficiência aceitamos perder em troca de variedade (rotas mais longas, jogadas fora do plano)? → `gdd/12-ia-micro.md`
+- [ ] **IA no micro:** quanto cada bot pode se afastar do plano do IGL? Igual para todos ou pela função, agressividade e traços? → `gdd/12-ia-micro.md`
 
 ## 2. Lado manager
 

@@ -71,3 +71,5 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Relatório do psicólogo | Relatório periódico de cada jogador: o que ele está pensando, a emoção dele e o efeito na partida e no time (ideia 6, a definir). | laudo, avaliação psicológica | 11-ideias |
 | Central de notificações | Aba da tela principal que resume o que o manager precisa resolver e o que aconteceu de importante; cada notificação leva à tela certa (ideia 7, a definir). | inbox, caixa de entrada | 11-ideias |
 | Psicólogo | Profissional que o clube contrata, com salário e qualidade; cuida do mental dos jogadores e escreve o relatório de cada um (ideia 6, a definir). | coach mental, terapeuta | 11-ideias |
+| Macro | O jogo do time: tática do round, execução, rotação e retake (decidido pelo IGL). | — | 12-ia-micro |
+| Micro | O jogo de cada bot: rota, ângulo que confere, onde mira, peek e reação a uma ameaça. | — | 12-ia-micro |
