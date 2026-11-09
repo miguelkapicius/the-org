@@ -4,6 +4,8 @@
 
 _Varredura pedida pelos autores (2026-11-09): os bots pensam bem a tática do time (macro), mas falta independência no jogo de cada um (micro). Este arquivo diz o que causa cada sintoma no código, quanto ele acontece e como corrigir. Caminhos relativos a `prototipo/csmanager/Assets/Game/`._
 
+> **Relatório detalhado** (impressões, confiança, números e o raciocínio de cada item, para outros agentes analisarem): `relatorios/2026-11-09-diagnostico-ia-micro.md`.
+
 > As propostas são **[Sugestão]** do agente, a validar. Cada correção deve entrar atrás de uma opção `-exp`, ser medida (ver "Como medir") e só então virar o padrão, porque mexer no micro muda o equilíbrio TR × CT que o treino dos pesos ajustou.
 
 ## Resumo
@@ -17,8 +19,9 @@ _Varredura pedida pelos autores (2026-11-09): os bots pensam bem a tática do ti
 | 5 | Seguem a tática à risca | **Sim, na execução** | Cada bot refaz a sequência de lugares do jogador pro dele; só troca, giro, call e granada interrompem | 3 |
 | 6 | Pegam sempre a tática de maior win rate | **Não, quase**: em 187 rounds de compra cheia o TR usou 156 planos diferentes, nenhum mais de 3 vezes | A escolha é variada; mas a "força" de cada plano vai de 0,36 a 2,91 (8 vezes), medida com 8 a 10 rounds cada: ruído vira preferência | 4 |
 | 7 | Falta personalidade individual | **Sim** | O jeito de jogar por função (entry agressivo, AWPer calmo, lurker paciente) está desligado por padrão | 4 |
+| 8 | No retake, o CT sempre vem pelo lado do CT e pelos mesmos caminhos; ninguém vai pelas costas | **Sim**: 79 % das entradas por duas portas (descida do mercado 43 %, descida do CT 36 %); 15 % pelas costas, aparentemente por acaso | Os pontos de encontro do retake são só do lado do CT; não existe flanco no retake | 1 |
 
-Números: 12 partidas inteiras, `Headless -micro 12 -seed 9100`. Não há referência de jogo profissional para eles: servem para comparar antes e depois de cada correção.
+Números: 12 partidas inteiras, `Headless -micro 12 -seed 9100` (o retake, 16 partidas à parte: 57 rounds com retake, 94 entradas). Não há referência de jogo profissional para eles: servem para comparar antes e depois de cada correção.
 
 ## 1. AWP: não reagem à ameaça de um tiro só
 
@@ -95,13 +98,30 @@ Números: 12 partidas inteiras, `Headless -micro 12 -seed 9100`. Não há refer�
 
 **[Sugestão] Correção:** religar junto com as correções 1 a 5 e medir; se o retake piorar, ajustar o estilo do âncora em vez de desligar tudo. Os traços da decisão 0019 também podem mudar o micro (o Esquentado faz mais wide peek, o Decisivo segura mais o ângulo no clutch).
 
+## 8. Retake sempre pelas mesmas portas
+
+**O que acontece.** Com a bomba plantada, o CT se junta num ponto do lado do CT e entra junto. Quem está do outro lado do mapa volta para uma porta do lado do CT em vez de vir pelas costas.
+
+**Causas no código:**
+- `Sim/Places.cs:73` (`RetakeStage`): 3 pontos de encontro no A (rua do CT, plataforma, praça) e 2 no B (viela, descida do mercado), **todos do lado do CT**.
+- `Sim/Igl.cs:1477-1503`: cada CT vai para a porta mais perto dele dentre essas (com divisão quando há folga de 2+ e um pouco de ruído), sempre dentro das mesmas portas.
+- `Sim/Igl.cs:1606` em diante: quem recua do bomb também vai para um desses pontos.
+- O flanco existe para o lurker do TR (`Sim/Igl.cs:851-895`) e para "vários contra um" (`Sim/Igl.cs:1814`), mas não no retake.
+
+**[Sugestão] Correção:**
+1. **Portas pelas costas:** pontos de retake do lado do TR (A: rampa e palácio; B: curta e casarão), marcados como flanco.
+2. **Quem está do outro lado entra de lá**, se for mais perto, em vez de voltar.
+3. **Flanco planejado** com vantagem numérica, com chance pela agressividade e pelo tempo de bomba que sobra.
+4. **Variar a porta principal** (aleatoriedade e memória de não repetir a última contra o mesmo time).
+
 ## Ordem sugerida
 
 1. AWP (item 1), porque é o sintoma mais visível e o mais "anti-humano".
-2. Divisão de ângulos e faixa lateral (itens 2 e 3), juntos, porque mexem na mesma movimentação em grupo.
-3. Rotas variadas e perigo dinâmico (item 4), que reaproveitam a "linha da AWP" do item 1.
-4. Liberdade no plano e personalidade (itens 5 e 7).
-5. Força dos planos (item 6), que é pequeno e independente.
+2. Retake (item 8), que é estrutural e localizado.
+3. Divisão de ângulos e faixa lateral (itens 2 e 3), juntos, porque mexem na mesma movimentação em grupo.
+4. Rotas variadas e perigo dinâmico (item 4), que reaproveitam a "linha da AWP" do item 1.
+5. Liberdade no plano e personalidade (itens 5 e 7).
+6. Força dos planos (item 6), que é pequeno e independente.
 
 ## Como medir
 
@@ -115,3 +135,4 @@ Mede visão tampada, mesmo ângulo, morrer no mesmo lugar (AWP x outras armas) e
 
 - Quanto de "eficiência" aceitamos perder em troca de variedade? (rotas mais longas e jogadas fora do plano às vezes dão errado, como com pessoas de verdade)
 - Quanto cada bot pode se afastar do plano do IGL (item 5)? Igual para todos ou pela função, agressividade e traços?
+- Qual a faixa realista de retakes com alguém vindo pelas costas (item 8)? Sem dados pro, é decisão de design.

@@ -12,6 +12,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Versão da Unity e pipeline de render (URP ou HDRP)? → `gdd/09-tecnico.md`
 - [ ] **IA no micro:** quanto de eficiência aceitamos perder em troca de variedade (rotas mais longas, jogadas fora do plano)? → `gdd/12-ia-micro.md`
 - [ ] **IA no micro:** quanto cada bot pode se afastar do plano do IGL? Igual para todos ou pela função, agressividade e traços? → `gdd/12-ia-micro.md`
+- [ ] **Retake:** qual a faixa realista de retakes com alguém vindo pelas costas? (hoje 15 % das entradas, sem flanco planejado) → `gdd/12-ia-micro.md`
 
 ## 2. Lado manager
 
