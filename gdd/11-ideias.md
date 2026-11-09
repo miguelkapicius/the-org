@@ -40,6 +40,8 @@ Pedidas pelo autor. O texto normal é a ideia dele; o que está marcado **[Suges
 
 **Ideia do autor:** cada jogador tem sessões com o psicólogo do time, que entrega um **relatório periódico** (semanal, mensal ou outro prazo, **a definir**) dizendo o que o jogador está pensando, a emoção dele e como isso afeta a partida e o time. O manager acompanha e controla esse parâmetro sempre. Na interface, uma **tela do psicólogo**, com o relatório de cada jogador.
 
+**Contratar o psicólogo (ideia do autor, 2026-11-09):** o clube **contrata** o psicólogo, e há psicólogos de **salários diferentes**. O psicólogo **influencia bastante o mental do time**: um psicólogo melhor, com salário maior, mantém o time melhor mentalmente, e qualquer problema fica mais fácil de resolver.
+
 **O que já existe e liga com isso:**
 - **Moral** (0 a 100, decisão 0019): sobe e desce com resultados e banco, e muda a habilidade na partida. É o número que o relatório explica.
 - **Traços** (decisão 0019): Esquentado, Estrela, Líder... dão o "jeito" de cada um reagir.
@@ -50,7 +52,15 @@ Pedidas pelo autor. O texto normal é a ideia dele; o que está marcado **[Suges
 - **O relatório**, por jogador: a emoção do momento (ex.: confiante, ansioso, frustrado, desmotivado, com saudade de jogar), o porquê (derrotas seguidas, banco, clássico perdido, contrato no fim, MVP recente) e o efeito na partida em números (ex.: "-2 % de habilidade, troca menos os colegas").
 - **Ações do manager** a partir do relatório: conversa individual, folga, prometer vaga de titular (que vira compromisso), mais sessões com o psicólogo. Cada uma com efeito e custo (tempo de treino, dinheiro, risco de não cumprir a promessa).
 - **Efeito no time:** um jogador muito abalado puxa o entrosamento ou a moral dos outros para baixo; um Líder confiante puxa para cima.
-- **Psicólogo pela Gaming House:** relatório simples desde o início e mais detalhado (com causas e previsões) a partir do nível 4, onde o psicólogo já está.
+- **Mercado de psicólogos:** algumas opções por vez (ex.: 3 a 5, renovadas a cada temporada), cada uma com **qualidade** (ex.: 1 a 5 estrelas), **salário semanal** que cresce com a qualidade e um contrato (duração e multa para demitir, como os contratos dos jogadores, decisão 0035). Sem psicólogo, o clube não tem relatório nem as ações.
+- **O que a qualidade muda** (quanto melhor, mais forte):
+  - **Proteção:** amortece as quedas de moral (ex.: a derrota que tira 3 tira 2) e acelera a volta ao normal;
+  - **Resolver problemas:** mais chance de as ações do manager funcionarem (conversa, folga, promessa) e de uma crise (jogador desmotivado, briga, Estrela no banco) acabar logo;
+  - **Relatório:** o bom psicólogo diz a causa e prevê o que vem (ex.: "vai pedir para sair se seguir no banco"); o fraco só diz a emoção;
+  - **Time:** ajuda a segurar o entrosamento e o efeito do clássico (decisões 0019 e 0021).
+- **Custo:** o salário entra nas despesas semanais (decisão 0015) junto com os dos jogadores; um psicólogo caro num clube pequeno pesa no caixa. É uma escolha de gestão: gastar no mental ou em jogador.
+- **Gaming House:** a sala do psicólogo pode ser o que o nível 4 libera (hoje o nível 4 já cita o psicólogo, decisão 0016), ou o psicólogo pode ser contratado desde o início e o nível 4 só melhorar o trabalho dele (mais sessões por semana). A definir.
+- **Depois:** o mesmo modelo serve para outros profissionais (fisioterapeuta, analista de demos, preparador), se fizer sentido.
 
 **Liga com:** `02-mecanicas.md` (moral e traços), `03-progressao.md` (Gaming House), `08-ui-ux.md` (tela nova), decisões 0016, 0019 e 0021.
 
@@ -109,5 +119,7 @@ As perguntas das 5 primeiras prioridades foram respondidas pelas decisões 0018 
 - Psicólogo: de quanto em quanto tempo sai o relatório de cada jogador (semanal, quinzenal, mensal)?
 - Psicólogo: além da moral, quais emoções/estados o relatório mostra e como cada um muda a partida e o time?
 - Psicólogo: o manager pode agir a partir do relatório (conversa, folga, promessa de vaga)? Com que custo?
-- Psicólogo: existe desde o início ou só com o nível 4 da Gaming House (onde o psicólogo já está)?
+- Psicólogo: pode ser contratado desde o início ou só com o nível 4 da Gaming House (onde o psicólogo já está)?
+- Psicólogo: quanto o melhor psicólogo vale a mais que o pior (o tamanho do efeito de cada nível de qualidade) e quanto custa cada nível?
+- Psicólogo: tem contrato (duração, multa para demitir) como os jogadores? Dá para ter mais de um?
 - Notificações: a central substitui a lista "O que merece atenção" do painel ou fica ao lado dela? Guarda histórico e lida/não lida?
