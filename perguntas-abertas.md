@@ -40,6 +40,9 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Single-player apenas, ou terá modo online (ligas entre amigos, ranking)? → `gdd/00-visao.md`
 - [ ] Nome do jogo e do "esporte" fictício → `gdd/00-visao.md`
 - [ ] Modelo de negócio: pago, free-to-play, early access? → `gdd/00-visao.md`
+- [ ] **Marketing:** data-alvo de lançamento, e vamos ao Steam Next Fest de junho de 2027 (14 a 21) com uma demo? → `marketing/plano-de-lancamento.md`
+- [ ] **Marketing:** qual a verba (anúncios, arte da cápsula, trailer) e quem cuida de redes, criadores e Discord? → `marketing/plano-de-lancamento.md`
+- [ ] **Marketing:** página e material em português e inglês desde o início? → `marketing/plano-de-lancamento.md`
 
 ## 4. Balanceamento (pode ficar para depois)
 
