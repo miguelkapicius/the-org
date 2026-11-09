@@ -2,6 +2,8 @@
 
 > **Status:** rascunho · **Responsável:** miguelkapicius · **Escrito em:** 2026-11-09 · **Revisado em:** 2026-11-09, com a pesquisa em `marketing/pesquisa-2026-11-09/`
 
+**Versão visual:** https://claude.ai/artifact/Fq9C51Ja5nS6udRA5LynUz (página privada do Miguel; compartilhar pelo menu Share para o Gabriel abrir).
+
 _Objetivo dos autores: juntar o máximo de wishlists com o menor custo possível, com tráfego pago e com streamers menores, para o jogo aparecer na página inicial da Steam no lançamento. Este plano é proposta do agente, a validar. Cada número vem da pesquisa (relatório e notas na pasta acima, com as fontes); lá, cada afirmação está marcada como evidência, estimativa ou inferência._
 
 ## Resumo
@@ -113,7 +115,24 @@ A base gratuita (página, demo, Next Fest, BIG Festival, criadores, clipes) é a
 
 O cenário máximo compra no máximo uns **3–5 mil wishlists a mais** que o enxuto. O que separa 15 mil de 80 mil não é verba: é um clipe viral ou um grande criador, e a chance disso cresce com **volume de clipes e de contatos**, não com mídia. Em todos os cenários, 70–80 % do tempo da dupla vai para demo, página e criadores.
 
-## 8. O que copiar do concorrente (sem as licenças)
+## 8. Preço (proposta)
+
+**Sugestão: US$ 14,99 no lançamento da versão 1.0**, com 10 a 15 % de desconto na primeira semana. No Brasil, **R$ 49,99** (a tabela regional da Steam sugere ~R$ 57 para US$ 14,99). Pagamento único, sem free-to-play.
+
+| Jogo | Situação | Preço (US$) | O que tem a mais | Resultado (estimado) |
+|---|---|---|---|---|
+| Esports Manager 2026 | 1.0, jul 2026 | 19,99 (R$ 59,99) | Publisher, licenças de times e jogadores, casters | ~124–274 mil cópias; reviews mistas no lançamento |
+| Teamfight Manager 2 | Acesso antecipado, mai 2026 | 19,99 | Sequência de um sucesso (MOBA) | ~58 mil wishlists; reviews mistas |
+| CS Manager (Crumana) | 1.0, ago 2026 | não confirmado | Sem publisher nem licenças, partida em 2D | ~2,9 mil cópias, apesar de 82 % positivas |
+| **O nosso** | 1.0, ago–set 2027 | **14,99 (R$ 49,99)** | Partida em 3D como transmissão, IA de profissional | meta de 15–30 mil wishlists |
+
+**Por quê:** sem licenças nem publisher, ficar US$ 5 abaixo do líder ajuda quem compara os dois; jogador da Steam raramente compra pelo preço cheio (a conversão vem de descontos e do aviso de lançamento a quem tem o jogo na wishlist); até US$ 30 é a faixa em que jogo de PC mais vende.
+
+**Acesso antecipado ou 1.0:** 1.0, se der. Acesso antecipado é um lançamento de verdade e reviews ruins no começo são difíceis de recuperar (o concorrente perdeu notas por "muito cru"). Se for acesso antecipado: US$ 12,99 e subir para 14,99–17,99 na 1.0, avisando antes.
+
+**Conta da primeira semana** (grosseira): 20 mil wishlists × 10 % = 2 mil cópias × US$ 14,99 × 0,9 (desconto) ≈ US$ 27 mil brutos; tirando 30 % da Steam e ~15 % de preço regional, reembolsos e impostos, sobram ~US$ 16 mil (≈ R$ 80 mil). Não inclui as vendas depois da primeira semana nem os descontos sazonais. A página visual tem uma calculadora para testar outros valores.
+
+## 9. O que copiar do concorrente (sem as licenças)
 
 O *Esports Manager 2026* vendeu entre ~124 e 274 mil cópias (estimativas) mesmo com reviews mistas no lançamento, com publisher, licenças de times e jogadores, casters da comunidade, demo no Sports Fest e depois no Next Fest e elencos editáveis. O *CS Manager*, bem avaliado mas sem nada disso, ficou em ~2,9 mil cópias. **A diferença foi alcance, não qualidade.** O que dá para copiar sem licença:
 - participação de casters e figuras da comunidade, com nomes próprios;
@@ -122,7 +141,7 @@ O *Esports Manager 2026* vendeu entre ~124 e 274 mil cópias (estimativas) mesmo
 
 E a lição defensiva: "muito cru" e "vazio depois de algumas temporadas" derrubaram as notas dele; uma dupla sem publisher não sobrevive a isso. Não lançar antes de a partida em 3D estar convincente.
 
-## 9. O que medir toda semana
+## 10. O que medir toda semana
 
 - wishlists por dia e total (Steamworks) e a linha de base sem ações;
 - de onde vieram (UTM por canal, criador e anúncio);
@@ -130,10 +149,10 @@ E a lição defensiva: "muito cru" e "vazio depois de algumas temporadas" derrub
 - na demo: jogadores que colocam na wishlist (meta: 16–19 %);
 - custo real por wishlist de cada anúncio.
 
-## 10. O que precisamos decidir
+## 11. O que precisamos decidir
 
-1. **Nome do jogo** (bloqueia a página).
-2. **Modelo de negócio e preço** (o preço em reais sai bem menor que em dólar pela tabela regional da Steam).
+1. **Nome do jogo** (bloqueia a página). Confirmado pelos autores (2026-11-09): o nome será outro e o jogo **não terá relação direta com o CS**; a simulação 5v5 é o que atrai esse público.
+2. **Modelo de negócio e preço** (proposta: pagamento único, US$ 14,99 e R$ 49,99, versão 1.0; seção 8).
 3. **Data-alvo** (a proposta é 24/08–14/09/2027) e se confirmamos não ir ao Next Fest de fevereiro.
 4. **Verba** (enxuto, médio ou máximo).
 5. **Quem cuida** dos criadores, dos clipes e do Discord.
