@@ -161,158 +161,41 @@ def logo(nome, tam, x, y, cor=OSSO, sub="ESPORTS MANAGER", cor_sub=SUAVE, ponto=
     return g, lw, alt
 
 
-# ---------------------------------------------------------------- o radar
-VAO, PISO, BEIRA, CAIXA = "#0e1217", "#2a333e", "#647182", "#566170"
+# ---------------------------------------------------------------- o padrão
+ANEL_P, PONTO_P, ANEL_V = "#1a2027", "#2b343f", "#3b4551"
 
 
-class Radar:
-    """Um round visto de cima, chapado, como o radar da partida e a prancheta de quem a analisa: o mapa em cinza,
-    os bots laranja (TR) e azuis (CT) com o cone de visão, o caminho que cada um fez, a rota combinada, as
-    utilitárias e, quando `tags` está ligado, o que cada bot está fazendo.
-    O mapa é inventado para a arte: não é nenhum mapa do jogo nem de outro jogo."""
-
-    def __init__(self, u, foco, em, giro=-16, tags=False, anel=None):
-        self.u, self.tags, self.anel = u, tags, anel
-        a = math.radians(giro)
-        self.c, self.s = math.cos(a) * u, math.sin(a) * u
-        self.dx = em[0] - (foco[0] * self.c - foco[1] * self.s)
-        self.dy = em[1] - (foco[0] * self.s + foco[1] * self.c)
-        self.chao, self.itens, self.bots, self.topo, self.defs = [], [], [], [], []
-        self.n = 0
-
-    def p(self, x, y):
-        return (self.dx + x * self.c - y * self.s, self.dy + x * self.s + y * self.c)
-
-    def pts(self, lista):
-        return " ".join("%.1f,%.1f" % self.p(*q) for q in lista)
-
-    def ret(self, x, y, w, d):
-        return self.pts([(x, y), (x + w, y), (x + w, y + d), (x, y + d)])
-
-    def piso(self, salas):
-        u = self.u
-        beira = "".join(f'<polygon points="{self.ret(*r)}"/>' for r in salas)
-        self.chao.append(f'<g fill="none" stroke="{BEIRA}" stroke-width="{0.2 * u:.2f}" stroke-linejoin="round">{beira}</g>')
-        self.chao.append(f'<g fill="{PISO}" stroke="{PISO}" stroke-width="0.8">{beira}</g>')
-
-    def caixa(self, x0, y0, x1, y1):
-        self.chao.append(f'<polygon points="{self.ret(x0, y0, x1 - x0, y1 - y0)}" fill="{CAIXA}" stroke="{BEIRA}" stroke-width="{0.06 * self.u:.2f}" stroke-linejoin="round"/>')
-
-    def bombsite(self, x0, y0, x1, y1, letra):
-        u = self.u
-        self.chao.append(f'<polygon points="{self.ret(x0, y0, x1 - x0, y1 - y0)}" fill="{OSSO}" fill-opacity="0.05" stroke="{OSSO}" '
-                         f'stroke-opacity="0.55" stroke-width="{0.07 * u:.2f}" stroke-dasharray="{0.36 * u:.1f} {0.22 * u:.1f}"/>')
-        ox, oy = self.p(x0 + 0.45, y1 - 0.5)
-        self.chao.append(f'<path d="{F800.curvas(letra, 1.5, 0, 0, 0, (self.c, self.s, self.s, -self.c, ox, oy))}" fill="{OSSO}" opacity="0.4"/>')
-
-    def cone(self, x, y, graus, comp, cor, abre=24):
-        self.n += 1
-        lista = [(x, y)] + [(x + comp * math.cos(math.radians(graus - abre + 2 * abre * i / 8)),
-                             y + comp * math.sin(math.radians(graus - abre + 2 * abre * i / 8))) for i in range(9)]
-        c, t = self.p(x, y), self.p(x + comp * math.cos(math.radians(graus)), y + comp * math.sin(math.radians(graus)))
-        self.defs.append(f'<linearGradient id="cone{self.n}" gradientUnits="userSpaceOnUse" x1="{c[0]:.1f}" y1="{c[1]:.1f}" x2="{t[0]:.1f}" y2="{t[1]:.1f}">'
-                         f'<stop offset="0" stop-color="{cor}" stop-opacity="0.62"/><stop offset="1" stop-color="{cor}" stop-opacity="0.04"/></linearGradient>')
-        self.chao.append(f'<polygon points="{self.pts(lista)}" fill="url(#cone{self.n})"/>')
-
-    def trilha(self, lista, cor):
-        """Por onde o bot já passou."""
-        self.chao.append(f'<polyline points="{self.pts(lista)}" fill="none" stroke="{cor}" stroke-width="{0.1 * self.u:.2f}" '
-                         f'stroke-linejoin="round" stroke-linecap="round" opacity="0.5"/>')
-
-    def rota(self, lista, cor):
-        """Para onde ele vai: a jogada combinada."""
-        u = self.u
-        self.itens.append(f'<polyline points="{self.pts(lista)}" fill="none" stroke="{cor}" stroke-width="{0.13 * u:.2f}" '
-                          f'stroke-dasharray="{0.34 * u:.1f} {0.24 * u:.1f}" stroke-linejoin="round"/>')
-        (x0, y0), (x1, y1) = lista[-2], lista[-1]
-        a = math.atan2(y1 - y0, x1 - x0)
-        tri = [(x1 + 0.62 * math.cos(a), y1 + 0.62 * math.sin(a))] + [(x1 + 0.36 * math.cos(a + s * 2.1), y1 + 0.36 * math.sin(a + s * 2.1)) for s in (1, -1)]
-        self.itens.append(f'<polygon points="{self.pts(tri)}" fill="{cor}"/>')
-
-    def bot(self, x, y, cor, graus, comp=3.4, tag=None, abre=24, lado=1):
-        u = self.u
-        self.cone(x, y, graus, comp, cor, abre)
-        bx, by = self.p(x, y)
-        self.bots.append(f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="{0.46 * u:.1f}" fill="{cor}" stroke="{GRAFITE}" stroke-width="{0.12 * u:.2f}"/>')
-        dentro = not self.anel or math.hypot(bx - self.anel[0], by - self.anel[1]) < 0.72 * self.anel[2]
-        if tag and self.tags and dentro:      # etiqueta só em quem aparece dentro do anel
-            self.etiqueta(bx, by, tag, cor, lado)
-
-    def etiqueta(self, bx, by, txt, cor, lado=1):
-        """O que o bot está fazendo, como a transmissão anotaria."""
-        u = self.u
-        t = max(8.5, 0.36 * u)
-        lw = FMONO.largura(txt, t, 0.06)
-        w, h = lw + 1.5 * t, 2.3 * t
-        ty = by - 1.25 * u - h
-        tx = bx + 0.7 * u if lado > 0 else bx - 0.7 * u - w
-        ax = tx if lado > 0 else tx + w
-        self.topo.append(f'<path d="M{bx:.1f} {by - 0.5 * u:.1f}L{bx:.1f} {ty + h / 2:.1f}L{ax:.1f} {ty + h / 2:.1f}" fill="none" stroke="{cor}" stroke-width="1.4"/>'
-                         f'<rect x="{tx:.1f}" y="{ty:.1f}" width="{w:.1f}" height="{h:.1f}" rx="2" fill="{GRAFITE}" stroke="{cor}" stroke-width="1.4"/>'
-                         f'<path d="{FMONO.curvas(txt, t, tx + 0.75 * t, ty + h / 2 + t / 2, 0.06)}" fill="{OSSO}"/>')
-
-    def morto(self, x, y, cor):
-        u, (bx, by) = self.u, self.p(x, y)
-        a = 0.3 * u
-        self.itens.append(f'<path d="M{bx - a:.1f} {by - a:.1f}L{bx + a:.1f} {by + a:.1f}M{bx - a:.1f} {by + a:.1f}L{bx + a:.1f} {by - a:.1f}" '
-                          f'stroke="{cor}" stroke-width="{0.14 * u:.2f}" stroke-linecap="round" opacity="0.7"/>')
-
-    def smoke(self, x, y, r=1.5):
-        u, (cx, cy) = self.u, self.p(x, y)
-        self.itens.append(f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{r * u:.1f}" fill="{OSSO}" fill-opacity="0.3" stroke="{OSSO}" stroke-opacity="0.75" stroke-width="{0.07 * u:.2f}"/>'
-                          f'<circle cx="{cx:.1f}" cy="{cy:.1f}" r="{0.62 * r * u:.1f}" fill="{OSSO}" fill-opacity="0.16"/>')
-
-    def flash(self, x, y):
-        u, (cx, cy) = self.u, self.p(x, y)
-        raios = "".join(f'M{polar(cx, cy, 0.24 * u, a)[0]:.1f} {polar(cx, cy, 0.24 * u, a)[1]:.1f}L{polar(cx, cy, 0.6 * u, a)[0]:.1f} {polar(cx, cy, 0.6 * u, a)[1]:.1f}' for a in range(0, 360, 45))
-        self.itens.append(f'<path d="{raios}" stroke="{OSSO}" stroke-width="{0.09 * u:.2f}" stroke-linecap="round"/><circle cx="{cx:.1f}" cy="{cy:.1f}" r="{0.15 * u:.1f}" fill="{OSSO}"/>')
-
-    def arco(self, a, b, curva=0.22):
-        """O arremesso de uma utilitária."""
-        u = self.u
-        p0, p1 = self.p(*a), self.p(*b)
-        mx, my = (p0[0] + p1[0]) / 2 + (p1[1] - p0[1]) * curva, (p0[1] + p1[1]) / 2 - (p1[0] - p0[0]) * curva
-        self.itens.append(f'<path d="M{p0[0]:.1f} {p0[1]:.1f}Q{mx:.1f} {my:.1f} {p1[0]:.1f} {p1[1]:.1f}" fill="none" stroke="{OSSO}" '
-                          f'stroke-width="{0.06 * u:.2f}" stroke-dasharray="{0.13 * u:.1f} {0.17 * u:.1f}" opacity="0.8"/>')
-
-    def montar(self):
-        # --- o mapa: base do TR à esquerda, do CT à direita, dois bombsites e o meio
-        self.piso([(1, 8, 5, 5), (4, 2, 3, 7), (4, 2, 13, 3), (6, 9, 8, 3), (13, 6, 4, 8), (16, 1, 9, 7),
-                   (3, 13, 3, 5), (3, 16, 15, 3), (17, 13, 8, 7), (26, 8, 5, 5), (23, 6, 5, 3), (24, 12, 4, 3), (15, 12, 3, 2)])
-        self.bombsite(18, 2, 24, 7, "A")
-        self.bombsite(18, 14, 24, 19, "B")
-        for c in ((19.2, 2.6, 20.4, 3.8), (21.4, 4.9, 23.4, 5.9), (17.2, 5.6, 18.2, 6.6), (20, 15, 21.2, 16.2),
-                  (22, 17.5, 24, 18.5), (14.6, 9.4, 15.6, 10.4), (9.5, 2.2, 10.5, 3.0)):
-            self.caixa(*c)
-
-        # --- o round: o TR executa o A. Dois entram juntos, um abre o pixel pelo meio, um finge o B.
-        self.trilha([(3.5, 10), (5.3, 8.2), (5.5, 3.6), (11, 3.4), (15.3, 3.4)], LARANJA)
-        self.trilha([(3, 11), (5, 8.6), (5.2, 4.2), (9, 4.0), (13.2, 4.1)], LARANJA)
-        self.trilha([(4.5, 11), (7, 10.5), (13.4, 10.6), (14.4, 8.3)], LARANJA)
-        self.trilha([(3.5, 12.4), (4.5, 16), (5, 17.6), (9.6, 17.6)], LARANJA)
-        self.rota([(16.1, 3.4), (18.3, 3.5), (20.4, 4.6)], LARANJA)
-        self.rota([(14.9, 7.7), (15.4, 7.0), (16.5, 6.7)], LARANJA)
-        self.smoke(24.6, 7.2, 1.45)
-        self.arco((13.2, 4.1), (24.6, 7.2), -0.2)
-        self.flash(18.9, 1.9)
-        self.arco((15.3, 3.4), (18.9, 1.9), 0.3)
-        self.morto(16.8, 9.2, AZUL)
-        self.bot(15.3, 3.4, LARANJA, 8, 3.6, "ENTRA NO FLASH", lado=-1)
-        self.bot(13.2, 4.1, LARANJA, 2, 2.6, "COBRE A TROCA", lado=-1)
-        self.bot(14.4, 8.3, LARANJA, -38, 3.4, "ABRE O PIXEL", abre=11, lado=-1)
-        self.bot(9.6, 17.6, LARANJA, 0, 3.6, "FINGE O B")
-        self.bot(10.6, 3.5, LARANJA, 0, 2.2)
-        # --- o CT reage: segura o ângulo, cruza fogo e rotaciona do B
-        self.rota([(22.7, 15.3), (25.4, 13.6), (26.6, 10.6), (25.3, 8.4)], AZUL)
-        self.bot(21.0, 3.9, AZUL, 186, 3.6, "SEGURA O ÂNGULO")
-        self.bot(23.6, 2.0, AZUL, 162, 3.8)
-        self.bot(22.0, 15.6, AZUL, -30, 2.2, "ROTACIONA")
-        self.bot(19.2, 17.4, AZUL, 180, 3.6)
-        return self
-
-    def svg(self):
-        """Devolve (defs, mapa, etiquetas): o mapa (com os bots) pode ser recortado pelo anel; as etiquetas ficam por cima."""
-        return "".join(self.defs), "".join(self.chao) + "".join(self.itens) + "".join(self.bots), "".join(self.topo)
+def padrao(w, h, passo, ox=0.0, oy=0.0, livre=None):
+    """O padrão da marca: o O da logo repetido em malha, cada um com o ponto espiando para um lado.
+    Quase todos ficam apagados, em grafite sobre grafite; cinco acendem em laranja e cinco em azul: o 5 contra 5.
+    `passo` é a distância entre os centros; (ox, oy) desloca a malha; `livre` = (x0, y0, x1, y1) é a área do texto,
+    onde a malha não entra."""
+    R, t, r, d = 0.37 * passo, 0.145 * passo, 0.19 * passo, 0.125 * passo
+    alt = passo * 0.866
+    apag, aceso = [], []
+    cols, lins = int(w / passo) + 3, int(h / alt) + 3
+    for j in range(-1, lins):
+        for i in range(-1, cols):
+            cx = ox + i * passo + (passo / 2 if j % 2 else 0)
+            cy = oy + j * alt
+            if cx < -passo or cx > w + passo or cy < -passo or cy > h + passo:
+                continue
+            if livre and livre[0] - R < cx < livre[2] + R and livre[1] - R < cy < livre[3] + R:
+                continue
+            k = (i * 374761393 + j * 668265263) & 0xFFFFFFFF
+            k = ((k ^ (k >> 13)) * 1274126177) & 0xFFFFFFFF
+            k ^= k >> 16
+            ang = (k % 12) * 30
+            anel = f'<path d="{circulo(cx, cy, R)}{circulo(cx, cy, R - t)}" fill-rule="evenodd"'
+            olho = f'<path d="{lente(cx, cy, R - t, cx + d, r)}" transform="rotate({ang} {cx:.1f} {cy:.1f})"'
+            cor = None
+            if (k >> 8) % 14 in (0, 7):
+                cor = LARANJA if (k >> 8) % 14 == 0 else AZUL
+            if cor:
+                aceso.append((cx, f'{anel} fill="{ANEL_V}"/>{olho} fill="{cor}"/>'))
+            else:
+                apag.append(f'{anel} fill="{ANEL_P}"/>{olho} fill="{PONTO_P}"/>')
+    return "".join(apag) + "".join(s for _, s in aceso)
 
 
 # ---------------------------------------------------------------- peças
@@ -323,9 +206,9 @@ def documento(w, h, corpo, defs="", fundo=GRAFITE):
 
 
 def veu(w, h, x0, x1, vertical=False):
-    """Escurece o lado onde o texto fica, para ele ler bem em cima da arte."""
+    """Apaga o padrão do lado onde o texto fica, para ele ler bem."""
     v = 'x1="0" y1="0" x2="0" y2="1"' if vertical else 'x1="0" y1="0" x2="1" y2="0"'
-    d = (f'<linearGradient id="veu" {v}><stop offset="{x0}" stop-color="{GRAFITE}" stop-opacity="0.97"/>'
+    d = (f'<linearGradient id="veu" {v}><stop offset="{x0}" stop-color="{GRAFITE}" stop-opacity="1"/>'
          f'<stop offset="{x1}" stop-color="{GRAFITE}" stop-opacity="0"/></linearGradient>')
     return d, f'<rect width="{w}" height="{h}" fill="url(#veu)"/>'
 
@@ -341,7 +224,7 @@ def escalacao(x, y, k=1.0):
         g += f'<path d="{F600.curvas(func, 11.5 * k, x + 42 * k, ly + 13 * k, 0.1)}" fill="{OSSO}"/>'
         g += f'<rect x="{x + 42 * k:.1f}" y="{ly + 21 * k:.1f}" width="{120 * k:.1f}" height="{3.5 * k:.1f}" fill="{LINHA}"/>'
         g += f'<rect x="{x + 42 * k:.1f}" y="{ly + 21 * k:.1f}" width="{120 * k * geral / 100:.1f}" height="{3.5 * k:.1f}" fill="{cor}"/>'
-    return g
+    return f'<rect x="{x - 18 * k:.1f}" y="{y - 26 * k:.1f}" width="{198 * k:.1f}" height="{248 * k:.1f}" rx="{4 * k:.1f}" fill="{GRAFITE}" fill-opacity="0.9"/>' + g
 
 
 def placar(cx, y, k=1.0):
@@ -362,42 +245,31 @@ def placar(cx, y, k=1.0):
     return g
 
 
-def arte(nome, w, h, u, foco, em, logo_=None, anel=None, veu_=None, tags=False, frase=None, time=None, placar_=None):
-    """Uma peça. Com `anel` = (cx, cy, raio), o radar aparece dentro do O da logo, enorme: é o assunto único da cápsula.
-    Sem ele, o radar ocupa o fundo todo. `foco` é a quadra do mapa que cai no ponto `em`; `logo_` = (tamanho, x, y)."""
-    defs, mapa, cima = Radar(u, foco, em, tags=tags, anel=anel).montar().svg()
-    if anel:
-        cx, cy, R = anel
-        e = 0.2 * R
-        defs += f'<clipPath id="anel"><circle cx="{cx}" cy="{cy}" r="{R - e / 2:.1f}"/></clipPath>'
-        corpo = (f'<circle cx="{cx}" cy="{cy}" r="{R - e / 2:.1f}" fill="{VAO}"/><g clip-path="url(#anel)">{mapa}</g>'
-                 f'<circle cx="{cx}" cy="{cy}" r="{R - e / 2:.1f}" fill="none" stroke="{OSSO}" stroke-width="{e:.1f}"/>{cima}')
-    else:
-        corpo = f'<rect width="{w}" height="{h}" fill="{VAO}"/>{mapa}{cima}'
-    if veu_:
-        d, r = veu(w, h, *veu_)
-        defs += d
-        corpo += r
+def arte(nome, w, h, passo, logo_=None, veu_=None, frase=None, desl=(0, 0)):
+    """Uma peça: o padrão no fundo e (opcional) a logo. `logo_` = (tamanho, x, y); `veu_` apaga o padrão sob o texto."""
+    livre, defs = None, ""
     if logo_:
         tam, x, y = logo_
-        g, _, alt = logo(nome, tam, x, y)
+        g, lw, alt = logo(nome, tam, x, y)
+        fim = alt + (0.75 * tam + len(frase) * 0.39 * tam if frase else 0)
+        livre = (x - 0.3 * tam, y - 0.25 * tam, x + lw + 0.3 * tam, y + fim + 0.2 * tam)
+    corpo = padrao(w, h, passo, *desl, livre=livre)
+    if veu_:
+        defs, r = veu(w, h, *veu_)
+        corpo += r
+    if logo_:
         corpo += g
         if frase:   # só fora da Steam: lá a cápsula leva arte, nome e subtítulo, mais nada
             ft = 0.26 * tam
             for i, lin in enumerate(frase):
                 corpo += f'<path d="{F600.curvas(lin, ft, x, y + alt + 0.75 * tam + i * ft * 1.5, 0.02)}" fill="{OSSO}"/>'
-    if time:
-        corpo += escalacao(*time)
-    if placar_:
-        corpo += placar(*placar_)
     return documento(w, h, corpo, defs)
 
 
-def painel(num, linhas, u, foco, em, v=(0.3, 0.75), time=None, placar_=None, w=616, h=300):
-    """Faixa para a descrição da página da Steam ("Sobre este jogo"): um recorte do radar e o título da seção."""
-    defs, mapa, cima = Radar(u, foco, em, tags=True).montar().svg()
-    d, r = veu(w, h, *v)
-    corpo = f'<rect width="{w}" height="{h}" fill="{VAO}"/>{mapa}{cima}{r}'
+def painel(num, linhas, time=None, placar_=None, w=616, h=300, desl=(0, 0)):
+    """Faixa para a descrição da página da Steam ("Sobre este jogo"): o padrão, o número e o título da seção."""
+    d, r = veu(w, h, 0.34, 0.8)
+    corpo = padrao(w, h, 78, *desl, livre=(0, h - 124, 28 + max(F800.largura(l, 38, 0.012) for l in linhas) + 14, h)) + r
     corpo += simbolo(24, 22, 40) + f'<path d="{FMONO.curvas(num, 11, 74, 47, 0.14)}" fill="{SUAVE}"/>'
     t = 38
     y0 = h - 32 - (len(linhas) - 1) * t * 1.16
@@ -407,7 +279,7 @@ def painel(num, linhas, u, foco, em, v=(0.3, 0.75), time=None, placar_=None, w=6
         corpo += escalacao(*time)
     if placar_:
         corpo += placar(*placar_)
-    return documento(w, h, corpo, defs + d)
+    return documento(w, h, corpo, d)
 
 
 def gravar(arq, svg):
@@ -417,7 +289,6 @@ def gravar(arq, svg):
 
 
 NOME = "THE @ORG"
-A = (18.5, 4.6)      # o bombsite A, onde a jogada acontece
 
 
 def main():
@@ -434,27 +305,29 @@ def main():
     gravar("simbolo.svg", documento(512, 512, simbolo(26, 26, 460), fundo=None))
     gravar("simbolo-escuro.svg", documento(512, 512, simbolo(26, 26, 460, GRAFITE, "#d9822b"), fundo=None))
     gravar("steam-icone-comunidade-184x184.svg", documento(184, 184, icone(ICONE, 184, raio=0), fundo=None))
+    # --- o padrão solto, para usar de fundo onde precisar (ladrilha na horizontal a cada `passo`)
+    gravar("padrao-1920x1080.svg", arte(nome, 1920, 1080, 150))
 
-    # --- Steam: loja. Um assunto só (o radar dentro do O), nome grande, sem mais texto.
-    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 21, A, (716, 215), (80, 40, 156), (716, 215, 250)))
-    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 32, A, (950, 353), (104, 64, 268), (950, 353, 372)))
-    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 11, A, (424, 87), (58, 18, 36), (424, 87, 122)))
-    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 29, A, (374, 606), (134, 56, 64), (374, 606, 322)))
-    gravar("steam-fundo-da-pagina-1438x810.svg", arte(nome, 1438, 810, 40, (15, 9.5), (719, 405), tags=True))
+    # --- Steam: loja. Nome grande sobre o padrão, sem mais texto.
+    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 112, (96, 44, 140), (0.18, 0.62), desl=(20, 30)))
+    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 150, (128, 64, 246), (0.18, 0.62), desl=(30, 20)))
+    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 64, (64, 20, 34), (0.5, 0.86), desl=(14, 18)))
+    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 124, (134, 56, 70), (0.2, 0.46, True), desl=(0, 30)))
+    gravar("steam-fundo-da-pagina-1438x810.svg", arte(nome, 1438, 810, 140))
     # --- Steam: biblioteca
-    gravar("steam-biblioteca-capsula-600x900.svg", arte(nome, 600, 900, 26, A, (300, 600), (106, 46, 60), (300, 600, 290)))
-    gravar("steam-biblioteca-heroi-3840x1240.svg", arte(nome, 3840, 1240, 96, (15, 9.5), (1920, 620)))
+    gravar("steam-biblioteca-capsula-600x900.svg", arte(nome, 600, 900, 100, (106, 46, 66), (0.2, 0.46, True), desl=(0, 30)))
+    gravar("steam-biblioteca-heroi-3840x1240.svg", arte(nome, 3840, 1240, 220))
     g, lw, lh = logo(nome, 250, 0, 0)
     g, lw, lh = logo(nome, 250, (1280 - lw) / 2, (720 - lh) / 2)
     gravar("steam-biblioteca-logo-1280x720.svg", documento(1280, 720, g, fundo=None))
     # --- Steam: faixas da descrição da página
-    gravar("steam-painel-1-transmissao-616x300.svg", painel("01", ["ASSISTA COMO", "TRANSMISSÃO"], 15, (17, 9), (430, 205), (0.3, 0.72), placar_=(436, 18, 0.78)))
-    gravar("steam-painel-2-bots-616x300.svg", painel("02", ["BOTS QUE JOGAM", "COMO PROFISSIONAIS"], 30, (17.5, 4.4), (430, 96), (0.3, 0.66)))
-    gravar("steam-painel-3-gestao-616x300.svg", painel("03", ["SUA GESTÃO", "APARECE NA PARTIDA"], 22, (20, 5), (250, 110), (0.3, 0.6), time=(446, 30, 0.8)))
-    # --- redes (aqui cabem a frase, as etiquetas e o placar)
+    gravar("steam-painel-1-transmissao-616x300.svg", painel("01", ["ASSISTA COMO", "TRANSMISSÃO"], placar_=(430, 26, 0.78)))
+    gravar("steam-painel-2-bots-616x300.svg", painel("02", ["BOTS QUE JOGAM", "COMO PROFISSIONAIS"], desl=(30, 10)))
+    gravar("steam-painel-3-gestao-616x300.svg", painel("03", ["SUA GESTÃO", "APARECE NA PARTIDA"], time=(452, 56, 0.8), desl=(10, 40)))
+    # --- redes (aqui cabe a frase)
     frase = ["VOCÊ MONTA O TIME.", "ELES JOGAM COMO PROFISSIONAIS."]
-    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 27, A, (1150, 250), (100, 80, 90), (1150, 250, 320), tags=True, frase=frase))
-    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 34, A, (540, 706), (160, 80, 70), (540, 706, 350), tags=True))
+    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 126, (100, 80, 96), (0.3, 0.7), frase=frase, desl=(20, 20)))
+    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 150, (160, 80, 80), (0.22, 0.46, True), desl=(0, 20)))
     print("ok:", len(os.listdir(SAIDA)), "arquivos em", SAIDA, "· nome usado:", limpo(nome))
 
 

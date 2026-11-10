@@ -52,7 +52,7 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Cápsula | Imagem do jogo na loja e na biblioteca da Steam (principal, pequena, vertical e cabeçalho). Leva só arte, nome e subtítulo. | capa, thumbnail, banner (banner é só o de redes) | marketing/identidade |
 | Painel da Steam | Faixa de imagem com título que abre cada seção da descrição na página da Steam. | banner, cabeçalho de seção | marketing/identidade |
 | Símbolo | A forma reduzida da logo: o O de ORG sozinho, um anel com o ponto laranja aparecendo por dentro. No ícone do app vai sobre um campo de cor chapada (decisão 0038). | mascote, escudo, brasão (brasão é o dos times) | marketing/identidade |
-| Radar | Nas artes de divulgação: um round visto de cima, chapado, com o mapa em cinza, os bots, o cone de visão, as rotas, as utilitárias e etiquetas do que cada bot está fazendo. Nas cápsulas aparece dentro do O da logo. | prancheta 3D, maquete (maquete é o visual do mapa dentro do jogo); minimapa é o do HUD da partida | marketing/identidade |
+| Padrão | O fundo das artes de divulgação: o O da logo repetido em malha, cada um com o ponto virado para um lado. Quase todos apagados, alguns acesos em laranja (TR) e em azul (CT). | textura, estampa | marketing/identidade |
 | Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
 | Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
 | Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |

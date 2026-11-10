@@ -1,4 +1,4 @@
-# 0038 — Nome THE ORG e identidade da marca: o O que vira radar
+# 0038 — Nome THE ORG e identidade da marca: o O que vira símbolo e padrão
 
 - **Status:** proposta
 - **Data:** 2026-11-10
@@ -17,7 +17,8 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 2. **Só tipografia** — limpa e barata, mas não diz que existe uma partida para assistir.
 3. **O mapa em maquete colorida** (o visual do jogo em 3D, com casas e bonecos) — foi a primeira versão. **Recusada pelo autor:** não gostou da "casinha" e pediu mais cara de FPS tático, formação e manager.
 4. **A prancheta tática em 3D** (o round em blocos de grafite, em perspectiva) — foi a segunda versão. **Recusada pelo autor:** não gostou do 3D nos banners e pediu para estudar o que deu certo em outros jogos.
-5. **O radar dentro do O** — o round visto de cima, chapado, dentro do O da logo ampliado. Um assunto só, nome grande, paleta fechada.
+5. **O radar dentro do O** (o round visto de cima, chapado, dentro do O da logo ampliado) — foi a terceira versão. **Recusada pelo autor:** ainda não gostou dos banners e pediu outro conceito, como um padrão que combine com o resto.
+6. **O padrão** — o O da logo repetido em malha, com alguns acesos em laranja e em azul. Sem mapa, sem cena: o fundo é a própria marca.
 
 **Ícone.** A primeira versão era um brasão de cinco lados. **Recusada pelo autor.** A segunda rodada trouxe o anel, o cone de visão e a formação; o autor não escolheu nenhuma e pediu para seguir o padrão de jogos que deram certo.
 
@@ -29,18 +30,19 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 
 ## Decisão
 - **Nome: THE ORG** (decisão do autor). "Org" é como a cena de esports chama a organização dona do time, que é o papel do manager.
-- **Arte: opção 5, o radar dentro do O** (proposta do agente).
+- **Arte: opção 6, o padrão** (proposta do agente).
 - **Logo:** o nome em Barlow Condensed ExtraBold (a fonte de título da interface, 0025). O **O de ORG é um anel com o ponto laranja aparecendo por dentro**: um bot abrindo pixel. Subtítulo fixo "ESPORTS MANAGER", que diz o gênero de cara. **Aprovada pelo autor.**
 - **Símbolo:** o O da logo sozinho. **Ícone do app:** o símbolo sobre um campo laranja chapado (grafite e osso ficam como alternativas).
-- **Cores:** as da interface. Grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640` (TR) e azul `#62a8ee` (CT). O mapa das artes é em tons de cinza.
-- **Arte:** o TR executando o bombsite A, visto de cima e chapado. Dois entram juntos com flash e smoke, um abre o pixel pelo meio, um finge o B; o CT segura o ângulo e rotaciona. Nas cápsulas, isso aparece dentro do O da logo ampliado. O mapa é inventado para a arte. Vetorial, gerada por `marketing/identidade/gerar.py`, sem imagem gerada por modelo.
-- **Transmissão e manager:** onde cabe, a arte leva o placar de transmissão e a escalação, com a função e o geral de cada titular.
-- **Na Steam:** a cápsula leva só arte, nome e subtítulo, sem etiquetas. As etiquetas do que cada bot faz e a frase ("Você monta o time. Eles jogam como profissionais.") ficam para os painéis, o fundo da página e as redes.
+- **Padrão:** o símbolo repetido em malha, cada um com o ponto virado para um lado. Quase todos apagados, em grafite sobre grafite; alguns acesos em laranja (TR) e em azul (CT). A malha não entra na área do texto.
+- **Cores:** as da interface. Grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640` (TR) e azul `#62a8ee` (CT).
+- **Transmissão e manager:** nos painéis da Steam, o placar de transmissão e a escalação, com a função e o geral de cada titular.
+- **Na Steam:** a cápsula leva só o padrão, o nome e o subtítulo. A frase ("Você monta o time. Eles jogam como profissionais.") fica para as redes.
+- Tudo vetorial, gerado por `marketing/identidade/gerar.py`, sem imagem gerada por modelo.
 
 ## Por quê
-- Pilar 1 (bots que jogam como profissionais): abrir pixel é o gesto que resume a IA e vira a marca; na arte, cada bot aparece fazendo uma coisa que um profissional faz.
-- Pilar 2 (assistir é o prêmio): o O da logo vira a janela por onde se assiste, e a arte é um round anotado, como numa transmissão.
-- Pilar 3 (gestão que aparece na partida): o nome fala do clube, a escalação aparece ao lado da jogada.
+- Pilar 1 (bots que jogam como profissionais): abrir pixel é o gesto que resume a IA e vira a marca; no padrão, cada anel é um bot olhando para um lado.
+- Pilar 2 (assistir é o prêmio): o O da logo é a janela por onde se assiste; o placar de transmissão entra nos painéis.
+- Pilar 3 (gestão que aparece na partida): o nome fala do clube, e a escalação entra nos painéis.
 - Pilar 4 (identidade própria) e decisão 0004: sem soldados, armas ou qualquer forma que lembre a marca de outro jogo.
 - Marketing: nome de 6 letras, grande na cápsula pequena, gênero escrito no subtítulo, e as mesmas cores e fontes do jogo para a página, o trailer e as capturas parecerem uma coisa só.
 
@@ -50,6 +52,6 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 - Trocar o nome não refaz nada à mão: `gerar.py "OUTRO NOME"` regenera todas as peças.
 - Falta decidir se estas artes vão como arte final ou servem de referência para um artista refazer a cápsula (o plano de marketing reserva verba para isso).
 - As artes do hub (soldados encapuzados) ficam fora do material público; trocá-las dentro do jogo é outra conversa.
-- As etiquetas usam palavras da cena ("flash", "smoke", "entry", "lurker"); nenhuma é nome de arma, mapa ou marca. Na escalação, a função de quem usa a arma de precisão aparece como "SNIPER".
-- A arte mostra comportamentos (entrar no flash, cobrir a troca, fingir um bombsite, rotacionar) que o jogo precisa mesmo entregar; os primeiros itens de `gdd/12-ia-micro.md` vêm antes de divulgar.
+- A escalação usa palavras da cena ("entry", "lurker", "IGL"); nenhuma é nome de arma, mapa ou marca. A função de quem usa a arma de precisão aparece como "SNIPER".
+- O padrão não mostra a partida. Quem mostra o jogo são as capturas e o trailer, que continuam sendo o que mais pesa na página.
 - Os brasões dos times e os retratos seguem pendentes em `gdd/06-arte.md`.
