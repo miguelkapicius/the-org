@@ -28,7 +28,7 @@ O símbolo (o O da logo) sobre um campo de cor chapada. **Laranja** está em uso
 
 ## Regras de uso
 
-- **Logo:** nome + subtítulo "ESPORTS MANAGER". Sobre grafite usa osso; sobre fundo claro usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
+- **Logo:** nome + subtítulo "TACTICAL FPS MANAGER". O autor recusou "ESPORTS MANAGER"; as alternativas estão em `saida/logo-subtitulo-*`, e o texto em uso é a constante `SUB` em `gerar.py`. Sobre grafite usa osso; sobre fundo claro usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
 - **Cores:** grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640`, azul `#62a8ee`. Laranja é o ponto e o TR; azul é o CT.
 - **Fontes:** Barlow Condensed ExtraBold no nome e nos títulos, SemiBold no subtítulo, IBM Plex Mono nos números (licença OFL, em `fontes/`).
 - **Na Steam** a cápsula leva só o padrão, o nome e o subtítulo. A frase fica para as redes.
@@ -77,6 +77,7 @@ O padrão fica em `padrao()`: o `passo` muda o tamanho dos anéis. O `.ico` e o 
 - Ícone do app: campo laranja, grafite ou osso?
 - O nome THE ORG está livre na Steam, em domínio e em registro de marca?
 - Estas artes vão como arte final ou viram referência para um artista refazer a cápsula? São desenho vetorial feito em código pelo agente, não imagem gerada por modelo; mesmo assim o plano de marketing reserva verba para a cápsula.
-- Subtítulo, frase e títulos dos painéis: confirmar, e definir a versão em inglês.
+- Subtítulo: "TACTICAL FPS MANAGER" (em uso), "MANAGER DE FPS TÁTICO" ou "MONTE O TIME. ASSISTA À PARTIDA."?
+- Frase e títulos dos painéis: confirmar, e definir a versão em inglês.
 - Os números da escalação e do placar são de exemplo.
 - Faltam as capturas e o trailer, que dependem do jogo.

@@ -150,8 +150,13 @@ def limpo(nome):
     return nome.replace("@", "")
 
 
-def logo(nome, tam, x, y, cor=OSSO, sub="ESPORTS MANAGER", cor_sub=SUAVE, ponto=LARANJA):
+SUB = "TACTICAL FPS MANAGER"      # a linha de gênero embaixo do nome
+SUBS_TESTE = {"en": SUB, "pt": "MANAGER DE FPS TÁTICO", "frase": "MONTE O TIME. ASSISTA À PARTIDA."}
+
+
+def logo(nome, tam, x, y, cor=OSSO, sub=None, cor_sub=SUAVE, ponto=LARANJA):
     """A logo: o nome grande e o gênero embaixo. (x, y) = canto de cima. Devolve (svg, largura, altura)."""
+    sub = SUB if sub is None else sub
     g, lw = palavra(nome, tam, x, y + tam, cor, ponto)
     alt = tam
     if sub:
@@ -298,6 +303,10 @@ def main():
     for cor, suf, sc, fundo in ((OSSO, "claro", SUAVE, None), (GRAFITE, "escuro", "#5b626c", None), (OSSO, "fundo", SUAVE, GRAFITE)):
         g, lw, lh = logo(nome, 120, 60, 60, cor=cor, cor_sub=sc, ponto=LARANJA if cor == OSSO else "#d9822b")
         gravar(f"logo-{suf}.svg", documento(round(lw + 120), round(lh + 120), g, fundo=fundo))
+    for chave, txt in SUBS_TESTE.items():      # as opções de subtítulo, lado a lado, para escolher
+        g, lw, lh = logo(nome, 120, 60, 60, sub=txt)
+        lw = max(lw, F600.largura(txt, 0.19 * 120, 0.16))
+        gravar(f"logo-subtitulo-{chave}.svg", documento(round(lw + 120), round(lh + 120), g))
     # --- ícone do app: o símbolo sobre cor chapada, em três campos; "icone-app" é o que está em uso
     for chave in ICONES:
         gravar(f"icone-{chave}.svg", documento(512, 512, icone(chave), fundo=None))

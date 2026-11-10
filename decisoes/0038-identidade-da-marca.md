@@ -31,7 +31,8 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 ## Decisão
 - **Nome: THE ORG** (decisão do autor). "Org" é como a cena de esports chama a organização dona do time, que é o papel do manager.
 - **Arte: opção 6, o padrão** (proposta do agente).
-- **Logo:** o nome em Barlow Condensed ExtraBold (a fonte de título da interface, 0025). O **O de ORG é um anel com o ponto laranja aparecendo por dentro**: um bot abrindo pixel. Subtítulo fixo "ESPORTS MANAGER", que diz o gênero de cara. **Aprovada pelo autor.**
+- **Logo:** o nome em Barlow Condensed ExtraBold (a fonte de título da interface, 0025). O **O de ORG é um anel com o ponto laranja aparecendo por dentro**: um bot abrindo pixel. **O nome com o O foi aprovado pelo autor.**
+- **Subtítulo:** "TACTICAL FPS MANAGER" (proposta do agente). O autor recusou "ESPORTS MANAGER" e pediu outro texto, sem dizer qual; ficam como alternativas "MANAGER DE FPS TÁTICO" e "MONTE O TIME. ASSISTA À PARTIDA."
 - **Símbolo:** o O da logo sozinho. **Ícone do app:** o símbolo sobre um campo laranja chapado (grafite e osso ficam como alternativas).
 - **Padrão:** o símbolo repetido em malha, cada um com o ponto virado para um lado. Quase todos apagados, em grafite sobre grafite; alguns acesos em laranja (TR) e em azul (CT). A malha não entra na área do texto.
 - **Cores:** as da interface. Grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640` (TR) e azul `#62a8ee` (CT).
@@ -47,7 +48,7 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 - Marketing: nome de 6 letras, grande na cápsula pequena, gênero escrito no subtítulo, e as mesmas cores e fontes do jogo para a página, o trailer e as capturas parecerem uma coisa só.
 
 ## Consequências
-- **THE ORG precisa ser conferido** na Steam, em domínio e em registro de marca antes de qualquer material público. O agente só fez uma busca rápida na web e não achou jogo com esse nome. É uma expressão comum em inglês, então a busca pelo nome sozinho vai trazer outros resultados; o subtítulo "Esports Manager" ajuda.
+- **THE ORG precisa ser conferido** na Steam, em domínio e em registro de marca antes de qualquer material público. O agente só fez uma busca rápida na web e não achou jogo com esse nome. É uma expressão comum em inglês, então a busca pelo nome sozinho vai trazer outros resultados; o subtítulo ajuda.
 - A pasta e a build do protótipo ainda se chamam `csmanager`; isso sai antes de qualquer build pública (plano de marketing).
 - Trocar o nome não refaz nada à mão: `gerar.py "OUTRO NOME"` regenera todas as peças.
 - Falta decidir se estas artes vão como arte final ou servem de referência para um artista refazer a cápsula (o plano de marketing reserva verba para isso).

@@ -17,7 +17,7 @@ Tudo modelado em **3D**. A partida deve parecer uma **demo/transmissão de CS**,
 **[Sugestão]** Proposta do agente em `marketing/identidade/` (decisão 0038), a validar:
 
 - **Nome:** THE ORG (escolhido pelo autor).
-- **Logo:** o nome em Barlow Condensed ExtraBold. O O de ORG é um anel com o ponto laranja aparecendo por dentro: um bot abrindo pixel. Subtítulo "ESPORTS MANAGER".
+- **Logo:** o nome em Barlow Condensed ExtraBold. O O de ORG é um anel com o ponto laranja aparecendo por dentro: um bot abrindo pixel. Subtítulo "TACTICAL FPS MANAGER" (o autor recusou "ESPORTS MANAGER").
 - **Símbolo (ícone do app):** o O da logo sozinho, sobre um campo de cor chapada (laranja em uso; grafite e osso como alternativas). Segue o padrão das marcas de jogo que deram certo: uma forma geométrica só, que funciona numa cor e em 16 px. O autor recusou o brasão e não escolheu entre o cone de visão e a formação.
 - **Arte:** o padrão. O O da logo repetido em malha, cada um com o ponto virado para um lado; quase todos apagados, em grafite sobre grafite, e alguns acesos em laranja (TR) e em azul (CT). O nome vai grande por cima, numa área limpa. Nos painéis da Steam entram o placar de transmissão e a escalação. O autor recusou as três versões anteriores, todas com o mapa desenhado: a maquete colorida, a prancheta tática em 3D e o radar dentro do O. Nada de soldado realista nem de arma (0004).
 - **Peças prontas:** ícones, cápsulas, cabeçalho, fundo e painéis da página da Steam, logo, cápsula e herói da biblioteca, banner e post de redes. Saem de `marketing/identidade/gerar.py`.
@@ -44,5 +44,5 @@ Ficaram para depois, a pedido do autor (2026-11-07), por exigirem gerar imagens:
 - O nome THE ORG está livre na Steam, em domínio e em registro de marca?
 - Ícone do app: campo laranja (em uso), grafite ou osso?
 - Artes (decisão 0038): validar o padrão de anéis. As artes feitas em código servem como arte final ou viram referência para um artista refazer a cápsula?
-- Subtítulo "ESPORTS MANAGER", frase "Você monta o time. Eles jogam como profissionais." e títulos dos painéis da Steam: confirmar, e definir a versão em inglês.
+- Subtítulo: "TACTICAL FPS MANAGER" (em uso), "MANAGER DE FPS TÁTICO" ou "MONTE O TIME. ASSISTA À PARTIDA."? Frase "Você monta o time. Eles jogam como profissionais." e títulos dos painéis da Steam: confirmar, e definir a versão em inglês.
 - Tipografia da interface: hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL, decisão 0025). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo?
