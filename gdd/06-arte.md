@@ -18,8 +18,8 @@ Tudo modelado em **3D**. A partida deve parecer uma **demo/transmissão de CS**,
 
 - **Nome:** THE ORG (escolhido pelo autor).
 - **Logo:** o nome em Barlow Condensed ExtraBold. O O de ORG é um anel com o ponto laranja aparecendo por dentro: um bot abrindo pixel. Subtítulo "ESPORTS MANAGER".
-- **Símbolo (ícone do app):** em aberto entre três opções. A, o anel: o O da logo sozinho. B, o cone de visão: o ponto no meio do O com o cone abrindo um vão no anel, como o marcador de um bot no mapa (é o que está nas peças). C, a formação: os cinco titulares em cunha. O autor recusou o brasão da primeira versão.
-- **Arte:** a prancheta tática. Um round visto de cima em blocos de grafite: os bots laranja e azuis com o cone de visão, o caminho que cada um fez, a rota combinada, smoke e flash com o arco do arremesso, e etiquetas do que cada bot está fazendo. Onde cabe, entra a escalação com função e geral. O autor recusou a primeira versão, com o mapa em maquete colorida, por não passar a ideia de FPS tático. Nada de soldado realista nem de arma (0004).
+- **Símbolo (ícone do app):** o O da logo sozinho, sobre um campo de cor chapada (laranja em uso; grafite e osso como alternativas). Segue o padrão das marcas de jogo que deram certo: uma forma geométrica só, que funciona numa cor e em 16 px. O autor recusou o brasão e não escolheu entre o cone de visão e a formação.
+- **Arte:** o radar. Um round visto de cima, chapado: o mapa em cinza, os bots laranja e azuis com o cone de visão, o caminho que cada um fez, a rota combinada, smoke e flash, e etiquetas do que cada bot está fazendo. Nas cápsulas, o radar aparece dentro do O da logo, enorme: um assunto só e o nome grande. Onde cabe, entram o placar de transmissão e a escalação. O autor recusou as duas versões anteriores: o mapa em maquete colorida e a prancheta tática em 3D. Nada de soldado realista nem de arma (0004).
 - **Peças prontas:** ícones, cápsulas, cabeçalho, fundo e painéis da página da Steam, logo, cápsula e herói da biblioteca, banner e post de redes. Saem de `marketing/identidade/gerar.py`.
 
 ## Referências
@@ -42,7 +42,7 @@ Ficaram para depois, a pedido do autor (2026-11-07), por exigirem gerar imagens:
 - Estilo realista, estilizado ou low-poly?
 - Retratos dos jogadores: hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA, em três faixas de idade (decisão 0027). Arte final: manter esse caminho, fazer retratos ilustrados à mão ou contratar fotografia de referência? Faltam expressões por estado (cansado, motivado) e mais rostos se o elenco visível passar de 32.
 - O nome THE ORG está livre na Steam, em domínio e em registro de marca?
-- Ícone do app: A (o anel), B (o cone de visão) ou C (a formação)?
-- Artes (decisão 0038): validar a prancheta tática. As artes feitas em código servem como arte final ou viram referência para um artista refazer a cápsula?
+- Ícone do app: campo laranja (em uso), grafite ou osso?
+- Artes (decisão 0038): validar o radar dentro do O. As artes feitas em código servem como arte final ou viram referência para um artista refazer a cápsula?
 - Subtítulo "ESPORTS MANAGER", frase "Você monta o time. Eles jogam como profissionais.", títulos dos painéis da Steam e etiquetas dos bots: confirmar, e definir a versão em inglês.
 - Tipografia da interface: hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL, decisão 0025). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo?

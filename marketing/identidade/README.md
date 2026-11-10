@@ -8,21 +8,23 @@ _O nome THE ORG e a logo foram escolhidos e aprovados pelo autor. O ícone e as 
 
 ## A ideia
 
-A marca é a própria simulação, vista como quem analisa a partida.
+O O de ORG é uma janela. Na logo, o ponto laranja aparece por trás dela (um bot abrindo pixel). Nas artes, o O cresce e vira o radar da partida.
 
-- **A logo:** THE ORG, com o O virando uma janela. Atrás dela, o ponto laranja aparece só o necessário: um bot abrindo pixel.
-- **A arte:** a prancheta tática. Um round visto de cima em blocos de grafite, com os bots laranja (TR) e azuis (CT), o cone de visão de cada um, o caminho que fizeram, a rota combinada, smoke e flash, e etiquetas do que cada bot está fazendo.
-- **O lado manager:** onde cabe, a escalação com a função e o geral de cada titular.
+- **A arte:** um round visto de cima, chapado. O mapa em cinza, os bots laranja (TR) e azuis (CT), o cone de visão de cada um, o caminho que fizeram, a rota combinada, smoke e flash, e etiquetas do que cada bot está fazendo.
+- **Transmissão e manager:** onde cabe, o placar de transmissão e a escalação com a função e o geral de cada titular.
 
-## Ícone do app: três opções
+## O que se tirou de jogos que deram certo
 
-| | Opção | O que é |
-|---|---|---|
-| A | **O anel** | O O da logo sozinho, com o ponto por dentro |
-| B | **O cone de visão** (nas peças por enquanto) | O ponto no meio do O, com o cone abrindo um vão no anel: o marcador de um bot no mapa |
-| C | **A formação** | Os cinco titulares em cunha; o da ponta é o ponto laranja |
+- **A cápsula tem de ler em miniatura** (120×45): nome grande, simples, em alto contraste.
+- **Um assunto dominante e paleta fechada.** Aqui o assunto é o radar dentro do O; as cores são grafite, osso, laranja e azul.
+- **O gênero se lê pela imagem** antes do nome: o radar com bots e rotas diz "FPS tático"; o subtítulo diz "manager".
+- **O símbolo é uma forma geométrica só**, que funciona numa cor e sozinha. Por isso o ícone é o O da logo num campo de cor chapada.
 
-Para trocar o que as peças usam, mude a linha `simbolo = simbolo_cone` em `gerar.py`.
+Fontes da pesquisa estão na decisão 0038 e no PR. É resumo de guias, não medição nossa.
+
+## Ícone do app
+
+O símbolo (o O da logo) sobre um campo de cor chapada. **Laranja** está em uso; **grafite** e **osso** ficam como alternativas. Para trocar, mude `ICONE = "laranja"` em `gerar.py`.
 
 ## Regras de uso
 
@@ -37,8 +39,8 @@ Para trocar o que as peças usam, mude a linha `simbolo = simbolo_cone` em `gera
 | Arquivo | Uso |
 |---|---|
 | `logo-claro` / `-escuro` / `-fundo` | Logo: para fundo escuro, para fundo claro e já sobre grafite |
-| `icone-a-anel`, `icone-b-cone`, `icone-c-formacao` (e `-claro`) | As três opções de ícone, 512×512 |
-| `icone-app` (`.svg`, `.png`, `.ico`), `simbolo` | O ícone em uso (hoje o B); o `.ico` tem de 16 a 256 px |
+| `icone-laranja`, `icone-grafite`, `icone-osso` | O ícone nos três campos de cor, 512×512 |
+| `icone-app` (`.svg`, `.png`, `.ico`), `simbolo`, `simbolo-escuro` | O ícone em uso (hoje o laranja) e o símbolo solto; o `.ico` tem de 16 a 256 px |
 | `steam-icone-comunidade-184x184` (`.jpg`) | Ícone da comunidade |
 | `steam-cabecalho-920x430` | Cabeçalho da página |
 | `steam-capsula-principal-1232x706` | Cápsula principal |
@@ -67,13 +69,13 @@ python3 marketing/identidade/gerar.py
 node marketing/identidade/render.js
 ```
 
-A jogada desenhada fica em `Prancheta.montar()`: o mapa (inventado para a arte), onde está cada bot, para onde olha e a etiqueta dele. O `.ico` e o `.jpg` são convertidos dos PNG com o Pillow.
+A jogada desenhada fica em `Radar.montar()`: o mapa (inventado para a arte), onde está cada bot, para onde olha e a etiqueta dele. O `.ico` e o `.jpg` são convertidos dos PNG com o Pillow.
 
 ## Perguntas em aberto
 
-- Ícone do app: A, B ou C?
+- Ícone do app: campo laranja, grafite ou osso?
 - O nome THE ORG está livre na Steam, em domínio e em registro de marca?
 - Estas artes vão como arte final ou viram referência para um artista refazer a cápsula? São desenho vetorial feito em código pelo agente, não imagem gerada por modelo; mesmo assim o plano de marketing reserva verba para a cápsula.
 - Subtítulo, frase, títulos dos painéis e etiquetas dos bots: confirmar, e definir a versão em inglês.
-- Os números da escalação são de exemplo.
+- Os números da escalação e do placar são de exemplo.
 - Faltam as capturas e o trailer, que dependem do jogo.
