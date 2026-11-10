@@ -2,45 +2,49 @@
 
 > **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0025, 0038 · **Escrito em:** 2026-11-10
 
-**Versão visual (canvas):** https://claude.ai/artifact/LPc5mbskMidwz2s1hVgRgF (página privada do Miguel; compartilhar pelo menu Share para o Gabriel abrir).
+**Versão visual (canvas):** https://claude.ai/artifact/LPc5mbskMidwz2s1hVgRgF
 
-_O nome THE ORG foi escolhido pelo autor. O resto é proposta do agente, a validar. O porquê de cada escolha está na decisão 0038._
+_O nome THE ORG e a logo foram escolhidos e aprovados pelo autor. O ícone e as artes são proposta do agente, a validar. O porquê de cada escolha, e o que já foi recusado, está na decisão 0038._
 
 ## A ideia
 
-A marca é a própria simulação.
+A marca é a própria simulação, vista como quem analisa a partida.
 
-- **O brasão** é a org: todo time de esports tem o seu. É o ícone do app, com formato próprio.
-- **Cinco lados:** os cinco titulares.
-- **A janela redonda:** o O de ORG e o olho do manager, que assiste.
-- **O ponto laranja:** um bot abrindo pixel. Aparece só o necessário atrás da janela.
-- **A arte** é a partida vista de cima em maquete, sobre o grafite da interface.
+- **A logo:** THE ORG, com o O virando uma janela. Atrás dela, o ponto laranja aparece só o necessário: um bot abrindo pixel.
+- **A arte:** a prancheta tática. Um round visto de cima em blocos de grafite, com os bots laranja (TR) e azuis (CT), o cone de visão de cada um, o caminho que fizeram, a rota combinada, smoke e flash, e etiquetas do que cada bot está fazendo.
+- **O lado manager:** onde cabe, a escalação com a função e o geral de cada titular.
+
+## Ícone do app: três opções
+
+| | Opção | O que é |
+|---|---|---|
+| A | **O anel** | O O da logo sozinho, com o ponto por dentro |
+| B | **O cone de visão** (nas peças por enquanto) | O ponto no meio do O, com o cone abrindo um vão no anel: o marcador de um bot no mapa |
+| C | **A formação** | Os cinco titulares em cunha; o da ponta é o ponto laranja |
+
+Para trocar o que as peças usam, mude a linha `simbolo = simbolo_cone` em `gerar.py`.
 
 ## Regras de uso
 
-- **Logo principal:** nome + subtítulo "ESPORTS MANAGER". A versão "completa" leva o brasão ao lado.
-- **Sobre grafite** usa osso; **sobre fundo claro** usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
-- **Ícone do app:** o brasão com contorno grafite, fundo transparente. Funciona em qualquer cor de fundo. Onde o ícone tem de ser quadrado (Steam), usar o quadrado.
-- **Cores:** grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640`, azul `#62a8ee`. O laranja é sempre o ponto (e o TR); o azul só aparece na arte (o CT).
-- **Fontes:** Barlow Condensed ExtraBold no nome, SemiBold no subtítulo (licença OFL, em `fontes/`).
-- **Na Steam** a cápsula leva só arte, nome e subtítulo. A frase fica para redes.
-- **Não fazer:** soldado realista, arma, mira, ou qualquer forma que lembre a capa de outro FPS (decisão 0004); degradê, brilho ou outra cor de destaque.
+- **Logo:** nome + subtítulo "ESPORTS MANAGER". Sobre grafite usa osso; sobre fundo claro usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
+- **Cores:** grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640`, azul `#62a8ee`. Laranja é o ponto e o TR; azul é o CT.
+- **Fontes:** Barlow Condensed ExtraBold no nome e nos títulos, SemiBold no subtítulo, IBM Plex Mono nas etiquetas (licença OFL, em `fontes/`).
+- **Na Steam** a cápsula leva só arte, nome e subtítulo, sem etiquetas. As etiquetas e a frase ficam para os painéis, o fundo da página e as redes.
+- **Não fazer:** soldado realista, arma, mira, nome de arma ou de mapa real, ou qualquer forma que lembre a capa de outro FPS (decisão 0004); degradê de fundo, brilho ou outra cor de destaque.
 
 ## Peças (em `saida/`, SVG e PNG)
 
 | Arquivo | Uso |
 |---|---|
-| `logo-claro` / `-escuro` / `-fundo` | Logo principal: para fundo escuro, para fundo claro e já sobre grafite |
-| `logo-completa-claro` / `-escuro` / `-fundo` | Logo com o brasão ao lado |
-| `simbolo`, `simbolo-escuro` | O brasão solto |
-| `icone-app` (`.svg`, `.png`, `.ico`) | Ícone do app, formato próprio; o `.ico` tem de 16 a 256 px |
-| `icone-quadrado`, `icone-quadrado-claro` | Ícone quadrado 512×512 |
+| `logo-claro` / `-escuro` / `-fundo` | Logo: para fundo escuro, para fundo claro e já sobre grafite |
+| `icone-a-anel`, `icone-b-cone`, `icone-c-formacao` (e `-claro`) | As três opções de ícone, 512×512 |
+| `icone-app` (`.svg`, `.png`, `.ico`), `simbolo` | O ícone em uso (hoje o B); o `.ico` tem de 16 a 256 px |
 | `steam-icone-comunidade-184x184` (`.jpg`) | Ícone da comunidade |
 | `steam-cabecalho-920x430` | Cabeçalho da página |
 | `steam-capsula-principal-1232x706` | Cápsula principal |
 | `steam-capsula-pequena-462x174` | Cápsula pequena (listas e busca) |
 | `steam-capsula-vertical-748x896` | Cápsula vertical |
-| `steam-fundo-da-pagina-1438x810` | Fundo da página |
+| `steam-fundo-da-pagina-1438x810` | Fundo da página, com as etiquetas |
 | `steam-painel-1/2/3-…-616x300` | Painéis da descrição: "Assista como transmissão", "Bots que jogam como profissionais", "Sua gestão aparece na partida" |
 | `steam-biblioteca-capsula-600x900` | Cápsula da biblioteca |
 | `steam-biblioteca-heroi-3840x1240` | Herói da biblioteca (sem nome, como a Steam pede) |
@@ -63,11 +67,13 @@ python3 marketing/identidade/gerar.py
 node marketing/identidade/render.js
 ```
 
-Para testar outro nome, passe-o como argumento (`gerar.py "OUTRO @ONOME"`). No nome, `@` troca a letra seguinte (um O) pelo anel com o ponto por dentro. O `.ico` e o `.jpg` são convertidos dos PNG com o Pillow.
+A jogada desenhada fica em `Prancheta.montar()`: o mapa (inventado para a arte), onde está cada bot, para onde olha e a etiqueta dele. O `.ico` e o `.jpg` são convertidos dos PNG com o Pillow.
 
 ## Perguntas em aberto
 
+- Ícone do app: A, B ou C?
 - O nome THE ORG está livre na Steam, em domínio e em registro de marca?
 - Estas artes vão como arte final ou viram referência para um artista refazer a cápsula? São desenho vetorial feito em código pelo agente, não imagem gerada por modelo; mesmo assim o plano de marketing reserva verba para a cápsula.
-- Subtítulo "ESPORTS MANAGER", a frase "Você monta o time. Eles jogam como profissionais." e os títulos dos três painéis: confirmar, e definir a versão em inglês.
+- Subtítulo, frase, títulos dos painéis e etiquetas dos bots: confirmar, e definir a versão em inglês.
+- Os números da escalação são de exemplo.
 - Faltam as capturas e o trailer, que dependem do jogo.

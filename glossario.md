@@ -51,7 +51,8 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
 | Cápsula | Imagem do jogo na loja e na biblioteca da Steam (principal, pequena, vertical e cabeçalho). Leva só arte, nome e subtítulo. | capa, thumbnail, banner (banner é só o de redes) | marketing/identidade |
 | Painel da Steam | Faixa de imagem com título que abre cada seção da descrição na página da Steam. | banner, cabeçalho de seção | marketing/identidade |
-| Símbolo | A forma reduzida da logo: o brasão da org, com cinco lados, a janela redonda e o ponto laranja que aparece atrás dela. Usado no ícone do app e onde o nome não cabe. | mascote, escudo; brasão sozinho é o dos times | marketing/identidade |
+| Símbolo | A forma reduzida da logo, usada no ícone do app e onde o nome não cabe. Três opções em aberto: o anel, o cone de visão e a formação (decisão 0038). | mascote, escudo, brasão (brasão é o dos times) | marketing/identidade |
+| Prancheta tática | O estilo das artes de divulgação: um round visto de cima em blocos de grafite, com os bots, o cone de visão, as rotas, as utilitárias e etiquetas do que cada bot está fazendo. | maquete (maquete é o visual do mapa dentro do jogo) | marketing/identidade |
 | Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
 | Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
 | Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |
