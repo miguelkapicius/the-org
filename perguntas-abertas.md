@@ -38,7 +38,7 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] Tamanho do escopo do primeiro lançamento → `gdd/00-visao.md`
 - [ ] Haverá replays das partidas? A simulação precisa ser determinística? → `gdd/09-tecnico.md`
 - [ ] Single-player apenas, ou terá modo online (ligas entre amigos, ranking)? → `gdd/00-visao.md`
-- [ ] Nome do jogo e do "esporte" fictício → `gdd/00-visao.md`
+- [ ] Nome do "esporte" fictício (o nome do jogo é THE ORG, decisão 0038) → `gdd/00-visao.md`
 - [ ] Modelo de negócio: pago, free-to-play, early access? → `gdd/00-visao.md`
 
 ## 4. Balanceamento (pode ficar para depois)
@@ -60,9 +60,9 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] **Acessibilidade:** o jogo terá navegação completa por teclado (Tab/foco) e opção de reduzir animações? Dicas só no mouse precisam de alternativa? → `gdd/08-ui-ux.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
 - [ ] **Retratos:** hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA (decisão 0027). Arte final: manter esse caminho, ilustrar à mão ou usar fotografia de referência? E expressões por estado (cansado, motivado)? → `gdd/06-arte.md`
-- [ ] **Nome do jogo:** escolher entre os 3 propostos em `marketing/identidade/` (FULL BUY, LIVE ON THREE, FRAGHOUSE) ou outro; antes de fechar, conferir se está livre na Steam, em domínio e em registro de marca (o agente só fez uma busca rápida na web). → `marketing/identidade/README.md`
-- [ ] **Identidade da marca (decisão 0038):** validar a logo com o ponto que abre o pixel, o símbolo e a arte em maquete. As artes são vetoriais, feitas em código pelo agente: servem como arte final ou viram referência para um artista refazer a cápsula (o plano de marketing reserva verba para isso)? → `marketing/identidade/README.md`
-- [ ] **Subtítulo e frase:** "ESPORTS MANAGER" como subtítulo fixo da logo e "Você monta o time. Eles jogam como profissionais." como frase das redes; e a versão em inglês da frase. → `marketing/identidade/README.md`
+- [ ] **Nome THE ORG:** conferir se está livre na Steam, em domínio e em registro de marca antes de qualquer material público (o agente só fez uma busca rápida na web e não achou jogo com esse nome). → `gdd/00-visao.md`
+- [ ] **Identidade da marca (decisão 0038):** validar a logo, o brasão e a arte em maquete. As artes são vetoriais, feitas em código pelo agente: servem como arte final ou viram referência para um artista refazer a cápsula (o plano de marketing reserva verba para isso)? → `marketing/identidade/README.md`
+- [ ] **Subtítulo, frase e painéis:** "ESPORTS MANAGER" como subtítulo fixo da logo, "Você monta o time. Eles jogam como profissionais." como frase das redes e os três títulos dos painéis da Steam; e a versão em inglês de tudo. → `marketing/identidade/README.md`
 - [ ] **Tipografia da interface:** hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo? → `gdd/06-arte.md`
 - [ ] **Backlog de arte (precisa gerar imagens, ficou para depois):** brasões dos times (hoje o protótipo usa a inicial no menu, na pré-partida, no ranking e no campeonato) e expressões nos retratos por estado do jogador (cansado, motivado, em alta). → `gdd/06-arte.md`
 - [ ] **Base de jogadores** (fase posterior, depois de afinar o comportamento dos bonecos): quantos jogadores, e como será feita (à mão, gerada ou mista)? Os adversários passam a usar jogadores dessa base. → `gdd/10-interface-vs-jogo.md`

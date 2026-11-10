@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Gera a logo e as artes de divulgação do jogo em SVG (texto já convertido em curvas).
 
-Uso:  python3 marketing/identidade/gerar.py            # gera tudo em marketing/identidade/saida/
-      python3 marketing/identidade/gerar.py "FULL BUY"  # troca o nome usado nas artes
+Uso:  python3 marketing/identidade/gerar.py              # gera tudo em marketing/identidade/saida/
+      python3 marketing/identidade/gerar.py "OUTRO NOME"  # troca o nome em todas as peças
 
 Depende de: fonttools e uharfbuzz (pip install fonttools uharfbuzz).
 Os PNG saem com `node marketing/identidade/render.js` (precisa do Playwright).
@@ -92,43 +92,75 @@ F600 = Fonte("BarlowCondensed-SemiBold.ttf")
 
 
 # ---------------------------------------------------------------- símbolo e logo
-def simbolo(x, y, s, bloco=OSSO, ponto=LARANJA):
-    """O "pixel": um bloco (a parede) e um ponto que aparece só o necessário atrás dele.
-    Ocupa (x, y) até (x + 1.24 s, y + s)."""
-    w, r = 0.74 * s, 0.3 * s
-    corte = x + w + 0.09 * s           # onde a parede esconde o ponto
-    cx, cy = x + w + 0.2 * s, y + 0.5 * s
-    h = math.sqrt(r * r - (corte - cx) ** 2)
-    return (f'<rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{s:.2f}" rx="{0.06 * s:.2f}" fill="{bloco}"/>'
-            f'<path d="M{corte:.2f} {cy - h:.2f}A{r:.2f} {r:.2f} 0 1 1 {corte:.2f} {cy + h:.2f}Z" fill="{ponto}"/>')
+def lente(c1x, cy, r1, c2x, r2):
+    """A parte do ponto (centro c2x, raio r2) que aparece dentro da janela (centro c1x, raio r1)."""
+    d = c2x - c1x
+    x = (d * d + r1 * r1 - r2 * r2) / (2 * d)
+    y = math.sqrt(r1 * r1 - x * x)
+    return (f'M{c1x + x:.2f} {cy - y:.2f}A{r1:.2f} {r1:.2f} 0 0 1 {c1x + x:.2f} {cy + y:.2f}'
+            f'A{r2:.2f} {r2:.2f} 0 0 1 {c1x + x:.2f} {cy - y:.2f}Z')
 
 
-SIMB_L = 0.74 + 0.2 + 0.3   # largura do símbolo em unidades de s
+def arredondar(pts, r):
+    """Polígono com os cantos arredondados."""
+    d, n = "", len(pts)
+    for i in range(n):
+        (ax, ay), (bx, by), (cx, cy) = pts[i - 1], pts[i], pts[(i + 1) % n]
+        la, lc = math.hypot(ax - bx, ay - by), math.hypot(cx - bx, cy - by)
+        p = (bx + (ax - bx) * r / la, by + (ay - by) * r / la)
+        q = (bx + (cx - bx) * r / lc, by + (cy - by) * r / lc)
+        d += f'{"L" if i else "M"}{p[0]:.2f} {p[1]:.2f}Q{bx:.2f} {by:.2f} {q[0]:.2f} {q[1]:.2f}'
+    return d + "Z"
+
+
+def circulo(cx, cy, r):
+    return f'M{cx - r:.2f} {cy:.2f}A{r:.2f} {r:.2f} 0 1 0 {cx + r:.2f} {cy:.2f}A{r:.2f} {r:.2f} 0 1 0 {cx - r:.2f} {cy:.2f}Z'
+
+
+def simbolo(x, y, s, bloco=OSSO, ponto=LARANJA, borda=None):
+    """O brasão da org. Cinco lados (os cinco titulares), a janela redonda (o O de ORG, o olho de quem assiste)
+    e o ponto laranja que aparece só o necessário atrás dela (o bot abrindo pixel). Ocupa o quadrado s × s.
+    Com `borda`, o brasão ganha contorno e a janela é preenchida: é o ícone solto, que funciona em qualquer fundo."""
+    esc = arredondar([(x + a * s, y + b * s) for a, b in ((0.08, 0.05), (0.92, 0.05), (0.92, 0.6), (0.5, 0.97), (0.08, 0.6))], 0.075 * s)
+    jx, jy, jr = x + 0.5 * s, y + 0.43 * s, 0.25 * s
+    olho = f'<path d="{lente(jx, jy, jr, jx + 0.135 * s, 0.205 * s)}" fill="{ponto}"/>'
+    if borda:
+        return (f'<path d="{esc}" fill="{bloco}" stroke="{borda}" stroke-width="{0.09 * s:.2f}" stroke-linejoin="round" paint-order="stroke"/>'
+                f'<path d="{circulo(jx, jy, jr)}" fill="{borda}"/>{olho}')
+    return f'<path d="{esc}{circulo(jx, jy, jr)}" fill="{bloco}" fill-rule="evenodd"/>{olho}'
 
 
 def palavra(nome, tam, x, y, cor=OSSO, ponto=LARANJA):
-    """Nome do jogo em Barlow Condensed ExtraBold. Um "|" no nome marca onde o ponto abre o pixel:
-    ele fica meio escondido atrás da letra seguinte. Um "*" troca a letra seguinte pelo ponto inteiro.
+    """Nome do jogo em Barlow Condensed ExtraBold. Marcas dentro do nome:
+    "@" troca a letra seguinte (um O) pelo anel com o ponto espiando por dentro, igual à janela do brasão;
+    "|" põe o ponto meio escondido atrás da letra seguinte; "*" troca a letra seguinte pelo ponto inteiro.
     Devolve (svg, largura)."""
     track = 0.012
     out, cx = [], x
-    partes = nome.replace("*", "\0*").replace("|", "\0|").split("\0")
+    partes = nome.replace("*", "\0*").replace("|", "\0|").replace("@", "\0@").split("\0")
     ant = ""
     for p in partes:
-        if p.startswith("|"):
+        cy = y - 0.5 * tam
+        if p.startswith("@"):
+            p = p[2:]
+            R, t = 0.515 * tam, 0.2 * tam
+            cx += 0.035 * tam
+            out.append(f'<path d="{circulo(cx + R, cy, R)}{circulo(cx + R, cy, R - t)}" fill="{cor}" fill-rule="evenodd"/>')
+            out.append(f'<path d="{lente(cx + R, cy, R - t, cx + R + 0.17 * tam, 0.245 * tam)}" fill="{ponto}"/>')
+            cx += 2 * R + 0.06 * tam
+        elif p.startswith("|"):
             p = p[1:]
             r = 0.2 * tam
             cx += (0.23 if ant[-1:] in "LTFP" else 0.37) * tam   # o vão onde o ponto aparece
             corte = cx - 0.065 * tam              # folga entre o ponto e a letra que o esconde
             c0 = cx + 0.02 * tam
             h = math.sqrt(r * r - (corte - c0) ** 2)
-            cy = y - 0.5 * tam
             out.append(f'<path d="M{corte:.2f} {cy - h:.2f}A{r:.2f} {r:.2f} 0 1 0 {corte:.2f} {cy + h:.2f}Z" fill="{ponto}"/>')
         elif p.startswith("*"):
-            p = p[2:]                             # a letra some e vira o ponto (a luz de "no ar")
+            p = p[2:]
             r = 0.36 * tam
             cx += 0.04 * tam
-            out.append(f'<circle cx="{cx + r:.2f}" cy="{y - 0.5 * tam:.2f}" r="{r:.2f}" fill="{ponto}"/>')
+            out.append(f'<circle cx="{cx + r:.2f}" cy="{cy:.2f}" r="{r:.2f}" fill="{ponto}"/>')
             cx += 2 * r + 0.07 * tam
         if p:
             out.append(f'<path d="{F800.curvas(p, tam, cx, y, track)}" fill="{cor}"/>')
@@ -138,7 +170,7 @@ def palavra(nome, tam, x, y, cor=OSSO, ponto=LARANJA):
 
 
 def limpo(nome):
-    return nome.replace("|", "").replace("*", "")
+    return nome.replace("|", "").replace("*", "").replace("@", "")
 
 
 def subtitulo(txt, tam, x, y, cor=SUAVE):
@@ -146,27 +178,24 @@ def subtitulo(txt, tam, x, y, cor=SUAVE):
 
 
 def logo_horizontal(nome, tam, x, y, cor=OSSO, sub="ESPORTS MANAGER", cor_sub=SUAVE, ponto=LARANJA):
-    """Símbolo + nome numa linha, com o gênero embaixo. (x, y) = canto de cima. Devolve (svg, largura, altura)."""
-    s = tam
-    g = simbolo(x, y, s, cor, ponto)
-    px = x + SIMB_L * s + 0.42 * tam
-    w, lw = palavra(nome, tam, px, y + tam, cor, ponto)
-    alt = tam
+    """Brasão + nome numa linha, com o gênero embaixo. (x, y) = canto de cima do brasão. Devolve (svg, largura, altura)."""
+    st = 0.19 * tam
+    s = tam + (0.3 * tam + st if sub else 0) + 0.3 * tam      # o brasão cobre o nome e o subtítulo
+    g = simbolo(x - 0.08 * s, y, s, cor, ponto)
+    px, ty = x + 0.84 * s + 0.26 * tam, y + 0.12 * tam
+    w, lw = palavra(nome, tam, px, ty + tam, cor, ponto)
     if sub:
-        st = 0.2 * tam
-        sv, _ = subtitulo(sub, st, px + 0.01 * tam, y + tam + 0.3 * tam + st, cor_sub)
-        g += sv
-        alt += 0.3 * tam + st
-    return g + w, px + lw - x, alt
+        g += subtitulo(sub, st, px + 0.01 * tam, ty + tam + 0.3 * tam + st, cor_sub)[0]
+    return g + w, px + lw - x, s
 
 
 def logo_empilhada(nome, tam, x, y, cor=OSSO, sub="ESPORTS MANAGER", cor_sub=SUAVE, ponto=LARANJA, com_simbolo=False):
-    """A logo principal: o nome grande e o gênero embaixo (o símbolo em cima é opcional). Devolve (svg, largura, altura)."""
+    """A logo principal: o nome grande e o gênero embaixo (o brasão em cima é opcional). Devolve (svg, largura, altura)."""
     g, cy = "", y
     if com_simbolo:
-        s = 0.5 * tam
-        g += simbolo(x, cy, s, cor, ponto)
-        cy += s + 0.38 * tam
+        s = 0.9 * tam
+        g += simbolo(x - 0.08 * s, cy, s, cor, ponto)
+        cy += s + 0.3 * tam
     w, lw = palavra(nome, tam, x, cy + tam, cor, ponto)
     g += w
     cy += tam
@@ -420,34 +449,62 @@ def gravar(arq, svg):
         f.write(svg)
 
 
-NOMES = {"full-buy": "FULL |BUY", "live-on-three": "LIVE *ON THREE", "fraghouse": "FRAG|HOUSE"}
+def painel(nome, num, linhas, u, ox, oy, v=(0.5, 0.82), w=616, h=300):
+    """Faixa para a descrição da página da Steam ("Sobre este jogo"): um recorte da maquete e o título da seção."""
+    m = Maquete(u, ox, oy).montar()
+    defs, cena = m.svg()
+    d, r = veu(w, h, *v)
+    corpo = grade(w, h, u, ox, oy) + cena + r
+    corpo += simbolo(26, 26, 40)
+    corpo += f'<path d="{F600.curvas(num, 13, 76, 52, 0.16)}" fill="{SUAVE}"/>'
+    t = 40
+    y0 = h - 34 - (len(linhas) - 1) * t * 1.16
+    for i, lin in enumerate(linhas):
+        corpo += f'<path d="{F800.curvas(lin, t, 28, y0 + i * t * 1.16, 0.012)}" fill="{OSSO}"/>'
+    return documento(w, h, corpo, defs + d)
+
+
+NOME = "THE @ORG"
 
 
 def main():
-    nome = sys.argv[1] if len(sys.argv) > 1 else NOMES["full-buy"]
+    nome = sys.argv[1] if len(sys.argv) > 1 else NOME
 
-    # --- logos (texto em curvas): a principal é o nome + gênero; "completa" leva o símbolo ao lado
-    for chave, n in NOMES.items():
-        for cor, suf, sc, fundo in ((OSSO, "claro", SUAVE, None), (GRAFITE, "escuro", "#5b626c", None), (OSSO, "fundo", SUAVE, GRAFITE)):
-            g, lw, lh = logo_empilhada(n, 120, 60, 60, cor=cor, cor_sub=sc, ponto=LARANJA if cor == OSSO else "#d9822b")
-            gravar(f"logo-{chave}-{suf}.svg", documento(round(lw + 120), round(lh + 120), g, fundo=fundo))
-        g, lw, lh = logo_horizontal(n, 120, 60, 60)
-        gravar(f"logo-{chave}-completa.svg", documento(round(lw + 120), round(lh + 120), g))
-    cs = lambda **k: simbolo(256 - 0.62 * 200, 256 - 100, 200, **k)
-    gravar("simbolo.svg", documento(512, 512, cs(), fundo=None))
-    gravar("icone.svg", documento(512, 512, cs()))
-    gravar("icone-claro.svg", documento(512, 512, cs(bloco=GRAFITE, ponto="#d9822b"), fundo=OSSO))
+    # --- logo (texto em curvas): a principal é o nome + gênero; "completa" leva o brasão ao lado
+    for cor, suf, sc, fundo in ((OSSO, "claro", SUAVE, None), (GRAFITE, "escuro", "#5b626c", None), (OSSO, "fundo", SUAVE, GRAFITE)):
+        pt = LARANJA if cor == OSSO else "#d9822b"
+        g, lw, lh = logo_empilhada(nome, 120, 60, 60, cor=cor, cor_sub=sc, ponto=pt)
+        gravar(f"logo-{suf}.svg", documento(round(lw + 120), round(lh + 120), g, fundo=fundo))
+        g, lw, lh = logo_horizontal(nome, 120, 60, 60, cor=cor, cor_sub=sc, ponto=pt)
+        gravar(f"logo-completa-{suf}.svg", documento(round(lw + 120), round(lh + 120), g, fundo=fundo))
+    # --- brasão e ícones
+    gravar("simbolo.svg", documento(512, 512, simbolo(56, 50, 400), fundo=None))
+    gravar("simbolo-escuro.svg", documento(512, 512, simbolo(56, 50, 400, bloco=GRAFITE, ponto="#d9822b"), fundo=None))
+    gravar("icone-app.svg", documento(512, 512, simbolo(36, 28, 440, borda=GRAFITE), fundo=None))      # formato próprio, fundo transparente
+    gravar("icone-quadrado.svg", documento(512, 512, simbolo(76, 70, 360)))                              # para onde o ícone tem de ser quadrado
+    gravar("icone-quadrado-claro.svg", documento(512, 512, simbolo(76, 70, 360, bloco=GRAFITE, ponto="#d9822b"), fundo=OSSO))
+    gravar("steam-icone-comunidade-184x184.svg", documento(184, 184, simbolo(27, 25, 130)))
 
-    # --- artes da Steam (só arte + nome + subtítulo, como a Steam pede nas cápsulas)
-    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 22, 606, 122, ("e", 66, 40, 46)))
-    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 34, 806, 208, ("e", 104, 64, 60)))
-    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 15, 372, 14, ("e", 56, 20, 38), (0.52, 0.72)))
-    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 30, 340, 412, ("e", 110, 56, 64)))
+    # --- Steam: loja (só arte + nome + subtítulo, como a Steam pede nas cápsulas)
+    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 22, 606, 122, ("e", 80, 40, 44)))
+    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 34, 806, 208, ("e", 122, 64, 56)))
+    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 14, 480, 4, ("e", 62, 20, 32), (0.62, 0.84)))
+    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 30, 340, 420, ("e", 134, 56, 64)))
+    gravar("steam-fundo-da-pagina-1438x810.svg", arte(nome, 1438, 810, 50, 700, 150))
+    # --- Steam: biblioteca
+    gravar("steam-biblioteca-capsula-600x900.svg", arte(nome, 600, 900, 25, 268, 440, ("e", 106, 46, 60)))
     gravar("steam-biblioteca-heroi-3840x1240.svg", arte(nome, 3840, 1240, 78, 1880, 300))
+    g, lw, lh = logo_empilhada(nome, 250, 0, 0)
+    g, lw, lh = logo_empilhada(nome, 250, (1280 - lw) / 2, (720 - lh) / 2)
+    gravar("steam-biblioteca-logo-1280x720.svg", documento(1280, 720, g, fundo=None))
+    # --- Steam: faixas da descrição da página
+    gravar("steam-painel-1-transmissao-616x300.svg", painel(nome, "01", ["ASSISTA COMO", "TRANSMISSÃO"], 20, 500, 36))
+    gravar("steam-painel-2-bots-616x300.svg", painel(nome, "02", ["BOTS QUE JOGAM", "COMO PROFISSIONAIS"], 40, 330, -150, (0.62, 0.96)))
+    gravar("steam-painel-3-gestao-616x300.svg", painel(nome, "03", ["SUA GESTÃO", "APARECE NA PARTIDA"], 30, 700, 96, (0.62, 0.92)))
     # --- redes (aqui cabe a frase)
     frase = ["VOCÊ MONTA O TIME.", "ELES JOGAM COMO PROFISSIONAIS."]
-    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 27, 1090, 112, ("e", 84, 80, 96), frase=frase))
-    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 42, 470, 452, ("e", 120, 80, 72)))
+    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 27, 1090, 112, ("e", 100, 80, 90), frase=frase))
+    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 42, 470, 462, ("e", 160, 80, 70)))
     print("ok:", len(os.listdir(SAIDA)), "arquivos em", SAIDA, "· nome usado:", limpo(nome))
 
 

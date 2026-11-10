@@ -1,29 +1,26 @@
-# Identidade da marca: logo e artes de divulgação
+# Identidade da marca: logo, ícone e artes de divulgação
 
 > **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0004, 0025, 0038 · **Escrito em:** 2026-11-10
 
 **Versão visual (canvas):** https://claude.ai/artifact/LPc5mbskMidwz2s1hVgRgF (página privada do Miguel; compartilhar pelo menu Share para o Gabriel abrir).
 
-_Proposta do agente, a validar. O porquê de cada escolha está na decisão 0038._
+_O nome THE ORG foi escolhido pelo autor. O resto é proposta do agente, a validar. O porquê de cada escolha está na decisão 0038._
 
 ## A ideia
 
-A marca é a própria simulação. O **ponto laranja** é um bot; ele aparece só o necessário atrás de uma letra, como quem abre pixel num ângulo. A arte é a partida vista de cima em **maquete**, sobre o grafite da interface.
+A marca é a própria simulação.
 
-## Os 3 nomes propostos
-
-| | Nome | Por quê | Contra |
-|---|---|---|---|
-| A | **FULL BUY** (recomendado) | A rodada em que o time compra tudo: fala de dinheiro e de jogo, que é o trabalho do manager. 7 letras, o mais legível na cápsula pequena | Quem não é da cena não pega a referência de primeira (o subtítulo resolve) |
-| B | **LIVE ON THREE** | O aviso de que a partida vai começar valendo; o ponto vira a luz de "no ar" | Longo; foi nome de um programa de esports encerrado em 2013 |
-| C | **FRAGHOUSE** | A Gaming House do time; palavra inventada, fácil de achar na busca | Fala mais do clube do que da partida |
-
-Nenhum usa "CS", "Counter", "Strike" ou "Major". **Antes de fechar:** conferir Steam, domínio e registro de marca. O agente só fez uma busca rápida na web.
+- **O brasão** é a org: todo time de esports tem o seu. É o ícone do app, com formato próprio.
+- **Cinco lados:** os cinco titulares.
+- **A janela redonda:** o O de ORG e o olho do manager, que assiste.
+- **O ponto laranja:** um bot abrindo pixel. Aparece só o necessário atrás da janela.
+- **A arte** é a partida vista de cima em maquete, sobre o grafite da interface.
 
 ## Regras de uso
 
-- **Logo principal:** nome + subtítulo "ESPORTS MANAGER". Sobre grafite usa osso; sobre fundo claro usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
-- **Símbolo:** bloco + ponto. Para ícone, avatar e onde o nome não cabe.
+- **Logo principal:** nome + subtítulo "ESPORTS MANAGER". A versão "completa" leva o brasão ao lado.
+- **Sobre grafite** usa osso; **sobre fundo claro** usa grafite, com o ponto em laranja mais escuro (`#d9822b`).
+- **Ícone do app:** o brasão com contorno grafite, fundo transparente. Funciona em qualquer cor de fundo. Onde o ícone tem de ser quadrado (Steam), usar o quadrado.
 - **Cores:** grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640`, azul `#62a8ee`. O laranja é sempre o ponto (e o TR); o azul só aparece na arte (o CT).
 - **Fontes:** Barlow Condensed ExtraBold no nome, SemiBold no subtítulo (licença OFL, em `fontes/`).
 - **Na Steam** a cápsula leva só arte, nome e subtítulo. A frase fica para redes.
@@ -33,36 +30,44 @@ Nenhum usa "CS", "Counter", "Strike" ou "Major". **Antes de fechar:** conferir S
 
 | Arquivo | Uso |
 |---|---|
-| `logo-<nome>-claro` / `-escuro` / `-fundo` / `-completa` | Logo de cada um dos 3 nomes: para fundo escuro, para fundo claro, já sobre grafite, e com o símbolo ao lado |
-| `simbolo`, `icone`, `icone-claro` | Símbolo solto e ícone 512×512 |
+| `logo-claro` / `-escuro` / `-fundo` | Logo principal: para fundo escuro, para fundo claro e já sobre grafite |
+| `logo-completa-claro` / `-escuro` / `-fundo` | Logo com o brasão ao lado |
+| `simbolo`, `simbolo-escuro` | O brasão solto |
+| `icone-app` (`.svg`, `.png`, `.ico`) | Ícone do app, formato próprio; o `.ico` tem de 16 a 256 px |
+| `icone-quadrado`, `icone-quadrado-claro` | Ícone quadrado 512×512 |
+| `steam-icone-comunidade-184x184` (`.jpg`) | Ícone da comunidade |
 | `steam-cabecalho-920x430` | Cabeçalho da página |
 | `steam-capsula-principal-1232x706` | Cápsula principal |
 | `steam-capsula-pequena-462x174` | Cápsula pequena (listas e busca) |
 | `steam-capsula-vertical-748x896` | Cápsula vertical |
+| `steam-fundo-da-pagina-1438x810` | Fundo da página |
+| `steam-painel-1/2/3-…-616x300` | Painéis da descrição: "Assista como transmissão", "Bots que jogam como profissionais", "Sua gestão aparece na partida" |
+| `steam-biblioteca-capsula-600x900` | Cápsula da biblioteca |
 | `steam-biblioteca-heroi-3840x1240` | Herói da biblioteca (sem nome, como a Steam pede) |
+| `steam-biblioteca-logo-1280x720` | Logo da biblioteca, fundo transparente |
 | `banner-social-1500x500`, `quadrado-social-1080x1080` | Redes |
 
-As artes saem com o nome **A**. Conferir os tamanhos no Steamworks na hora de subir: a Steam muda a lista de vez em quando.
+Conferir os tamanhos no Steamworks na hora de subir: a Steam muda a lista de vez em quando.
 
-## Regerar ou trocar o nome
+## Regerar
 
 ```bash
 pip install fonttools uharfbuzz
 ```
 
 ```bash
-python3 marketing/identidade/gerar.py "FRAG|HOUSE"
+python3 marketing/identidade/gerar.py
 ```
 
 ```bash
 node marketing/identidade/render.js
 ```
 
-No nome, `|` marca onde o ponto abre o pixel (atrás da letra seguinte) e `*` troca a letra seguinte pelo ponto inteiro (`"LIVE *ON THREE"`). Sem argumento, usa FULL BUY.
+Para testar outro nome, passe-o como argumento (`gerar.py "OUTRO @ONOME"`). No nome, `@` troca a letra seguinte (um O) pelo anel com o ponto por dentro. O `.ico` e o `.jpg` são convertidos dos PNG com o Pillow.
 
 ## Perguntas em aberto
 
-- Qual dos 3 nomes (ou outro)? Conferir Steam, domínio e registro de marca.
+- O nome THE ORG está livre na Steam, em domínio e em registro de marca?
 - Estas artes vão como arte final ou viram referência para um artista refazer a cápsula? São desenho vetorial feito em código pelo agente, não imagem gerada por modelo; mesmo assim o plano de marketing reserva verba para a cápsula.
-- Subtítulo "ESPORTS MANAGER" e a frase "Você monta o time. Eles jogam como profissionais.": confirmar, e definir a frase em inglês.
-- Faltam: logo da biblioteca (1280×720 transparente), fundo da página e as capturas e o trailer, que dependem do jogo.
+- Subtítulo "ESPORTS MANAGER", a frase "Você monta o time. Eles jogam como profissionais." e os títulos dos três painéis: confirmar, e definir a versão em inglês.
+- Faltam as capturas e o trailer, que dependem do jogo.

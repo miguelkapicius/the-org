@@ -49,8 +49,9 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
-| Cápsula | Imagem do jogo na loja da Steam (principal, pequena, vertical e cabeçalho). Leva só arte, nome e subtítulo. | capa, thumbnail, banner (banner é só o de redes) | marketing/identidade |
-| Símbolo | A forma reduzida da logo: o bloco (a parede) e o ponto laranja que abre o pixel atrás dele. Usado no ícone e onde o nome não cabe. | mascote, brasão (brasão é o dos times) | marketing/identidade |
+| Cápsula | Imagem do jogo na loja e na biblioteca da Steam (principal, pequena, vertical e cabeçalho). Leva só arte, nome e subtítulo. | capa, thumbnail, banner (banner é só o de redes) | marketing/identidade |
+| Painel da Steam | Faixa de imagem com título que abre cada seção da descrição na página da Steam. | banner, cabeçalho de seção | marketing/identidade |
+| Símbolo | A forma reduzida da logo: o brasão da org, com cinco lados, a janela redonda e o ponto laranja que aparece atrás dela. Usado no ícone do app e onde o nome não cabe. | mascote, escudo; brasão sozinho é o dos times | marketing/identidade |
 | Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
 | Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
 | Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |

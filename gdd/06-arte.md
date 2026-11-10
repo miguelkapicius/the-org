@@ -16,10 +16,11 @@ Tudo modelado em **3D**. A partida deve parecer uma **demo/transmissão de CS**,
 
 **[Sugestão]** Proposta do agente em `marketing/identidade/` (decisão 0038), a validar:
 
-- **Logo:** o nome em Barlow Condensed ExtraBold, com um ponto laranja meio escondido atrás de uma letra: é um bot abrindo pixel. Subtítulo "ESPORTS MANAGER".
-- **Símbolo:** o bloco (a parede) e o ponto que aparece atrás dele. Vira o ícone e o avatar.
+- **Nome:** THE ORG (escolhido pelo autor).
+- **Logo:** o nome em Barlow Condensed ExtraBold. O O de ORG é um anel com o ponto laranja aparecendo por dentro: um bot abrindo pixel. Subtítulo "ESPORTS MANAGER".
+- **Símbolo:** o brasão da org. Tem cinco lados (os cinco titulares), a janela redonda (o O de ORG, o olho de quem assiste) e o ponto laranja atrás dela. Vira o ícone do app, com formato próprio, e o avatar.
 - **Arte:** a partida vista de cima em maquete, sobre o grafite da interface: bonecos laranja e azuis, cone de visão, rota e fumaça. Nada de soldado realista nem de arma, para não lembrar a capa de outro jogo (0004).
-- **Peças prontas:** cápsulas e cabeçalho da Steam, herói da biblioteca, ícone, banner e post de redes. Saem de `marketing/identidade/gerar.py`, que troca o nome em todas de uma vez.
+- **Peças prontas:** ícones, cápsulas, cabeçalho, fundo e painéis da página da Steam, logo, cápsula e herói da biblioteca, banner e post de redes. Saem de `marketing/identidade/gerar.py`.
 
 ## Referências
 
@@ -40,7 +41,7 @@ Ficaram para depois, a pedido do autor (2026-11-07), por exigirem gerar imagens:
 
 - Estilo realista, estilizado ou low-poly?
 - Retratos dos jogadores: hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA, em três faixas de idade (decisão 0027). Arte final: manter esse caminho, fazer retratos ilustrados à mão ou contratar fotografia de referência? Faltam expressões por estado (cansado, motivado) e mais rostos se o elenco visível passar de 32.
-- Nome do jogo: escolher entre FULL BUY, LIVE ON THREE e FRAGHOUSE (ou outro) e conferir se está livre na Steam, em domínio e em registro de marca.
-- Identidade da marca (decisão 0038): validar a logo, o símbolo e a arte em maquete. As artes feitas em código servem como arte final ou viram referência para um artista refazer a cápsula?
-- Subtítulo "ESPORTS MANAGER" e frase "Você monta o time. Eles jogam como profissionais.": confirmar, e definir a frase em inglês.
+- O nome THE ORG está livre na Steam, em domínio e em registro de marca?
+- Identidade da marca (decisão 0038): validar a logo, o brasão e a arte em maquete. As artes feitas em código servem como arte final ou viram referência para um artista refazer a cápsula?
+- Subtítulo "ESPORTS MANAGER", frase "Você monta o time. Eles jogam como profissionais." e títulos dos painéis da Steam: confirmar, e definir a versão em inglês.
 - Tipografia da interface: hoje Barlow Condensed, Barlow e IBM Plex Mono (livres, OFL, decisão 0025). Manter ou definir a identidade tipográfica do jogo junto com o nome e o logo?
