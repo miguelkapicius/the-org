@@ -128,6 +128,7 @@ namespace CSM.Manager
     public class ResumoSemana
     {
         public int semana, temporada; public bool virouTemporada;
+        public ResumoTemporada temporadaEncerrada;   // decisão 0040: o resumo do ano que acabou, quando a semana vira a temporada
         public List<string> linhas = new List<string>();
         public List<ResultadoCampeonato> campeonatos = new List<ResultadoCampeonato>();
         public int receitas, despesas;
@@ -248,6 +249,7 @@ namespace CSM.Manager
             c.GerarMercado();
             c.GerarPsicologos();
             c.AjustarScouts();
+            c.MarcarInicioTemporada();
             c.Anotar("Começa a temporada 1. O clube joga o circuito " + Mundo.NomeCircuito(c.mundo.Clube.circuito) + ".");
             return c;
         }
@@ -831,15 +833,19 @@ namespace CSM.Manager
 
         void FimDeTemporada(ResumoSemana res)
         {
+            var resumo = ResumirTemporada();   // decisão 0040: o retrato do ano, antes de envelhecer o elenco
             foreach (var j in elenco.ToList())
             {
                 j.idade++;
-                if (j.idade >= 36 && elenco.Count > Provisorio.TITULARES) { elenco.Remove(j); res.linhas.Add(j.nome + " se aposentou aos " + j.idade + " anos."); }
+                if (j.idade >= IDADE_APOSENTADORIA && elenco.Count > Provisorio.TITULARES) { elenco.Remove(j); res.linhas.Add(j.nome + " se aposentou aos " + j.idade + " anos."); }
             }
             foreach (var j in elenco) GuardarInicio(j);
             foreach (var k in intel.Keys.ToList()) intel[k] *= 0.5f;   // a informação envelhece
             GerarMercado();
             GerarPsicologos();
+            ListarMudancas(resumo);
+            temporadas.Insert(0, resumo); temporadaNaoVista = true; res.temporadaEncerrada = resumo;
+            MarcarInicioTemporada();
             res.linhas.Add("Começa a temporada " + Temporada + ". O clube joga o circuito " + Mundo.NomeCircuito(CircuitoClube) + " (ranking " + PosicaoRanking + ").");
         }
 

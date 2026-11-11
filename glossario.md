@@ -29,6 +29,7 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Campeonato | Competição com times, formato (liga, grupos, suíço, mata-mata...) e premiação. | torneio, evento (usar só como sinônimo informal) | 01-core-loop |
 | Série | Confronto entre dois times decidido em um número de mapas: MD1, MD3 (melhor de 3) ou MD5 (melhor de 5). Cada mapa é uma partida. | md, bo3 | 01-core-loop |
 | Temporada | Um ano do jogo, com 52 semanas e o calendário de campeonatos. | ano, season | 01-core-loop |
+| Fim de temporada | A virada do ano: a tela animada com o resumo da temporada que acabou e a lista do que muda para a nova (decisão 0040). | fim de ano, encerramento | 01-core-loop |
 | Circuito | Grupo de campeonatos de um mesmo nível: Amador, Pro ou Elite. | tier, divisão | 01-core-loop |
 | Ranking | Lista dos 48 times por pontos de colocação em campeonatos; decide o circuito do clube. | classificação | 01-core-loop |
 | Veto | Fase antes da série em que os times banem e escolhem mapas. | pick/ban | 08-ui-ux |

@@ -126,7 +126,8 @@ namespace CSM.ManagerUI
 
             Mostrar();
             tela.Focus();
-            SomManager.AmbienteLigar();   // o zumbido da sala de controle (decisão 0029); some quando a partida começa
+            SomManager.AmbienteLigar();
+            if (rtCaptura == null && c != null && c.temporadaNaoVista) AbrirFimDeTemporada(c.UltimaTemporada);   // fechou o jogo antes de ver o fim da temporada   // o zumbido da sala de controle (decisão 0029); some quando a partida começa
 
             if (rtCaptura != null) yield return Capturar(pastaCaptura, rtCaptura);
         }
@@ -144,6 +145,12 @@ namespace CSM.ManagerUI
         // ================================================================================================ teclado
         void AoTeclar(KeyDownEvent e)
         {
+            if (ftEl != null)   // fim de temporada aberto: Esc ou espaço pula a animação; com tudo à vista, Enter começa a temporada
+            {
+                if (e.keyCode == KeyCode.Escape || e.keyCode == KeyCode.Space) { if (!ftPulou) Pular(); else FecharFimDeTemporada(); }
+                else if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && ftPulou) FecharFimDeTemporada();
+                return;
+            }
             switch (e.keyCode)
             {
                 case KeyCode.Alpha1: Ir(Aba.Painel); break;
@@ -414,6 +421,7 @@ namespace CSM.ManagerUI
             if (r == null) { Toast(c.Falido ? "O clube faliu." : "Há uma série marcada para esta semana: prepare, jogue ou pule antes de avançar.", true); return; }
             Salvar();
             Mostrar();
+            if (r.temporadaEncerrada != null) { AbrirFimDeTemporada(r.temporadaEncerrada); return; }   // decisão 0040: a virada tem tela própria
             string txt = r.virouTemporada ? "Nova temporada! " : "";
             txt += r.linhas.Count > 0 ? string.Join("  ·  ", r.linhas.Take(2)) : "Semana " + r.semana + " concluída.";
             Toast(txt, c.dinheiro < 0);

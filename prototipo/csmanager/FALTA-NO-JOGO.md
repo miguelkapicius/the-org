@@ -39,7 +39,7 @@ Legenda de tamanho: **P** = dias, **M** = semanas, **G** = projeto grande.
 | **Laboratório de demos** | Idem | Treino contra a IA de um adversário específico | M |
 | **Contrato de jogador e cláusula** | Idem | Hoje o jogador só tem salário. Faltam duração, renovação, cláusula de rescisão e propostas de outros times pelos seus jogadores | M |
 | **Negociação no mercado** | Mercado com "Contratar" a preço fixo | Falta negociar salário e valor, disputar com outros times e vender para um time específico | M |
-| **Resultado da temporada** | Calendário, circuitos (Amador, Pro, Elite) e ranking | Falta uma tela de **fim de temporada** (promoção e rebaixamento, resumo do ano, jogadores que se aposentaram) e metas do clube | M |
+| **Resultado da temporada** | Calendário, circuitos (Amador, Pro, Elite), ranking e a tela animada de **fim de temporada** (decisão 0040: promoção e rebaixamento, resumo do ano, aposentadorias e o que muda) | Faltam as **metas do clube** (o que a diretoria espera da temporada). A tela de fim de temporada ainda não foi aberta no Unity | P |
 
 ## 4. Interface
 

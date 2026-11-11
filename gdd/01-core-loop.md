@@ -1,6 +1,6 @@
 # Core loop
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014, 0018, 0021, 0034
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0008, 0010, 0012, 0014, 0018, 0021, 0034, 0040
 
 _O que o jogador faz minuto a minuto, sessão a sessão e ao longo do jogo._
 
@@ -46,6 +46,10 @@ Carreira com **ligas, campeonatos e temporadas inspirados no circuito profission
 
 O tempo corre em **semanas** (52 por temporada). Há campeonatos de **todos os formatos** (liga, grupos + mata-mata, grupos de dupla eliminação, suíço, mata-mata simples), com séries **MD1** (rodadas iniciais), **MD3** (decisivas) e **MD5** (final), numa **frequência parecida com a do CS2**: um time de elite joga um campeonato a cada 2 a 3 semanas, com pausas em que só treina, e há **2 Majors por temporada**. Os campeonatos são agrupados em **circuitos** (Amador, Pro, Elite) e um **ranking** de 48 times decide em qual o clube joga; sobe e desce no fim da temporada. Os adversários são fictícios e gerados pelo jogo. Nas semanas sem jogo o manager cuida do treino (decisão 0013).
 
+### Fim de temporada (decisão 0040)
+
+**[Sugestão]** Quando a semana vira a temporada, uma tela cheia e animada conta o ano: a manchete, o circuito de antes e o de depois com o ranking final, a campanha, os campeonatos, o MVP e a maior evolução, o caixa e os fãs, e o elenco um ano mais velho. Depois vem o "reset": a lista do que muda para a temporada nova, item a item, até o botão **Começar a temporada**. As temporadas passadas podem ser revistas pelo Calendário.
+
 ### Antes de cada partida de uma série (decisão 0014)
 
 O manager pode fazer o **veto de mapas** (ou deixar o jogo vetar, ou pular a série) e escolher a **estratégia**. Com informação sobre o adversário (scouts, decisão 0016), vê como ele joga e escolhe o contra.
@@ -56,5 +60,6 @@ Ser o técnico/dono de um time de e-sports e **ver seu time jogar como profissio
 
 ## Perguntas em aberto
 
+- Metas do clube: a diretoria pede um objetivo por temporada (ex.: subir de circuito, ficar no top 8)? O que acontece se não cumprir?
 - Balanceamento: quanto pesa cada fator (atributos, Gaming House, momento) na chance de o timeout funcionar?
 - Balancear o calendário: quantos campeonatos por temporada em cada circuito, premiações e pontos do ranking (valores provisórios da decisão 0012).

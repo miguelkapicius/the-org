@@ -58,6 +58,7 @@ namespace CSM.Manager
         public List<EquipeD> equipes = new List<EquipeD>(); public List<CampeonatoD> campeonatos = new List<CampeonatoD>();
         public SerieD serie = new SerieD();
         public List<string> favoritasTR = new List<string>(), proibidasTR = new List<string>(), favoritasCT = new List<string>(), proibidasCT = new List<string>();   // decisão 0022
+        public bool temTemporadas; public List<ResumoTemporada> temporadas = new List<ResumoTemporada>(); public bool temporadaNaoVista; public int inicioPartida, inicioFas, inicioDinheiro, inicioTitulos, inicioCircuito;   // decisão 0040 (salvamento antigo: começa a contar de onde abriu)
         public bool temPsicologo; public PsicologoD psicologo = new PsicologoD(); public List<PsicologoD> psicologosMercado = new List<PsicologoD>(); public int conversasNaSemana;   // decisão 0039 (salvamento antigo: sem psicólogo)
     }
 
@@ -113,6 +114,8 @@ namespace CSM.Manager
             d.emprestimos = c.emprestimos.Select(e => new EmprestimoD { principal = e.principal, parcela = e.parcela, restantes = e.restantes }).ToList();
             d.temPsicologo = c.psicologo != null; if (c.psicologo != null) d.psicologo = Para(c.psicologo);
             d.psicologosMercado = c.psicologosMercado.Select(Para).ToList(); d.conversasNaSemana = c.conversasNaSemana;
+            d.temTemporadas = true; d.temporadas = c.temporadas.ToList(); d.temporadaNaoVista = c.temporadaNaoVista;
+            d.inicioPartida = c.inicioPartida; d.inicioFas = c.inicioFas; d.inicioDinheiro = c.inicioDinheiro; d.inicioTitulos = c.inicioTitulos; d.inicioCircuito = c.inicioCircuito;
             d.equipes = c.mundo.equipes.Select(e => new EquipeD
             {
                 id = e.id, nome = e.nome, forca = e.forca, estilo = (int)e.estilo, circuito = (int)e.circuito, pontos = e.pontos, pontosAnt = e.pontosAnt, afinidade = (int[])e.afinidade.Clone(),
@@ -186,6 +189,13 @@ namespace CSM.Manager
             if (d.psicologosMercado != null && d.psicologosMercado.Count > 0) c.psicologosMercado.AddRange(d.psicologosMercado.Select(De));
             else c.GerarPsicologos();
             c.conversasNaSemana = d.conversasNaSemana;
+            if (d.temTemporadas)
+            {
+                if (d.temporadas != null) c.temporadas.AddRange(d.temporadas.Where(t => t != null));
+                c.temporadaNaoVista = d.temporadaNaoVista;
+                c.inicioPartida = d.inicioPartida; c.inicioFas = d.inicioFas; c.inicioDinheiro = d.inicioDinheiro; c.inicioTitulos = d.inicioTitulos; c.inicioCircuito = d.inicioCircuito; c.temInicioTemporada = true;
+            }
+            else c.MarcarInicioTemporada();
 
             if (d.temSerie)
             {
