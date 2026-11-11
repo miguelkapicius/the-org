@@ -250,15 +250,27 @@ def placar(cx, y, k=1.0):
     return g
 
 
-def arte(nome, w, h, passo, logo_=None, veu_=None, frase=None, desl=(0, 0)):
-    """Uma peça: o padrão no fundo e (opcional) a logo. `logo_` = (tamanho, x, y); `veu_` apaga o padrão sob o texto."""
+def foto(arq, w, h, fx=0.5, fy=0.5, zoom=1.0, escurece=0.12):
+    """Uma captura do jogo cobrindo a peça inteira. (fx, fy) diz que parte da imagem fica à vista quando sobra
+    (0 = começo, 1 = fim); `zoom` aproxima. O SVG aponta para o arquivo em capturas/, sem embutir a imagem."""
+    from PIL import Image
+    iw, ih = Image.open(os.path.join(AQUI, "capturas", arq)).size
+    e = max(w / iw, h / ih) * zoom
+    dw, dh = iw * e, ih * e
+    return (f'<image href="../capturas/{arq}" x="{-(dw - w) * fx:.1f}" y="{-(dh - h) * fy:.1f}" width="{dw:.1f}" height="{dh:.1f}" preserveAspectRatio="none"/>'
+            f'<rect width="{w}" height="{h}" fill="{GRAFITE}" fill-opacity="{escurece}"/>')
+
+
+def arte(nome, w, h, passo, logo_=None, veu_=None, frase=None, desl=(0, 0), captura=None):
+    """Uma peça: no fundo, uma captura do jogo (`captura` = (arquivo, fx, fy, zoom)) ou, sem ela, o padrão; por cima,
+    (opcional) a logo. `logo_` = (tamanho, x, y); `veu_` escurece o fundo sob o texto."""
     livre, defs = None, ""
     if logo_:
         tam, x, y = logo_
         g, lw, alt = logo(nome, tam, x, y)
         fim = alt + (0.75 * tam + len(frase) * 0.39 * tam if frase else 0)
         livre = (x - 0.3 * tam, y - 0.25 * tam, x + lw + 0.3 * tam, y + fim + 0.2 * tam)
-    corpo = padrao(w, h, passo, *desl, livre=livre)
+    corpo = foto(captura[0], w, h, *captura[1:]) if captura else padrao(w, h, passo, *desl, livre=livre)
     if veu_:
         defs, r = veu(w, h, *veu_)
         corpo += r
@@ -271,10 +283,11 @@ def arte(nome, w, h, passo, logo_=None, veu_=None, frase=None, desl=(0, 0)):
     return documento(w, h, corpo, defs)
 
 
-def painel(num, linhas, time=None, placar_=None, w=616, h=300, desl=(0, 0)):
+def painel(num, linhas, time=None, placar_=None, w=616, h=300, desl=(0, 0), captura=None):
     """Faixa para a descrição da página da Steam ("Sobre este jogo"): o padrão, o número e o título da seção."""
-    d, r = veu(w, h, 0.34, 0.8)
-    corpo = padrao(w, h, 78, *desl, livre=(0, h - 124, 28 + max(F800.largura(l, 38, 0.012) for l in linhas) + 14, h)) + r
+    d, r = veu(w, h, *((0.22, 0.86) if captura else (0.34, 0.8)))
+    fundo = foto(captura[0], w, h, *captura[1:]) if captura else padrao(w, h, 78, *desl, livre=(0, h - 124, 28 + max(F800.largura(l, 38, 0.012) for l in linhas) + 14, h))
+    corpo = fundo + r
     corpo += simbolo(24, 22, 40) + f'<path d="{FMONO.curvas(num, 11, 74, 47, 0.14)}" fill="{SUAVE}"/>'
     t = 38
     y0 = h - 32 - (len(linhas) - 1) * t * 1.16
@@ -317,26 +330,27 @@ def main():
     # --- o padrão solto, para usar de fundo onde precisar (ladrilha na horizontal a cada `passo`)
     gravar("padrao-1920x1080.svg", arte(nome, 1920, 1080, 150))
 
-    # --- Steam: loja. Nome grande sobre o padrão, sem mais texto.
-    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 112, (96, 44, 140), (0.18, 0.62), desl=(20, 30)))
-    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 150, (128, 64, 246), (0.18, 0.62), desl=(30, 20)))
-    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 64, (64, 20, 34), (0.5, 0.86), desl=(14, 18)))
-    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 124, (134, 56, 70), (0.2, 0.46, True), desl=(0, 30)))
-    gravar("steam-fundo-da-pagina-1438x810.svg", arte(nome, 1438, 810, 140))
+    # --- Steam: loja. Uma captura do jogo no fundo e o nome grande, sem mais texto.
+    D, V = "mapa-deserto.jpg", "mapa-vila.jpg"      # as capturas em capturas/; troque quando houver prints melhores
+    gravar("steam-cabecalho-920x430.svg", arte(nome, 920, 430, 0, (96, 44, 140), (0.36, 0.82), captura=(D, 0.62, 0.42, 1.12)))
+    gravar("steam-capsula-principal-1232x706.svg", arte(nome, 1232, 706, 0, (128, 64, 246), (0.36, 0.82), captura=(D, 0.6, 0.45, 1.1)))
+    gravar("steam-capsula-pequena-462x174.svg", arte(nome, 462, 174, 0, (64, 20, 34), (0.62, 0.98), captura=(D, 0.6, 0.47, 1.0)))
+    gravar("steam-capsula-vertical-748x896.svg", arte(nome, 748, 896, 0, (134, 56, 70), (0.24, 0.5, True), captura=(D, 0.52, 0.5, 1.0)))
+    gravar("steam-fundo-da-pagina-1438x810.svg", arte(nome, 1438, 810, 0, captura=(V, 0.5, 0.5, 1.0, 0.35)))
     # --- Steam: biblioteca
-    gravar("steam-biblioteca-capsula-600x900.svg", arte(nome, 600, 900, 100, (106, 46, 66), (0.2, 0.46, True), desl=(0, 30)))
-    gravar("steam-biblioteca-heroi-3840x1240.svg", arte(nome, 3840, 1240, 220))
+    gravar("steam-biblioteca-capsula-600x900.svg", arte(nome, 600, 900, 0, (106, 46, 66), (0.22, 0.48, True), captura=(D, 0.52, 0.5, 1.0)))
+    gravar("steam-biblioteca-heroi-3840x1240.svg", arte(nome, 3840, 1240, 0, captura=(D, 0.5, 0.45, 1.0, 0.2)))
     g, lw, lh = logo(nome, 250, 0, 0)
     g, lw, lh = logo(nome, 250, (1280 - lw) / 2, (720 - lh) / 2)
     gravar("steam-biblioteca-logo-1280x720.svg", documento(1280, 720, g, fundo=None))
     # --- Steam: faixas da descrição da página
-    gravar("steam-painel-1-transmissao-616x300.svg", painel("01", ["ASSISTA COMO", "TRANSMISSÃO"], placar_=(430, 26, 0.78)))
-    gravar("steam-painel-2-bots-616x300.svg", painel("02", ["BOTS QUE JOGAM", "COMO PROFISSIONAIS"], desl=(30, 10)))
-    gravar("steam-painel-3-gestao-616x300.svg", painel("03", ["SUA GESTÃO", "APARECE NA PARTIDA"], time=(452, 56, 0.8), desl=(10, 40)))
+    gravar("steam-painel-1-transmissao-616x300.svg", painel("01", ["ASSISTA COMO", "TRANSMISSÃO"], placar_=(430, 26, 0.78), captura=(V, 0.5, 0.45, 1.0)))
+    gravar("steam-painel-2-bots-616x300.svg", painel("02", ["BOTS QUE JOGAM", "COMO PROFISSIONAIS"], captura=(D, 0.55, 0.5, 1.25)))
+    gravar("steam-painel-3-gestao-616x300.svg", painel("03", ["SUA GESTÃO", "APARECE NA PARTIDA"], time=(452, 56, 0.8), captura=(D, 0.1, 0.3, 1.1)))
     # --- redes (aqui cabe a frase)
     frase = ["VOCÊ MONTA O TIME.", "ELES JOGAM COMO PROFISSIONAIS."]
-    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 126, (100, 80, 96), (0.3, 0.7), frase=frase, desl=(20, 20)))
-    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 150, (160, 80, 80), (0.22, 0.46, True), desl=(0, 20)))
+    gravar("banner-social-1500x500.svg", arte(nome, 1500, 500, 0, (100, 80, 96), (0.26, 0.72), frase=frase, captura=(V, 0.5, 0.42, 1.0)))
+    gravar("quadrado-social-1080x1080.svg", arte(nome, 1080, 1080, 0, (160, 80, 80), (0.24, 0.5, True), captura=(V, 0.6, 0.5, 1.0)))
     print("ok:", len(os.listdir(SAIDA)), "arquivos em", SAIDA, "· nome usado:", limpo(nome))
 
 

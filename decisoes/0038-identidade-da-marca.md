@@ -18,7 +18,8 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 3. **O mapa em maquete colorida** (o visual do jogo em 3D, com casas e bonecos) — foi a primeira versão. **Recusada pelo autor:** não gostou da "casinha" e pediu mais cara de FPS tático, formação e manager.
 4. **A prancheta tática em 3D** (o round em blocos de grafite, em perspectiva) — foi a segunda versão. **Recusada pelo autor:** não gostou do 3D nos banners e pediu para estudar o que deu certo em outros jogos.
 5. **O radar dentro do O** (o round visto de cima, chapado, dentro do O da logo ampliado) — foi a terceira versão. **Recusada pelo autor:** ainda não gostou dos banners e pediu outro conceito, como um padrão que combine com o resto.
-6. **O padrão** — o O da logo repetido em malha, com alguns acesos em laranja e em azul. Sem mapa, sem cena: o fundo é a própria marca.
+6. **O padrão** (o O da logo repetido em malha, com alguns acesos em laranja e em azul) — foi a quarta versão. O autor pediu para pôr capturas do jogo nos banners.
+7. **Captura do jogo no fundo** — a imagem do jogo rodando, escurecida do lado do texto, com o nome por cima. Mostra o produto de verdade.
 
 **Ícone.** A primeira versão era um brasão de cinco lados. **Recusada pelo autor.** A segunda rodada trouxe o anel, o cone de visão e a formação; o autor não escolheu nenhuma e pediu para seguir o padrão de jogos que deram certo.
 
@@ -30,14 +31,15 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 
 ## Decisão
 - **Nome: THE ORG** (decisão do autor). "Org" é como a cena de esports chama a organização dona do time, que é o papel do manager.
-- **Arte: opção 6, o padrão** (proposta do agente).
+- **Arte: opção 7, captura do jogo no fundo** (pedido do autor). O padrão fica para onde não há captura.
 - **Logo:** o nome em Barlow Condensed ExtraBold (a fonte de título da interface, 0025). O **O de ORG é um anel com o ponto laranja aparecendo por dentro**: um bot abrindo pixel. **O nome com o O foi aprovado pelo autor.**
 - **Subtítulo:** "TACTICAL FPS MANAGER" (proposta do agente). O autor recusou "ESPORTS MANAGER" e pediu outro texto, sem dizer qual; ficam como alternativas "MANAGER DE FPS TÁTICO" e "MONTE O TIME. ASSISTA À PARTIDA."
 - **Símbolo:** o O da logo sozinho. **Ícone do app:** o símbolo sobre um campo laranja chapado (grafite e osso ficam como alternativas).
 - **Padrão:** o símbolo repetido em malha, cada um com o ponto virado para um lado. Quase todos apagados, em grafite sobre grafite; alguns acesos em laranja (TR) e em azul (CT). A malha não entra na área do texto.
 - **Cores:** as da interface. Grafite `#0b0d10`, osso `#eceef1`, laranja `#f0a640` (TR) e azul `#62a8ee` (CT).
 - **Transmissão e manager:** nos painéis da Steam, o placar de transmissão e a escalação, com a função e o geral de cada titular.
-- **Na Steam:** a cápsula leva só o padrão, o nome e o subtítulo. A frase ("Você monta o time. Eles jogam como profissionais.") fica para as redes.
+- **Capturas:** as duas em uso (`mapa-deserto` e `mapa-vila`) são de exemplo, enviadas pelo autor, e mostram só o mapa.
+- **Na Steam:** a cápsula leva só a captura, o nome e o subtítulo. A frase ("Você monta o time. Eles jogam como profissionais.") fica para as redes.
 - Tudo vetorial, gerado por `marketing/identidade/gerar.py`, sem imagem gerada por modelo.
 
 ## Por quê
@@ -54,5 +56,6 @@ O plano de marketing pede nome e logo próprios antes de abrir a página da Stea
 - Falta decidir se estas artes vão como arte final ou servem de referência para um artista refazer a cápsula (o plano de marketing reserva verba para isso).
 - As artes do hub (soldados encapuzados) ficam fora do material público; trocá-las dentro do jogo é outra conversa.
 - A escalação usa palavras da cena ("entry", "lurker", "IGL"); nenhuma é nome de arma, mapa ou marca. A função de quem usa a arma de precisão aparece como "SNIPER".
-- O padrão não mostra a partida. Quem mostra o jogo são as capturas e o trailer, que continuam sendo o que mais pesa na página.
+- As capturas de exemplo mostram o mapa, sem bots nem HUD. As definitivas precisam de uma jogada acontecendo, que é o que diz "FPS tático" de relance.
+- Conferir o mapa do deserto contra a decisão 0004 antes de ir a público: visto de cima, o bombsite A com caixotes e muros lembra um mapa de deserto conhecido do gênero.
 - Os brasões dos times e os retratos seguem pendentes em `gdd/06-arte.md`.
