@@ -73,8 +73,10 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Multa de rescisão | O que o nosso clube paga para dispensar o jogador antes do fim do contrato: metade dos salários que faltam. | cláusula | 03-progressao |
 | Renovação | Novo contrato com um jogador do elenco que o jogador pode recusar (moral baixa ou pouco desejo de ficar). Pede salário e 30 % das luvas. | prorrogação | 03-progressao |
 | Fãs | Base de torcida do clube, uma moeda de progressão: sobe com vitórias, séries e campeonatos e cai com derrotas. Não se gasta; libera os níveis da Gaming House junto com o dinheiro. | seguidores, torcida, reputação | 03-progressao |
-| Relatório do psicólogo | Relatório periódico de cada jogador: o que ele está pensando, a emoção dele e o efeito na partida e no time (ideia 6, a definir). | laudo, avaliação psicológica | 11-ideias |
+| Relatório do psicólogo | Relatório semanal de cada jogador: a emoção, a causa e o efeito da moral na partida; o psicólogo melhor diz mais e prevê o que vem (decisão 0039). | laudo, avaliação | 11-ideias |
 | Central de notificações | Aba da tela principal que resume o que o manager precisa resolver e o que aconteceu de importante; cada notificação leva à tela certa (ideia 7, a definir). | inbox, caixa de entrada | 11-ideias |
-| Psicólogo | Profissional que o clube contrata, com salário e qualidade; cuida do mental dos jogadores e escreve o relatório de cada um (ideia 6, a definir). | coach mental, terapeuta | 11-ideias |
+| Psicólogo | Profissional que o clube contrata do mercado de psicólogos, com salário, qualidade (1 a 5 estrelas) e contrato; amortece as quedas de moral, faz conversas individuais e escreve o relatório de cada jogador (decisão 0039). | coach mental, terapeuta | 11-ideias |
+| Conversa individual | Ação do psicólogo com um jogador, limitada por semana; se der certo, a moral dele sobe (decisão 0039). | sessão, terapia | 11-ideias |
+| Emoção | O estado do jogador no relatório do psicólogo, pela moral: Confiante, Tranquilo, Ansioso, Frustrado ou Desmotivado (decisão 0039). | humor, sentimento | 11-ideias |
 | Macro | O jogo do time: tática do round, execução, rotação e retake (decidido pelo IGL). | — | 12-ia-micro |
 | Micro | O jogo de cada bot: rota, ângulo que confere, onde mira, peek e reação a uma ameaça. | — | 12-ia-micro |

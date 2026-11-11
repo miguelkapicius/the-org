@@ -19,5 +19,6 @@
     <Compile Include="..\Assets\Game\Manager\*.cs" LinkBase="Manager" />
     <Compile Include="TesteCampeonatos.cs" />
     <Compile Include="TesteCarreira.cs" />
+    <Compile Include="TestePsicologo.cs" />
   </ItemGroup>
 </Project>

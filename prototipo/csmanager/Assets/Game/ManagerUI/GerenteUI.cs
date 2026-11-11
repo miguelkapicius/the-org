@@ -27,7 +27,7 @@ namespace CSM.ManagerUI
         public int seed = 7;
         public const string CENA_PARTIDA = "Partida3D";
 
-        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Playbook, Serie, PreMatch, PosPartida, Opcoes }
+        enum Aba { Painel, Calendario, Elenco, Treino, Mercado, Financas, GamingHouse, Scouts, Psicologo, Playbook, Serie, PreMatch, PosPartida, Opcoes }
         Aba aba = Aba.Painel, abaAnterior = Aba.Painel;
         Carreira c;
         VisualElement tela, janela, conteudo, toastEl, dicaEl;
@@ -235,6 +235,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: titulo = "Gaming House"; sub = "Cada nível libera vantagens para o time."; break;
                 case Aba.Financas: titulo = "Finanças"; sub = "O que entra e o que sai toda semana."; break;
                 case Aba.Scouts: titulo = "Scouts"; sub = "Descubra como o adversário joga e quem vale contratar."; break;
+                case Aba.Psicologo: titulo = "Psicólogo"; sub = c.psicologo != null ? "O que cada jogador sente e como isso pesa na partida." : "Contrate um psicólogo para cuidar do mental do time."; break;
                 case Aba.Opcoes: titulo = "Opções"; sub = "Som, tamanho da interface e janela. Vale na hora e fica guardado."; break;
                 case Aba.Playbook: titulo = "Playbook"; sub = "As jogadas que o time prefere e as que nunca faz."; break;
                 case Aba.Serie: titulo = "Preparar série"; sub = c.serie != null ? c.serie.camp.nome + " · " + Fmt.Rotulo(c.serie.camp.nome, c.serie.conf.rotulo) : ""; break;
@@ -256,6 +257,7 @@ namespace CSM.ManagerUI
                 case Aba.GamingHouse: TelaGamingHouse(); break;
                 case Aba.Financas: TelaFinancas(); break;
                 case Aba.Scouts: TelaScouts(); break;
+                case Aba.Psicologo: TelaPsicologo(); break;
                 case Aba.Playbook: TelaPlaybook(); break;
                 case Aba.Opcoes: TelaOpcoes(); break;
                 case Aba.Serie: TelaSerie(); break;
@@ -288,6 +290,8 @@ namespace CSM.ManagerUI
             Item(nav, "Finanças", "dollar", Aba.Financas, null);
             Item(nav, "Gaming House", "house", Aba.GamingHouse, c.nivelGH.ToString());
             Item(nav, "Scouts", "eye", Aba.Scouts, c.scouts.Count > 0 ? c.scouts.Count.ToString() : null);
+            int abalados = c.psicologo != null ? c.elenco.Count(j => j.moral < Provisorio.MORAL_AVISO) : 0;
+            Item(nav, "Psicólogo", "help", Aba.Psicologo, abalados > 0 ? abalados.ToString() : null);
             int nPlay = c.favoritasTR.Count + c.favoritasCT.Count + c.proibidasTR.Count + c.proibidasCT.Count;
             Item(nav, "Playbook", "tag", Aba.Playbook, nPlay > 0 ? nPlay.ToString() : null);
 
@@ -544,7 +548,7 @@ namespace CSM.ManagerUI
 
         Aba DestinoAviso(string d) => d switch
         {
-            "elenco" => Aba.Elenco, "mercado" => Aba.Mercado, "gh" => Aba.GamingHouse, "treino" => Aba.Treino, "scouts" => Aba.Scouts,
+            "elenco" => Aba.Elenco, "mercado" => Aba.Mercado, "gh" => Aba.GamingHouse, "treino" => Aba.Treino, "scouts" => Aba.Scouts, "psicologo" => Aba.Psicologo,
             "serie" => Aba.Serie, "calendario" => Aba.Calendario, _ => Aba.Financas,
         };
 
@@ -961,6 +965,8 @@ namespace CSM.ManagerUI
                 ("mercado", () => { aba = Aba.Mercado; mercadoChat = false; comparar.Clear(); }, () => AtualizarPrevia(c.mercado[1])),
                 ("mercado-negociacao", () => { mercadoChat = true; var jj = c.mercado.OrderByDescending(x => x.Overall).Skip(2).First(); chatJogador = jj; var n = Negociador.Abrir(c, jj); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.6), (int)(n.salarioPedido * 0.7), false); Negociador.Propor(c, n, (int)(n.luvasPedida * 0.95), (int)(n.salarioPedido * 0.95), true); aba = Aba.Mercado; }, null),
                 ("scouts", () => aba = Aba.Scouts, null),
+                ("psicologo-mercado", () => aba = Aba.Psicologo, null),
+                ("psicologo", () => { if (c.psicologo == null && c.psicologosMercado.Count > 0) c.ContratarPsicologo(c.psicologosMercado.Last(), 1); c.elenco[c.elenco.Count - 1].moral = 25f; aba = Aba.Psicologo; }, null),
                 ("opcoes", () => aba = Aba.Opcoes, null),
                 ("playbook", () => { PlantaJogada.InicioDaCaptura = 0.62f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); c.MarcarJogada(js[0].nome, true, Carreira.MarcaJogada.Favorita); c.MarcarJogada(js[2].nome, true, Carreira.MarcaJogada.Proibida); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, null),
                 ("playbook-troca", () => { PlantaJogada.InicioDaCaptura = 0.5f; ladoPlaybookTR = true; var js = Estrategias.Jogadas(true); jogadaAberta = js[1].nome; exemploAberto = 0; aba = Aba.Playbook; }, () => { var js = Estrategias.Jogadas(true); exemploAberto++; AtualizarPainelPlaybook(false); jogadaAberta = js[3].nome; exemploAberto = 0; PreencherListaPlaybook(); AtualizarPainelPlaybook(true); Marcar(js[3].nome, true, Carreira.MarcaJogada.Favorita); }),

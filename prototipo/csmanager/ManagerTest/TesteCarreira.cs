@@ -27,6 +27,7 @@ class TesteCarreira
     public static void Main()
     {
         TesteCampeonatos.Rodar(); falhas += TesteCampeonatos.falhas;
+        TestePsicologo.Rodar(); falhas += TestePsicologo.falhas;
         Console.WriteLine("------ carreira ------");
         var c = Carreira.Nova(3);
         Ok(c.elenco.Count == 7 && c.mundo.equipes.Count == 48, "carreira nova: 7 jogadores e 48 times");

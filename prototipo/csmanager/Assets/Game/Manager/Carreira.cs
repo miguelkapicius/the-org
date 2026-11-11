@@ -246,6 +246,7 @@ namespace CSM.Manager
             foreach (var j in c.elenco) { c.GuardarInicio(j); Contratos.Assinar(j, 0); }   // contrato inicial pelo prazo que cada um prefere (decisão 0035)
             c.mundo =Mundo.Novo(seed, c.clube, c.Forca, c.elenco.Take(Provisorio.TITULARES).Select(j => (j.nome, j.funcao)).ToList());
             c.GerarMercado();
+            c.GerarPsicologos();
             c.AjustarScouts();
             c.Anotar("Começa a temporada 1. O clube joga o circuito " + Mundo.NomeCircuito(c.mundo.Clube.circuito) + ".");
             return c;
@@ -344,7 +345,7 @@ namespace CSM.Manager
         public int Forca => elenco.Count == 0 ? 0 : (int)Math.Round(Titulares.Average(j => j.Overall));
         public int CustoProximoNivelGH => GamingHouse.CustoProximo(nivelGH);
         public int PatrocinioPorSemana => (int)(Provisorio.PATROCINIO_BASE[(int)CircuitoClube] * GH.patrocinio);
-        public int DespesaFixaPorSemana => SalariosPorSemana + GH.manutencao + emprestimos.Sum(e => e.parcela);
+        public int DespesaFixaPorSemana => SalariosPorSemana + SalarioPsicologo + GH.manutencao + emprestimos.Sum(e => e.parcela);
 
         /// <summary>Força (média do geral) de uma escalação hipotética: serve para mostrar o efeito de uma troca ANTES de fazê-la.</summary>
         public static int ForcaDe(IEnumerable<Jogador> titulares) { var l = titulares.ToList(); return l.Count == 0 ? 0 : (int)Math.Round(l.Average(j => j.Overall)); }
@@ -494,6 +495,13 @@ namespace CSM.Manager
                 A(Aviso.Nivel.Atencao, j.nome + " termina o contrato em " + Contratos.Prazo(j.contratoSemanas) + ": renove, ou ele sai de graça.", "Ver elenco", "elenco");
             foreach (var j in elenco.Where(j => j.moral < Provisorio.MORAL_AVISO).Take(2))
                 A(Aviso.Nivel.Atencao, j.nome + " está desmotivado (moral " + (int)j.moral + "): rende menos na partida." + (Titular(j) ? "" : " Reserva há muito tempo perde ânimo."), "Ver elenco", "elenco");
+            // psicólogo (decisão 0039)
+            if (psicologo == null && elenco.Any(j => j.moral < Provisorio.MORAL_AVISO))
+                A(Aviso.Nivel.Dica, "Um psicólogo amortece as quedas de moral e conversa com quem está abalado.", "Ver psicólogos", "psicologo");
+            if (psicologo != null && psicologo.contratoSemanas <= Contratos.SEMANAS_AVISO)
+                A(Aviso.Nivel.Atencao, "O contrato do psicólogo " + psicologo.nome + " termina em " + Contratos.Prazo(psicologo.contratoSemanas) + ".", "Ver psicólogo", "psicologo");
+            if (ConversasRestantes > 0 && elenco.Any(j => j.moral < Provisorio.MORAL_NEUTRA - 10))
+                A(Aviso.Nivel.Dica, "O psicólogo tem conversa livre nesta semana e há jogador abalado.", "Ver relatório", "psicologo");
             if (EntrosamentoTime < 40) A(Aviso.Nivel.Dica, "Time pouco entrosado (" + (int)EntrosamentoTime + "): os bots trocam menos os colegas. Mantenha os titulares e faça sessões coletivas.", "Ver treino", "treino");
             if (nivelGH >= 2 && elenco.All(j => j.sessoes == 0)) A(Aviso.Nivel.Dica, "Ninguém está treinando: os atributos só mudam pela idade.", "Ver treino", "treino");
             if (scouts.Any(s => s.tipo == 0)) A(Aviso.Nivel.Dica, "Há scout sem tarefa: estude o próximo adversário ou procure talentos no mercado.", "Ver scouts", "scouts");
@@ -692,12 +700,12 @@ namespace CSM.Manager
             foreach (var j in elenco)
             {
                 bool t = tit.Contains(j);
-                float queda = Provisorio.MORAL_RESERVA_SEMANA * (j.traco == Traco.Estrela ? 2f : 1f);
+                float queda = Provisorio.MORAL_RESERVA_SEMANA * (j.traco == Traco.Estrela ? 2f : 1f) * FatorQuedaMoral;   // o psicólogo amortece (decisão 0039)
                 j.moral = Math.Clamp(j.moral + (t ? Provisorio.MORAL_TITULAR_SEMANA : -queda), 0f, 100f);
                 if (j.promessaSemanas > 0)   // promessa de titular (decisão 0026): cumprir rende moral, descumprir tira
                 {
                     j.promessaSemanas--;
-                    if (!t) j.moral = Math.Clamp(j.moral - 6f, 0f, 100f); else if (j.promessaSemanas == 0) j.moral = Math.Clamp(j.moral + 5f, 0f, 100f);
+                    if (!t) j.moral = Math.Clamp(j.moral - 6f * FatorQuedaMoral, 0f, 100f); else if (j.promessaSemanas == 0) j.moral = Math.Clamp(j.moral + 5f, 0f, 100f);
                 }
                 j.entrosamento = Math.Clamp(j.entrosamento + (t ? Provisorio.ENTROSAMENTO_TITULAR + coletivas * Provisorio.ENTROSAMENTO_COLETIVA : Provisorio.ENTROSAMENTO_RESERVA), 0f, 100f);
             }
@@ -760,7 +768,10 @@ namespace CSM.Manager
             Lanca("Salários e manutenção da Gaming House", -(sal + manut));
             Lanca("Patrocínio", patro);
             if (parcelas > 0) Lanca("Parcelas de empréstimo", -parcelas);
-            res.receitas = patro; res.despesas = sal + manut + parcelas;
+            int psi = SalarioPsicologo;
+            if (psi > 0) Lanca("Salário do psicólogo", -psi);
+            res.receitas = patro; res.despesas = sal + manut + parcelas + psi;
+            ProcessarPsicologo(res);
 
             // o mundo (campeonatos de todos os circuitos)
             EquipeClube.forca = Forca;
@@ -828,6 +839,7 @@ namespace CSM.Manager
             foreach (var j in elenco) GuardarInicio(j);
             foreach (var k in intel.Keys.ToList()) intel[k] *= 0.5f;   // a informação envelhece
             GerarMercado();
+            GerarPsicologos();
             res.linhas.Add("Começa a temporada " + Temporada + ". O clube joga o circuito " + Mundo.NomeCircuito(CircuitoClube) + " (ranking " + PosicaoRanking + ").");
         }
 
@@ -1082,7 +1094,7 @@ namespace CSM.Manager
             foreach (var j in Titulares)
             {
                 j.mapasNaSemana++;
-                j.moral = Math.Clamp(j.moral + pesoMoral * (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA), 0f, 100f);
+                j.moral = Math.Clamp(j.moral + pesoMoral * (venceu ? Provisorio.MORAL_VITORIA : -Provisorio.MORAL_DERROTA * FatorQuedaMoral), 0f, 100f);
                 if (j.idade <= 28) { int a = rng.Next(5); if (j.Valor(a) < j.potencial) j.Definir(a, j.Valor(a) + 0.08f * FatorIdade(j.idade)); }
             }
             var af = mundo.Clube.afinidade; af[mapa] = Math.Min(95, af[mapa] + 1);   // jogar no mapa dá afinidade

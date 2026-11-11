@@ -1,6 +1,6 @@
 # Ideias de features (backlog)
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0013, 0014, 0016, 0017, 0018, 0019, 0020, 0021, 0022
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0013, 0014, 0016, 0017, 0018, 0019, 0020, 0021, 0022, 0039
 
 _Banco de ideias para deixar o jogo mais envolvente ("só mais uma semana"). Nada aqui é decisão: cada ideia vira decisão em `decisoes/` antes de ser implementada. Ideias do agente, priorizadas pelo autor em 2026-11-06._
 
@@ -36,7 +36,7 @@ Três camadas, cada uma com uma razão para continuar jogando:
 
 Pedidas pelo autor. O texto normal é a ideia dele; o que está marcado **[Sugestão]** é detalhe do agente, a validar.
 
-### 6. Psicólogo da equipe e relatório de cada jogador
+### 6. Psicólogo da equipe e relatório de cada jogador — ✅ primeira versão feita (decisão 0039; tela ainda não aberta no Unity)
 
 **Ideia do autor:** cada jogador tem sessões com o psicólogo do time, que entrega um **relatório periódico** (semanal, mensal ou outro prazo, **a definir**) dizendo o que o jogador está pensando, a emoção dele e como isso afeta a partida e o time. O manager acompanha e controla esse parâmetro sempre. Na interface, uma **tela do psicólogo**, com o relatório de cada jogador.
 
@@ -114,12 +114,9 @@ Pedidas pelo autor. O texto normal é a ideia dele; o que está marcado **[Suges
 
 ## Perguntas em aberto
 
-As perguntas das 5 primeiras prioridades foram respondidas pelas decisões 0018 a 0022 (propostas, a validar).
+As perguntas das 5 primeiras prioridades foram respondidas pelas decisões 0018 a 0022, e as do psicólogo pela 0039 (propostas, a validar).
 
-- Psicólogo: de quanto em quanto tempo sai o relatório de cada jogador (semanal, quinzenal, mensal)?
-- Psicólogo: além da moral, quais emoções/estados o relatório mostra e como cada um muda a partida e o time?
-- Psicólogo: o manager pode agir a partir do relatório (conversa, folga, promessa de vaga)? Com que custo?
-- Psicólogo: pode ser contratado desde o início ou só com o nível 4 da Gaming House (onde o psicólogo já está)?
-- Psicólogo: quanto o melhor psicólogo vale a mais que o pior (o tamanho do efeito de cada nível de qualidade) e quanto custa cada nível?
-- Psicólogo: tem contrato (duração, multa para demitir) como os jogadores? Dá para ter mais de um?
+- Psicólogo (decisão 0039): um jogador abalado puxa a moral ou o entrosamento dos outros para baixo, e um Líder confiante puxa para cima? Com que força?
+- Psicólogo: além da conversa individual, haverá outras ações a partir do relatório (folga, prometer vaga)? Com que custo?
+- Psicólogo: o mesmo modelo serve para outros profissionais (fisioterapeuta, analista de demos, preparador)?
 - Notificações: a central substitui a lista "O que merece atenção" do painel ou fica ao lado dela? Guarda histórico e lida/não lida?
