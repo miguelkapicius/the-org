@@ -60,6 +60,8 @@ Cada pergunta também aparece em "Perguntas em aberto" da seção indicada.
 - [ ] **Acessibilidade:** o jogo terá navegação completa por teclado (Tab/foco) e opção de reduzir animações? Dicas só no mouse precisam de alternativa? → `gdd/08-ui-ux.md`
 - [ ] Mockup HTML (`prototipo/mockup-ui/`): atualizar para o visual "mesa de transmissão" ou aposentar e aprovar o visual direto pelas capturas da Unity? (muda o fluxo da decisão 0011) → `gdd/08-ui-ux.md`
 - [ ] **Retratos:** hoje são 32 retratos de estúdio de jogadores fictícios gerados por IA (decisão 0027). Arte final: manter esse caminho, ilustrar à mão ou usar fotografia de referência? E expressões por estado (cansado, motivado)? → `gdd/06-arte.md`
+- [ ] **Virais:** quem grava, edita e posta os clipes (3 por semana, versões Brasil e fora)? Terão narração em português, de quem? → `marketing/virais-e-comunidades.md`
+- [ ] **Virais:** o botão de salvar clipe, a câmera vertical 9:16 e o card de pós-partida para print entram no escopo da demo? → `marketing/virais-e-comunidades.md`
 - [ ] **Nome THE ORG:** conferir se está livre na Steam, em domínio e em registro de marca antes de qualquer material público (o agente só fez uma busca rápida na web e não achou jogo com esse nome). → `gdd/00-visao.md`
 - [ ] **Ícone do app (decisão 0038):** validar o O da logo em campo laranja (em uso) ou trocar pelo campo grafite ou osso. → `marketing/identidade/README.md`
 - [ ] **Artes (decisão 0038):** validar os banners e cápsulas com captura do jogo no fundo. As duas capturas usadas são de exemplo e mostram só o mapa: trocar por capturas com bots, HUD da transmissão e uma jogada acontecendo. → `marketing/identidade/README.md`
