@@ -1234,7 +1234,7 @@
 .hub-tit.longo { font-size: 28px; }
 .diario-sem { width: 44px; flex-shrink: 0; font-size: 13px; color: var(--apagado); }
 
-/* ---- folha do contrato (decisão 0039): um papel de verdade sobre a tela escurecida ---- */
+/* ---- folha do contrato (decisão 0042): um papel de verdade sobre a tela escurecida ---- */
 .contrato-cena { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(4, 5, 7, 0.86); align-items: center; justify-content: center; opacity: 0; transition-property: opacity; transition-duration: 0.18s; padding: 24px 0; }
 .contrato-cena.visivel { opacity: 1; }
 .contrato-rolo { flex-shrink: 1; max-height: 86%; width: 620px; max-width: 94%; }

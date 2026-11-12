@@ -1,10 +1,10 @@
-# 0039 — Fãs em escala de milhões (mais difíceis, mais valiosos) e a folha de contrato
+# 0042 — Fãs em escala de milhões (mais difíceis, mais valiosos) e a folha de contrato
 
 - **Status:** proposta
 - **Data:** 2026-11-07
 - **Autor:** miguelkapicius (com Claude)
 - **Seções afetadas:** gdd/03-progressao.md, gdd/08-ui-ux.md, glossario.md
-- **Substitui:** os números de fãs das decisões 0037 e 0038 (início, ganhos, mínimos da Gaming House e curva do patrocínio). A estrutura (fãs não se gastam, liberam a Gaming House, mexem no patrocínio e na atração) continua.
+- **Substitui:** os números de fãs das decisões 0037 e 0041 (início, ganhos, mínimos da Gaming House e curva do patrocínio). A estrutura (fãs não se gastam, liberam a Gaming House, mexem no patrocínio e na atração) continua.
 
 ## Contexto
 O autor quer que os fãs vão além de 35 mil: alguns **milhões** no topo, mais **difíceis de conquistar**, mas com **mais benefícios**. Também quer que o contrato do jogador apareça na interface **como uma folha de contrato de verdade**.

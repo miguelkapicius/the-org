@@ -452,7 +452,7 @@ class TesteCarreira
             Ok(cr != null && cr.fas == cg.fas && cr.sequencia == cg.sequencia, "fãs e sequência vão para o salvamento");
         }
 
-        // fãs mexem no patrocínio e na atração; pedido de saída e rescisão (decisão 0038)
+        // fãs mexem no patrocínio e na atração; pedido de saída e rescisão (decisão 0041)
         {
             Ok(Math.Abs(Fas.FatorPatrocinio(Fas.INICIAIS) - 1f) < 0.001f, "com os fãs iniciais o patrocínio não muda");
             Ok(Fas.FatorPatrocinio(8000) > Fas.FatorPatrocinio(2000) && Fas.FatorPatrocinio(100000000) <= 3.0f && Fas.FatorPatrocinio(0) >= 0.8f && Fas.FatorPatrocinio(2000000) > 2.2f, "mais fãs, mais patrocínio, entre 0,8 e 3,0 (milhões de fãs valem mais que o dobro)");
@@ -488,7 +488,7 @@ class TesteCarreira
             Ok(pedidos > 0, "jogadores muito infelizes acabam pedindo para sair (" + pedidos + " pedidos vistos)");
         }
 
-        // trajetória dos fãs em várias temporadas jogando tudo pelo "pular" (só informação: serve para balancear a escala da decisão 0039)
+        // trajetória dos fãs em várias temporadas jogando tudo pelo "pular" (só informação: serve para balancear a escala da decisão 0042)
         {
             var cTraj = Carreira.Nova(23); cTraj.dinheiro = 90000000; int gTraj = 0, tAnt = 0;
             while (cTraj.Temporada <= 6 && gTraj++ < 400 && !cTraj.Falido)

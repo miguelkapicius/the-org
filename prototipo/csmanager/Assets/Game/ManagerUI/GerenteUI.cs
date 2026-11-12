@@ -768,7 +768,7 @@ namespace CSM.ManagerUI
             if (j.mvps > 0) { var sv = Selo("MVP " + j.mvps + "×", null); ComDica(sv, "Vezes que foi MVP de mapa pelo clube" + (j.jogadas.Count > 0 ? ".\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : ".")); estado.Add(sv); }
             if (j.querSair > 0)
             {
-                // pediu para sair (decisão 0038): o selo é o botão do bônus de permanência; vender é a outra saída
+                // pediu para sair (decisão 0041): o selo é o botão do bônus de permanência; vender é a outra saída
                 var sj2 = j; int bonus = j.Salario * Contratos.SEMANAS_PERMANENCIA;
                 var sq = Selo("QUER SAIR", "vermelho"); sq.pickingMode = PickingMode.Position;
                 ComDica(sq, j.nome + " " + j.motivoSaida + " e vai embora de graça em " + j.querSair + " semana(s).\nClique para pagar " + Fmt.Dinheiro(bonus) + " de bônus e ele fica (a moral sobe). Ou venda por " + Fmt.Dinheiro(j.Venda) + ".");

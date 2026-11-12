@@ -21,7 +21,7 @@ namespace CSM.Manager
         public const float MORAL_MIN_RENOVAR = 30f;
         public const int OVERALL_COBICADO = 68;           // abaixo disso nenhum rival paga a cláusula
         public const double CHANCE_RIVAL_NORMAL = 0.006, CHANCE_RIVAL_INFELIZ = 0.04;   // por semana, por jogador cobiçado
-        // jogador que pede para sair (decisão 0038)
+        // jogador que pede para sair (decisão 0041)
         public const float MORAL_PEDE_SAIR = 25f;                     // abaixo disso ele pode pedir para sair
         public const double CHANCE_SAIR_INFELIZ = 0.06, CHANCE_SAIR_BANCO = 0.04;   // por semana (banco: reserva bom, parado e com moral < 45)
         public const int PRAZO_SAIDA = 4, SEMANAS_PERMANENCIA = 4;     // semanas até ele ir embora sozinho; bônus de permanência = 4 salários
@@ -145,7 +145,7 @@ namespace CSM.Manager
         /// <summary>Passa uma semana nos contratos: os que vencem saem (ou ficam a contragosto), e um rival pode pagar a cláusula.</summary>
         void ProcessarContratos(ResumoSemana res)
         {
-            // quem pediu para sair e foi ignorado vai embora de graça quando o prazo acaba (decisão 0038)
+            // quem pediu para sair e foi ignorado vai embora de graça quando o prazo acaba (decisão 0041)
             foreach (var j in elenco.ToList())
             {
                 if (j.querSair <= 0) continue;

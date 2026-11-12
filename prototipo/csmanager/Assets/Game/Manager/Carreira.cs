@@ -343,7 +343,7 @@ namespace CSM.Manager
         public int SalariosPorSemana => elenco.Sum(j => j.Salario);
         public int Forca => elenco.Count == 0 ? 0 : (int)Math.Round(Titulares.Average(j => j.Overall));
         public int CustoProximoNivelGH => GamingHouse.CustoProximo(nivelGH);
-        public int PatrocinioPorSemana => (int)(Provisorio.PATROCINIO_BASE[(int)CircuitoClube] * GH.patrocinio * Fas.FatorPatrocinio(fas));   // fãs mexem no patrocínio (decisão 0038)
+        public int PatrocinioPorSemana => (int)(Provisorio.PATROCINIO_BASE[(int)CircuitoClube] * GH.patrocinio * Fas.FatorPatrocinio(fas));   // fãs mexem no patrocínio (decisão 0041)
         public int DespesaFixaPorSemana => SalariosPorSemana + GH.manutencao + emprestimos.Sum(e => e.parcela);
 
         /// <summary>Força (média do geral) de uma escalação hipotética: serve para mostrar o efeito de uma troca ANTES de fazê-la.</summary>

@@ -7,7 +7,7 @@ using static CSM.ManagerUI.Ui;
 
 namespace CSM.ManagerUI
 {
-    /// <summary>A folha do contrato (decisão 0039): o contrato do jogador mostrado como um documento de verdade, em papel, com as cláusulas
+    /// <summary>A folha do contrato (decisão 0042): o contrato do jogador mostrado como um documento de verdade, em papel, com as cláusulas
     /// em linguagem simples (prazo, salário, vaga, cláusula de rescisão, multa, fim) e as assinaturas. Aparece como minuta na negociação, como
     /// "assinado" logo depois de fechar e como "em vigor" a partir do cartão do elenco (com renovar e rescindir).</summary>
     public partial class GerenteUI

@@ -1,6 +1,6 @@
-# 0038 — Fãs mexem no patrocínio e na atração; jogador pede para sair; rescisão na interface
+# 0041 — Fãs mexem no patrocínio e na atração; jogador pede para sair; rescisão na interface
 
-- **Status:** proposta (os números de fãs foram trocados pela decisão 0039)
+- **Status:** proposta (os números de fãs foram trocados pela decisão 0042)
 - **Data:** 2026-11-07
 - **Autor:** miguelkapicius (com Claude)
 - **Seções afetadas:** gdd/03-progressao.md, gdd/08-ui-ux.md, glossario.md

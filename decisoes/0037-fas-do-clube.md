@@ -1,6 +1,6 @@
 # 0037 — Fãs do clube: moeda de progressão que libera a Gaming House
 
-- **Status:** proposta (os números de fãs foram trocados pela decisão 0039)
+- **Status:** proposta (os números de fãs foram trocados pela decisão 0042)
 - **Data:** 2026-11-07
 - **Autor:** miguelkapicius (com Claude)
 - **Seções afetadas:** gdd/03-progressao.md, gdd/08-ui-ux.md, glossario.md

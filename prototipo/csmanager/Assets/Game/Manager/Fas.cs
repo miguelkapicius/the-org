@@ -43,7 +43,7 @@ namespace CSM.Manager
         /// <summary>Fãs do campeonato pela colocação (1 = campeão); 0 fora do pódio.</summary>
         public static int Titulo(int posicao, Circuito circ) => posicao >= 1 && posicao <= 3 ? (int)Math.Round(BASE_MAPA * Peso(circ) * BONUS_TITULO[posicao - 1]) : 0;
 
-        /// <summary>Quanto os fãs mexem no patrocínio (decisões 0038 e 0039): 1,0 com os fãs iniciais, +0,2 a cada vez que a base dobra, entre 0,8 e 3,0.</summary>
+        /// <summary>Quanto os fãs mexem no patrocínio (decisões 0041 e 0042): 1,0 com os fãs iniciais, +0,2 a cada vez que a base dobra, entre 0,8 e 3,0.</summary>
         public static float FatorPatrocinio(int fas) => Math.Max(0.8f, Math.Min(3.0f, 0.8f + 0.2f * (float)Math.Log(1.0 + Math.Max(0, fas) / 2000.0, 2.0)));
 
         /// <summary>Quanto a torcida pesa na atração de um jogador, de -1 (cerca de 600 fãs) a +1 (cerca de 640 mil), com zero em 20 mil.</summary>

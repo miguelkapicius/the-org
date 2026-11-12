@@ -45,7 +45,7 @@ namespace CSM.Manager
     public class Jogador
     {
         public string nome; public int idade; public Role funcao; public Skill skill = new Skill();
-        public int querSair; public string motivoSaida;   // pediu para sair: semanas que faltam para ele ir embora sem pagar nada (decisão 0038)
+        public int querSair; public string motivoSaida;   // pediu para sair: semanas que faltam para ele ir embora sem pagar nada (decisão 0041)
         public int potencial = 85;                  // teto de evolução (só se vê com scout, no mercado)
         public bool potencialRevelado;
         public float cansaco = 10, preparo;         // 0..100
