@@ -14,27 +14,35 @@ namespace CSM.ManagerUI
     {
         public static string Caminho => Path.Combine(Application.persistentDataPath, "carreira.json");
         public static bool Existe => File.Exists(Caminho);
+        /// <summary>Arquivo à parte da prévia do fim de temporada (menu CS Manager > Manager): nunca mexe na carreira salva de verdade.</summary>
+        public static string CaminhoPrevia => Path.Combine(Application.persistentDataPath, "carreira-previa.json");
 
-        public static void Salvar(Carreira c)
+        /// <summary>Ligado na prévia do fim de temporada: a carreira é de teste, então nada grava por cima do salvamento real (nem a partida 3D).</summary>
+        public static bool Previa;
+
+        public static void Salvar(Carreira c, string caminho = null)
         {
+            if (Previa && caminho == null) return;
+            caminho = caminho ?? Caminho;
             try
             {
                 Directory.CreateDirectory(Application.persistentDataPath);
-                string tmp = Caminho + ".tmp";
+                string tmp = caminho + ".tmp";
                 File.WriteAllText(tmp, JsonUtility.ToJson(SalvamentoDados.Para(c)));
-                if (File.Exists(Caminho)) File.Delete(Caminho);
-                File.Move(tmp, Caminho);   // escreve num arquivo temporário e troca: uma queda no meio não corrompe o salvamento
+                if (File.Exists(caminho)) File.Delete(caminho);
+                File.Move(tmp, caminho);   // escreve num arquivo temporário e troca: uma queda no meio não corrompe o salvamento
             }
             catch (Exception e) { Debug.LogWarning("Não foi possível salvar a carreira: " + e.Message); }
         }
 
         /// <summary>Carrega a carreira salva; null se não houver, se for de outra versão ou se o arquivo estiver ilegível.</summary>
-        public static Carreira Carregar()
+        public static Carreira Carregar(string caminho = null)
         {
+            caminho = caminho ?? Caminho;
             try
             {
-                if (!Existe) return null;
-                var c = SalvamentoDados.De(JsonUtility.FromJson<CarreiraD>(File.ReadAllText(Caminho)));
+                if (!File.Exists(caminho)) return null;
+                var c = SalvamentoDados.De(JsonUtility.FromJson<CarreiraD>(File.ReadAllText(caminho)));
                 if (c == null) Debug.LogWarning("O salvamento é de outra versão do jogo (ou está incompleto): começando uma carreira nova.");
                 return c;
             }

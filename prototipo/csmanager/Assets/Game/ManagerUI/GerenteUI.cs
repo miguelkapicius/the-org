@@ -81,6 +81,14 @@ namespace CSM.ManagerUI
             Application.targetFrameRate = 60;
             string pastaCaptura = Environment.GetEnvironmentVariable("CSM_CAPTURA");
             captura = !string.IsNullOrEmpty(pastaCaptura);
+            // prévia do fim de temporada (menu CS Manager > Manager): joga uma temporada num arquivo à parte e abre direto na tela; não salva nada
+            if (!captura && Environment.GetEnvironmentVariable("CSM_PREVIA") == "1")
+            {
+                Environment.SetEnvironmentVariable("CSM_PREVIA", null);
+                var pv = Salvamento.Carregar(Salvamento.CaminhoPrevia);
+                if (pv != null) { Carreira.Atual = pv; previa = true; }
+            }
+            if (previa) Salvamento.Previa = true;   // vale até sair do modo Play (a próxima entrada recarrega o código e zera)
             if (Carreira.Atual == null) Carreira.Atual = (captura ? null : Salvamento.Carregar()) ?? Carreira.Nova(seed);
             c = Carreira.Atual;
 
@@ -140,7 +148,8 @@ namespace CSM.ManagerUI
             SomManager.AmbienteDesligar();
         }
 
-        void Salvar() { if (!captura && c != null) Salvamento.Salvar(c); }
+        bool previa;   // modo prévia: a carreira é de teste e não grava por cima do salvamento
+        void Salvar() { if (!captura && !previa && c != null) Salvamento.Salvar(c); }
 
         // ================================================================================================ teclado
         void AoTeclar(KeyDownEvent e)

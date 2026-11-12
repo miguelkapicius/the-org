@@ -38,6 +38,27 @@ namespace CSM.EditorTools
             EditorApplication.isPlaying = true;
         }
 
+        /// <summary>Joga uma carreira de teste por uma temporada inteira (pulando as séries), grava num arquivo à parte e abre o manager já na tela
+        /// de fim de temporada (decisão 0040). Não mexe na carreira salva de verdade e, no modo prévia, o jogo não salva.</summary>
+        [MenuItem("CS Manager/Manager/Ver tela de fim de temporada")]
+        public static void VerFimDeTemporada()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            if (!File.Exists(ARQ) || !File.Exists(ARQ_PARTIDA)) Criar();
+            var c = CSM.Manager.Carreira.Nova(7);
+            for (int semanas = 0; !c.temporadaNaoVista && semanas < 80; semanas++)
+            {
+                int g = 0; while (c.TemJogoAgora && g++ < 20) c.PularSerie();
+                c.AvancarSemana();
+            }
+            if (!c.temporadaNaoVista) { Debug.LogError("A temporada de teste não chegou ao fim em 80 semanas."); return; }
+            Salvamento.Salvar(c, Salvamento.CaminhoPrevia);
+            System.Environment.SetEnvironmentVariable("CSM_PREVIA", "1");
+            CSM.Manager.Carreira.Atual = null;
+            EditorSceneManager.OpenScene(ARQ);
+            EditorApplication.isPlaying = true;
+        }
+
         [MenuItem("CS Manager/Manager/Apagar carreira salva")]
         public static void ApagarSalvamento() { Salvamento.Apagar(); Debug.Log("Carreira salva apagada: " + Salvamento.Caminho); }
 
