@@ -1342,3 +1342,19 @@
 .toast { max-width: 80%; }
 .dica { max-width: 340px; }
 .tut { max-width: 92%; }
+
+/* ---- fim de temporada: hierarquia, grade que não quebra e barra de ação fixa ---- */
+.ft { flex-direction: column; }
+.ft-tiles { flex-wrap: nowrap; margin-bottom: 6px; margin-right: -14px; }
+.ft-tiles > .ft-tile { min-width: 0; }
+.ft-bloco { overflow: visible; }
+.ft-circuito > .ft-tile { flex-grow: 0; flex-basis: auto; flex-shrink: 0; align-items: flex-end; margin-right: 0; min-width: 150px; }
+.ft-circuito > .ft-tile > .t { align-self: stretch; -unity-text-align: middle-right; }
+.ft-caixa { padding-bottom: 24px; }
+.ft-rodape { flex-direction: column; justify-content: center; flex-shrink: 0; margin-top: 0; padding: 14px 40px; background-color: #0b0d10; border-top-width: 1px; border-top-color: #1a1e23; align-items: center; }
+.ft-rodape-in { flex-direction: row; justify-content: space-between; align-items: center; width: 100%; max-width: 1240px; padding: 0 40px; }
+.ft-jog-nome { min-width: 0; flex-shrink: 0; }
+.ft-camps { flex-direction: row; flex-wrap: wrap; }
+.ft-camps > .ft-linha { width: 48.5%; margin-right: 1.5%; }
+.ft-pos.ouro .ic { color: #0b0d10; }
+.ft-rot { overflow: visible; text-overflow: clip; }

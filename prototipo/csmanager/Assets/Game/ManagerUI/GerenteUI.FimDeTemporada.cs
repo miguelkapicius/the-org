@@ -30,7 +30,7 @@ namespace CSM.ManagerUI
 
             var cv = E("ft"); cv.pickingMode = PickingMode.Position; ftEl = cv;
             tela.Add(cv);   // preso na tela antes de agendar as animações: o agendamento de um elemento só corre com ele no painel
-            var rol = new ScrollView(ScrollViewMode.Vertical); rol.AddToClassList("grow"); cv.Add(rol);
+            var rol = new ScrollView(ScrollViewMode.Vertical); rol.AddToClassList("grow"); rol.mouseWheelScrollSize = 60; rol.horizontalScrollerVisibility = ScrollerVisibility.Hidden; cv.Add(rol);
             var caixa = E("ft-caixa"); rol.Add(caixa);
 
             // ---------- topo: o ano e a manchete
@@ -63,12 +63,13 @@ namespace CSM.ManagerUI
             // ---------- a campanha
             var camp = E("ft-bloco");
             camp.Add(L("A campanha", "ft-tit"));
-            var tiles = E("ft-tiles");
-            var vd = L("", "ft-num"); tiles.Add(Rotulado("Mapas", vd, t.vitorias + " vitórias · " + t.derrotas + " derrotas"));
-            var pct = L("", "ft-num"); tiles.Add(Rotulado("Vitórias", pct, "dos mapas"));
-            var ser = L("", "ft-num"); tiles.Add(Rotulado("Séries vencidas", ser, "de " + t.series));
-            var sq = L("", "ft-num"); tiles.Add(Rotulado("Melhor sequência", sq, "vitórias seguidas"));
-            camp.Add(tiles);
+            // duas fileiras de dois (quatro lado a lado não cabem na coluna e a fileira quebrada ficava cortada)
+            var tilesA = E("ft-tiles"); var tilesB = E("ft-tiles");
+            var vd = L("", "ft-num"); tilesA.Add(Rotulado("Mapas", vd, t.vitorias + " vitórias · " + t.derrotas + " derrotas"));
+            var pct = L("", "ft-num"); tilesA.Add(Rotulado("Vitórias", pct, "dos mapas"));
+            var ser = L("", "ft-num"); tilesB.Add(Rotulado("Séries vencidas", ser, "de " + t.series));
+            var sq = L("", "ft-num"); tilesB.Add(Rotulado("Melhor sequência", sq, "vitórias seguidas"));
+            camp.Add(tilesA); camp.Add(tilesB);
             colA.Add(camp);
             Aparecer(camp, FT_CAMPANHA);
             Contar(vd, 0, t.mapas, FT_CAMPANHA + 100, 0.9f, v => v.ToString());
@@ -98,6 +99,7 @@ namespace CSM.ManagerUI
             var cps = E("ft-bloco");
             cps.Add(L("Campeonatos", "ft-tit"));
             if (t.campeonatos.Count == 0) cps.Add(L("O clube não terminou nenhum campeonato nesta temporada.", "f15", "suave"));
+            var grCamp = E("ft-camps"); cps.Add(grCamp);   // faixa de largura inteira, em duas colunas: a lista de 13 campeonatos não estica só a coluna da esquerda
             for (int i = 0; i < t.campeonatos.Count; i++)
             {
                 var k = t.campeonatos[i];
@@ -107,10 +109,10 @@ namespace CSM.ManagerUI
                 l.Add(pos);
                 var nm = L(k.nome, "f16", "grow"); nm.style.marginLeft = 12; l.Add(nm);
                 l.Add(L(k.premio > 0 ? Fmt.Dinheiro(k.premio) : "sem prêmio", "f15", k.premio > 0 ? "verde" : "suave"));
-                cps.Add(l);
-                Aparecer(l, FT_CAMPEONATOS + 200 + i * 160, k.posicao == 1 ? () => SomManager.Tocar(Som.Sucesso) : (Action)null);
+                grCamp.Add(l);
+                Aparecer(l, FT_CAMPEONATOS + 200 + i * 110, k.posicao == 1 ? () => SomManager.Tocar(Som.Sucesso) : (Action)null);
             }
-            colA.Add(cps);
+            caixa.Add(cps);
             Aparecer(cps, FT_CAMPEONATOS);
 
             // ---------- o elenco, um ano mais velho
@@ -124,7 +126,7 @@ namespace CSM.ManagerUI
                 nome.Add(L(e.nome, "f16", "negrito"));
                 var idade = L((e.idade - 1) + " anos", "f14", "suave"); idade.style.marginLeft = 10; nome.Add(idade);
                 if (e.aposentou) { var ap = Selo("APOSENTA", "laranja"); ap.style.marginLeft = 10; nome.Add(ap); }
-                else if (e.titular) { var tt = Selo("TITULAR"); tt.style.marginLeft = 10; nome.Add(tt); }
+                else if (!e.titular) { var tt = Selo("RESERVA"); tt.style.marginLeft = 10; nome.Add(tt); }   // titular é o normal: só o reserva ganha selo
                 l.Add(nome);
                 var barra = E("ft-barra"); var fill = E("ft-fill"); fill.style.width = Length.Percent(Mathf.Clamp(e.overallAntes, 0, 100)); barra.Add(fill); l.Add(barra);
                 int dif = e.overallDepois - e.overallAntes;
@@ -159,11 +161,13 @@ namespace CSM.ManagerUI
             Aparecer(rs, FT_RESET, () => SomManager.Tocar(Som.Semana));
 
             // ---------- começar
+            // barra fixa embaixo (fora da rolagem): a ação principal fica sempre à vista e dá para começar a qualquer momento
             var rod = E("ft-rodape");
-            var comecar = Botao("Começar a temporada " + (t.temporada + 1), () => FecharFimDeTemporada(), true, true, "play");
-            rod.Add(comecar);
-            caixa.Add(rod);
-            Aparecer(rod, FT_RESET + 400 + t.mudancas.Count * FT_PASSO_RESET);
+            var rodIn = E("ft-rodape-in"); rod.Add(rodIn);
+            rodIn.Add(L("Espaço pula a animação  ·  Enter começa a temporada " + (t.temporada + 1), "f13", "apagado"));
+            var comecar = Botao("Começar a temporada " + (t.temporada + 1), () => FecharFimDeTemporada(), true, true, "play", "cheio");
+            rodIn.Add(comecar);
+            cv.Add(rod);
 
             cv.schedule.Execute(() => cv.AddToClassList("visivel")).StartingIn(1);
         }

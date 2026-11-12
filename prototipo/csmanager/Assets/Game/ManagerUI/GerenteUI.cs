@@ -157,7 +157,7 @@ namespace CSM.ManagerUI
             if (ftEl != null)   // fim de temporada aberto: Esc ou espaço pula a animação; com tudo à vista, Enter começa a temporada
             {
                 if (e.keyCode == KeyCode.Escape || e.keyCode == KeyCode.Space) { if (!ftPulou) Pular(); else FecharFimDeTemporada(); }
-                else if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter) && ftPulou) FecharFimDeTemporada();
+                else if ((e.keyCode == KeyCode.Return || e.keyCode == KeyCode.KeypadEnter)) FecharFimDeTemporada();
                 return;
             }
             switch (e.keyCode)
@@ -272,6 +272,7 @@ namespace CSM.ManagerUI
 
             rolagem = new ScrollView(ScrollViewMode.Vertical); rolagem.AddToClassList("grow");
             rolagem.horizontalScrollerVisibility = ScrollerVisibility.Hidden;
+            rolagem.mouseWheelScrollSize = 60;   // o padrão da Unity é lento demais para telas longas
             principal.Add(rolagem);
             conteudo = E("corpo"); rolagem.Add(conteudo);
             switch (aba)
