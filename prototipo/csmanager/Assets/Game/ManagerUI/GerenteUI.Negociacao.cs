@@ -147,6 +147,14 @@ namespace CSM.ManagerUI
             {
                 var ac = Botao("Aceitar o pedido", () => Enviar(j, n, n.luvasPedida, n.salarioPedido, n.promessa), c.dinheiro >= n.luvasPedida); ac.style.marginRight = 8; bots.Add(ac);
             }
+            var ver = Botao("Ver contrato", () =>
+            {
+                int sem = anosAtual * Contratos.SEMANAS_ANO, ofSal = n.ofertaSalario, ofLuvas = n.ofertaLuvas;
+                var minuta = new DadosFolha { j = j, estado = EstadoFolha.Minuta, semanas = sem, salario = ofSal, luvas = ofLuvas, clausula = Contratos.Clausula(j, anosAtual), multa = (int)(Contratos.PARTE_MULTA * ofSal * sem), vaga = n.promessa };
+                AbrirContrato(minuta, Botao("Enviar proposta", () => { FecharContrato(); Enviar(j, n, n.ofertaLuvas, n.ofertaSalario, n.promessa); }, c.dinheiro >= n.ofertaLuvas, true, "play"));
+            }, true, false, "eye");
+            ComDica(ver, "Veja a minuta: o contrato com prazo, salário, vaga, cláusula de rescisão e multa, do jeito que será assinado.");
+            ver.style.marginRight = 8; bots.Add(ver);
             var env = Botao("Enviar proposta", () => Enviar(j, n, n.ofertaLuvas, n.ofertaSalario, n.promessa), pode, true, "play");
             if (!pode) ComDica(env, "Dinheiro insuficiente para essas luvas.");
             bots.Add(env);
@@ -177,11 +185,14 @@ namespace CSM.ManagerUI
             if (r.tipo == RespostaTipo.Aceita)
             {
                 proximoSomToast = Som.Dinheiro;
-                Resposta(null, j.nome + " assinou por " + Contratos.Prazo(j.contratoSemanas) + ": " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + "/sem.", sai != null ? "Escalar agora" : null, () =>
+                Resposta(null, j.nome + " assinou por " + Contratos.Prazo(j.contratoSemanas) + ": " + Fmt.Dinheiro(luvas) + " de luvas e " + Fmt.Dinheiro(salario) + "/sem.");
+                var assinado = new DadosFolha { j = j, estado = EstadoFolha.Assinado, semanas = j.contratoSemanas, salario = salario, luvas = luvas, clausula = j.clausula, multa = Contratos.Multa(j), vaga = promessa };
+                var escalar = sai != null ? Botao("Escalar agora", () =>
                 {
-                    c.TornarTitular(j); Salvar(); Mostrar();
+                    FecharContrato(); c.TornarTitular(j); Salvar(); Mostrar();
                     Toast(j.nome + " agora é titular. Força " + c.Forca + ", chance de vitória " + Pct(c.ChanceVitoria()) + ".");
-                });
+                }, true, true, "up") : null;
+                AbrirContrato(assinado, escalar);
                 return;
             }
             tela.schedule.Execute(() => SomManager.Tocar(r.tipo == RespostaTipo.Recusa || r.tipo == RespostaTipo.Cansado ? Som.Erro : Som.Receber, 0.8f)).StartingIn(260);   // a resposta dele chega um instante depois

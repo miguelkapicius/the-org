@@ -21,6 +21,11 @@ namespace CSM.Manager
         public const float MORAL_MIN_RENOVAR = 30f;
         public const int OVERALL_COBICADO = 68;           // abaixo disso nenhum rival paga a cláusula
         public const double CHANCE_RIVAL_NORMAL = 0.006, CHANCE_RIVAL_INFELIZ = 0.04;   // por semana, por jogador cobiçado
+        // jogador que pede para sair (decisão 0038)
+        public const float MORAL_PEDE_SAIR = 25f;                     // abaixo disso ele pode pedir para sair
+        public const double CHANCE_SAIR_INFELIZ = 0.06, CHANCE_SAIR_BANCO = 0.04;   // por semana (banco: reserva bom, parado e com moral < 45)
+        public const int PRAZO_SAIDA = 4, SEMANAS_PERMANENCIA = 4;     // semanas até ele ir embora sozinho; bônus de permanência = 4 salários
+        public const float MORAL_PERMANENCIA = 15f;
 
         /// <summary>Quantos anos o jogador prefere assinar: jovem quer segurança (3), veterano quer liberdade (1).</summary>
         public static int AnosDesejados(Jogador j) => j.idade <= 22 ? 3 : j.idade >= 29 ? 1 : 2;
@@ -100,15 +105,64 @@ namespace CSM.Manager
             int multa = Contratos.Multa(j);
             if (dinheiro < multa) return "Dinheiro insuficiente para pagar a multa de " + Fmt.Dinheiro(multa) + ".";
             ultimaVenda = null;
-            if (multa > 0) Lanca("Rescisão de " + j.nome + " (multa)", -multa);
+            ultimaRescisaoIndice = elenco.IndexOf(j); ultimaRescisaoMulta = multa; ultimaRescisao = j; ultimaRescisaoLancamento = null;
+            ultimaRescisaoMoral = elenco.Where(o => o != j).ToDictionary(o => o, o => o.moral);
+            if (multa > 0) { Lanca("Rescisão de " + j.nome + " (multa)", -multa); ultimaRescisaoLancamento = extrato[0]; }
             elenco.Remove(j);
             foreach (var o in elenco) o.moral = Math.Max(0f, o.moral - Provisorio.MORAL_RESCISAO);   // dispensar mexe com o grupo
+            return null;
+        }
+
+        /// <summary>Paga um bônus (4 salários) para um jogador que pediu para sair ficar: a moral sobe e o pedido cai.</summary>
+        public string Segurar(Jogador j)
+        {
+            if (!elenco.Contains(j)) return "Esse jogador não está no elenco.";
+            if (j.querSair <= 0) return j.nome + " não pediu para sair.";
+            int custo = j.Salario * Contratos.SEMANAS_PERMANENCIA;
+            if (dinheiro < custo) return "Dinheiro insuficiente para o bônus de " + Fmt.Dinheiro(custo) + ".";
+            ultimaVenda = null;
+            Lanca("Bônus de permanência de " + j.nome, -custo);
+            j.moral = Math.Min(100f, j.moral + Contratos.MORAL_PERMANENCIA); j.querSair = 0; j.motivoSaida = null;
+            Anotar(j.nome + " aceitou ficar com o bônus de permanência.");
+            return null;
+        }
+
+        // desfazer a última rescisão (o botão Dispensar mostra um aviso com Desfazer, como na venda)
+        Jogador ultimaRescisao; int ultimaRescisaoIndice, ultimaRescisaoMulta; Lancamento ultimaRescisaoLancamento; Dictionary<Jogador, float> ultimaRescisaoMoral;
+
+        public string DesfazerRescisao()
+        {
+            if (ultimaRescisao == null) return "Não há rescisão para desfazer.";
+            if (elenco.Count >= ElencoMax) return "Elenco cheio: não há vaga para o jogador voltar.";
+            dinheiro += ultimaRescisaoMulta;
+            if (ultimaRescisaoLancamento != null) extrato.Remove(ultimaRescisaoLancamento);
+            elenco.Insert(Math.Min(ultimaRescisaoIndice, elenco.Count), ultimaRescisao);
+            foreach (var kv in ultimaRescisaoMoral) kv.Key.moral = kv.Value;
+            ultimaRescisao = null;
             return null;
         }
 
         /// <summary>Passa uma semana nos contratos: os que vencem saem (ou ficam a contragosto), e um rival pode pagar a cláusula.</summary>
         void ProcessarContratos(ResumoSemana res)
         {
+            // quem pediu para sair e foi ignorado vai embora de graça quando o prazo acaba (decisão 0038)
+            foreach (var j in elenco.ToList())
+            {
+                if (j.querSair <= 0) continue;
+                if (--j.querSair > 0) continue;
+                j.motivoSaida = null;
+                if (elenco.Count <= Provisorio.TITULARES)
+                {
+                    j.moral = Math.Max(0f, j.moral - 5f);
+                    res.linhas.Add(j.nome + " queria sair, mas ficou porque você não tem quem pôr no lugar. A moral dele caiu.");
+                }
+                else
+                {
+                    elenco.Remove(j);
+                    foreach (var o in elenco) o.moral = Math.Max(0f, o.moral - Provisorio.MORAL_RESCISAO);
+                    res.linhas.Add(j.nome + " saiu do clube de graça porque o pedido dele foi ignorado. Você poderia ter vendido ou pago o bônus.");
+                }
+            }
             foreach (var j in elenco.ToList())
             {
                 if (j.contratoSemanas <= 0) continue;
@@ -137,6 +191,18 @@ namespace CSM.Manager
                 Lanca("Cláusula de rescisão de " + j.nome + " (paga por outro clube)", j.clausula);
                 res.linhas.Add("Outro clube pagou a cláusula de " + j.nome + " (" + Fmt.Dinheiro(j.clausula) + ") e o levou.");
                 elenco.Remove(j);
+            }
+            // jogador infeliz (ou bom parado no banco) pede para sair; o manager tem PRAZO_SAIDA semanas para vender ou pagar o bônus
+            foreach (var j in elenco.ToList())
+            {
+                if (elenco.Count <= Provisorio.TITULARES) break;
+                if (j.querSair > 0) continue;
+                bool banco = !Titular(j) && j.Overall >= Contratos.OVERALL_COBICADO && j.moral < 45f;
+                double p = j.moral < Contratos.MORAL_PEDE_SAIR ? Contratos.CHANCE_SAIR_INFELIZ : banco ? Contratos.CHANCE_SAIR_BANCO : 0;
+                if (p <= 0 || sorteio.NextDouble() >= p) continue;
+                j.querSair = Contratos.PRAZO_SAIDA;
+                j.motivoSaida = j.moral < Contratos.MORAL_PEDE_SAIR ? "está desmotivado" : "quer jogar e está no banco";
+                res.linhas.Add(j.nome + " pediu para sair (" + j.motivoSaida + "). Venda, pague o bônus de " + Fmt.Dinheiro(j.Salario * Contratos.SEMANAS_PERMANENCIA) + " ou ele vai embora de graça em " + Contratos.PRAZO_SAIDA + " semanas.");
             }
         }
     }

@@ -52,6 +52,11 @@ namespace CSM.Manager
             l.Add(new Fator { nome = "Prestígio", peso = 1.2f, valor = Math.Clamp(0.5f * circ + 0.5f * rank - 0.7f * (exigencia - 0.4f), -1f, 1f),
                 texto = "Circuito " + Mundo.NomeCircuito(c.CircuitoClube) + ", ranking #" + c.PosicaoRanking + ". Jogador bom quer clube forte." });
 
+            // torcida (decisão 0038): jogador quer jogar onde tem público; estrela e jovem ligam mais para isso
+            float tv = Fas.ValorAtracao(c.fas);
+            l.Add(new Fator { nome = "Torcida", peso = estrela ? 1.4f : jovem ? 1.0f : 0.7f, valor = tv,
+                texto = "O clube tem " + Fmt.Fas(c.fas) + " fãs." + (estrela ? " Estrela quer palco." : "") });
+
             // vaga: ele jogaria? (promessa de titular resolve, mas é uma obrigação)
             bool entraria = c.QuemSaiPara(j) != null;
             float vaga = entraria ? 0.7f : -0.7f; if (prometeVaga) vaga = Math.Max(vaga, 0.55f);

@@ -343,7 +343,7 @@ namespace CSM.Manager
         public int SalariosPorSemana => elenco.Sum(j => j.Salario);
         public int Forca => elenco.Count == 0 ? 0 : (int)Math.Round(Titulares.Average(j => j.Overall));
         public int CustoProximoNivelGH => GamingHouse.CustoProximo(nivelGH);
-        public int PatrocinioPorSemana => (int)(Provisorio.PATROCINIO_BASE[(int)CircuitoClube] * GH.patrocinio);
+        public int PatrocinioPorSemana => (int)(Provisorio.PATROCINIO_BASE[(int)CircuitoClube] * GH.patrocinio * Fas.FatorPatrocinio(fas));   // fãs mexem no patrocínio (decisão 0038)
         public int DespesaFixaPorSemana => SalariosPorSemana + GH.manutencao + emprestimos.Sum(e => e.parcela);
 
         /// <summary>Força (média do geral) de uma escalação hipotética: serve para mostrar o efeito de uma troca ANTES de fazê-la.</summary>
@@ -492,6 +492,8 @@ namespace CSM.Manager
             }
             foreach (var j in elenco.Where(j => j.contratoSemanas > 0 && j.contratoSemanas <= Contratos.SEMANAS_AVISO).OrderByDescending(j => Titular(j)).Take(2))
                 A(Aviso.Nivel.Atencao, j.nome + " termina o contrato em " + Contratos.Prazo(j.contratoSemanas) + ": renove, ou ele sai de graça.", "Ver elenco", "elenco");
+            foreach (var j in elenco.Where(j => j.querSair > 0).Take(2))
+                A(Aviso.Nivel.Critico, j.nome + " pediu para sair (" + j.motivoSaida + "): sai de graça em " + j.querSair + " semana(s). Venda ou pague o bônus de " + Fmt.Dinheiro(j.Salario * Contratos.SEMANAS_PERMANENCIA) + ".", "Ver elenco", "elenco");
             foreach (var j in elenco.Where(j => j.moral < Provisorio.MORAL_AVISO).Take(2))
                 A(Aviso.Nivel.Atencao, j.nome + " está desmotivado (moral " + (int)j.moral + "): rende menos na partida." + (Titular(j) ? "" : " Reserva há muito tempo perde ânimo."), "Ver elenco", "elenco");
             if (EntrosamentoTime < 40) A(Aviso.Nivel.Dica, "Time pouco entrosado (" + (int)EntrosamentoTime + "): os bots trocam menos os colegas. Mantenha os titulares e faça sessões coletivas.", "Ver treino", "treino");

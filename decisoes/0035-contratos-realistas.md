@@ -37,5 +37,5 @@ Opção 2.
 ## Consequências
 - Novos campos no jogador (`contratoSemanas`, `clausula`) e no salvamento; salvamento antigo ganha 2 temporadas.
 - **Na interface:** o prazo aparece na negociação (botão que alterna 1, 2 e 3 temporadas); o selo **RENOVAR** surge no cartão do elenco quando faltam 26 semanas ou menos, e clicar nele renova; a dica do jogador mostra prazo, multa e cláusula. **Não há botão de rescisão**: vender já cobre o caso, com mais dinheiro; a rescisão existe nas regras para uma tela futura.
-- Ainda não existe: o jogador **pedir para sair** por conta própria, contrato de reserva diferente do de titular, e o adversário ter contratos.
+- Ainda não existe: contrato de reserva diferente do de titular, e o adversário ter contratos.
 - Conferido por testes das regras (sem a Unity); a interface não foi compilada nem vista na tela.

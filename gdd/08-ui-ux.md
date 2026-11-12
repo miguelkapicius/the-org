@@ -1,6 +1,6 @@
 # UI / UX
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031, 0035, 0037
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0002, 0011, 0012, 0013, 0014, 0015, 0016, 0018, 0019, 0020, 0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030, 0031, 0035, 0037, 0038, 0039
 
 _Telas, HUD e fluxo de navegação._
 
@@ -38,9 +38,11 @@ _Telas, HUD e fluxo de navegação._
 
 **Regras de nitidez** (a interface é feature principal do jogo; **[Sugestão]**): texto nunca abaixo de 12 px na resolução de referência (1600×900) e o corrente em 14 a 16 px; texto secundário com contraste mínimo de ~4,5:1 sobre o fundo; camadas separadas pelo preenchimento (fundo < menu < cartão < item escolhido), com borda só no que está escolhido; a ação principal é sempre o botão sólido claro e as secundárias têm contorno; números de tabela em fonte monoespaçada para alinhar; conteúdo rola em vez de ser cortado.
 
-**Contratos na interface** (decisão 0035, **[Sugestão]**): na negociação do Mercado, um botão **Prazo** alterna 1, 2 e 3 temporadas (a dica diz o que ele prefere, a cláusula de rescisão e a multa). No cartão do Elenco, a dica do nome mostra o prazo, a multa e a cláusula; quando faltam 26 semanas ou menos aparece o selo **RENOVAR** (laranja nas últimas 13), que renova ao clicar, e a dica diz o preço ou por que ele recusa. O painel avisa contratos para acabar, rivais que pagaram a cláusula e jogadores bons que saíram do mercado. Não há botão de rescisão: vender cobre o caso. Ainda não conferido na tela.
+**Contratos na interface** (decisão 0035, **[Sugestão]**): na negociação do Mercado, um botão **Prazo** alterna 1, 2 e 3 temporadas (a dica diz o que ele prefere, a cláusula de rescisão e a multa). No cartão do Elenco, a dica do nome mostra o prazo, a multa e a cláusula; quando faltam 26 semanas ou menos aparece o selo **RENOVAR** (laranja nas últimas 13), que renova ao clicar, e a dica diz o preço ou por que ele recusa. O painel avisa contratos para acabar, rivais que pagaram a cláusula e jogadores bons que saíram do mercado. Rescindir tem botão no cartão do elenco (decisão 0038); jogador que pede para sair ganha o selo QUER SAIR, que paga o bônus de permanência ao clicar. Ainda não conferido na tela.
 
 **Fãs na interface** (decisão 0037, **[Sugestão]**): um chip **FÃS** na barra do topo, ao lado do saldo, com o mesmo formato (número curto: 12,4 mil). A dica explica como ganhar fãs e quanto falta para o próximo nível da Gaming House; a tela da Gaming House mostra o requisito de fãs junto do custo e, quando faltam fãs, o botão de subir fica desligado; o pós-partida mostra "+N fãs" (ou "−N"). Ainda não conferido na tela.
+
+**Folha de contrato** (decisão 0039, **[Sugestão]**): o contrato aparece como um **papel** por cima da tela escurecida, com título, número, as partes (clube e jogador), cláusulas numeradas em linguagem simples (objeto, vigência, remuneração, cláusula de rescisão, multa, fim do contrato e, se houver, pedido de saída), um carimbo (**MINUTA**, **ASSINADO** ou **EM VIGOR**) e as assinaturas. Três portas: clicar no nome/salário do jogador no Elenco abre o contrato em vigor (com Renovar, Rescindir e, se for o caso, Pagar bônus); na negociação, **Ver contrato** abre a minuta da proposta e dá para enviar dali; ao fechar a contratação, a folha assinada surge com **Escalar agora**. Esc fecha. Visto só em compilação, não na tela.
 
 **Primeiros passos** (decisão 0028): um tour guiado de 6 passos (Painel, Elenco, Treino, Mercado, Finanças e Série), sem bloqueio. Um cartão no canto mostra o passo e os botões Próximo (leva à tela do passo seguinte), Ir para a tela e Pular tutorial; o ícone da tela do passo **pulsa** no menu; os avisos temporários sobem para não cobrir o cartão. O botão de **ajuda** no fim do menu recomeça o tour. O passo fica salvo na carreira.
 

@@ -156,6 +156,7 @@ namespace CSM.ManagerUI
                 case KeyCode.Alpha8: Ir(Aba.Scouts); break;
                 case KeyCode.Alpha9: Ir(Aba.Playbook); break;
                 case KeyCode.Escape:
+                    if (contratoEl != null) { FecharContrato(); break; }
                     if (aba == Aba.PreMatch) Ir(Aba.Serie);
                     else if (aba == Aba.Serie || aba == Aba.PosPartida) Ir(Aba.Painel);
                     else if (aba == Aba.Calendario && campAberto != null) { campAberto = null; Mostrar(); }
@@ -377,7 +378,7 @@ namespace CSM.ManagerUI
             ftx.Add(L(Fmt.Fas(c.fas), "dado-val", "t"));
             fa.Add(ftx);
             string proxFas = c.nivelGH >= GamingHouse.MAX ? "A Gaming House já está no nível máximo." : "Próximo nível da Gaming House: " + Fmt.Fas(c.FasProximoNivelGH) + " fãs" + (c.FasBastam ? " (você já tem o bastante)." : " (faltam " + Fmt.Fas(c.FasProximoNivelGH - c.fas) + ").");
-            ComDica(fa, "Fãs do clube. Vitórias, séries e campeonatos trazem fãs (mais contra um favorito, num circuito maior e em sequência); derrotas, principalmente para times mais fracos, tiram. Os fãs não se gastam: liberam os níveis da Gaming House junto com o dinheiro.\n" + proxFas);
+            ComDica(fa, "Fãs do clube. Vitórias, séries e campeonatos trazem fãs (mais contra um favorito, num circuito maior e em sequência); derrotas, principalmente para times mais fracos, tiram. Os fãs não se gastam: liberam os níveis da Gaming House junto com o dinheiro, aumentam o patrocínio (hoje x" + Fas.FatorPatrocinio(c.fas).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + ") e atraem contratados.\n" + proxFas);
             h.Add(fa);
             return h;
         }
@@ -748,7 +749,8 @@ namespace CSM.ManagerUI
             var meta = L(j.idade + " anos · " + Fmt.Dinheiro(j.Salario) + "/sem", "f13", "suave", "info-meta");
             meta.pickingMode = PickingMode.Position;
             ComDica(meta, "Potencial " + j.potencial + " (o teto de evolução). Salário pago toda semana. Vende por " + Fmt.Dinheiro(j.Venda) + ".\nContrato: " + Contratos.Prazo(j.contratoSemanas)
-                + ". Rescindir antes do fim custa " + Fmt.Dinheiro(Contratos.Multa(j)) + " de multa; outro clube pode pagar a cláusula de " + Fmt.Dinheiro(j.clausula) + " para levá-lo.");
+                + ". Rescindir antes do fim custa " + Fmt.Dinheiro(Contratos.Multa(j)) + " de multa; outro clube pode pagar a cláusula de " + Fmt.Dinheiro(j.clausula) + " para levá-lo.\nClique para abrir o contrato.");
+            Clicavel(meta, () => AbrirContratoDoElenco(j));
             info.Add(meta);
 
             // estado: a conclusão primeiro; o número na dica
@@ -764,6 +766,15 @@ namespace CSM.ManagerUI
                 estado.Add(sm);
             }
             if (j.mvps > 0) { var sv = Selo("MVP " + j.mvps + "×", null); ComDica(sv, "Vezes que foi MVP de mapa pelo clube" + (j.jogadas.Count > 0 ? ".\n\nJogadas da partida:\n• " + string.Join("\n• ", j.jogadas) : ".")); estado.Add(sv); }
+            if (j.querSair > 0)
+            {
+                // pediu para sair (decisão 0038): o selo é o botão do bônus de permanência; vender é a outra saída
+                var sj2 = j; int bonus = j.Salario * Contratos.SEMANAS_PERMANENCIA;
+                var sq = Selo("QUER SAIR", "vermelho"); sq.pickingMode = PickingMode.Position;
+                ComDica(sq, j.nome + " " + j.motivoSaida + " e vai embora de graça em " + j.querSair + " semana(s).\nClique para pagar " + Fmt.Dinheiro(bonus) + " de bônus e ele fica (a moral sobe). Ou venda por " + Fmt.Dinheiro(j.Venda) + ".");
+                sq.RegisterCallback<ClickEvent>(_ => SegurarJogador(sj2));
+                estado.Add(sq);
+            }
             if (j.contratoSemanas > 0 && j.contratoSemanas <= 2 * Contratos.SEMANAS_AVISO)
             {
                 // contrato perto do fim (decisão 0035): o selo é o botão de renovar; a conta e o motivo de uma recusa ficam na dica
@@ -804,6 +815,9 @@ namespace CSM.ManagerUI
             var vender = BotaoMini("", () => Vender(jj), false, c.elenco.Count > Provisorio.TITULARES, "tag"); vender.AddToClassList("perigo"); vender.AddToClassList("so-ic");
             ComDica(vender, c.elenco.Count > Provisorio.TITULARES ? "Vender por " + Fmt.Dinheiro(j.Venda) + " (dá para desfazer logo depois)." : "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.");
             ac.Add(vender);
+            var dispensar = BotaoMini("", () => Dispensar(jj), false, c.elenco.Count > Provisorio.TITULARES, "minus"); dispensar.AddToClassList("perigo"); dispensar.AddToClassList("so-ic");
+            ComDica(dispensar, c.elenco.Count > Provisorio.TITULARES ? "Rescindir o contrato: paga " + Fmt.Dinheiro(Contratos.Multa(j)) + " de multa (metade dos salários que faltam) e ninguém paga por ele. Os outros perdem 2 de moral. Dá para desfazer logo depois. Vender costuma ser melhor." : "É preciso manter pelo menos " + Provisorio.TITULARES + " jogadores.");
+            ac.Add(dispensar);
             cj.Add(ac);
             return cj;
         }
@@ -879,6 +893,27 @@ namespace CSM.ManagerUI
             var erro = c.Renovar(j);
             if (erro == null) { proximoSomToast = Som.Dinheiro; Salvar(); Mostrar(); }
             Toast(erro ?? j.nome + " renovou por " + Contratos.Prazo(j.contratoSemanas) + ": " + Fmt.Dinheiro(p.luvas) + " de luvas e " + Fmt.Dinheiro(p.salario) + " por semana.", erro != null);
+        }
+
+        void SegurarJogador(Jogador j)
+        {
+            int bonus = j.Salario * Contratos.SEMANAS_PERMANENCIA;
+            var erro = c.Segurar(j);
+            if (erro == null) { proximoSomToast = Som.Dinheiro; Salvar(); Mostrar(); }
+            Toast(erro ?? j.nome + " aceitou ficar por " + Fmt.Dinheiro(bonus) + " de bônus.", erro != null);
+        }
+
+        void Dispensar(Jogador j)
+        {
+            int multa = Contratos.Multa(j);
+            var erro = c.Rescindir(j);
+            comparar.Remove(j);
+            Resposta(erro, j.nome + " saiu do clube" + (multa > 0 ? " (multa de " + Fmt.Dinheiro(multa) + ")." : "."), "Desfazer", () =>
+            {
+                var e2 = c.DesfazerRescisao();
+                Salvar(); Mostrar();
+                Toast(e2 ?? j.nome + " voltou para o elenco.", e2 != null);
+            });
         }
 
         void Vender(Jogador j)

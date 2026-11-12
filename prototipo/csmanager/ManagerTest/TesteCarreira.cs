@@ -452,6 +452,54 @@ class TesteCarreira
             Ok(cr != null && cr.fas == cg.fas && cr.sequencia == cg.sequencia, "fãs e sequência vão para o salvamento");
         }
 
+        // fãs mexem no patrocínio e na atração; pedido de saída e rescisão (decisão 0038)
+        {
+            Ok(Math.Abs(Fas.FatorPatrocinio(Fas.INICIAIS) - 1f) < 0.001f, "com os fãs iniciais o patrocínio não muda");
+            Ok(Fas.FatorPatrocinio(8000) > Fas.FatorPatrocinio(2000) && Fas.FatorPatrocinio(100000000) <= 3.0f && Fas.FatorPatrocinio(0) >= 0.8f && Fas.FatorPatrocinio(2000000) > 2.2f, "mais fãs, mais patrocínio, entre 0,8 e 3,0 (milhões de fãs valem mais que o dobro)");
+            var cp = Carreira.Nova(14); int p0 = cp.PatrocinioPorSemana; cp.fas = 40000;
+            Ok(cp.PatrocinioPorSemana > p0, "40 mil fãs rendem mais patrocínio (" + p0 + " → " + cp.PatrocinioPorSemana + ")");
+            var alvoF = cp.mercado.OrderByDescending(m => m.Overall).First();
+            cp.fas = 300; float dPouco = Negociador.Desejo(Negociador.Fatores(cp, alvoF, false));
+            cp.fas = 600000; float dMuito = Negociador.Desejo(Negociador.Fatores(cp, alvoF, false));
+            Ok(dMuito > dPouco && Negociador.Fatores(cp, alvoF, false).Any(f => f.nome == "Torcida"), "mais fãs atraem o contratado (desejo " + dPouco.ToString("0.00") + " → " + dMuito.ToString("0.00") + ")");
+
+            var cs2 = Carreira.Nova(15); cs2.dinheiro = 5000000;
+            var rs0 = cs2.elenco.Last(); rs0.moral = 10; rs0.querSair = 2; rs0.motivoSaida = "está desmotivado";
+            int d0 = cs2.dinheiro; float m0 = rs0.moral; int sal = rs0.Salario;
+            Ok(cs2.Segurar(rs0) == null && cs2.dinheiro == d0 - sal * Contratos.SEMANAS_PERMANENCIA && rs0.moral > m0 && rs0.querSair == 0, "bônus de permanência: paga 4 salários, moral sobe, o pedido cai");
+            Ok(cs2.Segurar(rs0) != null, "sem pedido não há o que segurar");
+            var ig = cs2.elenco.Last(); ig.querSair = 1; int tam = cs2.elenco.Count;
+            cs2.AvancarSemana();
+            Ok(cs2.elenco.Count == tam - 1 && !cs2.elenco.Contains(ig), "pedido ignorado: ele sai de graça no fim do prazo");
+            var cm = Carreira.Nova(16); while (cm.elenco.Count > Provisorio.TITULARES) cm.elenco.RemoveAt(cm.elenco.Count - 1);
+            var tt = cm.elenco[0]; tt.querSair = 1; cm.AvancarSemana();
+            Ok(cm.elenco.Contains(tt) && tt.querSair == 0, "com só 5 jogadores ele não consegue sair");
+            var cv = Carreira.Nova(17); cv.dinheiro = 5000000; var vv = cv.elenco.Last(); int dv = cv.dinheiro; int ex = cv.extrato.Count; var moraisAntes = cv.elenco.Where(x => x != vv).Select(x => x.moral).ToList(); int tamv = cv.elenco.Count;
+            Ok(cv.Rescindir(vv) == null && cv.elenco.Count == tamv - 1, "rescisão tira o jogador do elenco");
+            Ok(cv.DesfazerRescisao() == null && cv.dinheiro == dv && cv.extrato.Count == ex && cv.elenco.Count == tamv && cv.elenco.Last() == vv, "desfazer a rescisão devolve jogador, dinheiro e extrato");
+            Ok(cv.elenco.Where(x => x != vv).Select(x => x.moral).SequenceEqual(moraisAntes), "desfazer a rescisão devolve a moral dos outros");
+            Ok(cv.DesfazerRescisao() != null, "só dá para desfazer uma vez");
+            var cq = Carreira.Nova(18); var qq = cq.elenco.Last(); qq.querSair = 3; qq.motivoSaida = "quer jogar e está no banco";
+            var optq = new System.Text.Json.JsonSerializerOptions { IncludeFields = true };
+            var cr2 = SalvamentoDados.De(System.Text.Json.JsonSerializer.Deserialize<CarreiraD>(System.Text.Json.JsonSerializer.Serialize(SalvamentoDados.Para(cq), optq), optq));
+            Ok(cr2 != null && cr2.elenco.Any(x => x.nome == qq.nome && x.querSair == 3 && x.motivoSaida == qq.motivoSaida), "pedido de saída vai para o salvamento");
+            var cn = Carreira.Nova(19); int pedidos = 0, gn = 0; foreach (var jn in cn.elenco) jn.moral = 5;
+            while (cn.Semana < 40 && gn++ < 80 && !cn.Falido) { cn.dinheiro = Math.Max(cn.dinheiro, 5000000); Avanca(cn); pedidos += cn.elenco.Count(x => x.querSair > 0); }
+            Ok(pedidos > 0, "jogadores muito infelizes acabam pedindo para sair (" + pedidos + " pedidos vistos)");
+        }
+
+        // trajetória dos fãs em várias temporadas jogando tudo pelo "pular" (só informação: serve para balancear a escala da decisão 0039)
+        {
+            var cTraj = Carreira.Nova(23); cTraj.dinheiro = 90000000; int gTraj = 0, tAnt = 0;
+            while (cTraj.Temporada <= 6 && gTraj++ < 400 && !cTraj.Falido)
+            {
+                if (cTraj.Temporada != tAnt && cTraj.Semana <= 1) { Console.WriteLine("  fãs no início da T" + cTraj.Temporada + ": " + Fmt.Fas(cTraj.fas) + " (" + Fas.Faixa(cTraj.fas) + "), circuito " + Mundo.NomeCircuito(cTraj.CircuitoClube) + ", patrocínio x" + Fas.FatorPatrocinio(cTraj.fas).ToString("0.00")); tAnt = cTraj.Temporada; }
+                Avanca(cTraj); cTraj.dinheiro = Math.Max(cTraj.dinheiro, 90000000);
+            }
+            Console.WriteLine("  fãs no fim: " + Fmt.Fas(cTraj.fas) + " (" + Fas.Faixa(cTraj.fas) + ")");
+            Ok(cTraj.fas > Fas.INICIAIS, "depois de seis temporadas a base de fãs cresceu");
+        }
+
         // partida pulada calibrada (decisão 0036)
         {
             var rp = new Random(5); int n = 4000, prorr = 0, largo = 0; double soma = 0;
