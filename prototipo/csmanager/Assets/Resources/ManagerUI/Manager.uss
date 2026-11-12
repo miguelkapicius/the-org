@@ -1300,3 +1300,45 @@
 .ft-rodape { flex-direction: row; justify-content: flex-end; margin-top: 28px; }
 .ft-entra { opacity: 0; translate: 0 18px; transition-property: opacity, translate; transition-duration: 0.45s; transition-timing-function: ease-out-cubic; }
 .ft-entra.visivel { opacity: 1; translate: 0 0; }
+
+/* ======================================================================================================
+   Terceira rodada (decisão 0023): nada estoura a caixa. Texto longo vira reticências, cartões e linhas cortam o que passa,
+   as grades de cartões quebram de fileira em vez de espremer, e os botões respondem ao clique. Esta camada vem por último.
+   ====================================================================================================== */
+
+/* texto de uma linha só nunca passa da caixa: encurta com "…" (a dica ou a tela própria traz o texto inteiro) */
+.t { overflow: hidden; text-overflow: ellipsis; }
+.quebra, .legenda, .banner > .t, .toast > .t, .dica > .t, .previa > .t, .efeito-time > .t, .estilo-desc, .nota-estimada, .fin-lin > .t,
+.hub-tit, .hub-sub, .gh-passo-nome, .car-tit, .folha Label { text-overflow: clip; }
+.ic, .selo, .brasao, .av, .quad, .tecla, .cont, .pip { flex-shrink: 0; }
+.selo { max-width: 100%; }
+
+/* cartões e linhas cortam o que passar (nunca vazam para o vizinho) */
+.card-j, .atalho, .resumo, .treino-card, .slot, .mapa-card, .scout-card, .intel-card, .fin-peca, .vit-card, .estilo-card,
+.neg-linha, .prox-item, .pb-linha, .camp-card, .ft-bloco, .compromisso, .hero, .previa, .efeito-time, .gh-nivel, .escala, .compara { min-width: 0; overflow: hidden; }
+.tr, .lista-l, .cal-linha, .cf-linha, .rk-linha, .camp-linha, .camp-jogo, .camp-mini, .diario-linha, .aviso, .fin-fluxo, .fin-lin, .fin-emp, .tj-linha-tab,
+.emp-linha, .linha-extrato, .mb-linha, .cmp-linha, .pm2-j, .ft-linha, .ft-jog { overflow: hidden; }
+.c { flex-shrink: 1; min-width: 0; overflow: hidden; }
+.c-k { flex-shrink: 0; overflow: visible; }
+.info, .vit-corpo, .neg-linha-meio, .pb-linha-esq, .hero-lado, .compromisso > .grow, .gh-topo > * { min-width: 0; }
+.info-nome, .slot-nome, .mapa-nome, .pb-linha-nome, .pm2-j-nome, .pm2-nome, .neg-nome { min-width: 0; flex-shrink: 1; }
+
+/* grade de cartões do elenco: quebra de fileira conforme a largura (de 5 colunas até 1) em vez de espremer o cartão */
+.grade-cards { flex-direction: row; flex-wrap: wrap; margin-bottom: 4px; }
+.grade-cards > .card-j { flex-grow: 0; flex-basis: auto; flex-shrink: 0; width: 19.1%; min-width: 236px; margin-right: 0.8%; margin-bottom: 14px; }
+.vit-card { min-width: 250px; }
+
+/* botões: área de clique confortável e resposta ao clique */
+.btn-mini { min-height: 30px; }
+.btn-mini.so-ic { min-width: 34px; }
+.aba { padding-top: 11px; padding-bottom: 11px; }
+.btn, .btn-mini, .item, .aba, .menu-acao, .seg-b, .comecar, .hub-btn, .toast-acao, .aviso-btn { transition-property: background-color, border-color, color, scale; transition-duration: 120ms; }
+.btn:active, .btn-mini:active, .menu-acao:active, .hub-btn:active, .aviso-btn:active, .toast-acao:active { scale: 0.97 0.97; }
+.item:active, .seg-b:active, .comecar:active { scale: 0.96 0.96; }
+.btn.desligado:active, .btn-mini.desligado:active { scale: 1 1; }
+.camp-pag:hover, .cal-linha:hover, .camp-linha:hover, .neg-linha:hover { transition-property: background-color; transition-duration: 120ms; }
+
+/* janelas flutuantes sempre cabem na tela */
+.toast { max-width: 80%; }
+.dica { max-width: 340px; }
+.tut { max-width: 92%; }
