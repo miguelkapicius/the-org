@@ -1,6 +1,6 @@
 # Mecânicas
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022, 0024, 0034
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0003, 0004, 0005, 0007, 0013, 0014, 0017, 0019, 0022, 0024, 0034, 0039
 
 _Regras e sistemas do jogo, com números quando possível._
 
@@ -100,6 +100,10 @@ Antes da mudança o plant médio ficava entre 56 s e 64 s para todos os estilos.
 - **Moral:** +3 por mapa vencido, -3 por mapa perdido (titulares); por semana +1 titular, -2 reserva. Vale de -4,5 % (0) a +3 % (100) na habilidade; neutra em 60.
 - **Entrosamento:** por semana +5 titular, +1 reserva, +3 por sessão coletiva (titulares); contratado chega com 20. A média dos titulares muda a chance de um bot **trocar** o colega que morreu (×0,6 a ×1,4, neutra em 50), a distância de onde ele vai trocar (340 a 500) e a força (±2 %). **Medido** (24 partidas por valor): mortes trocadas em até 5 s vão de 21,0 % (entrosamento 10) a 23,2 % (50) e 25,1 % (90); nas vitórias por round o efeito ainda não aparece além do ruído.
 - Os traços dos jogadores do mercado só aparecem com scout. O adversário ainda não tem traços (não tem jogadores de verdade).
+
+### Psicólogo (decisão 0039)
+
+**[Sugestão]** Com um psicólogo contratado, toda queda de moral fica 8 % menor por estrela, e quem está abaixo da moral neutra sobe 0,2 por estrela por semana, só até a neutra. Há também a conversa individual: 1 por semana, ou 2 com a sala do psicólogo (Gaming House nível 4), com 40 % + 10 % por estrela de chance de subir a moral em 4 + estrelas. Detalhes e números na decisão 0039.
 
 ## Perguntas em aberto
 

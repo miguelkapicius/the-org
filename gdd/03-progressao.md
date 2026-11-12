@@ -1,6 +1,6 @@
 # Progressão e economia
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024, 0026, 0035, 0037
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0007, 0010, 0012, 0013, 0015, 0016, 0024, 0026, 0035, 0037, 0039
 
 _Como o jogador evolui e quais recursos circulam._
 
@@ -63,7 +63,7 @@ O time tem **uma** instalação: a **Gaming House**. O manager investe para subi
 
 O nível da Gaming House **libera** outras coisas que o manager pode melhorar, como **treinos** e **scouts**. Sem subir a Gaming House, essas opções ficam bloqueadas.
 
-- **Níveis (decisão 0016, proposta do agente):** cinco, cada um com vantagens: 1 Alojamento, 2 Sala de treino (libera treinos), 3 Sala de análise (libera **scouts**), 4 Centro de performance (recuperação de cansaço e sessões coletivas), 5 Complexo de elite (analista de demos, bootcamp, mais patrocínio). A evolução é **gradativa**.
+- **Níveis (decisão 0016, proposta do agente):** cinco, cada um com vantagens: 1 Alojamento, 2 Sala de treino (libera treinos), 3 Sala de análise (libera **scouts**), 4 Centro de performance (recuperação de cansaço, sessões coletivas e a sala do psicólogo: +1 conversa individual por semana com o psicólogo contratado, decisão 0039), 5 Complexo de elite (analista de demos, bootcamp, mais patrocínio). A evolução é **gradativa**.
 - **Scouts:** o manager dá uma tarefa a cada scout por semana: **estudar um adversário** (revela como ele joga: estilo, mapas fortes e fracos, estratégia) ou **procurar no mercado** (revela o potencial dos jogadores).
 - **Efeito na partida:** o nível da Gaming House aumenta a chance de um timeout funcionar (ver `01-core-loop.md`).
 - **Custo:** precisa ser **balanceado**: nem tão fácil de subir, nem tão difícil.

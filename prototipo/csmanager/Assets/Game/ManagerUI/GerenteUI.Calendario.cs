@@ -43,6 +43,13 @@ namespace CSM.ManagerUI
         {
             if (campAberto != null) { DetalheCampeonato(campAberto); return; }
             conteudo.Add(Abas(new[] { "Calendário", "Campeonatos", "Ranking" }, calAba, i => { calAba = i; Mostrar(); }));
+            if (c.UltimaTemporada != null)   // rever o fim da temporada passada (decisão 0040)
+            {
+                var ult = c.UltimaTemporada;
+                var rev = BotaoMini("Rever a temporada " + ult.temporada + ": " + ult.Manchete, () => AbrirFimDeTemporada(ult), false, true, "trophy");
+                rev.style.alignSelf = Align.FlexStart; rev.style.marginBottom = 12;
+                conteudo.Add(rev);
+            }
             if (calAba == 1) ListaCampeonatos();
             else if (calAba == 2) Leaderboard();
             else CalendarioMensal();
