@@ -202,12 +202,21 @@ namespace CSM.ManagerUI
             dicaEl = E("dica"); dicaEl.pickingMode = PickingMode.Ignore; dicaEl.style.display = DisplayStyle.None;
             dicaTxt = L("", "quebra"); dicaEl.Add(dicaTxt);
             tela.Add(dicaEl);
+            Vector2 ultimo = Vector2.zero;
             void Posicionar(Vector2 p)
             {
-                float larg = tela.resolvedStyle.width, x = p.x + 16;
-                if (x + 340 > larg) x = p.x - 340 - 8;
-                dicaEl.style.left = Mathf.Max(8, x); dicaEl.style.top = p.y + 22;
+                // a dica nunca sai da tela: usa o tamanho real dela (ou o máximo, antes da primeira medição) e vira para o outro lado do mouse
+                ultimo = p;
+                float larg = tela.resolvedStyle.width, alt = tela.resolvedStyle.height;
+                float dl = dicaEl.resolvedStyle.width, da = dicaEl.resolvedStyle.height;
+                if (float.IsNaN(dl) || dl < 20f) dl = 340f;
+                if (float.IsNaN(da) || da < 20f) da = 90f;
+                float x = p.x + 16, y = p.y + 22;
+                if (x + dl > larg - 8) x = p.x - dl - 8;
+                if (y + da > alt - 8) y = p.y - da - 12;
+                dicaEl.style.left = Mathf.Clamp(x, 8f, Mathf.Max(8f, larg - dl - 8f)); dicaEl.style.top = Mathf.Max(8f, y);
             }
+            dicaEl.RegisterCallback<GeometryChangedEvent>(_ => { if (dicaEl.resolvedStyle.display != DisplayStyle.None) Posicionar(ultimo); });   // o texto novo muda o tamanho: reposiciona
             Ui.Dica = (el, txt) =>
             {
                 el.RegisterCallback<PointerEnterEvent>(ev => { dicaTxt.text = txt; dicaEl.style.display = DisplayStyle.Flex; Posicionar(ev.position); dicaEl.BringToFront(); });
@@ -602,17 +611,14 @@ namespace CSM.ManagerUI
             return Clicavel(a, acao);
         }
 
-        /// <summary>Cartões de jogador em fileiras de 5 (a última fileira é completada com vazios para manter a largura).</summary>
+        /// <summary>Cartões de jogador em grade que quebra de fileira conforme a largura (5 colunas até 1).</summary>
         void Grade(IEnumerable<Jogador> jogadores)
         {
             var lista = jogadores.ToList();
             if (lista.Count == 0) { conteudo.Add(L("Nenhum jogador nesse filtro.", "f15", "suave")); return; }
-            for (int i = 0; i < lista.Count; i += 5)
-            {
-                var fila = E("fila-cards");
-                for (int k = 0; k < 5; k++) fila.Add(i + k < lista.Count ? CartaoJogador(lista[i + k]) : E("card-j", "vazio"));
-                conteudo.Add(fila);
-            }
+            var grade = E("grade-cards");   // quebra de fileira conforme a largura (5 colunas até 1), sem espremer o cartão
+            foreach (var j in lista) grade.Add(CartaoJogador(j));
+            conteudo.Add(grade);
         }
 
         /// <summary>Selo do traço de personalidade (decisão 0019), com a explicação ao passar o mouse. null = sem traço ou não visível.</summary>
@@ -733,15 +739,12 @@ namespace CSM.ManagerUI
             return card;
         }
 
-        /// <summary>Cartões do elenco em fileiras de 5 (a última fileira é completada com vazios para manter a largura).</summary>
+        /// <summary>Cartões do elenco em grade que quebra de fileira conforme a largura (5 colunas até 1).</summary>
         void CartoesElenco(List<Jogador> lista)
         {
-            for (int i = 0; i < lista.Count; i += 5)
-            {
-                var fila = E("fila-cards");
-                for (int k = 0; k < 5; k++) fila.Add(i + k < lista.Count ? CartaoElenco(lista[i + k]) : E("card-j", "vazio"));
-                conteudo.Add(fila);
-            }
+            var grade = E("grade-cards");   // quebra de fileira conforme a largura (5 colunas até 1), sem espremer o cartão
+            foreach (var j in lista) grade.Add(CartaoElenco(j));
+            conteudo.Add(grade);
         }
 
         /// <summary>
