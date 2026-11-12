@@ -24,3 +24,4 @@ _A definir._
 
 - Quantos mapas no MVP?
 - Lista de armas e utilitárias do MVP.
+- O mapa do deserto (usado nas capturas de divulgação) é nosso o bastante? Visto de cima, o bombsite A com caixotes e muros lembra um mapa de deserto conhecido do gênero; conferir contra a decisão 0004 antes de ir a material público.

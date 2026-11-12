@@ -26,7 +26,18 @@ class TesteCarreira
 
     public static void Main()
     {
+        // CSM_TESTE=psicologo ou CSM_TESTE=temporada roda só essa parte (a suíte inteira leva vários minutos)
+        string so = Environment.GetEnvironmentVariable("CSM_TESTE");
+        if (so == "psicologo" || so == "temporada")
+        {
+            if (so == "psicologo") TestePsicologo.Rodar(); else TesteTemporada.Rodar();
+            int f = so == "psicologo" ? TestePsicologo.falhas : TesteTemporada.falhas;
+            Console.WriteLine(f == 0 ? "TODOS OS TESTES PASSARAM" : f + " FALHA(S)");
+            Environment.Exit(f == 0 ? 0 : 1);
+        }
         TesteCampeonatos.Rodar(); falhas += TesteCampeonatos.falhas;
+        TestePsicologo.Rodar(); falhas += TestePsicologo.falhas;
+        TesteTemporada.Rodar(); falhas += TesteTemporada.falhas;
         Console.WriteLine("------ carreira ------");
         var c = Carreira.Nova(3);
         Ok(c.elenco.Count == 7 && c.mundo.equipes.Count == 48, "carreira nova: 7 jogadores e 48 times");

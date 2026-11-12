@@ -1265,3 +1265,38 @@
 .folha-ass-linha { height: 34px; border-bottom-width: 1px; border-color: #23201a; justify-content: flex-end; margin-bottom: 5px; }
 .folha .folha-ass-nome { font-size: 19px; -unity-font-style: italic; color: #1b2f5e; }
 .folha .folha-rodape { font-size: 12px; color: #6d6757; margin-top: 20px; }
+
+/* ---- fim de temporada (decisão 0040) ---- */
+.ft { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: #0b0d10; opacity: 0; transition-property: opacity; transition-duration: 0.3s; }
+.ft.visivel { opacity: 1; }
+.ft-caixa { width: 100%; max-width: 1240px; align-self: center; padding: 48px 40px 56px 40px; }
+.ft-topo { flex-direction: row; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.ft-topo-esq { flex-shrink: 1; }
+.ft-manchete { font-size: 64px; color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); white-space: normal; }
+.ft-cols { flex-direction: row; align-items: flex-start; }
+.ft-col { flex-grow: 1; flex-basis: 0; min-width: 0; margin-right: 24px; }
+.ft-bloco { padding: 20px 24px; margin-top: 20px; background-color: #111418; border-radius: 6px; }
+.ft-circuito { flex-direction: row; justify-content: space-between; align-items: center; }
+.ft-circ { font-size: 40px; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.ft-seta { font-size: 34px; color: #f5a524; margin: 0 16px; }
+.ft-tit { font-size: 22px; color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); margin-bottom: 12px; }
+.ft-tiles { flex-direction: row; flex-wrap: wrap; }
+.ft-tile { flex-grow: 1; flex-basis: 0; min-width: 140px; margin-right: 14px; margin-bottom: 8px; }
+.ft-rot { font-size: 12px; color: var(--suave); letter-spacing: 2px; }
+.ft-num { font-size: 38px; color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.ft-nome { font-size: 26px; color: #ffffff; -unity-font-definition: url("/Assets/Resources/ManagerUI/Fontes/BarlowCondensed-SemiBold.ttf"); }
+.ft-linha { flex-direction: row; align-items: center; padding: 8px 0; border-bottom-width: 1px; border-color: #1a1e23; }
+.ft-pos { width: 40px; height: 30px; align-items: center; justify-content: center; border-radius: 3px; background-color: #181c21; }
+.ft-pos.ouro { background-color: #f5a524; }
+.ft-pos.ouro > .t { color: #0b0d10; }
+.ft-pos.podio > .t { color: #f5a524; }
+.ft-jog { flex-direction: row; align-items: center; padding: 7px 0; }
+.ft-jog-nome { flex-direction: row; align-items: center; width: 46%; }
+.ft-barra { flex-grow: 1; height: 6px; background-color: #1a1e23; border-radius: 3px; overflow: hidden; margin-left: 12px; }
+.ft-fill { height: 6px; background-color: #eceef1; border-radius: 3px; transition-property: width; transition-duration: 0.9s; transition-timing-function: ease-out-cubic; }
+.ft-mud { flex-direction: row; align-items: flex-start; padding: 6px 0; }
+.ft-check { width: 22px; height: 22px; border-radius: 11px; align-items: center; justify-content: center; background-color: #181c21; opacity: 0.35; scale: 0.7 0.7; transition-property: opacity, scale, background-color; transition-duration: 0.3s; }
+.ft-check.feito { opacity: 1; scale: 1 1; background-color: #2f8a5b; }
+.ft-rodape { flex-direction: row; justify-content: flex-end; margin-top: 28px; }
+.ft-entra { opacity: 0; translate: 0 18px; transition-property: opacity, translate; transition-duration: 0.45s; transition-timing-function: ease-out-cubic; }
+.ft-entra.visivel { opacity: 1; translate: 0 0; }

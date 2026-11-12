@@ -1,10 +1,14 @@
 # Visão
 
-> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0007, 0023
+> **Status:** rascunho · **Responsável:** miguelkapicius · **Decisões:** 0001, 0002, 0003, 0004, 0007, 0023, 0038
 
 _A base de tudo. Toda outra seção deve respeitar os pilares definidos aqui._
 
 > Convenção desta seção: texto normal = ideia dos autores. **[Sugestão]** = proposta do agente, ainda não validada.
+
+## Nome
+
+**THE ORG** (escolhido pelo autor em 2026-11-10; decisão 0038). "Org" é como a cena de esports chama a organização dona do time, que é o papel do manager. Falta conferir se o nome está livre na Steam, em domínio e em registro de marca.
 
 ## Pitch (uma frase)
 
@@ -43,6 +47,7 @@ Um jogo de **manager de um time de tático-FPS competitivo**, em que você monta
 ## Perguntas em aberto
 
 - Single-player apenas, ou terá algum modo online (ligas entre amigos, ranking)?
-- Nome do jogo e do "esporte" fictício.
+- Nome do "esporte" fictício (o nome do jogo é THE ORG).
+- THE ORG está livre na Steam, em domínio e em registro de marca? Conferir antes de qualquer material público.
 - Modelo de negócio: jogo pago, free-to-play, early access?
 - Tamanho do escopo do primeiro lançamento (MVP).

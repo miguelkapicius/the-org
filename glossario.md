@@ -29,6 +29,7 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Campeonato | Competição com times, formato (liga, grupos, suíço, mata-mata...) e premiação. | torneio, evento (usar só como sinônimo informal) | 01-core-loop |
 | Série | Confronto entre dois times decidido em um número de mapas: MD1, MD3 (melhor de 3) ou MD5 (melhor de 5). Cada mapa é uma partida. | md, bo3 | 01-core-loop |
 | Temporada | Um ano do jogo, com 52 semanas e o calendário de campeonatos. | ano, season | 01-core-loop |
+| Fim de temporada | A virada do ano: a tela animada com o resumo da temporada que acabou e a lista do que muda para a nova (decisão 0040). | fim de ano, encerramento | 01-core-loop |
 | Circuito | Grupo de campeonatos de um mesmo nível: Amador, Pro ou Elite. | tier, divisão | 01-core-loop |
 | Ranking | Lista dos 48 times por pontos de colocação em campeonatos; decide o circuito do clube. | classificação | 01-core-loop |
 | Veto | Fase antes da série em que os times banem e escolhem mapas. | pick/ban | 08-ui-ux |
@@ -49,6 +50,11 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Pós-partida | Tela depois da partida: resultado, dinheiro e desempenho de cada jogador. | resumo final | 08-ui-ux |
 | Painel do clube | Tela inicial do manager, fora da partida: próxima partida, elenco, finanças. | dashboard, hub | 08-ui-ux |
 | Utilitária | Granadas e equipamentos táticos (smoke, flash, molotov...). | utility, nade | 02-mecanicas |
+| Cápsula | Imagem do jogo na loja e na biblioteca da Steam (principal, pequena, vertical e cabeçalho). Leva só arte, nome e subtítulo. | capa, thumbnail, banner (banner é só o de redes) | marketing/identidade |
+| Painel da Steam | Faixa de imagem com título que abre cada seção da descrição na página da Steam. | banner, cabeçalho de seção | marketing/identidade |
+| Símbolo | A forma reduzida da logo: o O de ORG sozinho, um anel com o ponto laranja aparecendo por dentro. No ícone do app vai sobre um campo de cor chapada (decisão 0038). | mascote, escudo, brasão (brasão é o dos times) | marketing/identidade |
+| Padrão | O O da logo repetido em malha, cada um com o ponto virado para um lado. Quase todos apagados, alguns acesos em laranja (TR) e em azul (CT). Fundo para onde não há captura do jogo. | textura, estampa | marketing/identidade |
+| Captura | Imagem tirada do jogo rodando, usada no fundo dos banners e das cápsulas e na galeria da página da Steam. | print, screenshot | marketing/identidade |
 | Timeout | Pausa pedida pelo manager durante a partida (3 por partida) para mudar o estilo do time; única intervenção na partida. | tempo técnico, pausa tática | 01-core-loop |
 | Traço | Característica de personalidade de um jogador (ex.: clutch, líder) que muda como ele joga em certas situações. | perk, habilidade especial | 11-ideias |
 | Moral | Ânimo do jogador; sobe e desce com resultados e decisões do manager. | humor, motivação | 11-ideias |
@@ -69,3 +75,10 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Pedido de saída | Quando o jogador desmotivado (ou bom reserva parado) avisa que quer ir embora. O manager tem 4 semanas para vender, pagar o bônus de permanência (4 salários) ou perdê-lo de graça. | demissão | 03-progressao |
 | Renovação | Novo contrato com um jogador do elenco que o jogador pode recusar (moral baixa ou pouco desejo de ficar). Pede salário e 30 % das luvas. | prorrogação | 03-progressao |
 | Fãs | Base de torcida do clube, uma moeda de progressão: sobe com vitórias, séries e campeonatos e cai com derrotas. Não se gasta; libera os níveis da Gaming House junto com o dinheiro. | seguidores, torcida, reputação | 03-progressao |
+| Relatório do psicólogo | Relatório semanal de cada jogador: a emoção, a causa e o efeito da moral na partida; o psicólogo melhor diz mais e prevê o que vem (decisão 0039). | laudo, avaliação | 11-ideias |
+| Central de notificações | Aba da tela principal que resume o que o manager precisa resolver e o que aconteceu de importante; cada notificação leva à tela certa (ideia 7, a definir). | inbox, caixa de entrada | 11-ideias |
+| Psicólogo | Profissional que o clube contrata do mercado de psicólogos, com salário, qualidade (1 a 5 estrelas) e contrato; amortece as quedas de moral, faz conversas individuais e escreve o relatório de cada jogador (decisão 0039). | coach mental, terapeuta | 11-ideias |
+| Conversa individual | Ação do psicólogo com um jogador, limitada por semana; se der certo, a moral dele sobe (decisão 0039). | sessão, terapia | 11-ideias |
+| Emoção | O estado do jogador no relatório do psicólogo, pela moral: Confiante, Tranquilo, Ansioso, Frustrado ou Desmotivado (decisão 0039). | humor, sentimento | 11-ideias |
+| Macro | O jogo do time: tática do round, execução, rotação e retake (decidido pelo IGL). | — | 12-ia-micro |
+| Micro | O jogo de cada bot: rota, ângulo que confere, onde mira, peek e reação a uma ameaça. | — | 12-ia-micro |
