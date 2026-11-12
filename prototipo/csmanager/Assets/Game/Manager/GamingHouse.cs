@@ -22,13 +22,13 @@ namespace CSM.Manager
         {
             new NivelGH { nome = "Alojamento", custo = 0, manutencao = 500, maxSessoes = 2, coletivas = 0, scouts = 0, nivelIntel = 0, elencoMax = 8, recuperacao = 1f, ganhoTreino = 1f, patrocinio = 1f,
                 vantagens = new[] { "Elenco de até 8 jogadores (5 titulares e 3 reservas)", "Treino individual leve: até 2 sessões por semana por jogador" } },
-            new NivelGH { nome = "Sala de treino", custo = 100000, fas = 1500, manutencao = 1500, maxSessoes = 4, coletivas = 0, scouts = 0, nivelIntel = 0, elencoMax = 9, recuperacao = 1f, ganhoTreino = 1f, patrocinio = 1f, estudoMapa = true,
+            new NivelGH { nome = "Sala de treino", custo = 100000, fas = 8000, manutencao = 1500, maxSessoes = 4, coletivas = 0, scouts = 0, nivelIntel = 0, elencoMax = 9, recuperacao = 1f, ganhoTreino = 1f, patrocinio = 1f, estudoMapa = true,
                 vantagens = new[] { "Libera os TREINOS: foco por atributo, até 4 sessões por semana", "Estudo de mapa: o time ganha afinidade com o mapa escolhido", "+1 vaga de reserva (9 jogadores)" } },
-            new NivelGH { nome = "Sala de análise", custo = 250000, fas = 4000, manutencao = 3500, maxSessoes = 4, coletivas = 0, scouts = 1, nivelIntel = 1, elencoMax = 9, recuperacao = 1f, ganhoTreino = 1f, patrocinio = 1.1f, estudoMapa = true,
+            new NivelGH { nome = "Sala de análise", custo = 250000, fas = 60000, manutencao = 3500, maxSessoes = 4, coletivas = 0, scouts = 1, nivelIntel = 1, elencoMax = 9, recuperacao = 1f, ganhoTreino = 1f, patrocinio = 1.1f, estudoMapa = true,
                 vantagens = new[] { "Libera os SCOUTS: 1 scout", "Informação do adversário nível 1: o estilo de jogo dele", "Scout no mercado: revela o potencial dos jogadores", "Patrocínio +10%" } },
-            new NivelGH { nome = "Centro de performance", custo = 500000, fas = 12000, manutencao = 7000, maxSessoes = 4, coletivas = 3, scouts = 2, nivelIntel = 2, elencoMax = 10, recuperacao = 1.3f, ganhoTreino = 1f, patrocinio = 1.2f, estudoMapa = true,
+            new NivelGH { nome = "Centro de performance", custo = 500000, fas = 400000, manutencao = 7000, maxSessoes = 4, coletivas = 3, scouts = 2, nivelIntel = 2, elencoMax = 10, recuperacao = 1.3f, ganhoTreino = 1f, patrocinio = 1.2f, estudoMapa = true,
                 vantagens = new[] { "Fisioterapeuta: recuperação de cansaço +30%", "Sala do psicólogo: +1 conversa individual por semana (com psicólogo contratado)", "Sessões coletivas: entrosamento do time (preparo extra)", "2 scouts", "Informação do adversário nível 2: mapas fortes e fracos", "+1 vaga de reserva (10 jogadores)", "Patrocínio +20%" } },
-            new NivelGH { nome = "Complexo de elite", custo = 1000000, fas = 35000, manutencao = 12000, maxSessoes = 5, coletivas = 3, scouts = 3, nivelIntel = 3, elencoMax = 10, recuperacao = 1.3f, ganhoTreino = 1.2f, patrocinio = 1.5f, estudoMapa = true, bootcamp = true,
+            new NivelGH { nome = "Complexo de elite", custo = 1000000, fas = 2000000, manutencao = 12000, maxSessoes = 5, coletivas = 3, scouts = 3, nivelIntel = 3, elencoMax = 10, recuperacao = 1.3f, ganhoTreino = 1.2f, patrocinio = 1.5f, estudoMapa = true, bootcamp = true,
                 vantagens = new[] { "Analista de demos: informação do adversário nível 3 (estratégia detalhada e jogador de destaque)", "3 scouts", "Bootcamp: ganho de treino +20% e uma sessão extra por semana", "Patrocínio +50%" } },
         };
 
@@ -45,6 +45,7 @@ namespace CSM.Manager
     public class Jogador
     {
         public string nome; public int idade; public Role funcao; public Skill skill = new Skill();
+        public int querSair; public string motivoSaida;   // pediu para sair: semanas que faltam para ele ir embora sem pagar nada (decisão 0041)
         public int potencial = 85;                  // teto de evolução (só se vê com scout, no mercado)
         public bool potencialRevelado;
         public float cansaco = 10, preparo;         // 0..100

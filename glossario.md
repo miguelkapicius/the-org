@@ -72,6 +72,7 @@ Termos oficiais do jogo. Agentes e humanos usam **só** estes termos. Termo novo
 | Contrato | Acordo de 1 a 3 temporadas entre o clube e o jogador, com salário e cláusula de rescisão. Vence sozinho no fim; antes disso só acaba por venda, rescisão ou cláusula paga por um rival. | vínculo, passe | 03-progressao |
 | Cláusula de rescisão | Valor que outro clube paga para levar o jogador no meio do contrato; fixado na assinatura e pago ao nosso caixa. | multa (multa é a que o nosso clube paga) | 03-progressao |
 | Multa de rescisão | O que o nosso clube paga para dispensar o jogador antes do fim do contrato: metade dos salários que faltam. | cláusula | 03-progressao |
+| Pedido de saída | Quando o jogador desmotivado (ou bom reserva parado) avisa que quer ir embora. O manager tem 4 semanas para vender, pagar o bônus de permanência (4 salários) ou perdê-lo de graça. | demissão | 03-progressao |
 | Renovação | Novo contrato com um jogador do elenco que o jogador pode recusar (moral baixa ou pouco desejo de ficar). Pede salário e 30 % das luvas. | prorrogação | 03-progressao |
 | Fãs | Base de torcida do clube, uma moeda de progressão: sobe com vitórias, séries e campeonatos e cai com derrotas. Não se gasta; libera os níveis da Gaming House junto com o dinheiro. | seguidores, torcida, reputação | 03-progressao |
 | Relatório do psicólogo | Relatório semanal de cada jogador: a emoção, a causa e o efeito da moral na partida; o psicólogo melhor diz mais e prevê o que vem (decisão 0039). | laudo, avaliação | 11-ideias |

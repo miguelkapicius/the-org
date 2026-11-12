@@ -1234,6 +1234,38 @@
 .hub-tit.longo { font-size: 28px; }
 .diario-sem { width: 44px; flex-shrink: 0; font-size: 13px; color: var(--apagado); }
 
+/* ---- folha do contrato (decisão 0042): um papel de verdade sobre a tela escurecida ---- */
+.contrato-cena { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: rgba(4, 5, 7, 0.86); align-items: center; justify-content: center; opacity: 0; transition-property: opacity; transition-duration: 0.18s; padding: 24px 0; }
+.contrato-cena.visivel { opacity: 1; }
+.contrato-rolo { flex-shrink: 1; max-height: 86%; width: 620px; max-width: 94%; }
+.contrato-barra { flex-direction: row; justify-content: center; margin-top: 16px; flex-shrink: 0; }
+.folha { background-color: #f1ecdf; padding: 38px 46px 30px 46px; border-radius: 2px; border-width: 1px; border-color: #cfc7b2; }
+.folha Label { color: #23201a; white-space: normal; }
+.folha-carimbo { position: absolute; right: 38px; top: 34px; border-width: 3px; border-radius: 4px; padding: 3px 12px; rotate: -9deg; }
+.folha-carimbo.minuta { border-color: #b8590f; }
+.folha-carimbo.assinado { border-color: #2f7d4f; }
+.folha .folha-carimbo-t { font-size: 17px; -unity-font-style: bold; letter-spacing: 3px; }
+.folha-carimbo.minuta > .folha-carimbo-t { color: #b8590f; }
+.folha-carimbo.assinado > .folha-carimbo-t { color: #2f7d4f; }
+.folha .folha-tit { font-size: 25px; -unity-font-style: bold; letter-spacing: 2px; margin-right: 150px; }
+.folha .folha-sub { font-size: 15px; color: #5b5648; margin-top: 2px; }
+.folha .folha-num { font-size: 12px; color: #6d6757; margin-top: 8px; letter-spacing: 1px; }
+.folha-regua { height: 2px; background-color: #23201a; margin-top: 14px; margin-bottom: 16px; }
+.folha-partes { flex-direction: row; margin-bottom: 8px; }
+.folha-parte { flex-grow: 1; flex-basis: 0; margin-right: 20px; }
+.folha .folha-rot { font-size: 11px; color: #6d6757; letter-spacing: 2px; -unity-font-style: bold; }
+.folha .folha-nome { font-size: 20px; -unity-font-style: bold; margin-top: 2px; }
+.folha .folha-det { font-size: 12px; color: #5b5648; margin-top: 2px; }
+.folha-cl { margin-top: 12px; padding-top: 10px; border-top-width: 1px; border-color: rgba(35, 32, 26, 0.22); }
+.folha-cl.alerta { background-color: rgba(184, 89, 15, 0.12); padding: 10px 12px; border-top-width: 0; border-left-width: 4px; border-color: #b8590f; }
+.folha .folha-cl-tit { font-size: 12px; -unity-font-style: bold; letter-spacing: 2px; color: #4a4638; }
+.folha .folha-cl-txt { font-size: 15px; margin-top: 3px; }
+.folha-assinaturas { flex-direction: row; margin-top: 30px; }
+.folha-ass { flex-grow: 1; flex-basis: 0; margin-right: 24px; }
+.folha-ass-linha { height: 34px; border-bottom-width: 1px; border-color: #23201a; justify-content: flex-end; margin-bottom: 5px; }
+.folha .folha-ass-nome { font-size: 19px; -unity-font-style: italic; color: #1b2f5e; }
+.folha .folha-rodape { font-size: 12px; color: #6d6757; margin-top: 20px; }
+
 /* ---- fim de temporada (decisão 0040) ---- */
 .ft { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background-color: #0b0d10; opacity: 0; transition-property: opacity; transition-duration: 0.3s; }
 .ft.visivel { opacity: 1; }
