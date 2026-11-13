@@ -142,7 +142,7 @@ Feita em 13/11 no repositório the-org, em `prototipo/csmanager`, sobre a main q
 
 - A base da junção é a última subida do Gabriel (commit `3bf2363`, de 06/11). O estado do PC do Gabriel entrou num commit em cima dela, e a main foi juntada nesse ramo (`gabriel/bots-exe22`).
 - Nada do Manager foi apagado: `Assets/Game/Manager`, `ManagerUI`, `Assets/Resources/ManagerUI`, `ManagerTest` e o `README.md` ficaram como estavam na main.
-- **`Build/` continua sendo o exe da main (o do Miguel, com o Manager).** O exe 22 dos bots, com os atalhos de teste, está em **`Build_bots_exe22/`**. Não existe ainda um exe com as duas coisas juntas; para ter, é gerar o build do projeto junto.
+- **`Build/` continua sendo o exe da main (o do Miguel, com o Manager).** O exe 22 dos bots, com os atalhos de teste, está em **`Build_bots_exe22/`**. O exe com as duas coisas juntas está em `Build_junto/` (ver abaixo).
 - Ficou de fora de propósito: `Tools/sons/.env` (tinha chave de API).
 
 ### Conflitos e como cada um foi resolvido
@@ -164,8 +164,14 @@ Feita em 13/11 no repositório the-org, em `prototipo/csmanager`, sobre a main q
 - `Headless` e `ManagerTest` compilam.
 - 40 rounds (`-n 40 -seed 900`, flags do CT_NOVO5) no código junto dão o mesmo resultado do código só dos bots, a menos de uma casa decimal em uma medida.
 
+### Exe do projeto junto (13/11): `Build_junto/`
+
+- Gerado do projeto junto (`Visual3D.GerarJogoBatch`): abre na tela do Manager e a partida 3D roda com a simulação atual dos bots.
+- `Build_junto/CSManager.exe` direto = comportamento aprovado (sem flags). `Build_junto/CSManager_CT_NOVO6.bat` = o mesmo exe com o cérebro novo ligado (os outros `.bat` são as etapas anteriores).
+- Conferido: o exe abre e fica 40 s na tela do Manager sem nenhuma exceção no log; `CenaManager.TestarCarreiraBatch` passa no editor; os testes do `ManagerTest` passam (todos).
+- **Não conferido:** uma partida assistida inteira dentro desse exe (Manager → pré-partida → Assistir → timeout → volta ao Manager). É a primeira coisa a testar à mão.
+
 ### O que NÃO foi conferido
 
-- Ninguém jogou o projeto junto: não foi gerado exe dele, e a tela do Manager, o timeout e a partida ao vivo com o cérebro novo não foram testados juntos.
-- Os testes do `ManagerTest` não foram executados, só compilados.
+- Ninguém jogou uma partida no projeto junto: a tela do Manager, o timeout e a partida ao vivo com o cérebro novo não foram testados juntos à mão.
 - O efeito dos traços, do entrosamento e do estilo do manager em cima do cérebro novo não foi medido. As flags novas dos bots continuam desligadas por padrão, então o jogo do Manager roda o comportamento antigo até alguém passar `-exp`.
