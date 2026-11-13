@@ -1,6 +1,6 @@
 # Técnico
 
-> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003, 0006, 0008, 0009, 0011
+> **Status:** rascunho · **Responsável:** — · **Decisões:** 0002, 0003, 0006, 0008, 0009, 0011, 0036
 
 _Engine, arquitetura e restrições técnicas._
 
@@ -23,7 +23,7 @@ _Engine, arquitetura e restrições técnicas._
 
 ### Partida pulada (decisão 0008)
 
-O resultado de uma partida pulada é calculado por probabilidade. **[Sugestão]** Para não ficar diferente da partida assistida, calibrar essa fórmula rodando muitas partidas da IA real sem gráficos e comparando os resultados.
+O resultado de uma partida pulada é calculado por probabilidade, calibrada com a simulação (decisão 0036): `Headless -chance N` roda N partidas por diferença de força e mede a chance de vitória e a distribuição de placares. Refazer quando a IA mudar.
 
 ## Requisitos de performance
 

@@ -822,6 +822,9 @@ namespace CSM.Headless
             if (Array.IndexOf(a, "-cenas") >= 0) return Cenas.Rodar(int.Parse(Arg(a, "-cenas", "300")), seed0, Arg(a, "-saida", "base"));   /* bancada de cenas de comportamento (PLANO_SIMULACAO.md) */
             if (Array.IndexOf(a, "-tabelaDuelo") >= 0) return MedeTabelaDuelo.Rodar(int.Parse(Arg(a, "-tabelaDuelo", "300")), seed0, Arg(a, "-saida", "base"));   /* tabela de chance de duelo do avaliador (PLANO_SIMULACAO.md 4.1) */
             if (Array.IndexOf(a, "-bolo") >= 0) return MedeBolo.Rodar(int.Parse(Arg(a, "-bolo", "20")), seed0, Arg(a, "-saida", "base"));   /* todo mundo junto, em partida inteira */
+            if (Array.IndexOf(a, "-chance") >= 0) return MedirChance.Rodar(int.Parse(Arg(a, "-chance", "60")), seed0, int.Parse(Arg(a, "-base", "65")));
+            if (Array.IndexOf(a, "-micro") >= 0) return MedirMicro.Rodar(int.Parse(Arg(a, "-micro", "12")), seed0);
+            if (Array.IndexOf(a, "-estilos") >= 0) return MedirEstilos.Rodar(int.Parse(Arg(a, "-estilos", "18")), seed0);
             if (Array.IndexOf(a, "-partidas") >= 0) return Partidas(int.Parse(Arg(a, "-partidas", "100")), seed0, Arg(a, "-modoA", ""), Arg(a, "-modoB", ""), Arg(a, "-saida", "adapta"));
             if (Array.IndexOf(a, "-treino") >= 0) return Treino(int.Parse(Arg(a, "-passos", "60")), n, seed0);
             var mt = new Metricas(); var trava = new object(); int feitos = 0;

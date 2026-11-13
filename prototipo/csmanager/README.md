@@ -22,7 +22,7 @@ Protótipo em Unity 6000.6.7f1 (URP): mapa original "Vila" em maquete 3D, bots s
 
 ## Rodar sem o Unity
 
-Precisa do .NET 9. Rode da raiz deste protótipo:
+Precisa do .NET 9 (com o SDK do .NET 10, compile com `-p:LangVersion=13` e rode com `DOTNET_ROLL_FORWARD=Major`). Rode da raiz deste protótipo:
 
 ```bash
 dotnet build Headless -c Release
@@ -37,6 +37,14 @@ O relatório sai em `Logs/bots/teste.txt`. Para partidas inteiras:
 ```bash
 dotnet Headless/bin/Release/net9.0/Headless.dll -partidas 100 -seed 100 -modoB semAdaptar -saida adapta
 ```
+
+Para medir o efeito da estratégia do manager (decisão 0017: cada estilo, antes e depois de preferir os planos do estilo):
+
+```bash
+dotnet Headless/bin/Release/net9.0/Headless.dll -estilos 18 -seed 500
+```
+
+O relatório sai em `Logs/bots/estilos.txt` (cerca de 15 minutos com 18 partidas por estilo).
 
 ## Interface do manager
 

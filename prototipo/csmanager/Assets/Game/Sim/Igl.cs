@@ -426,10 +426,14 @@ namespace CSM.Sim
             if (rep != null) { string cc = cands[0].compra; cands.AddRange(rep.Planos(tr).Where(p => p.compra == cc)); }
             float lado = L != null && L.Adapta ? L.intencao.lado : 0;
             if (tr && L != null && L.Adapta && EXPF.Contains("bxIglCrencaLigado")) lado = L.LadoCrenca();   /* bx: lado pela crença contínua (CT visto + não ser previsível) */
-            var w = new float[cands.Count];
+            var w = new float[cands.Count]; var wSem = new float[cands.Count];
             for (int i = 0; i < cands.Count; i++)
             {
                 var p = cands[i]; float f = (EXPF.Contains("forcaIgual") ? 1f : Estrategias.Forca(p.idx)) * (p.ganhou ? 1.15f : 0.9f);
+                // estilo escolhido pelo manager (decisão 0014): prefere os planos daquele estilo, sem proibir os outros
+                if (P.categoria != Estrategias.Categoria.Equilibrada && p.categoria == P.categoria && !EXPF.Contains("semEstiloBanco")) f *= Estrategias.PREFERENCIA_ESTILO;
+                // playbook do manager (decisão 0022): favorita pesa mais; proibida sai (fica em wSem, para o caso de proibir tudo)
+                if (P.favoritas != null && P.favoritas.Contains(p.jogada)) f *= Estrategias.PREFERENCIA_PLAYBOOK;
                 if (L != null)
                 {
                     if (L.bancoUsados.Contains(p.idx)) f *= 0.25f;
@@ -454,7 +458,8 @@ namespace CSM.Sim
                     for (int k = 0; k < 5; k++) { var z = p.ZonaEntre(k, 15, 25); if (z == "A") nA++; else if (z == "B") nB++; }
                     f *= MathF.Exp(0.3f * lado * (nA - nB));
                 }
-                w[i] = f;
+                wSem[i] = f;
+                w[i] = P.proibidas != null && P.proibidas.Contains(p.jogada) ? 0f : f;
             }
             string porqueCall = "";
             if (tr && Calls && L != null)
@@ -488,6 +493,8 @@ namespace CSM.Sim
                 float parte = ExpNum("repParte", 0.35f);
                 if (sr > 0 && sb > 0) for (int i = nBanco; i < cands.Count; i++) w[i] *= parte / (1 - parte) * sb / sr;
             }
+            float somaW = 0; foreach (var x in w) somaW += x;
+            if (somaW <= 0) w = wSem;   // proibiu tudo o que cabe nesta compra: o IGL ignora as proibições neste round
             estr = cands[rng.Weighted(w)];
             L?.bancoUsados.Add(estr.idx);
             if (tr && L != null && Estilo)

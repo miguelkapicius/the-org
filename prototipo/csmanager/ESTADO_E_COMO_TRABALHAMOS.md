@@ -136,4 +136,36 @@ As flags do pacote mais recente estão na última linha de `Build/CSManager_CT_N
 
 ## 7. Junção com o trabalho do Miguel
 
-Ver a seção no fim deste arquivo, preenchida depois da junção.
+Feita em 13/11 no repositório the-org, em `prototipo/csmanager`, sobre a main que tinha o trabalho do Miguel até o PR 28.
+
+### Como foi feita
+
+- A base da junção é a última subida do Gabriel (commit `3bf2363`, de 06/11). O estado do PC do Gabriel entrou num commit em cima dela, e a main foi juntada nesse ramo (`gabriel/bots-exe22`).
+- Nada do Manager foi apagado: `Assets/Game/Manager`, `ManagerUI`, `Assets/Resources/ManagerUI`, `ManagerTest` e o `README.md` ficaram como estavam na main.
+- **`Build/` continua sendo o exe da main (o do Miguel, com o Manager).** O exe 22 dos bots, com os atalhos de teste, está em **`Build_bots_exe22/`**. Não existe ainda um exe com as duas coisas juntas; para ter, é gerar o build do projeto junto.
+- Ficou de fora de propósito: `Tools/sons/.env` (tinha chave de API).
+
+### Conflitos e como cada um foi resolvido
+
+| Arquivo | O que os dois lados mudaram | Resolução |
+|---|---|---|
+| `Sim/Brain.cs` (colega caiu) | Bots: bloco da região da morte. Miguel: alcance de troca pelo entrosamento. | Ficam os dois: o bloco dos bots, e o alcance do entrosamento no lugar do 420 fixo. |
+| `Sim/Igl.cs` (escolha do plano) | Bots: repertório de calls e táticas criadas. Miguel: estilo do manager, playbook (favorita, proibida). | Ficam os dois. As flags no trecho do Miguel usam `EXPF` (o nome atual do conjunto de flags). |
+| `Sim/Match.cs` (`End`) | Bots: auditoria do 1º abate. Miguel: `fimEm = t`. | Linha dos bots com o `fimEm = t` do Miguel. |
+| `Sim/Partida.cs` (`Time`) | Bots: `clima`, `equipe`. Miguel: timeouts, foco, traços, jogada da partida. | Classe com os campos dos dois; o resto é do Miguel. |
+| `Sim/Estrategias.cs` (`Plano.Nome`) | Bots: nome de tática criada. Miguel: `categoria`, `jogada`. | Campos do Miguel; o nome mostra a categoria e conhece tática criada. |
+| `Partida/PartidaAoVivo3D.cs` | Bots/HUD: tecla R do rádio. Miguel: timeout e volta ao manager. | Comentário com as duas teclas; o bloco do timeout e da volta ao manager é o do Miguel. |
+| `Headless/Program.cs` | Medidores novos dos dois lados. | Ficam todos. |
+| `ManagerTest/ManagerTest.csproj` | (sem conflito) | Ganhou a linha que compila `Sim/Cerebro/*.cs`, senão não compilava. |
+
+### O que foi conferido depois da junção
+
+- O projeto junto abre e **compila no Unity 6000.6.7f1 sem erro** (modo lote).
+- `Headless` e `ManagerTest` compilam.
+- 40 rounds (`-n 40 -seed 900`, flags do CT_NOVO5) no código junto dão o mesmo resultado do código só dos bots, a menos de uma casa decimal em uma medida.
+
+### O que NÃO foi conferido
+
+- Ninguém jogou o projeto junto: não foi gerado exe dele, e a tela do Manager, o timeout e a partida ao vivo com o cérebro novo não foram testados juntos.
+- Os testes do `ManagerTest` não foram executados, só compilados.
+- O efeito dos traços, do entrosamento e do estilo do manager em cima do cérebro novo não foi medido. As flags novas dos bots continuam desligadas por padrão, então o jogo do Manager roda o comportamento antigo até alguém passar `-exp`.

@@ -14,7 +14,7 @@ namespace CSM.View3D
     /// A partida ao vivo no visual de maquete: a MESMA simulação da PartidaAoVivo (2D), desenhada em 3D — bonecos do
     /// Blender (Boneco3D) com a escolha de animação (câmera e passo em Transmissao), smoke por volume (Fumaca3D), fogo do
     /// molotov, rastro de tiro, granada voando, armas no chão e C4. Câmera segue a ação como no 2D (Transmissao.Mirar).
-    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, R rádio do time (A/B/desligado), Esc câmera automática, roda do mouse = zoom.
+    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, R rádio do time (A/B/desligado), T timeout, Esc câmera automática, roda do mouse = zoom.
     /// </summary>
     public partial class PartidaAoVivo3D : MonoBehaviour
     {
@@ -99,8 +99,8 @@ namespace CSM.View3D
             hud.Cabeca = ag => bonecos.TryGetValue(ag.id, out var bb) ? bb.transform.position + Vector3.up * Mathf.Lerp(1.2f, 0.95f, Suave(ag.duck)) : Vector3.zero;
             // menu inicial (sessão HUDs/interface, Menu3D): no Play abre o menu com um round rodando atrás (vitrine);
             // em batch, print e medição (-csm_*) vai direto pra partida como antes
-            if (Menu3D.Ligado) menu = new Menu3D(this); else NovaPartida();   // (o Menu3D começa a vitrine)
-            carregando = false;
+            if (Menu3D.Ligado) menu = new Menu3D(this); else NovaPartida();   // (o Menu3D começa a vitrine; vindo do manager ele já começa a partida)
+            carregando = false; fimCarregar = Time.realtimeSinceStartup;
         }
 
         Hud3D hud;
@@ -343,6 +343,8 @@ namespace CSM.View3D
 
         void Teclado()
         {
+            if (Input.GetKeyDown(KeyCode.T)) AbrirTimeout();
+            if (timeoutAberto) return;   // escolhendo o timeout: a partida fica parada
             if (Input.GetKeyDown(KeyCode.Space)) pausado = !pausado && !acabou;
             if (Input.GetKeyDown(KeyCode.Alpha1)) velocidade = 1; if (Input.GetKeyDown(KeyCode.Alpha2)) velocidade = 2;
             if (Input.GetKeyDown(KeyCode.Alpha3)) velocidade = 4; if (Input.GetKeyDown(KeyCode.Alpha4)) velocidade = 8;
@@ -355,13 +357,19 @@ namespace CSM.View3D
 
         void OnGUI()
         {
+            if (carregando) { DesenharCarregando(1f); return; }
+            OnGUIJogo();
+            DesenharCarregando(AlfaCarregando());   // fade ao entrar na partida
+        }
+
+        void OnGUIJogo()
+        {
             if (sTxt == null)
             {
                 sTxt = new GUIStyle(GUI.skin.label) { fontSize = 12, wordWrap = true, richText = true };
                 sCaixa = new GUIStyle(GUI.skin.box); sBotao = new GUIStyle(GUI.skin.button) { fontSize = 12 };
                 var fundo = new Texture2D(1, 1); fundo.SetPixel(0, 0, new Color(0.05f, 0.05f, 0.06f, 0.6f)); fundo.Apply(); sCaixa.normal.background = fundo;
             }
-            if (carregando) { GUI.Label(new Rect(20, 20, 400, 30), aquecendo ? "Aquecendo a simulação..." : "Montando a maquete e a partida..."); return; }
             if (Vitrine || (menu != null && menu.Cobrindo)) return;   // menu/placar por cima: sem controles do jogo
             // clicar no card do HUD segue o jogador (o HUD é uGUI sem EventSystem: botão invisível por cima)
             for (int i = 0; i < 5; i++)
@@ -386,6 +394,21 @@ namespace CSM.View3D
             x = 14; y += 26;
             if (B("Próximo round", 96)) PulaRound();
             if (B(painel ? "Sem pensamento" : "Pensamento (P)", 110)) painel = !painel;
+            x = 14; y += 26;
+            if (pt.A.timeouts > 0 && !acabou) { if (B($"Timeout (T) · {pt.A.timeouts}", 110)) AbrirTimeout(); }
+            else GUI.Label(new Rect(x, y, 160, 22), "Sem timeouts", sTxt);
+            TimeoutGUI(W, H);
+            // partida vinda do manager: no fim, fecha a partida da carreira (prêmio, salários) e volta ao painel do clube
+            if (acabou && DoManager && menu == null)
+            {
+                var carreira = CSM.Manager.Carreira.Atual;
+                bool venceu = pt.vencedor == pt.A;
+                var r = new Rect(W / 2 - 190, H / 2 - 60, 380, 120);
+                GUI.Box(r, GUIContent.none, sCaixa);
+                GUI.Label(new Rect(r.x + 12, r.y + 10, r.width - 24, 50), $"<b>{(venceu ? "Vitória" : "Derrota")}</b>  {pt.A.nome} {pt.A.placar} x {pt.B.placar} {pt.B.nome}", sTxt);
+                if (pt.jogada != null) GUI.Label(new Rect(r.x + 12, r.y + 32, r.width - 24, 34), $"<b>Jogada da partida:</b> {pt.jogada.Descricao}", sTxt);   // decisão 0020
+                if (GUI.Button(new Rect(r.x + 12, r.y + 66, r.width - 24, 40), "Voltar ao manager", sBotao)) { VoltarAoManager(); return; }
+            }
             // o que o jogador seguido está pensando (explicação dos bots)
             if (!painel || seguir < 0) return;
             var s = m.agents[seguir];

@@ -23,6 +23,11 @@ namespace CSM.Sim
         public float utilitaria = 0.8f;     // execução de granada: sabe o pixel, mas quanto acerta (0..1)
         public float miraAwp = 1f, miraPistola = 1f;   /* status (Jogadores.cs): erro de mira com AWP/pistola relativo à mira de rifle (1 = igual) */
 
+        /// <summary>Entrosamento com o time (decisão 0019), 0..1; 0,5 = neutro. Muda a chance de trocar o colega que morreu.</summary>
+        public float entrosamento = 0.5f;
+
+        public Skill Copia() => (Skill)MemberwiseClone();
+
         /// <summary>
         /// Estilo de jogador pela função (arquétipos do cenário pro): entry agressivo que abre (tipo apEX), AWPer calmo e
         /// preciso (tipo FalleN), lurker paciente, suporte da utilitária, IGL que pensa pelo time (mira um pouco pior),

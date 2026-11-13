@@ -16,6 +16,7 @@
     <Compile Include="..\Assets\Game\Sim\*.cs" LinkBase="Sim" />
     <Compile Include="..\Assets\Game\Sim\Cerebro\*.cs" LinkBase="Sim\Cerebro" />
     <Compile Include="..\Assets\Game\Map\*.cs" LinkBase="Map" />
+    <Compile Include="..\Assets\Game\Manager\*.cs" LinkBase="Manager" />
     <Compile Include="..\Assets\Game\View\Effects.cs" LinkBase="View" />
     <Compile Include="..\Assets\Game\View\Iso.cs" LinkBase="View" />
   </ItemGroup>

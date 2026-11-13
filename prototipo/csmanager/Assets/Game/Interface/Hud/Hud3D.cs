@@ -1103,12 +1103,7 @@ namespace CSM.View3D
             return sp > 0 ? $"<color={Cor(s.Substring(0, sp))}>{s.Substring(0, sp)}</color>{s.Substring(sp)}" : s;
         }
 
-        public static string NomeArma(string g) => g switch
-        {
-            "ak" => "AK-47", "m4" => "M4A4", "m4s" => "M4A1-S", "awp" => "AWP", "mp9" => "MP9", "mac10" => "MAC-10",
-            "usp" => "USP-S", "glock" => "Glock-18", "deagle" => "Desert Eagle", "faca" => "faca",
-            "tec9" => "Tec-9", "fiveseven" => "Five-SeveN", "p250" => "P250", "galil" => "Galil AR", "famas" => "FAMAS", _ => g.ToUpper()
-        };
+        public static string NomeArma(string g) => CSM.Sim.WeaponStats.Nome(g);
 
         static Color CorNade(string n) => n switch
         {
