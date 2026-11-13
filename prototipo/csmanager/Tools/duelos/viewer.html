@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Duelos de cima</title>
+<style>
+  :root { --bg:#14161a; --pan:#1c1f25; --lin:#2b303a; --tx:#e6e8ec; --mut:#8d94a3; --tr:#f0a23a; --ct:#57a8f5; --wall:#343a46; --box:#6b7383; --low:#4a505c; --floor:#20242b; --hit:#ff5a5a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--tx); font:14px/1.4 system-ui,Segoe UI,Roboto,sans-serif; }
+  .wrap { display:grid; grid-template-columns:300px 1fr; height:100vh; }
+  aside { background:var(--pan); border-right:1px solid var(--lin); overflow:auto; padding:10px; }
+  aside h1 { font-size:15px; margin:4px 0 2px; }
+  aside .exp { color:var(--mut); font-size:11px; word-break:break-all; margin-bottom:8px; }
+  .conj { display:flex; gap:6px; flex-wrap:wrap; margin:6px 0; }
+  .conj button { background:#2a2f39; color:var(--tx); border:1px solid #3b4250; border-radius:6px; padding:4px 10px; cursor:pointer; font:inherit; }
+  .conj button.on { background:#3a4558; border-color:#6b7a94; }
+  aside h2 { font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:14px 0 4px; }
+  .it { padding:6px 8px; border-radius:6px; cursor:pointer; border:1px solid transparent; margin-bottom:3px; }
+  .it:hover { background:#242830; }
+  .it.on { background:#262b35; border-color:#3d4554; }
+  .it small { color:var(--mut); display:block; }
+  main { display:flex; flex-direction:column; min-width:0; }
+  .top { padding:10px 14px; border-bottom:1px solid var(--lin); }
+  .top b { font-size:15px; }
+  .top span { color:var(--mut); margin-left:8px; }
+  .cv { flex:1; min-height:0; position:relative; }
+  canvas { width:100%; height:100%; display:block; }
+  .ctl { display:flex; gap:10px; align-items:center; padding:8px 14px; border-top:1px solid var(--lin); }
+  .ctl button { background:#2a2f39; color:var(--tx); border:1px solid #3b4250; border-radius:6px; padding:5px 12px; cursor:pointer; font:inherit; }
+  .ctl button.on { background:#3a4558; }
+  .ctl input[type=range] { flex:1; }
+  .ctl .t { font-variant-numeric:tabular-nums; color:var(--mut); width:110px; text-align:right; }
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--lin); border-top:1px solid var(--lin); }
+  .p { background:var(--pan); padding:8px 14px; min-height:92px; }
+  .p .n { font-weight:600; }
+  .p .n i { font-style:normal; color:var(--mut); font-weight:400; margin-left:6px; }
+  .bar { height:6px; background:#333944; border-radius:3px; margin:5px 0; overflow:hidden; }
+  .bar div { height:100%; background:#62c462; }
+  .p .f { color:var(--mut); font-size:12px; }
+  .p .th { font-size:13px; margin-top:2px; }
+  .tags { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .tag { font-size:11px; padding:1px 7px; border-radius:10px; background:#2c323d; color:var(--mut); }
+  .tag.r { background:#5a2626; color:#ffb4b4; }
+  .tag.g { background:#22492c; color:#a9e6b4; }
+  .leg { position:absolute; left:12px; bottom:10px; font-size:11px; color:var(--mut); background:#14161acc; padding:5px 8px; border-radius:6px; }
+  @media (max-width:800px) { .wrap { grid-template-columns:1fr; height:auto; } aside { max-height:34vh; } .cv { height:60vh; flex:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside><h1 id="tit">Duelos</h1><div class="conj" id="conj"></div><div class="exp" id="exp"></div><div id="lista"></div></aside>
+  <main>
+    <div class="top"><b id="ctit"></b><span id="csub"></span></div>
+    <div class="cv"><canvas id="cv"></canvas><div class="leg">círculo = jogador · traço = mira · risco claro = tiro · linha vermelha fina = os dois têm linha livre · anel pontilhado = distância até a cobertura mais perto</div></div>
+    <div class="ctl">
+      <button id="play">▶</button>
+      <button data-v="0.25">0,25×</button><button data-v="0.5" class="on">0,5×</button><button data-v="1">1×</button>
+      <input id="seek" type="range" min="0" max="100" value="0">
+      <div class="t" id="tt"></div>
+    </div>
+    <div class="duo"><div class="p" id="pa"></div><div class="p" id="pb"></div></div>
+  </main>
+</div>
+<script>
+const DADOS0 = /*DADOS*/null;
+const CONJ = DADOS0 ? (DADOS0.conjuntos || [DADOS0]) : []; let DADOS = CONJ[0];
+const $ = id => document.getElementById(id);
+const cv = $('cv'), cx = cv.getContext('2d');
+let C = null, fi = 0, tocando = false, vel = 0.5, ult = 0, acc = 0, mapaImg = null, esc = 1, ox = 0, oy = 0;
+
+function lista() {
+  const cj = $('conj'); cj.innerHTML = ''; if (CONJ.length > 1) CONJ.forEach(d => { const b = document.createElement('button'); b.textContent = d.rotulo || d.titulo; b.className = d === DADOS ? 'on' : ''; b.onclick = () => { DADOS = d; lista(); abre(0); }; cj.appendChild(b); });
+  $('tit').textContent = 'Duelos — ' + (DADOS.rotulo || DADOS.titulo); $('exp').textContent = DADOS.exp ? 'flags: ' + DADOS.exp.replace(/_/g, ' ') : 'sem flags';
+  const g = {}; DADOS.clipes.forEach((c, i) => (g[c.tag] = g[c.tag] || []).push(i));
+  const el = $('lista'); el.innerHTML = '';
+  Object.keys(g).sort().reverse().forEach(tag => {
+    const h = document.createElement('h2'); h.textContent = tag + ' (' + g[tag].length + ')'; el.appendChild(h);
+    g[tag].forEach(i => {
+      const c = DADOS.clipes[i], A = c.jog.find(j => j.id === c.a), B = c.jog.find(j => j.id === c.b);
+      const d = document.createElement('div'); d.className = 'it'; d.dataset.i = i;
+      d.innerHTML = `${A.n} <span style="color:var(--mut)">x</span> ${B.n}<small>${(c.ult - c.ini).toFixed(1)} s · ${(c.dist * 2.9 / 40).toFixed(0)} m · ${c.fim} · semente ${c.seed}</small>`;
+      d.onclick = () => abre(i); el.appendChild(d);
+    });
+  });
+}
+function abre(i) {
+  C = DADOS.clipes[i]; fi = 0; acc = 0;
+  document.querySelectorAll('.it').forEach(e => e.classList.toggle('on', +e.dataset.i === i));
+  const A = C.jog.find(j => j.id === C.a), B = C.jog.find(j => j.id === C.b);
+  $('ctit').textContent = `${A.n} (${A.tr ? 'TR' : 'CT'}, ${A.arma}) x ${B.n} (${B.tr ? 'TR' : 'CT'}, ${B.arma})`;
+  $('csub').textContent = `${C.onde} · ${C.tag} · fim: ${C.fim}`;
+  $('seek').max = C.f.length - 1;
+  const m = C.mapa, w = m.linhas[0].length, h = m.linhas.length, off = document.createElement('canvas'); off.width = w; off.height = h;
+  const o = off.getContext('2d'), cor = { '0': '#20242b', '1': '#4a505c', '2': '#343a46', '3': '#6b7383' };
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { o.fillStyle = cor[m.linhas[y][x]]; o.fillRect(x, y, 1, 1); }
+  mapaImg = off; tocando = true; $('play').textContent = '❚❚'; desenha();
+}
+function ajusta() {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  if (cv.width !== Math.round(r.width * dpr) || cv.height !== Math.round(r.height * dpr)) { cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr); }
+  const m = C.mapa, mw = m.linhas[0].length * m.cel, mh = m.linhas.length * m.cel;
+  esc = Math.min(cv.width / mw, cv.height / mh); ox = (cv.width - mw * esc) / 2 - m.x0 * esc; oy = (cv.height - mh * esc) / 2 - m.y0 * esc;
+}
+const X = x => ox + x * esc, Y = y => oy + y * esc;
+function desenha() {
+  if (!C) return; ajusta();
+  const m = C.mapa, F = C.f[fi], t = F[0];
+  cx.fillStyle = '#14161a'; cx.fillRect(0, 0, cv.width, cv.height);
+  cx.imageSmoothingEnabled = false;
+  cx.drawImage(mapaImg, X(m.x0), Y(m.y0), m.linhas[0].length * m.cel * esc, m.linhas.length * m.cel * esc);
+  F[3].forEach(s => { cx.fillStyle = 'rgba(200,205,215,.45)'; cx.beginPath(); cx.arc(X(s[0]), Y(s[1]), s[2] * esc, 0, 7); cx.fill(); });
+  const ia = C.jog.findIndex(j => j.id === C.a), ib = C.jog.findIndex(j => j.id === C.b), PA = F[1][ia], PB = F[1][ib];
+  if (F[2]) { cx.strokeStyle = 'rgba(255,90,90,.55)'; cx.lineWidth = Math.max(1, esc * .5); cx.beginPath(); cx.moveTo(X(PA[0]), Y(PA[1])); cx.lineTo(X(PB[0]), Y(PB[1])); cx.stroke(); }
+  C.jog.forEach((j, k) => {
+    const p = F[1][k], vivo = p[4] & 1, duel = k === ia || k === ib, cor = j.tr ? '#f0a23a' : '#57a8f5', r = (duel ? 7 : 5) * Math.max(1, esc * .9);
+    const x = X(p[0]), y = Y(p[1]);
+    if (!vivo) { cx.strokeStyle = cor; cx.globalAlpha = .5; cx.lineWidth = 2; cx.beginPath(); cx.moveTo(x - r, y - r); cx.lineTo(x + r, y + r); cx.moveTo(x + r, y - r); cx.lineTo(x - r, y + r); cx.stroke(); cx.globalAlpha = 1; return; }
+    if (duel && p[7] > 0 && p[7] < 900) { cx.setLineDash([4, 4]); cx.strokeStyle = 'rgba(160,230,170,.5)'; cx.lineWidth = 1; cx.beginPath(); cx.arc(x, y, p[7] * esc, 0, 7); cx.stroke(); cx.setLineDash([]); }
+    if (p[4] & 4) { cx.strokeStyle = 'rgba(255,240,180,.9)'; cx.lineWidth = Math.max(1.5, esc * .8); cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x + Math.cos(p[2]) * 500 * esc, y + Math.sin(p[2]) * 500 * esc); cx.stroke(); }
+    cx.strokeStyle = cor; cx.lineWidth = Math.max(1.5, esc); cx.beginPath(); cx.moveTo(x, y); cx.lineTo(x + Math.cos(p[2]) * 34 * esc, y + Math.sin(p[2]) * 34 * esc); cx.stroke();
+    cx.fillStyle = cor; cx.globalAlpha = duel ? 1 : .55; cx.beginPath(); cx.arc(x, y, (p[4] & 2) ? r * .75 : r, 0, 7); cx.fill(); cx.globalAlpha = 1;
+    if (duel) { cx.strokeStyle = '#fff'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(x, y, r + 2, 0, 7); cx.stroke(); }
+    cx.fillStyle = '#e6e8ec'; cx.font = `${Math.round(11 * (window.devicePixelRatio || 1))}px system-ui`; cx.textAlign = 'center'; cx.fillText(j.n + ' ' + p[3], x, y - r - 6);
+  });
+  $('seek').value = fi; $('tt').textContent = `${t.toFixed(2)} s ${t < C.ini ? '(antes)' : t > C.ult ? '(depois)' : ''}`;
+  painel('pa', ia, PA, PB); painel('pb', ib, PB, PA);
+}
+function painel(id, k, p, o) {
+  const j = C.jog[k], t = C.f[fi][0]; let fase = '', pensa = '';
+  for (const x of C.txt) { if (x[0] > t) break; if (x[1] === j.id) { fase = x[2]; pensa = x[3]; } }
+  const vivo = p[4] & 1, ang = Math.abs(((Math.atan2(o[1] - p[1], o[0] - p[0]) - p[2] + Math.PI * 3) % (Math.PI * 2)) - Math.PI) * 180 / Math.PI;
+  const tags = [];
+  if (vivo) {
+    tags.push(`<span class="tag">${p[5] < 8 ? 'parado' : p[5] < 40 ? 'devagar' : 'correndo'}</span>`);
+    if (p[4] & 2) tags.push('<span class="tag">agachado</span>');
+    if (p[4] & 32) tags.push('<span class="tag r">recarregando</span>');
+    if (p[4] & 8) tags.push('<span class="tag r">cego</span>');
+    tags.push(`<span class="tag ${p[6] < 0 ? 'r' : ''}">alvo: ${p[6] < 0 ? 'nenhum' : (C.jog.find(q => q.id === p[6]) || { n: '?' }).n}</span>`);
+    tags.push(`<span class="tag">mira a ${ang.toFixed(0)}° dele</span>`);
+    if (p[7] >= 0) tags.push(`<span class="tag ${p[7] <= 35 ? 'g' : ''}">cobertura a ${p[7] > 900 ? '4 m+' : (p[7] * 2.9 / 40).toFixed(1) + ' m'}</span>`);
+  }
+  $(id).innerHTML = `<div class="n" style="color:${j.tr ? 'var(--tr)' : 'var(--ct)'}">${j.n}<i>${j.tr ? 'TR' : 'CT'} · ${j.arma} · ${vivo ? p[3] + ' hp' : 'morto'}</i></div><div class="bar"><div style="width:${vivo ? p[3] : 0}%"></div></div><div class="f">${fase}</div><div class="th">${pensa || ''}</div><div class="tags">${tags.join('')}</div>`;
+}
+function laco(ts) {
+  if (tocando && C) {
+    const dt = Math.min(.1, (ts - ult) / 1000); acc += dt * vel;
+    const passo = 1 / 16; let mudou = false;
+    while (acc >= passo) { acc -= passo; fi++; mudou = true; if (fi >= C.f.length) { fi = 0; acc = -0.6 * vel; } }
+    if (mudou) desenha();
+  }
+  ult = ts; requestAnimationFrame(laco);
+}
+$('play').onclick = () => { tocando = !tocando; $('play').textContent = tocando ? '❚❚' : '▶'; };
+$('seek').oninput = e => { fi = +e.target.value; tocando = false; $('play').textContent = '▶'; desenha(); };
+document.querySelectorAll('.ctl button[data-v]').forEach(b => b.onclick = () => { vel = +b.dataset.v; document.querySelectorAll('.ctl button[data-v]').forEach(x => x.classList.toggle('on', x === b)); });
+window.addEventListener('resize', desenha);
+document.addEventListener('keydown', e => { if (e.key === ' ') { e.preventDefault(); $('play').click(); } if (e.key === 'ArrowRight') { fi = Math.min(C.f.length - 1, fi + 1); desenha(); } if (e.key === 'ArrowLeft') { fi = Math.max(0, fi - 1); desenha(); } });
+if (DADOS && DADOS.clipes.length) { lista(); abre(0); requestAnimationFrame(laco); } else document.body.innerHTML = '<p style="padding:20px">Sem dados.</p>';
+</script>
+</body>
+</html>

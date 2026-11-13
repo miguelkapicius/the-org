@@ -16,7 +16,8 @@ namespace CSM.View
         public readonly float[] T = new float[BW * BH];
         public readonly short[] OBJ = new short[BW * BH];
         public readonly bool[] FLOOR = new bool[BW * BH];
-        const int NX = Map.MapData.NX, NY = Map.MapData.NY, NZ = MapVoxels.NZ;
+        static readonly int NX = Map.MapData.NX, NY = Map.MapData.NY;
+        const int NZ = MapVoxels.NZ;
 
         public StaticMap()
         {

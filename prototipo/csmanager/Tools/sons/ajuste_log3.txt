@@ -1,0 +1,9 @@
+ak      distante custo  12.67 ->  11.43
+p250    distante custo   7.00 ->   6.57
+mp9     distante custo   8.82 ->   8.64
+glock   distante custo   5.34 ->   4.72
+mac10   distante custo   8.44 ->   4.87
+deagle  distante custo  11.91 ->  11.80
+m4s     distante custo   3.40 ->   3.34
+m4      distante custo   6.56 ->   5.82
+awp     distante custo  18.98 ->  18.52

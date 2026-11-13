@@ -13,7 +13,10 @@ namespace CSM.Sim
     public static class Rotas
     {
         public const float FAIXA = 5f; public const int NF = 32;   // 0..160 s (round + bomb)
-        public const string ARQ = "Assets/Game/Sim/rotas.bin";
+        public static readonly string ArqBot = MapaEscolhido.Arq("Assets/Game/Sim/rotas.bin");   // por mapa (Vila no lugar de sempre) — aprendido de bot × bot
+        /// <summary>Tirado dos PROS (Headless -rotasPro): o de bot × bot reforçava os vícios dos bots. -exp rotasProLigado usa este.</summary>
+        public static readonly string ArqPro = MapaEscolhido.Arq("Assets/Game/Sim/rotas_pro.bin");
+        public static string ARQ => !TeamBrain.EXPF.Contains("rotasProVelho") && File.Exists(ArqPro) ? ArqPro : ArqBot;   /* padrão 2026-11-08: fatorial pz no critério; -humano "segurando onde não pode ter ninguém" −53% */
         static float[][][] dens;   // [time][faixa][célula]
         static readonly object trava = new object();
 

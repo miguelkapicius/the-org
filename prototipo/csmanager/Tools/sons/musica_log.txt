@@ -1,0 +1,1 @@
+música adiada pelo usuário (2026-11-04): rode com --forcar quando ele pedir

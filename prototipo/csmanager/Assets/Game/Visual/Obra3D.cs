@@ -14,6 +14,8 @@ namespace CSM.View3D
         readonly List<Color> C = new List<Color>(); readonly List<int> T = new List<int>();
         readonly bool lin = QualitySettings.activeColorSpace == ColorSpace.Linear;
         public int Vertices => V.Count;
+        /// <summary>Alfa do vértice dos blocos seguintes: classe de material no Maquete.shader (0,30 adobe, 0,15 terraço; 1 = nada).</summary>
+        public float Alfa = 1f;
 
         Color L(Color c) => lin ? c.linear : c;
 
@@ -33,7 +35,7 @@ namespace CSM.View3D
                 V.Add(o - e1 - e2); V.Add(o + e1 - e2); V.Add(o + e1 + e2); V.Add(o - e1 + e2);
                 var nn = n.normalized;
                 // um pouco mais escuro embaixo (oclusão de desenho)
-                var cc = nn.y < -0.5f ? lc * 0.8f : lc; cc.a = 1;
+                var cc = nn.y < -0.5f ? lc * 0.8f : lc; cc.a = Alfa;
                 for (int i = 0; i < 4; i++) { N.Add(nn); C.Add(cc); }
                 Tri(k, k + 1, k + 2, nn); Tri(k, k + 2, k + 3, nn);
             }

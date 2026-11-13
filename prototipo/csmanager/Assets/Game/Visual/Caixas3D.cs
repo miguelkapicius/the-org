@@ -20,7 +20,8 @@ namespace CSM.View3D
             var l = new List<Caixa>();
             foreach (var c in MapData.covers)
             {
-                if (c.kind != "crate" && c.kind != "crate_top") continue;
+                if (CSM.View.MapVoxels.Tipo(c.kind) != "crate" && c.kind != "crate_top") continue;
+                if (Brasa3D.Cuida(c.kind)) continue;   // na Brasa a caixa é o caixote do Survival Kit (Brasa3D)
                 int f = MapData.walk[c.r.x0, c.r.y0] ? MapData.floor[c.r.x0, c.r.y0] : MapData.GZ;
                 int z1 = f + c.h;
                 if (c.kind == "crate_top") l.Add(new Caixa { x0 = c.r.x0, x1 = c.r.x1, y0 = c.r.y0, y1 = c.r.y1, z0 = f + 16, z1 = z1 });

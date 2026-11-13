@@ -50,6 +50,23 @@ namespace CSM.View3D
             return Color.HSVToRGB(h, s, v).linear;
         }
 
+        static readonly string[] TECIDO = { "tronco", "braco", "coxa", "canela", "quadril", "gola", "colete", "perneira", "cabeca", "alca", "bolsinho", "bolsa", "cinto", "mao", "bota", "ante" };
+        static readonly string[] PELE = { "furo", "boca", "labio", "pulso", "ante" };
+        static readonly string[] VIDRO = { "olho", "branco", "brilho", "lente", "reflexo", "luneta", "visor" };
+        /// <summary>Tipo da peça pro material do boneco (CSM/Boneco, alfa da cor de vértice): 0 tecido, 0,33 pele,
+        /// 0,66 olho/vidro, 1 duro (arma, metal, granada, equipamento). Pele só se a cor for de pele (o antebraço do CT é
+        /// manga da farda).</summary>
+        static float Tipo(string nome, Color cor)
+        {
+            if (nome.Length <= 2 || !(nome.StartsWith("ct") || nome.StartsWith("tr"))) return 1;
+            string n = nome.Substring(2);
+            bool corPele = cor.r > 0.25f && cor.r > cor.g * 1.5f && cor.g > cor.b;
+            foreach (var k in VIDRO) if (n.StartsWith(k)) return 0.66f;
+            foreach (var k in PELE) if (n.StartsWith(k) && corPele) return 0.33f;
+            foreach (var k in TECIDO) if (n.StartsWith(k)) return 0;
+            return 1;
+        }
+
         public static Modelo Carregar(string time)
         {
             if (cache.TryGetValue(time, out var m)) return m;
@@ -64,11 +81,13 @@ namespace CSM.View3D
             {
                 var pj = h.pecas[p]; int nv = pj.nv;
                 var V = new Vector3[nv]; var N = new Vector3[nv]; var Cs = new Color[nv]; var T = new int[nv];
+                float tipo = nv > 0 ? Tipo(pj.nome, new Color(f[pj.c], f[pj.c + 1], f[pj.c + 2])) : 1;
                 for (int i = 0; i < nv; i++)
                 {
                     V[i] = C(f[pj.v + 3 * i], f[pj.v + 3 * i + 1], f[pj.v + 3 * i + 2]);
                     N[i] = C(f[pj.n + 3 * i], f[pj.n + 3 * i + 1], f[pj.n + 3 * i + 2]);
                     Cs[i] = Brinquedo(new Color(f[pj.c + 3 * i], f[pj.c + 3 * i + 1], f[pj.c + 3 * i + 2]));
+                    Cs[i].a = tipo;
                 }
                 // troca de mão (Blender destro -> Unity canhoto): inverte a ordem de cada triângulo
                 for (int i = 0; i < nv; i += 3) { T[i] = i; T[i + 1] = i + 2; T[i + 2] = i + 1; }
@@ -110,8 +129,14 @@ namespace CSM.View3D
         {
             if (matCorpo == null)
             {
-                matCorpo = new Material(Shader.Find("CSM/Maquete")) { name = "Maquete boneco" };
-                matCorpo.SetFloat("_Smoothness", 0.42f); matCorpo.SetFloat("_Variacao", 0.03f); matCorpo.SetFloat("_Borda", 0.35f);
+                // "C + sombra" (usuário escolheu no retrato, 2026-11-06): brinquedo macio no clima Animal Crossing, com
+                // um pouco mais de sombra que o "bem fofo". Retrato: Visual3D.CapturarRetratoBatch
+                matCorpo = new Material(Shader.Find("CSM/Boneco")) { name = "Boneco macio" };
+                matCorpo.SetFloat("_Enrola", 0.45f); matCorpo.SetFloat("_Degrau", 0.55f); matCorpo.SetFloat("_SombraCor", 0.8f);
+                matCorpo.SetFloat("_Faixa", 0.5f); matCorpo.SetFloat("_Veludo", 0.8f); matCorpo.SetFloat("_VeludoPot", 2.7f);
+                matCorpo.SetFloat("_Brilho", 0.3f); matCorpo.SetFloat("_Tecido", 0.8f); matCorpo.SetFloat("_FreqTecido", 90f);
+                matCorpo.SetFloat("_Pastel", 0.45f); matCorpo.SetFloat("_Borda", 0.22f);
+                matCorpo.SetFloat("_Ambiente", 0.78f); matCorpo.SetFloat("_SombraMin", 0.25f);
                 matCorpo.SetFloat("_SombraGorda", 0.006f);   // arma fina faz sombra que se vê
             }
             if (matBrilho == null) matBrilho = new Material(Shader.Find("CSM/Brilho")) { name = "Brilho boneco" };
@@ -338,6 +363,23 @@ namespace CSM.View3D
         {
             golpeT = 0; golpeK = Mathf.Clamp01(forca * (cabeca ? 1.3f : 1f)); golpeCab = cabeca; golpeSinal = sinal >= 0 ? 1 : -1;
         }
+
+        /// <summary>Morreu: zera todo efeito de estado do corpo (branco do flash, tranco, coice). O ragdoll não chama mais
+        /// Pose, então o que estivesse ligado no último quadro vivo congelaria no corpo.</summary>
+        public void LimparEfeitos()
+        {
+            brancoCego = 0; golpeT = 9; golpeK = 0; recuoK = 0;
+            if (flash != 0 || queima != 0) { flash = 0; queima = 0; queimaPosta = 0; AtualizarCorpo(); }
+        }
+
+        /// <summary>Pegando fogo (0..1): manchas rosadas/vermelhas que tremulam no corpo (CSM/Boneco _Queima). Sobe rápido
+        /// quando encosta na chama e apaga devagar quando sai.</summary>
+        public float queima; float queimaPosta;
+        public void Queimar(bool noFogo, float dt)
+        {
+            queima = noFogo ? Mathf.Min(1, queima + dt * 4f) : Mathf.Max(0, queima - dt * 0.7f);
+            if (Mathf.Abs(queima - queimaPosta) > 0.02f || (queima == 0 && queimaPosta != 0)) { queimaPosta = queima; AtualizarCorpo(); }
+        }
         bool golpeCab; float golpeSinal = 1;
         const float PESCOCO = 0.56f;   // altura do pescoço no espaço do modelo (o que fica acima é cabeça/capacete)
 
@@ -383,7 +425,7 @@ namespace CSM.View3D
         void AtualizarCorpo()
         {
             mpbCorpo ??= new MaterialPropertyBlock();
-            mpbCorpo.SetColor("_CorTime", corSil); mpbCorpo.SetFloat("_Flash", flash);
+            mpbCorpo.SetColor("_CorTime", corSil); mpbCorpo.SetFloat("_Flash", flash); mpbCorpo.SetFloat("_Queima", queimaPosta);
             for (int p = 0; p < rends.Length; p++) if (!modelo.brilho[p]) rends[p].SetPropertyBlock(mpbCorpo);
         }
 

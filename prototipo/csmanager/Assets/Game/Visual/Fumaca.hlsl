@@ -95,6 +95,19 @@ float FumRaioFuro(float3 o, float3 d)
     return lerp(0.1, 1, k);
 }
 
+// rolar (usuário, 2026-11-06: "hoje ela não tem movimento de fumaça"): a couve-flor escorre pra fora do centro, pra
+// cima e girando de leve, ~4 do jogo/s, como fumaça viva revirando. Mapa de fluxo com 2 fases defasadas (cada uma anda 14
+// e volta enquanto a outra está no meio): anda sem parar e sem esticar o ruído pra sempre. esc = escala do ruído
+float FumRola(float3 g, int i, float esc)
+{
+    float3 cen = _FumMin[i].xyz + _FumTam.xyz * float3(0.5, 0.5, 0);
+    float2 rad = g.xy - cen.xy; float rl = length(rad); rad = rl > 1e-3 ? rad / rl : float2(1, 0);
+    float3 flu = float3(rad * 0.7 + float2(-rad.y, rad.x) * 0.45, 0.75);
+    float f0 = frac(_FumT * 0.28), f1 = frac(_FumT * 0.28 + 0.5);
+    float n0 = FumRuido((g - flu * (f0 * 14.0)) * esc), n1 = FumRuido((g - flu * (f1 * 14.0)) * esc + 23.0);
+    return lerp(n0, n1, abs(1 - 2 * f0));
+}
+
 // densidade desenhada (0..1) da smoke i no ponto g: as esferas das bolotas (Fumaca3D) com a borda ondulada pelo ruído
 // grande e comida em fiapos pelo ruído fino (só na borda: o miolo fica cheio); a rampa macia deixa a borda rala, sem
 // cara de massinha
@@ -105,11 +118,15 @@ float FumDens(float3 g, int i)
     // movimento enquanto ativa (usuário: "a smoke ter um pouco de movimento"): um ruído grande e lento empurra o ponto
     // numa direção que gira devagar (a borda revira, ±4 do jogo) e o fiapo fino escorre pro lado. Só a borda e a textura
     // mexem: o miolo e o tamanho (o que a Sim usa pra tapar a visão, SmokeVolume.SampleVis) ficam iguais
-    float w = FumRuido(g * 0.4 + float3(0, 0, _FumT * 0.35)) - 0.5;
-    float ang = _FumT * 0.25;
-    float3 gw = g + w * float3(cos(ang), sin(ang), 0.6) * 8.0;
-    float n = FumRuido(gw), nd = FumRuido(gw * 2.7 + 31 + float3(_FumT * 0.9, _FumT * 0.5, 0));
-    float d = b * FumAberto(g, n) + (n - 0.5) * 0.35;
+    float w = FumRuido(g * 0.4 + float3(0, 0, _FumT * 0.5)) - 0.5;
+    float ang = _FumT * 0.4;
+    float3 gw = g + w * float3(cos(ang), sin(ang), 0.6) * 11.0;
+    // rolar (usuário, 2026-11-06: "hoje ela não tem movimento de fumaça"): a couve-flor escorre pra fora do centro, pra
+    // cima e girando de leve, ~3 do jogo/s, como fumaça viva revirando. Mapa de fluxo com 2 fases defasadas (cada uma
+    // anda 12 e volta enquanto a outra está no meio): anda sem parar e sem esticar o ruído pra sempre
+    float n = FumRola(gw, i, 1);
+    float nd = FumRuido(gw * 2.7 + 31 + float3(_FumT * 1.4, _FumT * 0.8, -_FumT * 0.6));
+    float d = b * FumAberto(g, n) + (n - 0.5) * 0.42;
     d -= nd * 0.5 * (1 - saturate(d * 1.15));
     return saturate((d - 0.26) / 0.42);
 }

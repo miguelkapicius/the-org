@@ -20,10 +20,10 @@ namespace CSM.View3D
 
         static int Base(MapData.Cover c) => MapData.walk[c.r.x0, c.r.y0] ? MapData.floor[c.r.x0, c.r.y0] : MapData.GZ;
 
-        static int Topo(int x, int y) => MapData.walk[x, y] ? MapData.floor[x, y] : (MapData.solid[x, y] > 0 ? MapData.solid[x, y] : MapData.BlockH(x, y));
+        static int Topo(int x, int y) => CSM.View.MapVoxels.Topo(x, y);
 
         /// <summary>Caixas d'água (tanque) e caixotes dos telhados: a mesma sorte do MapVoxels (Rng 4, mesma ordem).</summary>
-        static List<(int cx, int cy, int h0, bool tanque)> Tralhas()
+        internal static List<(int cx, int cy, int h0, bool tanque)> Tralhas()
         {
             var l = new List<(int, int, int, bool)>();
             int NX = MapData.NX, NY = MapData.NY;
@@ -63,7 +63,7 @@ namespace CSM.View3D
             var g = (byte[])G.Clone();
             foreach (var c in MapData.covers)
             {
-                if (System.Array.IndexOf(KINDS, c.kind) < 0) continue;
+                if (System.Array.IndexOf(KINDS, CSM.View.MapVoxels.Tipo(c.kind)) < 0) continue;
                 int f = Base(c);
                 Apaga(g, true, c.r.x0 - 5, c.r.x1 + 5, c.r.y0 - 5, c.r.y1 + 5, f, f + Mathf.Max(c.h, 16) + 1, 12, 13, 17, 43, 38, 10, 11, 41, 30);
             }
@@ -206,6 +206,48 @@ namespace CSM.View3D
             }
         }
 
+        // (modelo, maior medida no chão em unidades do jogo)
+        static readonly (string, float)[] OLARIA = { ("fp_Vase_2", 6.6f), ("fp_Vase_4", 4.2f), ("fp_Pot_1", 5.2f), ("fp_Vase_2", 5.2f), ("fp_Vase_4", 5f) };
+        static readonly (string, float)[] FEIRA = { ("fp_FarmCrate_Apple", 7f), ("fp_FarmCrate_Carrot", 7f), ("fp_Barrel_Apples", 6.6f), ("fp_Bag", 5.4f), ("fp_FarmCrate_Empty", 7f) };
+        static readonly (string, float)[] ARMAZEM = { ("fp_Bag", 6f), ("fp_Bag", 5.2f), ("fp_Crate_Wooden", 7f), ("fp_Barrel", 6.6f), ("fp_Bag", 5.6f) };
+        static readonly (string, float)[] ADEGA = { ("fp_Barrel", 7.2f), ("fp_Barrel", 6.4f), ("fp_Bucket_Wooden_1", 4f), ("fp_Barrel_Apples", 6.8f), ("fp_Barrel", 6.8f) };
+
+        /// <summary>Carga de cada cobertura pequena (usuário: props "mal colocados, muito repetidos", "não melhorou os props"):
+        /// modelos do Fantasy Props MegaKit na proporção deles, em grupo solto dentro da MESMA área da cobertura — tema pelo
+        /// tipo (jarros = olaria, cestos = feira, sacos = armazém, barril = adega) com uma peça de outro tema de vez em
+        /// quando, tamanhos e giros diferentes, casa vazia aqui e ali e duas peças pequenas juntas. Colisão não muda.</summary>
+        static void Carga(MapData.Cover c, int f)
+        {
+            var r = new System.Random(c.r.x0 * 7349 + c.r.y0 * 113 + 5);
+            float R(float a, float b) => a + (float)r.NextDouble() * (b - a);
+            string k = CSM.View.MapVoxels.Tipo(c.kind);
+            var tema = k == "jars" || k == "plants" ? OLARIA : k == "baskets" ? FEIRA : k == "sacks" ? ARMAZEM : ADEGA;
+            var outros = new[] { OLARIA, FEIRA, ARMAZEM, ADEGA };
+            float w = c.r.x1 - c.r.x0, d = c.r.y1 - c.r.y0; const float PASSO = 7.2f;
+            int nx = Mathf.Max(1, Mathf.FloorToInt(w / PASSO)), ny = Mathf.Max(1, Mathf.FloorToInt(d / PASSO));
+            float px = w / nx, py = d / ny; int vazio = nx * ny >= 4 ? r.Next(nx * ny) : -1;
+            for (int i = 0; i < nx; i++)
+                for (int j = 0; j < ny; j++)
+                {
+                    if (i * ny + j == vazio) continue;
+                    var lista = r.NextDouble() < 0.22 ? outros[r.Next(4)] : tema;
+                    var (nome, lado) = lista[r.Next(lista.Length)];
+                    if (nome == "fp_FarmCrate_Empty") nome = "fp_FarmCrate_Apple";
+                    lado = Mathf.Min(lado * 1.22f * R(0.92f, 1.08f), Mathf.Min(px, py) * 1.12f);   // um tico maior que o tamanho real: lê melhor de cima
+                    float cx = c.r.x0 + (i + 0.5f) * px, cy = c.r.y0 + (j + 0.5f) * py, folga = Mathf.Max(0, (Mathf.Min(px, py) - lado) * 0.5f);
+                    bool quadrado = nome.Contains("Crate");
+                    float giro = quadrado ? r.Next(4) * 90f + R(-12f, 12f) : R(0f, 360f);
+                    if (lado < 6.2f && Mathf.Max(px, py) > 6.5f)
+                    {   // peça pequena: duas juntas, de tamanhos diferentes
+                        bool emX = px >= py; float s = 1.9f;
+                        Packs3D.Modelo(nome, cx - (emX ? s : 0), cy - (emX ? 0 : s) + R(-0.4f, 0.4f), f, lado, giro);
+                        var (n2, l2) = tema[r.Next(tema.Length)]; if (n2 == "fp_FarmCrate_Empty") n2 = "fp_FarmCrate_Carrot";
+                        Packs3D.Modelo(n2, cx + (emX ? s : 0), cy + (emX ? 0 : s) + R(-0.4f, 0.4f), f, Mathf.Min(l2 * 1.1f, 5.4f) * R(0.85f, 1f), R(0f, 360f));
+                    }
+                    else Packs3D.Modelo(nome, cx + R(-folga, folga), cy + R(-folga, folga), f, lado, giro);
+                }
+        }
+
         /// <summary>Monta os enfeites (uma malha só) filho de <paramref name="pai"/>.</summary>
         public static GameObject Montar(Material mat, Transform pai)
         {
@@ -215,7 +257,8 @@ namespace CSM.View3D
             foreach (var c in MapData.covers)
             {
                 int f = Base(c);
-                switch (c.kind)
+                if (pack && Packs3D.TemModelos && MapData.MAPA != "brasa" && System.Array.IndexOf(KINDS, CSM.View.MapVoxels.Tipo(c.kind)) >= 0) { Carga(c, f); continue; }
+                switch (CSM.View.MapVoxels.Tipo(c.kind))
                 {
                     case "jars":
                     case "plants":
@@ -230,13 +273,21 @@ namespace CSM.View3D
                             for (int j = 0; j < ny; j++)
                             {
                                 float bx = x0 + i * PASSO + jr.Uniform(-0.5f, 0.5f), by = y0 + j * PASSO + jr.Uniform(-0.5f, 0.5f), bh = Mathf.Max(7, c.h) * jr.Uniform(0.85f, 1.05f);
-                                if (pack) Packs3D.Barril(bx, by, f, bh); else Barril(o, bx, by, f, bh);
+                                // cada nicho tem uma carga diferente (usuário: "muito repetidos"): só barris com um saco no meio,
+                                // sacaria com barril nas pontas, ou caixotes de feira com sacos — nas mesmas casas da cobertura
+                                int comp = (c.r.x0 * 7 + c.r.y0 * 3) % 3, pos = i + j * nx, ult = nx * ny - 1;
+                                bool saco = comp == 0 ? (nx * ny >= 3 && pos % 3 == 1) : comp == 1 ? (pos != 0 && pos != ult) : (pos == ult && ult > 0);
+                                bool feira = comp == 2 && !saco;
+                                if (pack && saco) Packs3D.Sacos(bx, by, f, c.r.x0 * 13 + pos);
+                                else if (pack && feira) Packs3D.Caixote(bx, by, f, c.r.y0 * 7 + pos);
+                                else if (pack) Packs3D.Barril(bx, by, f, bh); else Barril(o, bx, by, f, bh);
                             }
                         break;
                     }
                     case "sacks":
                     case "baskets":
                     {
+                        if (Brasa3D.Cuida(c.kind)) break;   // na Brasa os sacos de cimento são fardos do kit (Brasa3D)
                         var sr = new Rng(c.r.x0 * 17 + c.r.y0 * 5);
                         int n = Mathf.Max(2, (c.r.x1 - c.r.x0) * (c.r.y1 - c.r.y0) / 14);
                         if (pack)
@@ -248,7 +299,13 @@ namespace CSM.View3D
                                 for (int j = 0; j < ny; j++)
                                 {
                                     float jx = px0 + i * lado + sr.Uniform(-0.6f, 0.6f), jy = py0 + j * lado + sr.Uniform(-0.6f, 0.6f); int sem = c.r.x0 * 131 + c.r.y0 * 17 + i * 7 + j;
-                                    if (c.kind == "sacks") Packs3D.Sacos(jx, jy, f, sem); else Packs3D.Caixote(jx, jy, f, sem);
+                                    // mistura (usuário: "5 sacos de areia" iguais em fila): a 1ª peça é a do tipo da cobertura e as outras
+                                    // alternam com barril e caixote/saco, pra pilha parecer carga de verdade e não um carimbo
+                                    int qual = (i + j * 2 + c.r.x0 + c.r.y0) % 3;
+                                    if (i + j == 0) qual = 0;
+                                    if (qual == 1) Packs3D.Barril(jx, jy, f, Mathf.Max(7, c.h) * sr.Uniform(0.85f, 1.0f));
+                                    else if ((qual == 0) == (c.kind == "sacks")) Packs3D.Sacos(jx, jy, f, sem);
+                                    else Packs3D.Caixote(jx, jy, f, sem);
                                 }
                         }
                         else
@@ -260,12 +317,34 @@ namespace CSM.View3D
                         break;
                     }
                     case "barrel":
-                        if (pack) Packs3D.Barril((c.r.x0 + c.r.x1) / 2f, (c.r.y0 + c.r.y1) / 2f, f, c.h);
-                        else Barril(o, (c.r.x0 + c.r.x1) / 2f, (c.r.y0 + c.r.y1) / 2f, f, c.h);
+                    {
+                        // cobertura de barril larga (Brasa: 1 casa = 25 ou mais) vira grupo de barris lado a lado; a da
+                        // Vila (estreita) segue com 1 barril no meio, igual a antes
+                        // Brasa: barril maior (2 por casa de 25, como os da Inferno); passo 8,2 com o de 7,4 da Vila
+                        bool grande = MapData.MAPA == "brasa";
+                        float PB = grande ? 12.4f : 8.2f, DB = grande ? 11f : 7.4f;
+                        int nx = Mathf.Max(1, Mathf.FloorToInt((c.r.x1 - c.r.x0 - 0.4f) / PB)), ny = Mathf.Max(1, Mathf.FloorToInt((c.r.y1 - c.r.y0 - 0.4f) / PB));
+                        if (nx * ny == 1)
+                        {
+                            if (pack) Packs3D.Barril((c.r.x0 + c.r.x1) / 2f, (c.r.y0 + c.r.y1) / 2f, f, c.h);
+                            else Barril(o, (c.r.x0 + c.r.x1) / 2f, (c.r.y0 + c.r.y1) / 2f, f, c.h);
+                            break;
+                        }
+                        var br = new Rng(c.r.x0 * 37 + c.r.y0 * 11);
+                        float bx0 = (c.r.x0 + c.r.x1) * 0.5f - (nx - 1) * PB * 0.5f, by0 = (c.r.y0 + c.r.y1) * 0.5f - (ny - 1) * PB * 0.5f;
+                        for (int i = 0; i < nx; i++)
+                            for (int j = 0; j < ny; j++)
+                            {
+                                float bx = bx0 + i * PB + br.Uniform(-0.6f, 0.6f), by = by0 + j * PB + br.Uniform(-0.6f, 0.6f), bh = c.h * br.Uniform(0.88f, 1.02f);
+                                if (pack) Packs3D.Barril(bx, by, f, bh, DB); else Barril(o, bx, by, f, bh);
+                            }
                         break;
+                    }
                 }
             }
-            foreach (var t in Tralhas()) { if (t.tanque) Tanque(o, t.cx, t.cy, t.h0); else Caixote(o, t.cx, t.cy, t.h0); }
+            // (altura do telhado como o Pisos3D desenhou: no quarteirão do palácio os blocos de cima foram nivelados)
+            // (no telhado do palácio não vai caixa nem caixa d'água: usuário, "essas caixas e caixa da água não!")
+            foreach (var t in Tralhas()) { if (Pisos3D.NoPalacio(t.cx, t.cy)) continue; int hz = Pisos3D.Alt != null && Pisos3D.CasaDe[t.cx, t.cy] >= 0 ? Pisos3D.Alt[t.cx, t.cy] : t.h0; if (t.tanque) Tanque(o, t.cx, t.cy, hz); else Caixote(o, t.cx, t.cy, hz); }
             Carroca(o); Escada(o);
             return o.Montar("Adornos (jarros, sacos, cestos, barris, telhados, carroça)", mat, pai);
         }

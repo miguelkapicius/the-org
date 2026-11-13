@@ -17,7 +17,7 @@ namespace CSM.View3D
 
         static IEnumerable<MapData.Cover> Fontes()
         {
-            foreach (var c in MapData.covers) if (c.kind == "fountain") yield return c;
+            foreach (var c in MapData.covers) if (c.kind == "fountain" && !Brasa3D.Cuida(c.kind)) yield return c;   // na Brasa a fonte é a quadrada do kit (Brasa3D)
         }
 
         static float Chao(MapData.Cover c)
@@ -54,42 +54,32 @@ namespace CSM.View3D
 
         public static GameObject Montar(Material mat, Transform pai, bool linear)
         {
-            var pf = Resources.Load<GameObject>("Kenney/fountain-round-detail");
-            if (pf == null) { Debug.LogWarning("[Chafariz3D] faltou Resources/Kenney/fountain-round-detail"); return null; }
-            var raiz = new GameObject("Chafariz (Kenney)"); raiz.transform.SetParent(pai, false);
-            // o material do mapa repinta o que olha pra cima com o mapa visto de cima (piso): a água e a borda viravam ladrilho
-            mat = new Material(mat) { name = "Maquete chafariz" }; mat.SetFloat("_UsarTopo", 0); mat.SetFloat("_UsarVertice", 1);
-            Color pedra = Paleta3D.Vertice(PEDRA, linear), agua = Paleta3D.Vertice(AGUA, linear);
+            // Vila marroquina: a fonte redonda de pedra do Kenney destoava (usuário: "não tem mais coesão visual"). Agora é
+            // uma fonte de pátio de azulejo (zellige): degrau largo de 16 lados, bacia oitavada branca com barra verde-água e
+            // friso azul, água, e no meio o pedestal com a taça. Mesmo diâmetro e altura da cobertura da Sim.
+            var o = new Obra3D(); float E = MalhaMapa.ESC; int n = 0;
+            Color cal = new Color(0xF2 / 255f, 0xEA / 255f, 0xD8 / 255f), verde = new Color(0x3F / 255f, 0xA6 / 255f, 0xA0 / 255f), azul = new Color(0x2F / 255f, 0x5E / 255f, 0x8E / 255f);
+            Color agua = new Color(0x4F / 255f, 0xA8 / 255f, 0xD8 / 255f), barro = Paleta3D.Srgb(Paleta3D.ADOBE + 2);
             foreach (var c in Fontes())
             {
-                var g = Object.Instantiate(pf, raiz.transform);
-                // a raiz do FBX traz o giro de eixo (Blender Z pra cima -> Unity Y): não zerar
-                g.transform.SetPositionAndRotation(Vector3.zero, pf.transform.localRotation);
-                g.transform.localScale = pf.transform.localScale;
-                // pinta: cópia da malha com a cor da paleta no lugar do branco/azul do conversor
-                foreach (var mf in g.GetComponentsInChildren<MeshFilter>())
-                {
-                    var me = Object.Instantiate(mf.sharedMesh); var cs = me.colors;
-                    if (cs == null || cs.Length != me.vertexCount) { cs = new Color[me.vertexCount]; for (int i = 0; i < cs.Length; i++) cs[i] = Color.white; }
-                    for (int i = 0; i < cs.Length; i++) cs[i] = cs[i].b > cs[i].r + 0.2f ? agua : pedra;
-                    me.colors = cs; mf.sharedMesh = me;
-                    var r = mf.GetComponent<MeshRenderer>();
-                    if (r != null) { r.sharedMaterials = new[] { mat }; r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On; }
-                }
-                // tamanho: o diâmetro da cobertura no chão
-                var b = new Bounds(); bool ok = false;
-                foreach (var r in g.GetComponentsInChildren<Renderer>()) { if (!ok) { b = r.bounds; ok = true; } else b.Encapsulate(r.bounds); }
-                if (!ok) continue;
-                float diam = (c.r.x1 - c.r.x0) * MalhaMapa.ESC, k = diam / Mathf.Max(0.001f, Mathf.Max(b.size.x, b.size.z));
-                g.transform.localScale = pf.transform.localScale * k;
-                float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f;
-                var chao = MalhaMapa.ParaUnity(cx, cy, Chao(c));
-                // o pivô do modelo pode não estar no pé nem no meio: alinha pela caixa
-                var centro = new Vector3(b.center.x, b.min.y, b.center.z) * k;
-                g.transform.position = chao - centro;
-                Debug.Log($"[Chafariz3D] chafariz em ({cx:0},{cy:0}) diâmetro {diam:0.00} u, escala {k:0.000}");
+                float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f, R = (c.r.x1 - c.r.x0) / 2f, z0 = Chao(c), h = Mathf.Max(8f, c.h);
+                Vector3 U(float dz) => MalhaMapa.ParaUnity(cx, cy, z0 + dz);
+                Vector3 Cima(float dz) => Vector3.up * dz * E;
+                o.Cilindro(U(0), Cima(0.9f), R * 1.06f * E, R * 1.06f * E, 16, barro);                       // degrau
+                o.Cilindro(U(0.9f), Cima(1.4f), R * 0.96f * E, R * 0.96f * E, 8, cal);                       // bacia: cal
+                o.Cilindro(U(2.3f), Cima(0.9f), R * 0.97f * E, R * 0.97f * E, 8, verde);                     // barra verde-água
+                o.Cilindro(U(3.2f), Cima(0.5f), R * 0.96f * E, R * 0.96f * E, 8, azul, cal);                 // friso azul, borda de cal
+                o.Cilindro(U(3.2f), Cima(0.52f), R * 0.80f * E, R * 0.80f * E, 8, agua, agua);               // água
+                o.Cilindro(U(3.2f), Cima(h * 0.55f), R * 0.16f * E, R * 0.12f * E, 8, cal);                  // pedestal
+                o.Cilindro(U(3.2f + h * 0.55f), Cima(0.5f), R * 0.15f * E, R * 0.15f * E, 8, verde);
+                o.Cilindro(U(3.7f + h * 0.55f), Cima(1.6f), R * 0.13f * E, R * 0.40f * E, 12, cal, agua);    // taça com água
+                o.Cilindro(U(5.3f + h * 0.55f), Cima(Mathf.Max(0.6f, h - 5.3f - h * 0.55f)), R * 0.06f * E, R * 0.03f * E, 6, azul);   // bico
+                n++;
+                Debug.Log($"[Chafariz3D] fonte de azulejo em ({cx:0},{cy:0}) raio {R:0.0} do jogo");
             }
-            return raiz;
+            if (n == 0) return null;
+            mat = new Material(mat) { name = "Maquete chafariz" }; mat.SetFloat("_UsarTopo", 0); mat.SetFloat("_UsarVertice", 1);
+            return o.Montar("Chafariz (zellige)", mat, pai);
         }
     }
 }

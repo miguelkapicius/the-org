@@ -24,6 +24,30 @@ namespace CSM.Sim
         public readonly Team team;
         public class Contact { public int id; public V2 pos; public float z, t; public bool seen; public string by; public int hp = 100; public float hpT = -9; }
         public readonly Dictionary<int, Contact> contacts = new Dictionary<int, Contact>();
+        /// <summary>
+        /// CRENÇA POR EVIDÊNCIA (apCrencaLigado, sim-apoio 2026-11-09; Gabriel: "memória curta"). O contato continua a melhor hipótese
+        /// até uma evidência contra: alguém do time olhou o ponto depois e não viu ninguém, ou ele foi ouvido/visto noutro lugar (o
+        /// rastro dele colapsou depois, longe dali). Sem evidência, a chance de ainda estar lá cai como no pro (de_mirage: na mesma
+        /// região há 4 s+ 0,69 · 8 s+ 0,49 · 15 s+ 0,29 → e^(−idade/11)). Medido (Headless -memoria): depois que o time para de ver,
+        /// o inimigo fica a ≤200 do ponto 99% aos 4 s e 88-94% aos 8 s; o cérebro largava com 3-8 s.
+        /// </summary>
+        public const float CRENCA_TAU = 8f;   /* v2 (09/11): pro fica na região 62% aos 4 s, 44% aos 8 s → τ ≈ 8-10 */
+        /// <summary>CRENÇA 2 (crenca2Ligado, 2026-11-12): o som é do rastro de quem fez o som (antes ia tudo pro rastro "mais plausível": 4 TR
+        /// correndo juntos viravam 1, e quando o dono de verdade morria ficava um fantasma no lugar); call atrasada não apaga som mais
+        /// novo; o rastro escorre na velocidade de quem corre; e o time conta os inimigos por zona pelo rastro (visto, ouvido ou cantado).</summary>
+        public static bool Crenca2 => TeamBrain.EXPF.Contains("crenca2Ligado");
+        /// <summary>A crença 2 vale pra este time? (crenca2SoCT / crenca2SoTR: só um lado, pra medir de quem é o efeito.)</summary>
+        public bool Cr2 => Crenca2 && !TeamBrain.EXPF.Contains(team == Team.CT ? "crenca2SoTR" : "crenca2SoCT");
+        public bool Refutado(Contact c, float t)
+        {
+            if (t - c.t < 0.5f) return false;
+            int i = Idx(c.pos);
+            if (seenAt[i] > c.t + 0.4f) return true;   // olharam o ponto e ele não estava
+            foreach (var r in inimigos) if (r.id == c.id) return r.infoT > c.t + 0.3f && r.poss[i] < 0.1f;   // ouvido/visto noutro lugar
+            return false;
+        }
+        /// <summary>Chance (0-1) de o contato ainda valer: 0 se refutado; senão cai com a idade como no pro.</summary>
+        public float Vale(Contact c, float t) => Refutado(c, t) ? 0f : t - c.t < 0.5f ? 1f : MathF.Exp(-(t - c.t) / CRENCA_TAU);
         /// <summary>Onde e quando o portador do bomb foi visto por último.</summary>
         public V2 bombaPos; public float bombaT = -99;
         public readonly List<(float t, V2 p, string kind)> heard = new List<(float, V2, string)>();
@@ -74,7 +98,7 @@ namespace CSM.Sim
         public static V2 CenterOf(int i) => Center(i / GY, i % GY);
 
         /// <summary>Onde um inimigo pode estar: 0..1 por célula (1 = cabe com a última info; cai devagar com a distância).</summary>
-        public class Rastro { public int id; public float[] poss = new float[GX * GY]; public float infoT = -1000, area, conf; public bool vivo = true; }
+        public class Rastro { public int id; public float[] poss = new float[GX * GY]; public float infoT = -1000, area, conf; public bool vivo = true; public V2 infoPos; }
         public readonly List<Rastro> inimigos = new List<Rastro>();
         /// <summary>Área possível (em células ponderadas) do tamanho de um bomb: com isso ele "está ali" (confiança 1).</summary>
         public const float A0 = 70;
@@ -97,7 +121,7 @@ namespace CSM.Sim
         /// </summary>
         public static void Viewshed(V2 pos, float eyeZ, float aim, float halfFov, float range, Func<V2, float, bool> smoke, Action<int> visible)
         {
-            var tops = Tops(); const int NY = MapData.NY;
+            var tops = Tops(); int NY = MapData.NY;
             int rays = (int)(2 * halfFov / (1.6f * MathF.PI / 180)) + 2;   // ~1 célula de 12 entre raios a 450 de distância
             for (int r = 0; r < rays; r++)
             {
@@ -153,7 +177,7 @@ namespace CSM.Sim
         /// <summary>Info nova de um inimigo: tudo que se achava dele some, ele está ali (raio = incerteza).</summary>
         void Colapsa(Rastro r, V2 p, int raio, float v, float t)
         {
-            Array.Clear(r.poss, 0, r.poss.Length); MarkR(r, p, raio, v); r.infoT = t;
+            Array.Clear(r.poss, 0, r.poss.Length); MarkR(r, p, raio, v); r.infoT = t; r.infoPos = p;
         }
 
         /// <summary>
@@ -162,12 +186,31 @@ namespace CSM.Sim
         /// inimigo não volta cheia na hora: o teto cresce com o tempo desde que foi vista (memória, em
         /// <paramref name="memoria"/> s volta a ser suspeita de vez). Rota toda vigiada = o rastro não passa.
         /// </summary>
+        float[] tmp, tetoPlant; float plantT = 1e9f; V2 bombaPlant;
+        /// <summary>CRENÇA 2: plantou — quem não deu notícia depois do plant está perto do C4 (pós-plant), não espalhado pelo mapa. O rastro
+        /// sem informação nova fica com teto pela distância do C4 (cheio até 500, quase nada depois de 850). Quem for visto ou ouvido
+        /// a mais de 550 do C4 depois do plant (o lurker) fica livre do teto. Sem isso o CT andava de shift na própria base no retake.</summary>
+        public void PriorPlant(V2 bomba, float t)
+        {
+            var tt = new float[GX * GY];
+            foreach (int i in passIdx) { float d = (CenterOf(i) - bomba).Len; tt[i] = d < 500 ? 1f : d > 850 ? 0.06f : 1f - 0.94f * (d - 500) / 350f; }
+            tetoPlant = tt; plantT = t; bombaPlant = bomba;
+        }
+        void TetoPlant()
+        {
+            if (tetoPlant == null) return;
+            foreach (var r in inimigos)
+            {
+                if (!r.vivo || r.infoT > plantT + 1f && (r.infoPos - bombaPlant).Len > 550f) continue;   /* livre do teto só quem deu notícia depois do plant e LONGE do C4 (lurker); quem atira de dentro do bomb continua "perto do C4" */
+                var ps = r.poss; foreach (int i in passIdx) if (ps[i] > tetoPlant[i]) ps[i] = tetoPlant[i];
+            }
+        }
         public void Spread(float t, float memoria)
         {
             foreach (var r in inimigos)
             {
                 if (!r.vivo) continue;
-                var h = r.poss; var nh = (float[])h.Clone();
+                var h = r.poss; var nh = tmp ??= new float[h.Length]; Array.Copy(h, nh, h.Length);   /* um rascunho por time: clonar 10 grades 4x por segundo era lixo de memória */
                 foreach (int i in passIdx)
                 {
                     if (h[i] <= 0.02f) continue;
@@ -181,6 +224,7 @@ namespace CSM.Sim
                 }
                 Array.Copy(nh, h, h.Length);
             }
+            TetoPlant();
         }
 
         /// <summary>Aliado vê a célula agora: ninguém está lá (todos os rastros zeram ali). Recalc depois.</summary>
@@ -224,16 +268,27 @@ namespace CSM.Sim
             contacts[id] = new Contact { id = id, pos = pos, z = z, t = t, seen = true, by = by, hp = old?.hp ?? 100, hpT = old?.hpT ?? -9 };
             if (bomba) { bombaPos = pos; bombaT = t; }   // dá pra ver o C4 nas costas
             var r = inimigos.Find(x => x.id == id);
-            if (r != null && r.vivo) Colapsa(r, pos, 1, 1f, t);
+            if (r != null && r.vivo && !(Cr2 && r.infoT > t)) Colapsa(r, pos, 1, 1f, t);   /* call do que foi visto ANTES não apaga o que se ouviu dele depois */
         }
 
         /// <summary>
         /// Som (passo, tiro, plant): de quem é? Do inimigo que mais plausivelmente estava ali (o rastro dele cobre o
         /// lugar; empate = quem está há mais tempo sem info). Esse inimigo passa a estar ali.
         /// </summary>
-        public void Heard(V2 p, float t, string kind, float uncertainty)
+        public void Heard(V2 p, float t, string kind, float uncertainty, int fonte = -1, float feito = -1)
         {
             heard.Add((t, p, kind));
+            if (Cr2 && fonte >= 0)
+            {   /* quem fez o som é quem passa a estar ali: cada passo conta o seu dono, e a morte dele leva o rastro certo */
+                var rf = inimigos.Find(x => x.id == fonte);
+                if (rf != null)
+                {   /* a informação vale da hora em que o som foi FEITO (ele chega 0,5-1,1 s depois pelo rádio). Dono já morto: o passo atrasado
+                       some, não vira outro inimigo em cima do corpo. Já visto/ouvido DEPOIS desse som: fica o mais novo */
+                    float ti = feito >= 0 ? feito : t;
+                    if (rf.vivo && rf.infoT <= ti) Colapsa(rf, p, Math.Max(1, (int)(uncertainty / C)), kind == "tiro" ? 0.95f : 0.85f, ti);
+                    return;
+                }
+            }
             int i = Idx(p); Rastro best = null; float bs = -1;
             foreach (var r in inimigos)
             {
@@ -244,6 +299,40 @@ namespace CSM.Sim
             if (best != null) Colapsa(best, p, Math.Max(1, (int)(uncertainty / C)), kind == "tiro" ? 0.95f : 0.85f, t);
         }
 
+        /// <summary>
+        /// Suspeita (não certeza): "deve ter alguém ali" — a granada que veio de lá. Soma a possibilidade no rastro do
+        /// inimigo mais plausível sem apagar o resto do que se achava dele (Heard/Colapsa apagam: aquilo é ouvir o cara).
+        /// </summary>
+        public void Suspeita(V2 p, float t, float incerteza, float conf)
+        {
+            int i = Idx(p); Rastro best = null; float bs = -1;
+            foreach (var r in inimigos)
+            {
+                if (!r.vivo) continue;
+                float s = r.poss[i] + 0.001f * (t - r.infoT);
+                if (s > bs) { bs = s; best = r; }
+            }
+            if (best != null) MarkR(best, p, Math.Max(1, (int)(incerteza / C)), Math.Clamp(conf, 0, 1));
+        }
+
+        static int[] zonaCel;
+        /// <summary>Quantos inimigos o time acredita em cada zona (A/Mid/B), pelo rastro de quem deu notícia há menos de
+        /// <paramref name="janela"/> s (visto, ouvido ou cantado): cada um soma 1, repartido pelas zonas onde pode estar agora.</summary>
+        public void PorZona(float[] acc, float t, float janela)
+        {
+            if (zonaCel == null) { var z = new int[GX * GY]; foreach (int i in passIdx) z[i] = Coletivo.ZonaIdx(CenterOf(i)); zonaCel = z; }
+            foreach (var r in inimigos)
+            {
+                if (!r.vivo || t - r.infoT > janela || r.area <= 0) continue;
+                var ps = r.poss; float a = 0, b = 0, c = 0;
+                foreach (int i in passIdx) { float v = ps[i]; if (v <= 0) continue; int z = zonaCel[i]; if (z == 0) a += v; else if (z == 2) c += v; else b += v; }
+                float s = a + b + c; if (s <= 0) continue;
+                acc[0] += a / s; acc[1] += b / s; acc[2] += c / s;
+            }
+        }
+
+        /// <summary>O time teve notícia deste inimigo DEPOIS de <paramref name="t"/> e longe de <paramref name="p"/>? (crença por jogador)</summary>
+        public bool Movido(int id, V2 p, float t) { foreach (var r in inimigos) if (r.id == id) return !r.vivo || r.infoT > t + 0.3f && (r.infoPos - p).Len > 200f; return false; }
         public void Morreu(int id) { var r = inimigos.Find(x => x.id == id); if (r != null) { r.vivo = false; Array.Clear(r.poss, 0, r.poss.Length); } }
 
         /// <summary>bx: as k células mais prováveis de ter inimigo num raio (peso = soma das probabilidades dos rastros ali).

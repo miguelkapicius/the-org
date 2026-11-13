@@ -21,6 +21,8 @@ namespace CSM.View3D
             // granada do morto: a Sim rola ela a cada passo (ItemChao.pos/vel, dá pra pegar rolando, como no CS); o desenho
             // segue a posição atual suavizada e gira pela distância andada
             public bool rola, caixa; public int quiques; public Match.ItemChao item;
+            // granada/kit no chão (dropada pro colega ou do morto): som do baque (Som3D.GranadaCaiu; kit fica mudo)
+            public string nade;
             // amostra dos vértices do item (espaço dele, sem escala) e a escala: o chão apoia no ponto mais baixo DE VERDADE
             // depois do giro (antes era uma meia altura fixa: lata deitada flutuava, arma inclinada afundava)
             public Vector3[] pts; public Vector3 esc = Vector3.one; public Vector3 eixo = Vector3.right; public float giro;
@@ -135,7 +137,7 @@ namespace CSM.View3D
                 bool doMorto = !deMao && it.morto != null && bonecos.ContainsKey(it.morto.id);
                 if (doMorto) { var tr = bonecos[it.morto.id].transform; mao = tr.position + Vector3.up * 0.35f; yaw = UnityEngine.Random.Range(0f, 360f); }
                 var gi = Granada(it.nade, it.time == Team.T); gi.transform.localScale = Vector3.one * ESC_GRANADA_CHAO;
-                var ac = NovoItem(gi, mao, emp * 0.6f, yaw); ac.meiaAltura = 0.03f * ESC_GRANADA_CHAO;
+                var ac = NovoItem(gi, mao, emp * 0.6f, yaw); ac.meiaAltura = 0.03f * ESC_GRANADA_CHAO; ac.nade = it.nade;
                 if (doMorto)   // sai do corpo (mao) e segue o rolo da Sim
                 {
                     ac.rola = true; ac.item = it; ac.caixa = it.nade == "kit";
@@ -261,7 +263,12 @@ namespace CSM.View3D
                     ac.r = idade < 0.18f ? Quaternion.Slerp(ac.r, deitada, 1 - Mathf.Exp(-20f * dt)) : deitada;
                 }
                 novo.y = Mathf.Max(novo.y, Efeitos3D.Piso(novo) + Fundo(ac, ac.r));   // apoiado pelo ponto mais baixo (não flutua nem afunda)
-                if (idade >= 0.18f) novo.y = Efeitos3D.Piso(novo) + Fundo(ac, ac.r);
+                if (idade >= 0.18f)
+                {
+                    novo.y = Efeitos3D.Piso(novo) + Fundo(ac, ac.r);
+                    // granada do morto chegou no chão (fim da queda do peito): o baque dela, uma vez
+                    if (!ac.soou && ac.nade != null) { ac.soou = true; Som3D.GranadaCaiu(novo, ac.nade); }
+                }
                 ac.p = novo; ac.go.transform.SetPositionAndRotation(ac.p, ac.r);
                 // parou na Sim e o desenho chegou: fica como está (deitada/chapada)
                 if (it.vel.x == 0 && it.vel.y == 0 && (novo - alvo).sqrMagnitude < 1e-6f) { ac.rola = false; ac.parada = true; ac.v = Vector3.zero; ac.w = Vector3.zero; }
@@ -286,6 +293,7 @@ namespace CSM.View3D
                     if (Mathf.Abs(ac.v.y) > 1.2f) fx.Passo(ac.p, Vector3.zero);   // poeirinha do baque
                     // 1º baque: o clipe já traz baque + 1 quique; cada quique seguinte da física soa mais baixo
                     if (ac.gun != null) { if (!ac.soou) { ac.soou = true; Som3D.ArmaCaiu(ac.p, ac.gun); } else Som3D.ArmaQuicou(ac.p, ac.gun, ++ac.quiques); }
+                    else if (ac.nade != null) { Som3D.GranadaCaiu(ac.p, ac.nade, ac.soou ? ++ac.quiques : 0); ac.soou = true; }
                     ac.v = new Vector3(ac.v.x * 0.62f, -ac.v.y * 0.32f, ac.v.z * 0.62f); ac.w *= 0.55f;
                     // rolando/escorregando no chão até parar
                     if (Mathf.Abs(ac.v.y) < 0.5f)

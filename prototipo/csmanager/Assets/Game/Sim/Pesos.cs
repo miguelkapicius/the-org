@@ -89,7 +89,8 @@ namespace CSM.Sim
             return p;
         }
 
-        public const string ARQUIVO = "Assets/Game/Sim/pesos.txt";
+        /* pesos de comportamento valem pra qualquer mapa; o mapa pode ter os seus (Assets/Game/Sim/<mapa>/pesos.txt) */
+        public static readonly string ARQUIVO = File.Exists(CSM.Map.MapaEscolhido.Arq("Assets/Game/Sim/pesos.txt")) ? CSM.Map.MapaEscolhido.Arq("Assets/Game/Sim/pesos.txt") : "Assets/Game/Sim/pesos.txt";
         static Pesos padrao;
         /// <summary>Os pesos aprovados (pesos.txt) ou os de fábrica. Sempre devolve uma cópia.</summary>
         public static Pesos Padrao()

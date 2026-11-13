@@ -1,0 +1,248 @@
+### 1 · 2026-11-10T17:42
+Eu tenho feito um jogo com outras 7 sessões de simulação, de visual, de HUD, de som e tudo mais. Acontece que eu tô com muito problema para fazer a simulação dos bots em algumas coisas. Tá? Ele tá cada vez melhorando mais, mas hoje eu tô com um problema muito forte de otimização disso, né? Eu acho que o jogo ele começa a lagar bastante e tal, começa a ficar injogável assim de ver os jogadores. E ainda tem muitas questões que não se assemelham com jogadores de pro, né? Eles, principalmente assim, eles são ruins de estratégia, ou ruins de micro, eles não tomam, tipo, o duelo me incomoda um pouco, tipo, eles pinam, eles não sabem, tipo, fazer um pique e matar, eles não sabem pegar cobertura, eles não sabem tentar fazer uma counterplay, tentar, tipo, sei lá, sair, aparecer em outro lugar, e, tipo, enfim, sabe, tentar fazer um mind games ali, eu sinto que eles ficam ali parados, trocando tiro, assim, até alguém morrer, muitas vezes, por mais que eu já tenha tentado melhorar isso bastante com o Ops 5.5, e eu preciso de um plano disso, de melhora, e depois implementação, né, acho que primeiro é a otimização, que tem que ver por que tá tão ruim, tem que ver, eu acho que o código ele tá ficando muito Frankenstein, né, tem muitas linhas de código, muita coisa que provavelmente tá inútil, porque a gente precisou dar uma refatorada nas coisas, então tem várias flags desligadas, enfim, e assim, cara, melhorar o comportamento no geral, né, tipo assim, eu sinto que eles ainda não interagem com todos os sons, tipo assim, o som do cara plantando a bomba, o som de uma granada, o som dos passos ainda tem uma coisa bugada, eu não sei se eles só tende a melhorar, mas ainda tá esquisito, sabe? Ainda dá pra ver que são bots jogando. E o retake dos CTs, eles vão de cada vez, eles têm alguns vícios também, os bots. Que tiram a imersão do jogo, que é o que eu quero criar. Eu quero criar bots inteligentes que jogam igual pros, você ter a sensação de que você tá vendo players jogando ali e tal. Humanizados e tal. São bons, que fazem plays, né? Enfim. Então, eu sinto que é isso, o duelo é uma coisa mais difícil, né, de criar um cover, de tentar abandonar a trocação de tiro naquele momento enquanto ainda for dependendo com a situação, né. Hoje a gente tem a crença dos bots, que é uma coisa que eu acho que é o melhor jeito de fazer, a crença e o juiz que define as decisões ali de acordo com a crença do bot, o que ele acredita e como ele sabe jogar o jogo, mas eu ainda acredito que isso aí tá meio quebrado ainda, sabe? Essa
+
+### 2 · 2026-11-10T17:46
+Mano, eu queria que eles jogassem igual os pros, sabe? Tipo, mano, com shoulder pick, tipo assim, mano, se adaptando às situações todas, tá ligado? Tanto no micro, né, que os jogadores, cada jogador individualmente, tanto nas causas de GL, como ele lê o jogo, leitura, adaptação, tipo, pique, fatiada, assim, sabe, pra pixel, onde pode ter gente. A crença onde pode ter gente, memória memória longa, sabe? Eles usando estratégias, usando bem as granadas, sabe? Igual um pro jogaria, entendeu? Eu tenho, acho que, um pouco de estrutura, só que não tá funcionando, sabe?
+
+### 3 · 2026-11-10T17:49
+tem o repositorio the org https://github.com/miguelkapicius/the-org/tree/main/prototipo/csmanager, e mano vai a fundo só vc, quero testar do que vc é capaz e se vai arruma o jogo, mas antes de começar, me fala como vc ve o resultado final de tudo q fizer
+
+### 4 · 2026-11-10T17:52
+isso, e oq funciona hj em dia e mto dificilmente precise de alteração?
+
+### 5 · 2026-11-10T17:53
+começa
+
+### 6 · 2026-11-10T19:02
+Mano, mas você tá ligado que só com números não dá pra ver se os caras estão jogando de uma forma coerente como um profissional jogaria, né? Tipo, tomando as decisões menos bots, assim, de ficar parado atirando no meio do aberto. Ou tipo, sei lá, trocação de tiro meio esquisita, espinando bastante. Tá ligado isso, não?
+
+### 7 · 2026-11-10T19:35
+E o que mais me incomoda, além dos duelos e tal, as outras coisas que a gente já combinou, é o jeito que eles olham o jogo, tá ligado? O jeito que eles olham as jogadas, as tipo, ideias, assim, tipo, sei lá, sabe, assim, tipo, ah, vou avançar aqui, e às vezes o mapa de calor, o cara, tipo, meio que mira em lugares que, tipo, sabe, a crença deles meio que tá, às vezes, precisa de várias mudanças, né, de onde os caras estão, né, tipo, a memória curta deles, acho que eu já falei isso, né, depois você vai bater nesses pontos, né. Sei lá, como que eles lidam, por exemplo, com o que eles acham da partida, tá ligado? Ah, puta, acho que tem Alp, acho que, sei lá, aquele cara tá jogando bem, ou tipo, ah, vamos evitar o bomb de não sei quem, ah, vamos pegar vantagem em algum lugar e tentar fazer alguma coisa com isso, ou vou pegar uma informação e tentar fazer alguma coisa com isso. Hoje em dia eles não fazem isso, tá ligado? Outra coisa também, tipo, como os pontas jogam, tá ligado? Como os âncoras jogam muitas vezes, como eles reagem às coisas de modo geral, sabe? Tipo, eles ainda reagem mal a várias coisas, sabe? Eles têm alguns vícios de ficar, tipo, sei lá, trocando na base CT lá, tá ligado? Enfim. Eles às vezes eles não sabem direito o pós-plant. Enfim, jogar de acordo com a partida, né? Porque geralmente, cara, o que acontece? O GL tem uma ideia de macro daquele round, eles podem jogar de acordo com aquele macro até o final, ou eles, tipo assim, podem adaptar algumas coisas. Aí, tipo, o que não tá funcionando nos outros rounds, eles vão melhorando conforme a partida, tá ligado? E depois isso vai virar não só a partida, eles vão guardar a partida inteira para as próximas partidas, para a próxima série, como que, entendeu? Tem um monte de coisa, tá ligado? Igual acontece na vida real. Você entende isso, né?
+
+### 8 · 2026-11-10T19:42
+Leitura é tipo memória entre partidas e tal, ainda é uma coisa que vai ser implementada depois, né? Até porque hoje a gente só tem um mapa, tá ligado? Estamos tentando ir pro segundo, né? O manager ainda está sendo feito por outra pessoa, então eu não tenho toda a base necessária para começar a implementar isso, mas a gente está criando a base para conseguir que isso se torne uma realidade depois, né? Os status de jogadores, a gente vai beber muito do Football Manager, né? Status de jogadores, características, treinamento com base tipo, em posições, né? E aí, tipo, tem repertório de canadas, repertório de táticas, um monte de coisa. Mas enfim, eu não sei também, às vezes dá pra pegar um pouco do que a animação, o personagem falou. Ou, enfim, você não falou, conversou com ela, mas dá pra conversar com ela, talvez ela lembre de algumas coisas no backlog anotadas, fazem sentido ou não, né? E é isso, assim, a gente caminha pra isso, sabe? A gente caminha, o jogador vai ser o coach, ele vai poder ter 3 timeouts, ele vai poder decidir algumas estratégias com o IGL no começo da partida, e vai poder também no meio da partida. Mas por enquanto eu quero que você foque na simulação padrão, né? Como um jogador com todos os status 15 jogaria, que seria o padrão, tá ligado? Entendeu? E aí vão ter jogadores muito piores ou melhores, tipo 20 lendas, enfim, né? Não sei se deu pra entender isso muito bem, não sei se ficou muito confuso, mas é isso, depois a gente complementa muita coisa, cara. Sistema de mentoria, sistema de tipo, realmente treinar alguma habilidade do jogador, tipo, sei lá, cara, é bom de pistol, né? Ou tipo, o cara gosta de fazer spray, sei lá, velho, joga agressivo de Alp, umas coisas assim, tá ligado? A gente tem que pensar em muitas coisas ainda, mas tipo, a minha é pra esse jogo, entendeu? É tipo um Football Manager de FPS tático, no estilo isométrico ali e tal.
+
+### 9 · 2026-11-10T19:47
+Mano, é que tem muita coisa que eu vou adicionando depois, tá ligado? Esse negócio do manager na partida, tá ligado? Então tem coisas que a gente vai ter que, tipo, adaptar depois, tá ligado? Mas, pô, se tiver um cara jogando 15-15 decente, tipo, 15/20 decente ali, tá ligado? Com os status, como se fosse isso, tá ligado? Um jogador padrão, digamos assim. Mano, já acho que ajudaria bastante, né? E depois a gente adapta, né? É melhor, tá ligado?
+
+### 10 · 2026-11-10T19:48
+Mano, toda a questão de movimentação deles, eles são meio ruins ainda, tá ligado? Tipo, eles sabem, tipo, tem implementado bunny hop, mas os caras não sabem, ou o modelo anterior não sabia fazer direito. Tem a questão do pezinho, tem essas features, mas elas não são usadas, eles não sabem quando usar direito. Tem uma base, acho que ok, porque eu tentei fazer muito, né, tipo... Mas, enfim, isso também vai ser depois, tá ligado? Por enquanto, foca naquelas coisas que a gente falou no começo, pra eu sentir uma melhora ou não, tá ligado?
+
+### 11 · 2026-11-10T21:03
+ta ficando melhor aparentemente
+
+### 12 · 2026-11-10T21:24
+mano mas eu quero ver as funcionalidades hoje po, nao vou ver nada as 23h?
+
+### 13 · 2026-11-10T23:01
+ate as 23h tem tempo
+
+### 14 · 2026-11-10T23:52
+Mano, você tá se apegando muito aos números, tá ligado? Tipo, o TR pode ficar forte por N motivos, mano. Pode ser que o mapa esteja desbalanceado. E aí foda-se, mano, tem um mapa tipo 3% a mais TR, mano. Tipo, ninguém liga, relaxa. Tá tudo certo, mano, tem, vão ter mapas mais CTs. Porque assim, mano, querendo ou não, certeza eles têm a talvez o nosso jogo esteja mais forte picar do que ficar ali, tipo, segurando o ângulo, né? E aí, beleza, cara, a gente vai ajustando depois, não fica brisando muito nisso, não, velho.
+
+### 15 · 2026-11-10T23:57
+Mano, você tá vendo que o escudo, antes de picar, ele olha pra trás? É porque o amigo dele tá bangando ou, tipo, ele só olha pra trás porque é um bug mesmo? Valida isso pra mim.
+
+### 16 · 2026-11-10T23:59
+E mano, o Mira tava ali no top mid olhando pro nada ou ele tava esperando alguma coisa também, mano? Porque tipo, pra mim o cara também tava mirando esquisitaço. Tava de lado pro pra tudo, tava mirando em porra nenhuma. Mano, tá justamente do jeito que eu achei que não ia estar, tá ligado?
+
+### 17 · 2026-11-11T00:02
+E, mano, uma brisa também, tipo, os prós, eles não, tipo, às vezes, muitas vezes eles não ficam comparados segurando, tipo, um pixel. Primeiro que o mira já, como eu falei, tá mirando parado de lado pra tudo, tá ligado? Então ele não tá mirando em lugar nenhum, tá ligado? Ele tá esperando a vez dele, tipo, igual um bot, tá ligado? E aí, tipo assim, geralmente, mano, eles ficam dando umas trefadinhas pequenininhas, assim, sabe? Porque justamente dificulta, né, tipo, de alguém ver eles assim, tipo... Tem chance de errar a bala, né? E eu acho que a mira dos bosses tá muito ruim ainda. Entendeu? Tipo, mano, tem que, mano, colar mais na cabeça às vezes, tá ligado? O profissional às vezes cola a mira na cabeça, tá ligado?
+Nesse momento o aliado dele podia bangar pra ele, né, mano? Pô, já que tem alguém aí pra bangar, tá ligado? Fazendo nada também. O cara que tá atrás dele não tá fazendo nada. Tá foda-se. Podia tá bangando pra ele, mano.
+
+### 18 · 2026-11-11T00:05
+streifadinha na espera, em cima dessas três, se nao souber oq eu to falando pesquisa
+
+### 19 · 2026-11-11T00:16
+posso abrir o .bat e testar ja?
+
+### 20 · 2026-11-11T00:46
+boa vc vai melhorar isso e tudo q der a noite
+
+### 21 · 2026-11-11T00:48
+É, tipo, a ideia não é deixar uma coisa fixa, tá ligado? Mas é, tipo, dar utilidade, tá ligado? Tipo assim, é uma... o cara pode fazer alguma coisa ao invés de ficar ali parado, tá ligado? Ou senão ele não deveria estar ali, tá ligado? É nesse sentido, entendeu? E, tipo assim, depois desse lance do Elo, tinha mais coisa pra gente resolver, né? Tem... Fala tudo que tá anotado no seu backlog aí.
+
+### 22 · 2026-11-11T00:53
+É, tipo, eu tô aqui com o jogo, tipo, mano, eles conseguiram ver que era stack A, a galera foi pra, pro bomb B e tal. Aí, tipo assim, o meu foi olhar meio, mas aí, tipo, em vez de tipo, olhar, ele foi andando pro aberto, assim, lá pro meio aberto, com, mano, uma, tipo, uma flash na mão, assim. E aí morreu muito esquisito, assim. Ou, tipo assim, o CTs, mano, o Rocha ficou no meio, ele parado, tá ligado? E, tipo, aí os CTs mataram todo mundo e não tinha o defuso, porque o defuso tava com o Rocha tava lá no meio, tipo, fazendo nada, assim, sei lá. Enfim, essas coisas, tá ligado? Também, pra adicionar aí. Tem muita coisa, cara. Mas eu acho que, tipo, pô... Se você ficar aí sem parar, tá ligado? Sem parar mesmo, assim, tipo, você acha que você tem quanto tempo aí pra arrumar tudo isso? E aí, tipo, ir pra criar realmente um banco de dados dos jogadores e aquelas coisas do FM que eu tinha te falado.
+
+### 23 · 2026-11-11T00:55
+Outra coisa que tá rolando um bug também, que é tipo assim, o cara compra uma Alp pro Alper, tá ligado? Só que ele tá de Alp, ele pega a Alp e é isso, tá ligado? E fica lá. E outra coisa, tipo, mano, uma puta de uma... De um negócio que parece até uma hive mind, assim, sabe? Tipo, todo mundo... Que é tipo... Tem um momento, sei lá, tipo, por exemplo, a bomba vai explodir. Aí os caras vai todo mundo, no, tipo, meio que no mesmo cantinho ali se juntar, tá ligado? Muito esquisito. Enfim, essas coisinhas aí. E tipo assim, o que eu falei do banco de jogadores lá do Futebol Manager, eu pensei tipo mais por conta do tipo, a gente ter a base, né, do que um jogador tipo, sei lá, 15 em tudo ali, tá ligado, padrão, pra depois implementar as características, o resto, porque isso muda muito o jogo, né, e enfim, mas se você acha que dá pra fazer tudo ao mesmo tempo, mano, eu vou fazendo, tá ligado, até os mapas, mano, eu vou fazer ao mesmo tempo, tá ligado, qualquer coisa.
+
+### 24 · 2026-11-11T01:23
+retake ta muito baixo, pesquisa como os pros jogam retake para ter ideia de como melhorar os nossos, alias faz isso para tudo mano, pesquisa bastante e me fala oq vc descobriu de relevante para colocarmos no jogador padrao
+
+### 25 · 2026-11-11T01:29
+Você acha que é o lance deles, tipo, saberem se comportar com cada arma, né? Com uma AK, com uma AWP, com um SMG, com uma pistola? Porque tem... muda o jeito de jogar, né? Dependendo da arma que você tá, né? Você vai, tipo, enfim, vai priorizar outras coisas, né? Você acha que muda o micro deles agora, sim, ou, tipo, depois que a gente implementar tudo?
+
+### 26 · 2026-11-11T01:58
+Mano, vai rodando aí, tipo, infinito, tá ligado? E aí a cada 12 horas tipo, coloca, tipo, o exe novo ali com as coisas que você quiser. Ou sempre deixa o teste ali com as coisas mais atualizadas que você tá validando. Sei lá, o que você quiser, mano. Foda-se. O que você quiser mesmo. Uma forma melhor, tá ligado? Mas eu não preciso ficar vendo o bagulho toda hora, você não precisa ficar perdendo tempo com isso. Eu quero que você foque em melhorar os pontos que eu te falei, que você sabe que tem que melhorar, tá ligado?
+
+### 27 · 2026-11-11T02:03
+essas 6 coisas vao demorar 1 semana e meia?
+
+### 28 · 2026-11-11T02:04
+É aquilo que você tinha falado de, tipo, mira por crença, essas coisas e tal, você tá nessa conta aí também? E, tipo, enfim, o IGL também tá nessa conta, tipo, adaptabilidade, leitura de jogo, táticas diferentes, né? É como jogar os conceitos pós-plant, marote, enfim, todas essas coisas já tá aí?
+
+### 29 · 2026-11-11T10:14
+continue
+
+### 30 · 2026-11-11T11:57
+Mano, pegar esse DXZ aí até as... Pode adiar pra 4 horas da tarde. O EXE. Porque eu não vou estar em casa pra olhar o PC, tá ligado? Então, mano, vai... 4 da tarde você gera um, mas, cara... Vai suave, vai tocando essas coisas aí. Qualquer coisa, mano, manda um replay de duelo quando você achar que eu preciso dar uma olhada, né, pra validar também. Replay que você quiser aí, tá? Antigamente até um replay da vila de um round inteiro, assim, que eles mandavam. Mas se isso for te atrapalhar muito, talvez seja melhor você focar nas suas coisas aí.
+
+### 31 · 2026-11-11T13:18
+isso da bomba talvez ainda tenha sobrado o djsksra q a gente usava antes, q nao fazia sentido pq ngm se movimenta usando djskra
+
+### 32 · 2026-11-11T15:50
+segue a fila
+
+### 33 · 2026-11-11T18:30
+@"C:\Users\olive\Downloads\WhatsApp Video 2026-11-11 at 15.23.18.mp4"
+Mano, esse vídeo resume bem, tipo, o que eu tenho falado, tá ligado? Parece que eles estão, tipo, jogando no automático, assim, sabe? Não parece ter uma estratégia por trás das coisas. Eles tipo, sei lá, velho, jogaram muito esquisitos ali. Você viu o CT jogando? Tipo, o R acho que tá jogando, o TR tá jogando melhor, mas tipo, você viu o CT jogando? Tipo, ele avança meio sem motivo, aí ele morre, ninguém faz nada com isso, aí fica vários caras olhando a mesma coisa pro mesmo lugar. Tá ligado? Uma coisa meio sem sentido. Tipo, sei lá, não tem uma estratégia, eles não tem um porquê estar ali, eles só, tipo, ficam mirando num canto e ficam, tipo, todos coladinhos assim, tentando mirar em algum lugar que o amigo não tá, talvez, né, não sei nem se tem isso no código. E aí, tipo assim, não sei se você viu, mas tem uma hora que os caras ficam todo mundo na escada do janelão ali parado, tá ligado? Tipo, eles tentam retake, tem coisas que, tipo, em alguns momentos estão boas, mas a maioria tá muito ruim, tá ligado? Tipo, são uns bots muito burros, parece que eles têm a mesma cabeça, assim, a mesma hora, eles pensam tudo igual, tanto que eles escolhem os quatro coladinhos ali, tá vendo? E aí, tipo, no final o Terry que sobrevive ainda, tipo, não pega a AW que tá no chão, ele fica de Mac 10 mesmo, tá ligado? O que mais que eu posso falar? Tem muita coisa estranha, assim, sabe? Eles ficam ali, tipo, os quatro andando juntos. Aí depois, tipo, os TRs ficam abrindo no CT, e morrem, tá ligado? Tipo, sabendo que tem gente ali, eles abrem e morrem, em vez de, tipo, pô, segurar vantagem ali, ou, tipo, jogar de outro jeito. Enfim, tem muita coisa esquisita, sabe?
+
+### 34 · 2026-11-11T19:58
+no teste sempre
+
+### 35 · 2026-11-11T23:12
+mano existe alguma chance q seja melhor refazer o cerebro inteiro dos bots dnv?
+
+### 36 · 2026-11-11T23:15
+pq os primeiros vao sair piores?
+
+### 37 · 2026-11-11T23:16
+mano foi feito em 5 dias
+
+### 38 · 2026-11-11T23:17
+ta mas vc sabe exatamente como eu quero q eles joguem né? ou preciso explicar mais algo?
+
+### 39 · 2026-11-11T23:21
+É, mano, eu quero, tipo, replicar o jogo, tá ligado? Eu quero, tipo, assim, que eles joguem em coletivo. Pesquisa as coisas que você não souber, tá ligado? Tipo, eu quero que eles joguem em coletivo. Eu quero que, tipo, mano, eles, tipo, tenham players muito bons, tenham players muito ruins. Eu quero, tipo, realmente simular uma partida de CS. Então, tem as defaults, tem as execuções, tem, tipo, os rushes, tem várias estratégias diferentes. Tem muita coisa, tá ligado? E, tipo, assim, mano, dependendo... mano, tem rounds que, tipo, vai ser mais solto, tem rounds que vai ser mais uma leitura do GL, tá ligado? E, tipo, por enquanto, um 15-15, ele erra algumas vezes, mas, tipo assim, cara, é tipo como se fosse um jogador bom padrão, tá ligado? Sem nada especial e sem nada de ruim, então, enfim. Vai refazendo aí e vê, tá ligado? Porra, mano, se tiver que mudar o jeito de fazer, o jeito que a gente tem a crença, o juízo hoje, também tiver um jeito melhor, estrutura, faz isso.
+
+### 40 · 2026-11-11T23:55
+Tá, cara, vamos aí. Mano, eu tô há uma semana e meia mais ou menos fazendo, eu perdi um pouco as contas, tá ligado? Só que é o Opus que tá fazendo essa parte, tá ligado? E aí eu fui passando vários contextos pra ele, né? Do que eu queria, mas acho que as coisas foram se perdendo. Então eu acho que a gente precisa escrever um plano, tá ligado? Tipo um GDD, que já tem naquele The Org lá, mas enfim, um plano aqui nosso pra implementação da simulação, que é o quê? É a base do nosso jogo, entendeu? Pra tudo que eu quero que vem depois, a base do jogo, o que seria? Um jogador, 15 em todos os negócios ali, né? E aí, mano, é o seguinte, vou tentar te passar a visão das coisas, tá ligado? Como acontece na vida real geralmente? Bom, os jogadores numa partida de CS, quando começa o round, eles estão comprando o IGL, passa uma call, tá ligado? Mano, ela pode derivar de várias coisas. Ela pode ser um rush B, um rush A, um jogar pro meio, um cara, sei lá, jogar avançado. Pode ser, mano, tem muitas calls, tá ligado? Porque tipo assim, pra você ir pro mapa, você pode tentar ir pelo meio e cortar ali pelo caminho de rato, no caso da B. Ou pra você rushar A, você pode tipo smocar lá na frente, tentar passar uma galera pelo conector, passar pelo palácio e tal, enfim, tá ligado? E aí, enquanto isso, o time CT geralmente joga em alguns rounds uma default, tipo 2-1-2, sabe assim? Ou às vezes joga, dependendo do mapa, dependendo do IGL, apostando para um bomb, né? Então, tipo, enfim, eles também giram bastante, dependendo do mapa, né? Tem sempre um âncora, né? Tem, enfim, essas coisas, tá ligado? Eles giram, eles leem a partida, eles tentam adivinhar, né, onde estão, enfim. Geralmente, na maioria dos mapas, CT é mais forte, entendeu? Geralmente, tá ligado? Ou tipo assim, às vezes de acordo com o respawn de como tá o time, eles jogam tipo com uma tática. Então tipo assim, ah mano, vamos tentar, sei lá, passar dois varandas, não sei o que, o outro vai pro fundo, bangando, não sei o que. Então assim, aí os jogadores, pra fazer a tática, eles têm um micro deles. Micro o quê? Mano, eles também podem passar tática, às vezes podem falar alguma coisa, contribuir com alguma coisa. Mas os jogadores têm um micro. Tem uns jogadores que são entry, tem um jogador que é lurker, tem um jogador que é rifler, um jogador que é alper. E, mano, o estilo de alper pra alper é diferente. O estilo de alper pra um rifler no meio do mesmo time, o jeito que eles se portam, dependendo da arma, é diferente, né? E aí, tipo, o jeito de atirar. E tem todas as regras do jogo do CS, que é, tipo assim, o spray, o untap, como que a bala se comporta quando o boneco tá andando. Isso muda diferente da qual arma que é, entendeu? E aí, mano, tem várias técnicas do jogo. Tem shoulder pick, eles jogam diferente quando você acha que tem alp, né? Tem caras que quando estão, enfim, confiantes e tal, eles vão, tipo, dar uma estrefadinha, tentar matar o cara. Mas são todos exemplos que eu tô te dando, é muita coisa pra eu te falar. Você pode, tipo, pesquisar, sei lá, os conceitos de técnicas de CS, tá ligado? Mas uma coisa é o uso de granadas, né, pra chegar naquele objetivo. E, mano, no meio do round, velho, tudo pode mudar, tá ligado? Tem a leitura do IGL. No meio do round tudo muda, entendeu? Às vezes eles podem seguir a tática, né, ou tentar forçar aquela tática, ou, enfim, tudo que o IGL lê, tá ligado? O IGL dos dois times, né? Então, assim, enfim, isso é o CS, tá ligado? O básico do CS, como é jogado. Então tem o micro, tem o macro, tem a leitura de jogo, tem a adaptabilidade, né? Então, tipo, e pro nosso jogo, cara, eu não sei, tipo assim, se esse lance de crença, juiz, pra mim fazia muito sentido, né? Porque é o que eles acreditam, né? Não é a verdade, os caras não estão de hack, eles não têm um hack, eles não têm as coisas. Então, tipo, é mais ou menos sempre o que eles acreditam daquele momento, né? Mas eu também, tipo, assim, se tiver um outro jeito de fazer, tá ligado? Que seja mais interessante, alguma tecnologia que seja melhor de desenvolver. Eu sei que hoje no mercado não existe isso que eu quero, né? Eu vou ser, tipo, pioneiro, a gente tá sendo pioneiro nisso, né? Mas, enfim, talvez, cara, isso do cara ficar sorteando as coisas ali, de acordo com a crença que ele pensa ali, é muito genérico, né? Porque, assim, às vezes a melhor jogada pra ele deveria ser bangar. Mas ele sorteia que ele vai ir, tá ligado? Sei lá, não me parece tão bom ainda, sabe? Enfim. E, mano, enfim, eu não sei se você precisa de mais contexto. Você pode pesquisar também as coisas do CS, né? Acho que você, porra, na internet tem muita coisa. Não sei se vale a pena você assistir, como é que é, tá ligado? Enfim. E uma coisa é, tipo, mano, não tem importância. Às vezes o CT sai um pouco mais forte, o TR, porque às vezes isso é calibramento de mapa, entendeu? Mas assim, cara, em algumas ocasiões, segurar é mais fácil, entendeu? Às vezes o jeito que eles estão jogando o retake tá piorando o CT, sei lá, tá ligado? Se você acha que tudo isso você precisa refazer, tá ligado? Ficar 5 dias refazendo, não tem problema, mano. Eu quero bots que saibam se movimentar, saibam fazer bunny hop, saibam fazer pezinho, boost, pra ser uma partida gostosa de ver, uma partida que seja dinâmica, né, com várias táticas, coisas que nem uma partida igual da outra, né, simulando players que pensam diferente, tem estilos de jogo diferentes, né, que isso vai entrar também com os status, né, com as características, com as personalidades. A gente vai beber muito do Football Manager, né, e enfim, talvez o balanceamento venha depois, tá ligado? Tipo, eu sinto que você se baseia muito em números, coisas que, às vezes, sei lá, cara. Tipo assim, o que é reprovou, tá ligado? O que é... Mano, eu preciso que o comportamento do bot seja inteligente, tá ligado? O cara vai bangar pra ele mesmo, por que ele vai no shift? Né? O cara vai errar uma granada? Entendeu? Porque a crença do bot é ruim, às vezes. Entendeu? A memória deles estava curta até então, entendeu? Como eles leem o jogo estava esquisito. As informações que eles recebem... Pô, tinha som, cara. Sei lá, o cara plantando, o cara recarregando, que até 2 dias atrás o cara não escutava. Entendeu? O cara, tipo, vê uma granada vindo de uma direção e tem ideia de onde tá vindo, sabe? O cara sabe que tem um alper que geralmente joga do meio. E aí, tipo, tentar, cara... Um abre pulando e o outro, sabe? Tipo, pra tirar a mira dele enquanto... Sabe? Isso é um exemplo também, né? E aí o alper do outro lado também vai se adaptando a isso, entendeu? Se ele erra uma vez, porra, você é um ser humano jogando, você pode cair 5 vezes na mesma coisa. O cara pode estar num dia muito bom e te humilhar. Mas, sabe, a chance de você tentar se adaptar a isso é muito grande, tá ligado? Principalmente num jogo profissional.
+
+### 41 · 2026-11-12T00:03
+Então, depois quando a gente for fazer personalidade, característica do jogador, temperamento, momento também, né? Tipo, fazer o que o... um pouco do que o Football Manager faz muito bem, sabe? Que é aquele... regerenciamento do time, assim, dos jogadores, né? Que interfere o resultado de uma partida, às vezes, sabe? Cara, e você como jogador, você é o coach. O coach, ele pode decidir, né, e, tipo, você é o manager também, então você contrata jogador, você cuida das finanças do time, você cuida dos patrocínios, da marca, de, enfim, etc. E você também é o coach na partida, ou seja, você é o cara, tipo assim, você pode decidir como jogar, né, com o IGL, tipo assim, vocês decidirem no começo da partida como é que vai ser, tá ligado? Tipo, como você vai jogar pra aquele time. E aí você vai ter todo um time de staff por trás também, sabe? Igual, mano, esses jogos de manager. Você tem staff, né? Você tem os jogadores, aí você tem psicólogo, fisioterapeuta, analista, olheiro e não sei o que. Eles vão, tipo, tem 0 a 5 estrelas e blá blá blá. Então, assim, esse sistema, aí com base no jogador vai fazer o quê? Ele vai pôr... Você como coach, você pode... Primeiro que você gerencia o plantel, né, digamos assim. Você fecha patrocínio, as coisas que eu já falei. Aí você decide como jogar com o time. Você decide algumas táticas, que se você quiser passar as táticas. Ou você pode também ser mais, tipo, modo... Sabe, para os players que não querem se aprofundar tanto na simulação. Sei lá, um modo rápido, assim, tipo... Quero que você jogue mais agressivo, quero que você evite tal coisa, não sei o quê. E aí, no timeout, você tem 3 timeouts por partida, igual na vida real. E no OT, vai ser exatamente a mecânica de OT do CS, né? Que é aquela coisa tipo 3 rounds troca, até fazer tipo... Enfim, se acabar 12-12 vai até 16, acabar... Igual a regra, mano, que tem em campeonato de CS, tá ligado? Pro OT. E aí, nesse caso, cada OT, né, que são tipo 5 rounds, eu acho, né? Eu, tipo, overtime 1, 2, 3. O coach ganha 1, né? Timeout, né? E nesse timeout ele teria, tipo, 3 ações, assim, sabe? Que é, tipo, sei lá, acalmar o time, né? Ou às vezes, tipo, cara, acontece muito também dos caras irem embalando, sabe? Tipo, além da economia, tipo, na vida real eles vão criando confiança ali e tal, vai criando um momentum de um time, né? E aí, tipo, a gente pode ter uma barra de momento, assim, ou pode ser interna, enfim, que, tipo, dê, né, alguns buffs quando o time do outro lado tá mais, enfim, sabe? Aquele momento, ou o nosso time, enfim. E aí o coach pode pausar pra tentar dar uma gelada nesse momento, né? E jogar uma tática pra um round, ou jogar uma forma de jogar, ou, tipo, dar uma dica, tipo, evite algum bombe, ou faz a tática do round, enfim, né? É mais como o jogador pode jogar, entendeu?
+
+### 42 · 2026-11-12T00:04
+é que, irmão, tem muita coisa, tá ligado? Tipo, o lance do manager tem muita coisa, mano. Entendeu? Tem muita ideia. E ideia que vai surgindo, né, depois. Eu acho que essa é a base da simulação. Eu preciso bem feita, entendeu? Antes de começar essas coisas, né?
+
+### 43 · 2026-11-12T00:13
+E, cara, uma parada assim, que é real, mesmo que os jogadores são, tipo... todos parecidos em status, né? Uma coisa que tem que ser implementada agora é, tipo assim, cada jogador é um jogador, tá ligado? Tipo, eles pensam de, tipo, maneiras, às vezes, tipo, diferentes, sabe? Você não cria aquele bagulho de hive mind, né? Parece que eles fazem igual, tudo na hora igual, ao mesmo tempo sincronizados, pensam a mesma coisa, né? E tipo, isso não existe, mano, entendeu? Isso não existe, velho. Tipo, enquanto um tá fazendo outra coisa, o outro tá fazendo outro pra ele chegar num objetivo, né?
+
+### 44 · 2026-11-12T00:17
+É tipo assim, tem caos que o Gelli vai querer jogar junto, tá ligado? Tipo, vai todo mundo na banana, sei lá, vai todo mundo num tal lugar. Aí tipo assim, fica aqui perto pra me tradar, tá ligado? Isso acontece no jogo também. Mas aí tipo assim, querendo ou não, o cara tá cumprindo o objetivo, tá ligado? Tá cumprindo o objetivo de tradar o colega, de fazer alguma coisa. Hoje, tipo assim, eles estão ali, quando o cara morre não faz nada, então tipo, ele tava ali pra nada, tá ligado? Enfim, também só são exemplos, né? Tem muito mais motivos de por que as pessoas jogam junto, tá ligado?
+
+### 45 · 2026-11-12T00:19
+ta vc vai refazer do 0?
+
+### 46 · 2026-11-12T00:22
+como vc pensa em tecnicamwntw fazer cada coisa? arquitetura?
+
+### 47 · 2026-11-12T00:25
+sabe oq sao rounds executados né?
+
+### 48 · 2026-11-12T00:28
+Crença por jogador é uma tabela pequena, não um mapa de calor para cada um. O mapa de calor difuso continua por time, como conhecimento comum do jogo. Fazer um por jogador multiplicaria por cinco a parte mais pesada da simulação. mas ficaria mto pesado o jogo? e mano isso com opcao com valor e tal, o jogador nao faria sempre a msm coisa?
+
+### 49 · 2026-11-12T00:31
+boa, e como o jogador reagiria a escutar um inimigo recarregando?
+
+### 50 · 2026-11-12T00:33
+e como ele reagiria se visse da onde uma he veio?
+
+### 51 · 2026-11-12T00:35
+Cuidado com esse, tipo, o IGL reage ao conjunto, tá ligado? Tipo, com melhor. Tipo, não é a posição do cara que faz ele ser melhor ou não, tá ligado? É tipo os status que vem depois.
+
+### 52 · 2026-11-12T00:36
+E jogar de GL faz esses atributos subirem depois, tá ligado? Tipo, depois quando a gente implementar, você vai subindo os atributos que cada função exige, né? Você vai meio que jogando mais naquela posição e vai ganhando mais experiência.
+
+### 53 · 2026-11-12T00:37
+vc tem alguma pergunta para começar a implementação da simulação?
+
+### 54 · 2026-11-12T00:39
+2 ct novo contra tr velho assim que der
+
+### 55 · 2026-11-12T00:43
+sub agentes e mais sessoes ajudariam vc a entregar mais rapido?
+
+### 56 · 2026-11-12T00:43
+Mano, o que o jogador pode fazer também é pegar a informação do, sei lá, que o amigo dele morreu e daí, tipo, sei lá, se ele não quiser segurar ali e não der pra trocar, ele pode recuar, tá ligado? Jogar uma granada, enfim, recuar pro bombe, ficar ali, tá ligado? Sabendo que tem inimigo ali.
+
+### 57 · 2026-11-12T00:47
+sim pode fazer
+
+### 58 · 2026-11-12T00:53
+tem alguma skill q te ajudaria nisso q esta fazendo?
+
+### 59 · 2026-11-12T00:55
+faz e usa as 3
+
+### 60 · 2026-11-12T01:01
+tem mais alguma da comunidade q te ajudaria?
+
+### 61 · 2026-11-12T01:05
+tem mas skils da comunidade para vc fable q faça sentido?
+
+### 62 · 2026-11-12T01:05
+se for te ajudar instala
+
+### 63 · 2026-11-12T01:08
+tem alguma q ajuda a economizar o seu custo sem perder qualidade?
+
+### 64 · 2026-11-12T01:10
+nao precisa, como eu começo outra sessao da onde vc parou?
+
+### 65 · 2026-11-12T01:14
+nao apareceu a skill da unity
+
+### 66 · 2026-11-12T01:16
+tem algum mcp util tbm?
+
+### 67 · 2026-11-12T01:19
+Se você usasse esse MCP para assistir vídeos, assim, tipo, da internet, sei lá, partidas e tal, você acha que ajudaria a você validar o que eu falei e também, tipo, coisas que eu deixei passar? Tipo, sei lá, assistir várias partidas, assim, quantas partidas você consegue assistir por segundo, sei lá?
+
+### 68 · 2026-11-12T01:23
+É que, mano, esse bagulho de, tipo, bancadas de cenas nos prós não ficaria uma coisa muito, tipo, baseada em números, tá ligado? Que às vezes não retornam nada.
+
+### 69 · 2026-11-12T01:25
+Você acha que isso faria, tipo, ajudaria você ou não, tá ligado? E, mano, os CTs novos estão bem melhores, mas eles têm alguns problemas ainda. Eles não estão prontos, né? Tipo, só pra saber, assim.
+
+### 70 · 2026-11-12T01:26
+É, tipo, eles ainda estão com o mapa de calor cagado, né? Eles ainda são bem burros, né, mano? Sei lá, tem umas coisas que... Tipo, eu sinto que no micro eles melhoraram, mas no macro eles estão, tipo, uma bosta ainda.
+
+### 71 · 2026-11-12T01:30
+boa, os cts sao muito mais burros q os trs e faz isso entao ja q ajudaria  O que eu faria com as demos é diferente: usá-las como exemplos para olhar, não como estatística.
+Para mim, uma "caixa-preta dos pros". Hoje eu abro um round do seu jogo e leio a linha do tempo: quem estava onde, o que cada um fez, segundo a segundo. Faria o mesmo com rounds de pro. Em vez de contar, eu leio vinte casos da mesma situação — colega caiu no bomb e sobrou um — e descrevo em palavras o que eles fazem e em que ordem. É assim que eu pego coisa que você não falou e que eu não sabia.
+Para você, replays lado a lado. Já existe o visualizador de replay dos duelos. A mesma situação apareceria em dois clipes: o que o pro fez e o que o nosso bot fez. Você bate o olho e diz "é isso" ou "não é isso". Quem julga é o seu olho.
+Para o código, casos de teste. Cada situação lida vira uma cena com resultado esperado descrito em frase: "o segundo sai da cobertura dois segundos depois, com flash". O bot passa ou não passa naquela cena.
+
+### 72 · 2026-11-12T01:33
+mano e se vc rodar a skill de ver falha de logica no codigo de logica dos bots com o contexto atual, nao ajudaria tbm?
+
+### 73 · 2026-11-12T01:39
+posso apagar aqui?
+
+### 74 · 2026-11-12 (madrugada, sessão seguinte)
+Vai fazendo aí; se precisar lançar subagentes e usar skills, usa (as da Unity, code review com lógica). Pra gente criar o bot do jeito que a gente espera. Tem coisas que me incomodam muito, eles têm vícios, por isso o cérebro novo: é sempre pela base CT; eles pensam pelo caminho mais rápido em vez de um caminho que seja mais seguro, que surpreenda, que pela situação e pela crença deles seja melhor. Tem coisas bem quebradas ainda. Uma parte da economia está bem quebrada, mas deixa pra depois: agora eles pegam AWP sempre, não importa se já tem 3 ou 5; quero uma, no máximo 2. Eles não dropam no começo do round pro AWPer, então ficam com a AWP, uma hora tem 3 AWP e o AWPer joga de USP. E o bug que não é resolvido: um cara dropa uma AK ou um rifle pro AWPer do time, o AWPer tem dinheiro, compra a AWP e deixa a AK no chão; ninguém vê, ninguém faz nada, dinheiro desperdiçado. Continua na fila pra melhorar a simulação no geral, que é a base do que vem depois no jogo. Vou dormir; só para quando estiver bom e a fila terminar.
+
+### 75 · 2026-11-12 (madrugada, depois de jogar o CT_NOVO3, rounds 1 e 2)
+Além do retake o cara escolher outros lugares pra ir de acordo com a crença: eles têm a prioridade, muitas vezes, de defusar a bomba. Hoje eu vejo os caras parados no CT trocando tiro. Às vezes o cara precisa entrar, precisa ganhar espaço. Um pro player joga assim, ele ganha espaço; não fica trocando tiro com os caras ali até matar. Hoje eles ficam trocando tiro, são ruins de bala, estão de SMG trocando de longe, pinam pra caralho, acaba o tempo. Parece que todo mundo morre de medo: dá um tiro, volta, dá um tiro, volta. O duelo melhorou, sim. Mas não tem como: abre, toma um tiro, volta, abre, toma um tiro, volta, abre, toma um tiro, volta, morreu. Tem situações e situações. O TR é bangado e fica parado. Decisões que não fazem sentido: ficar trocando tiro lá do bomb B pela base CT pro cara que está na base. Os caras entram numa brisa de duelo e ficam duelando lá de longe; isso não existe. Tenta dar uma bunada, chegar mais perto, matar os caras. Não fica de longe trocando tiro todas as vezes.
+
+### 76 · 2026-11-12 (manhã)
+O que eu falei do CT ficar parado na base é só um exemplo: é pra matar esse negócio na raiz, ver como está a crença dos bots, como eles jogam, baseado naquilo que eu pedi do jogo.
+
+### 77 · 2026-11-12 (manhã)
+Cego pode ficar parado, mas depende muito do contexto. Se ele acha que tem alguém chegando, ele vai tentar ter um entendimento do mapa ali pra pegar um cover; não vai ficar parado pra tomar tiro. Agora, se ele entende que não tem ninguém do lado, que foi uma bang que ele tomou ali, beleza, ele fica.
+
+### 78 · 2026-11-12 (manhã)
+Smokaram o meio, o que o jogador de TR pode fazer? [o Claude listou opções e disse que o TR "não atravessa sozinho de shift"] Ele pode atravessar sozinho no shift sim, depende da escolha do momento.
+
+### 79 · 2026-11-12 (manhã)
+Então agora pensa em todas as escolhas em todas as situações, não só em smoke, que o bot pode ter várias opções que não tem hoje. Todas as situações podem ser jogadas de vários jeitos. Ensina o bot essas opções, de acordo com crença e juiz.
+
+### 80 · 2026-11-12 (manhã)
+Eu não quero que seja sorteado. Eu quero que seja de acordo com cada jogador e com o que ele pensa. Ele vai decidindo sobre várias opções que ele tem em cada situação. Eu tinha falado isso pra outra sessão.
+
+### 81 · 2026-11-12 (~10h)
+[o Claude perguntou se seguia ensinando as situações na ordem dele ou fazia a crença por jogador antes] Faz o que você achar melhor primeiro, mas faz tudo, irmão. Você sabe o resultado que eu quero.
+

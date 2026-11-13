@@ -12,6 +12,21 @@ namespace CSM.View
         public const int NZ = 80;
         static int I(int x, int y, int z) => (x * NY + y) * NZ + z;
 
+        /// <summary>Tipo de desenho da cobertura: "crate_pilha"/"barrel_pilha" (Brasa: pilha que não se sobe) se desenham
+        /// igual a "crate"/"barrel" — só muda a navegação dos bots.</summary>
+        public static string Tipo(string kind) => kind != null && kind.EndsWith("_pilha") ? kind.Substring(0, kind.Length - 6) : kind;
+
+        /// <summary>Altura desenhada do topo (piso onde anda, telhado onde não anda). Na Brasa o telhado sobe pro
+        /// múltiplo de 12 acima (cada casa da planta tem o seu topo: sem isso o telhado virava colcha de degrauzinhos);
+        /// nunca fica mais baixo que o da Sim. A Vila fica igual. Fachada3D e Adornos3D usam esta mesma.</summary>
+        public static int Topo(int x, int y)
+        {
+            if (walk[x, y]) return floor[x, y];
+            int t = solid[x, y] > 0 ? solid[x, y] : BlockH(x, y);
+            if (MAPA == "brasa" && t > GZ) t = Math.Min(NZ, GZ + (int)MathF.Ceiling((t - GZ) / 12f) * 12);
+            return t;
+        }
+
         public static byte[] Build()
         {
             var G = new byte[NX * NY * NZ];
@@ -25,7 +40,7 @@ namespace CSM.View
             var top = new int[NX, NY];
             for (int x = 0; x < NX; x++)
                 for (int y = 0; y < NY; y++)
-                    top[x, y] = walk[x, y] ? floor[x, y] : (solid[x, y] > 0 ? solid[x, y] : BlockH(x, y));
+                    top[x, y] = Topo(x, y);
 
             for (int x = 0; x < NX; x++)
                 for (int y = 0; y < NY; y++)
@@ -249,7 +264,8 @@ namespace CSM.View
             {
                 int f = walk[c.r.x0, c.r.y0] ? floor[c.r.x0, c.r.y0] : GZ;
                 int z1 = f + c.h;
-                switch (c.kind)
+                if (CSM.View3D.Brasa3D.Cuida(c.kind)) continue;   // Brasa: vira modelo do kit (Brasa3D)
+                switch (Tipo(c.kind))
                 {
                     case "crate":
                     case "crate_top":
@@ -278,6 +294,8 @@ namespace CSM.View
                         break;
                     }
                     case "lowwall":
+                    case "halfwall":   // meio muro (Brasa)
+                    case "wall":       // muro inteiro (Brasa, escuro do B)
                         for (int x = c.r.x0; x < c.r.x1; x++)
                             for (int y = c.r.y0; y < c.r.y1; y++)
                             {
@@ -293,6 +311,33 @@ namespace CSM.View
                                 G[I(x, y, z1 - 1)] = 11;
                             }
                         break;
+                    case "logs":    // pilha de toras (Brasa, banana): rolos deitados no eixo comprido, 2 camadas
+                    {
+                        bool ax = c.r.x1 - c.r.x0 >= c.r.y1 - c.r.y0;
+                        int L0 = ax ? c.r.x0 : c.r.y0, L1 = ax ? c.r.x1 : c.r.y1, W0 = ax ? c.r.y0 : c.r.x0, W1 = ax ? c.r.y1 : c.r.x1;
+                        int camadas = c.h >= 8 ? 2 : 1;
+                        float rl = c.h / (2f + 1.7f * (camadas - 1));
+                        for (int k = 0; k < camadas; k++)
+                        {
+                            int n = Math.Max(1, (int)((W1 - W0) / (2 * rl)) - k);
+                            float zc = f + rl + k * rl * 1.7f, w0 = (W0 + W1) / 2f - (n - 1) * rl;
+                            for (int j = 0; j < n; j++)
+                            {
+                                float wc = w0 + j * 2 * rl;
+                                for (int l = L0; l < L1; l++)
+                                    for (int w = (int)(wc - rl - 1); w <= (int)(wc + rl + 1); w++)
+                                        for (int z = (int)(zc - rl - 1); z <= (int)(zc + rl + 1); z++)
+                                        {
+                                            float dw = w + 0.5f - wc, dz = z + 0.5f - zc, d2 = dw * dw + dz * dz;
+                                            int x = ax ? l : w, y = ax ? w : l;
+                                            if (d2 > rl * rl || !InMap(x, y) || z < 0 || z >= NZ) continue;
+                                            bool ponta = l == L0 || l == L1 - 1;
+                                            G[I(x, y, z)] = (byte)(ponta ? (d2 < rl * rl * 0.4f ? 43 : 38) : ((l + z) % 7 == 0 ? 11 : 10));
+                                        }
+                            }
+                        }
+                        break;
+                    }
                     case "jars":    // jarros de barro de alturas variadas
                     case "plants":  // vasos com planta
                     {
@@ -367,7 +412,7 @@ namespace CSM.View
                                 for (int z = f; z < z1; z++)
                                 {
                                     if (c.kind == "pillar" && dd <= (f + 2 < z && z < z1 - 2 ? 2.4f : 3.2f)) G[I(x, y, z)] = 15;
-                                    if (c.kind == "barrel" && dd <= 2.8f) G[I(x, y, z)] = (byte)(z == f + c.h / 2 ? 13 : 12);
+                                    if (Tipo(c.kind) == "barrel" && dd <= 2.8f) G[I(x, y, z)] = (byte)(z == f + c.h / 2 ? 13 : 12);
                                     if (c.kind == "well" && dd <= 3.2f && dd > 2) G[I(x, y, z)] = 15;
                                 }
                                 if (c.kind == "well" && dd <= 2) G[I(x, y, f)] = 19;

@@ -225,7 +225,7 @@ namespace CSM.View3D
             foreach (var c in MapData.covers)
                 if (x >= c.r.x0 && x < c.r.x1 && y >= c.r.y0 && y < c.r.y1 && (c.kind.StartsWith("crate") || c.kind == "cart")) return "madeira";
             float chao = NavGrid.ZAt(new V2(gx, gy));
-            if (gz <= chao + 1.5f) return MapData.fmat[x, y] switch { MapData.Floor.Dirt => "terra", MapData.Floor.Wood => "madeira", MapData.Floor.Cart => "madeira", _ => "pedra" };
+            if (gz <= chao + 1.5f) return MapData.fmat[x, y] switch { MapData.Floor.Dirt => "terra", MapData.Floor.Wood => MapData.MAPA == "brasa" ? "madeira" : "pedra" /* Vila: o casarão virou ladrilho de barro no visual (11/11) */, MapData.Floor.Cart => "madeira", _ => "pedra" };
             return "pedra";
         }
 
@@ -236,7 +236,7 @@ namespace CSM.View3D
             if (MapData.coverH[x, y] > 0 && a.z >= MapData.GZ + MapData.coverH[x, y] - 1) return "madeira";
             if (Pisos3D.Deck()[x, y]) return "madeira";   // deck da banca do B (Pisos3D: piso trocado só no visual)
             if (Marmore()[x, y] && MapData.fmat[x, y] == MapData.Floor.Stone) return "marmore";   // palácio: piso de mármore (só som)
-            return MapData.fmat[x, y] switch { MapData.Floor.Dirt => "terra", MapData.Floor.Wood => "madeira", MapData.Floor.Cart => "madeira", _ => "pedra" };
+            return MapData.fmat[x, y] switch { MapData.Floor.Dirt => "terra", MapData.Floor.Wood => MapData.MAPA == "brasa" ? "madeira" : "pedra" /* Vila: o casarão virou ladrilho de barro no visual (11/11) */, MapData.Floor.Cart => "madeira", _ => "pedra" };
         }
         static bool[,] marmore;
         /// <summary>Células das áreas do palácio (Floor.Stone na Sim; o som de passo/pulo é de mármore).</summary>
@@ -310,13 +310,15 @@ namespace CSM.View3D
                     {
                         var mo = Morte(a, b);
                         // o piscar do último tiro zera: o corpo não posa mais (só o ragdoll), o branco ficaria preso nele
-                        b.Golpe(0);
+                        b.Golpe(0); b.LimparEfeitos();   // branco do flash, tranco e coice não congelam no corpo
                         b.semArma = true; b.Pose(b.animAtual ?? "mira_" + arma, b.uAtual, 0);   // esconde a arma da mão
                         bool hsMorte = ultAcerto.TryGetValue(a.id, out var ua) && ua.hs && m.t - ua.t < 0.6f;
                         // embalo: velocidade de quando ainda estava vivo (a Sim pode zerar na morte)
                         velViva.TryGetValue(a.id, out var vv);
                         rg = new Ragdoll3D(b, mo.dir, mo.forca, a.id * 31 + rn, hsMorte, new Vector3(vv.x, 0, -vv.y) * MalhaMapa.ESC); ragdolls[a.id] = rg;
                         Som3D.Parar(a.id); Som3D.CorpoCaiu(b.transform.position);
+                        // abate: um espirro a mais de sangue no sentido do tiro, que fica no chão/parede até o round acabar
+                        if (a.killedBy != null && a.killedBy != a) fx.SangueMorte(b.transform.position + Vector3.up * (hsMorte ? 0.62f : 0.42f), mo.dir, hsMorte);
                     }
                     rg.Passo(dt); Costas(a.id, b, null);
                     b.noChao = false; b.Silhueta(false); ultHp[a.id] = a.hp;
@@ -470,8 +472,11 @@ namespace CSM.View3D
                     else if (a.gun.inMag > a.gun.s.mag * 0.5f) quaseVazio.Remove(a.id);
                 }
                 bool queima = a.alive && m.NoFogo(a);    // a mesma regra da Sim: queima quem encosta o corpo na chama desenhada (-exp bxFogoCorpoVelho volta ao pé na célula)
-                if (queima) { fx.Queimando(b.transform.position, dt); if (noFogo.Add(a.id)) Som3D.Queimando(b.transform.position, a.id); }
+                if (queima) { fx.Queimando(b.transform.position, dt); noFogo.Add(a.id); Som3D.Queimando(b.transform.position, a.id); }
                 else noFogo.Remove(a.id);
+                // pegando fogo no corpo: manchas de brasa laranja tremulando (CSM/Boneco). Sem mexer na pose: ele segue atirando no
+                // fogo (usuário: o braço abrindo/tirando a mão da arma ficava esquisito)
+                b.Queimar(queima, dt);
                 // zumbido da flash só de quem a câmera segue (é o "ouvido" do espectador)
                 bool cego = a.alive && a.Blind(m.t);
                 if (cego && seguir >= 0 && m.agents[seguir] == a && cegoVisto.Add(a.id)) Som3D.Zumbido(1f);

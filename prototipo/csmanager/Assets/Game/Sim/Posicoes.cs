@@ -10,7 +10,7 @@ namespace CSM.Sim
     /// </summary>
     public static class Posicoes
     {
-        public const string ARQ = "Assets/Game/Sim/posicoes.txt";
+        public static readonly string ARQ = CSM.Map.MapaEscolhido.Arq("Assets/Game/Sim/posicoes.txt");   // por mapa (Vila no lugar de sempre)
         static Dictionary<string, float> forca; static readonly object trava = new object();
 
         public static float Forca(bool tr, string nome)

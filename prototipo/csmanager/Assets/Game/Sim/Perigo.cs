@@ -46,7 +46,16 @@ namespace CSM.Sim
                     Intel.Viewshed(p, NavGrid.ZAt(p) + 18, (l - p).Atan2, 25f * MathF.PI / 180, range, null, i => d[i] = MathF.Max(d[i], w));
                 }
             var c = new float[NavGrid.CellCount];
-            for (int i = 0; i < c.Length; i++) { var (x, y) = NavGrid.CellAt(i); c[i] = CUSTO * d[Intel.Idx(NavGrid.Center(x, y))]; }
+            /* -exp anguloCustoLigado: o bot anda exposto a 2-3,5 quinas ao mesmo tempo e só pode olhar uma — em 33% dos contatos o
+               inimigo aparece numa quina que ele não olhava. O pro resolve com o PÉ: anda por onde só um ângulo abre de cada vez
+               (colado na parede, por dentro), e limpa um antes de abrir o outro. Aqui cada quina além da primeira que se vê de
+               uma célula encarece o caminho por ela: o bot prefere a rota que abre menos ângulos de uma vez; se não tem, passa */
+            float kAng = TeamBrain.EXPF.Contains("anguloCustoLigado") ? TeamBrain.ExpNum("anguloCusto", 0.6f) : 0f;
+            for (int i = 0; i < c.Length; i++)
+            {
+                var (x, y) = NavGrid.CellAt(i); V2 ce = NavGrid.Center(x, y);
+                c[i] = CUSTO * d[Intel.Idx(ce)] + (kAng > 0 ? kAng * MathF.Max(0, Pixels.Em(ce).Length - 1) : 0f);
+            }
             return c;
         }
     }

@@ -16,7 +16,8 @@ namespace CSM.Map
     /// </summary>
     public static class NavGrid
     {
-        public const int CELL = 2, NGX = NX / CELL, NGY = NY / CELL;
+        public const int CELL = 2;
+        public static readonly int NGX = NX / CELL, NGY = NY / CELL;   // pelo mapa montado (MapData.MAPA)
         // EYE = olho de quem está em pé (boneco de 25): caixa simples (16) não esconde, pilha (28) esconde
         // pulo 18 = ~70% da altura do boneco (como o pulo do CS): sobe em caixa (16), barril (12), banca (12),
         // caixote da carroça (10); pilha (28) só por cima da caixa de baixo
@@ -32,7 +33,7 @@ namespace CSM.Map
         /* SALTO (opt-in, -exp apSaltoLigado): pulo correndo por cima de um vão (sacada → chão do outro lado, meio → caminho de
            rato). Só entra no caminho quando compensa (custo = distância + 10). Lido da linha de comando: o NavGrid monta antes do TeamBrain */
         public static readonly bool SALTO = MapData.Velho("apSaltoLigado");
-        public static readonly bool BOOST = MapData.Velho("apBoostLigado") && !MapData.Velho("apBoostVelho");   /* opt-in até o A/B sem o AWPer (a sessão dos bots quer como padrão se passar) */
+        public static readonly bool BOOST = !MapData.Velho("apBoostVelho");   /* padrão desde 2026-11-07 (réplica pr: CT retake −0.45, pt+pr −3.2 dentro do piso ±4.0; trocas +0.9, plant −2.1 rumo ao alvo) */
         public static readonly bool[,] soBoost = new bool[NGX, NGY];
         /* PEZINHO COMO ESTADO (padrão do pezinho; -exp apBoostMalha volta ao antigo): o topo da pilha NÃO entra na malha —
            pra todo o planejamento (caminhos, campos, spots, cover) a pilha de 28 segue obstáculo, como sem pezinho. O topo é só

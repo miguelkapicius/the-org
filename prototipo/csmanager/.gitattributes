@@ -1,2 +1,3 @@
 # A build do jogo vai byte por byte igual à do PC que gerou (o git não troca quebra de linha dos arquivos dela)
 Build/** -text
+Build_bots_exe22/** -text

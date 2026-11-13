@@ -21,6 +21,7 @@ namespace CSM.Sim
         public float aggression = 0.5f;     // 0 = passivo, 1 = agressivo
         public float composure = 0.8f;      // erra menos no clutch / sob pressão
         public float utilitaria = 0.8f;     // execução de granada: sabe o pixel, mas quanto acerta (0..1)
+        public float miraAwp = 1f, miraPistola = 1f;   /* status (Jogadores.cs): erro de mira com AWP/pistola relativo à mira de rifle (1 = igual) */
 
         /// <summary>
         /// Estilo de jogador pela função (arquétipos do cenário pro): entry agressivo que abre (tipo apEX), AWPer calmo e
@@ -31,7 +32,7 @@ namespace CSM.Sim
         public static Skill Estilo(Role r)
         {
             var s = new Skill();
-            if (!TeamBrain.EXP.Contains("estilos") || TeamBrain.EXP.Contains("estilosVelho")) return s;   /* opt-in: sozinho mexia o retake (−7); volta com os status dos jogadores */
+            if (!TeamBrain.EXPF.Contains("estilos") || TeamBrain.EXPF.Contains("estilosVelho")) return s;   /* opt-in: sozinho mexia o retake (−7); volta com os status dos jogadores */
             switch (r)
             {
                 case Role.Entry: s.aggression = 0.82f; s.composure = 0.66f; s.aimSigma = 0.62f; s.reaction = 0.18f; s.utilitaria = 0.7f; break;
@@ -81,6 +82,7 @@ namespace CSM.Sim
         public string gunId; public WeaponStats.Gun gun; public bool scoped;
         // inventário como no CS: a primária e a pistola (a que não está na mão fica guardada). Sem primária, outraId = null
         public string outraId; public WeaponStats.Gun outraGun; public int trocouArma;
+        public bool somRecarga, somFaca; public int somTrocou = -1;   // sons de ação: o estado no passo anterior (Match.SonsDeEstado)
         public bool TemOutra => outraId != null;
         /// <summary>A primária (rifle/SMG/AWP), esteja na mão ou guardada; null se ele só tem pistola.</summary>
         public string Primaria => !WeaponStats.Pistola(gunId) ? gunId : outraId != null && !WeaponStats.Pistola(outraId) ? outraId : null;
@@ -91,7 +93,7 @@ namespace CSM.Sim
             if (outraId == null) return;
             gun.reloadLeft = 0;
             (gunId, outraId) = (outraId, gunId); (gun, outraGun) = (outraGun, gun);
-            scoped = false; spray = 0; faca = false; sacaAte = t + (TeamBrain.EXP.Contains("sacarTrocaCurta") ? TempoSacarCurto : TempoSacar); trocouArma++;
+            scoped = false; spray = 0; faca = false; sacaAte = t + (TeamBrain.EXPF.Contains("sacarTrocaCurta") ? TempoSacarCurto : TempoSacar); trocouArma++;
         }
         public int spray;                      // bala do spray atual (zera quando para de atirar)
         public float aimErrV;                  // erro vertical atual da mira (graus), vem do Brain ao achar um alvo
@@ -104,6 +106,7 @@ namespace CSM.Sim
         public int kills, deaths, hs, shots, hits, damage, firstKills, firstDeaths, traded, tradeKills;
         public int ganho;                       // dinheiro ganho no round (abates, plant, defuse) — a Partida paga
         public float apanhouEm = -99;           // último tiro que levou
+        public Agent apanhouDe; public V2 apanhouDePos;   // quem deu esse tiro e de onde (crença 3: o colega que toma tiro diz de onde veio)
         public bool guardando;                  // decidiu guardar a arma neste round (não procura duelo)
         public bool vivoNoFim, salvaPos;         // vivo no instante em que o round acabou (dinheiro); salvando no pós-round (não é "guardou")
         public float avisoFlashAte = -9;        // ouviu "bang!" do aliado: vira a cara até esse tempo
@@ -150,7 +153,7 @@ namespace CSM.Sim
             int r = 0;
             if (crouch && !crouchAntes) { r = duckVel < 5f ? 2 : 1; duckVel = MathF.Max(DUCK_MIN, duckVel - DUCK_POR_APERTO); apertosAgachar++; }
             crouchAntes = crouch;
-            float passo = duckVel * (TeamBrain.EXP.Contains("duckRapido") ? 100f : DUCK_RITMO) * dt, alvo = crouch ? 1 : 0;
+            float passo = duckVel * (TeamBrain.EXPF.Contains("duckRapido") ? 100f : DUCK_RITMO) * dt, alvo = crouch ? 1 : 0;
             duckCorpo = duckCorpo < alvo ? MathF.Min(alvo, duckCorpo + passo) : MathF.Max(alvo, duckCorpo - passo);
             duckVel = MathF.Min(DUCK_IDEAL, duckVel + DUCK_VOLTA * dt);
             return r;
@@ -166,7 +169,7 @@ namespace CSM.Sim
         /// <summary>Sacar até poder atirar: CS2 weapons.vdata m_flDeployDuration (quase tudo 1,0; M4 1,13, AWP 1,27, MP9 1,2,
         /// Galil 1,1). sacarVelho = os tempos curtos de antes.</summary>
         public float TempoSacarCurto => gunId == "awp" ? 0.75f : gunId == "deagle" ? 0.6f : WeaponStats.Pistola(gunId) || gunId == "mp9" || gunId == "mac10" ? 0.45f : 0.55f;
-        public float TempoSacar => TeamBrain.EXP.Contains("sacarVelho")
+        public float TempoSacar => TeamBrain.EXPF.Contains("sacarVelho")
             ? TempoSacarCurto
             : gunId switch { "awp" => 1.267f, "m4" or "m4s" => 1.133f, "mp9" => 1.2f, "galil" => 1.1f, _ => 1.0f };
         public bool ArmaPronta(float t) => !faca && t >= sacaAte;
@@ -205,6 +208,7 @@ namespace CSM.Sim
         /// andando, penalidade e recuperação), mas o nosso mundo é outro (mapa ~1/4 do CS, boneco chibi maior em
         /// proporção, câmera de cima): a escala absoluta é calibrada pelo resultado (HS, precisão, tempo pra matar).
         /// </summary>
+        public static bool ArmaExataParada => TeamBrain.EXPF.Contains("armaExataParada");   /* opt-in até calibrar a mira da mão */
         public static float ESCALA_ARMA = 5f;   // calibrado: 1 = HS 85%; 5 = ~65% com AWP equilibrada; 7 = 61% mas a AWP domina
         public enum Part { Nada, Cabeca, Tronco, Perna }
 
@@ -225,7 +229,7 @@ namespace CSM.Sim
         /// conta como cabeça fica DENTRO da cabeça chibi desenhada, centrada nela, no tamanho do CS (o HS não vira o
         /// cabeção). -exp hitboxTelaVelho: a antiga (cabeça 19,6-23,4, centro 21,5, acima da desenhada).
         /// </summary>
-        public static bool HitboxTela => !TeamBrain.EXP.Contains("hitboxTelaVelho");
+        public static bool HitboxTela => !TeamBrain.EXPF.Contains("hitboxTelaVelho");
         public static float CabecaZ(float duck) => 19.5f - 2.7f * duck;
         public static float PeitoZ(float duck) => 12.5f - 2.6f * duck;
 
@@ -248,19 +252,39 @@ namespace CSM.Sim
             float inac = (a.Agachado ? (luneta ? s.inCrouchAlt : s.inCrouch) : (luneta ? s.inStandAlt : s.inStand)) + a.gun.penalidade;
             float vr = MathX.Clamp((a.Speed - 0.34f * a.MaxSpeed) / (0.61f * a.MaxSpeed), 0, 1);
             if (vr > 0) inac += s.inMove * MathF.Pow(vr, 0.25f);
-            else if (!a.ArmaLeve && !TeamBrain.EXP.Contains("semAssentar"))
+            /* -exp assentaFisicaLigado: no CS2 a precisão depende só da velocidade NA HORA do tiro. Esta penalidade (0,2 s depois de
+               andar rápido) foi criada pra quem já está parado ganhar de quem chega correndo — mas o ADAD do duelo (anda de lado
+               e solta a bala na virada) cai sempre dentro dela: com as flags de duelo a precisão a 10-20 m ia de 35% pra 27% (pro
+               37%) e a 20-30 m de 22% pra 15% (pro 26%); sem ela volta a 32% e 22%. Quem chega correndo continua pagando na
+               reação (ReactionTime) e no tempo de frear, que é o que acontece no jogo */
+            else if (!a.ArmaLeve && !TeamBrain.EXPF.Contains("semAssentar") && !TeamBrain.EXPF.Contains("assentaFisicaLigado"))
                 inac += 0.35f * s.inMove * MathF.Max(0, 1 - (m.t - a.rapidoEm) / 0.2f);   // acabou de frear: rifle ainda não assentou
             if (a.gunId == "awp" && a.brain.target != null) m.Aud("AWP: acerto por distância", Faixa((a.brain.target.pos - a.pos).Len) + " tiro");
             if (a.gunId == "awp") m.Ev(!luneta ? "AWP tiro sem luneta/round" : vr > 0 ? "AWP tiro na luneta andando/round" : "AWP tiro na luneta parado/round");
-            if (luneta && vr <= 0 && !TeamBrain.EXP.Contains("awpVelha")) inac = (a.Agachado ? s.inCrouchAlt : s.inStandAlt) / ESCALA_ARMA;   // parada na luneta é exata (cancela a escala abaixo): quem erra é a mão
-            inac *= ESCALA_ARMA;   // o nosso mundo não é o do CS: proporções entre armas/situações do CS2, escala calibrada aqui
+            if (luneta && vr <= 0 && !TeamBrain.EXPF.Contains("awpVelha")) inac = (a.Agachado ? s.inCrouchAlt : s.inStandAlt) / ESCALA_ARMA;   // parada na luneta é exata (cancela a escala abaixo): quem erra é a mão
+            bool rifleMao = Brain.MaoAssenta && (a.gunId == "ak" || a.gunId == "m4" || a.gunId == "m4s" || a.gunId == "galil" || a.gunId == "famas");   /* bx: mão que assenta (só rifle) */
+            if (ArmaExataParada && a.gunId != "awp" || rifleMao)
+            {   /* teste armaExataParada: parado, a 1ª bala sai como no CS2 (o cone de parado/agachado sem a escala do nosso mundo);
+                   a escala fica só no que é da arma se mexendo e atirando (penalidade do tiro e andando). Quem erra o tiro parado
+                   é a mão (aimSigma = status Mira), não a arma: assim um mira 20 faz a jogada de spray/pinada que um 10 não faz */
+                float baseParado = a.Agachado ? s.inCrouch : s.inStand;
+                inac = baseParado * TeamBrain.ExpNum("escalaParada", 1f) + (inac - baseParado) * ESCALA_ARMA;
+            }
+            else inac *= ESCALA_ARMA;   // o nosso mundo não é o do CS: proporções entre armas/situações do CS2, escala calibrada aqui
             float r1 = rng.Rand() * inac, t1 = rng.Uniform(0, 6.2832f), r2 = rng.Rand() * s.spread, t2 = rng.Uniform(0, 6.2832f);
             const float RAD = 57.29578f;
             float armaL = (r1 * MathF.Cos(t1) + r2 * MathF.Cos(t2)) * RAD, armaV = (r1 * MathF.Sin(t1) + r2 * MathF.Sin(t2)) * RAD;
             // ---- o JOGADOR: erro de mira (habilidade), meio cego treme, recoil que ele não compensou (força do recoil da arma)
-            float sig = a.skill.aimSigma;
+            float sig = a.skill.aimSigma * (a.gunId == "awp" ? a.skill.miraAwp : WeaponStats.Pistola(a.gunId) ? a.skill.miraPistola : 1f);   /* sem ficha os dois são 1 */
             if (a.MeioCego(m.t)) sig *= 1 + 1.5f * a.flashI * a.flashI;   // meio cego: a mira treme (fraca: só um pouquinho)
             sig *= 1 + 0.5f * a.panico;                                     // pânico: mão tremendo
+            if (rifleMao)
+            {   /* bx: o cone parado ficou exato: o erro que ele tinha (raio uniforme até R×ESCALA; por eixo R²/6) vai pra mão, e a
+                   mão pesa a situação (apressada com ameaça, assenta sem) */
+                float bp = (a.Agachado ? s.inCrouch : s.inStand) * RAD * TeamBrain.ExpNum("escalaParada", 1f);
+                float extra = bp * MathF.Sqrt(MathF.Max(0f, ESCALA_ARMA * ESCALA_ARMA - 1f) / 6f);
+                sig = MathF.Sqrt(sig * sig + extra * extra) * a.brain.MaoPressa();
+            }
             // AWP: um tiro só e sem spray pra corrigir — pré-mirado é mortal, mas flick de luneta erra bem mais (a AWP
             // que dá peek e precisa achar o alvo perde pra quem já estava mirando; a que segura o ângulo continua forte)
             if (a.gunId == "awp" && m.t - a.brain.alvoDesde < 0.9f) sig *= 1 + MathX.Clamp((a.brain.flickAlvo - 4f) / 12f, 0, 1.6f);   // 2º tiro, já em cima: normal
@@ -279,11 +303,21 @@ namespace CSM.Sim
                 recoilV = i * mag * (1 - a.skill.spray);
                 recoilL = MathF.Sin(a.spray * 0.7f) * 1.4f * (s.recoilVar / 70f) * (1 - a.skill.spray) * MathF.Min(1, a.spray / 8f);
             }
-            float eL = armaL + rng.Normal(0, sig) + recoilL, eV = armaV + rng.Normal(0, sig) + recoilV + a.aimErrV;
+            float maoL = rng.Normal(0, sig), maoV = rng.Normal(0, sig);
+            float eL = armaL + maoL + recoilL, eV = armaV + maoV + recoilV + a.aimErrV;
+            if (Match.Auditar && a.brain.target != null && a.brain.target.Blind(m.t) && a.gunId != "awp" && !WeaponStats.Pistola(a.gunId))
+            {   /* bx: tiro no cego — qual parte do erro passa do tamanho da cabeça (arma = cone; mão = aimSigma; recuo; altura do flick) */
+                float cab = MathF.Atan2(1.8f, dist) * RAD;
+                float vArma = MathF.Sqrt(armaL * armaL + armaV * armaV), vMao = MathF.Sqrt(maoL * maoL + maoV * maoV), vRec = MathF.Sqrt(recoilL * recoilL + recoilV * recoilV), vAlt = MathF.Abs(a.aimErrV);
+                string maior = vArma >= vMao && vArma >= vRec && vArma >= vAlt ? "arma (cone)" : vMao >= vRec && vMao >= vAlt ? "mão (mira)" : vRec >= vAlt ? "recuo" : "altura (flick)";
+                float vMax = MathF.Max(MathF.Max(vArma, vMao), MathF.Max(vRec, vAlt));
+                m.Aud("tiro no cego: maior parte do erro", maior + (vMax > cab ? " · passa da cabeça" : " · cabe na cabeça") + (dist < 140 ? " · <10m" : dist < 280 ? " · 10-20m" : " · 20m+"));
+                m.Aud("tiro no cego: cone da arma x cabeça", (vArma / cab < 1 ? "a cone < cabeça" : vArma / cab < 2 ? "b 1-2x" : vArma / cab < 4 ? "c 2-4x" : "d 4x+") + (dist < 140 ? " · <10m" : dist < 280 ? " · 10-20m" : " · 20m+") + (a.Speed > a.MaxSpeed * 0.34f ? " · andando" : m.t - a.rapidoEm < 0.2f ? " · freando" : " · parado"));
+            }
             // alvo cruzando de lado: a mão segue o alvo com atraso (~0,06 s), então quem anda de lado é mais difícil de acertar
             // (o que faz o jiggle e o strafe valerem, sobretudo contra AWP). Erro horizontal = velocidade angular x atraso.
             // apRastreioVelho desliga (não sorteia nada: o jogo fica como antes); ExpNum("apRastreio") ajusta (100 = atraso de 0,06 s, o padrão)
-            float kRastreio = TeamBrain.EXP.Contains("apRastreioVelho") ? 0f : TeamBrain.ExpNum("apRastreio", 1f);   /* A/B 900: neutro, nota de erros 0,98 -> 0,84 */
+            float kRastreio = TeamBrain.EXPF.Contains("apRastreioVelho") ? 0f : TeamBrain.ExpNum("apRastreio", 1f);   /* A/B 900: neutro, nota de erros 0,98 -> 0,84 */
             var alvoR = a.brain.target;
             if (kRastreio > 0 && alvoR != null && alvoR.alive)
             {
@@ -334,10 +368,10 @@ namespace CSM.Sim
         {
             var w = W[shooter.gunId];
             float d = w.dmg * (part == Part.Cabeca ? shooter.gun.s.hsMult : part == Part.Perna ? 0.75f : 1f);   // M4A1-S: 3,475 na cabeça
-            if (!TeamBrain.EXP.Contains("quedaDanoVelha"))
+            if (!TeamBrain.EXPF.Contains("quedaDanoVelha"))
             {   // CS2 weapons.vdata m_flRangeModifier: o dano cai rm^(distância/500) — pesa em pistola e SMG (Glock 0,85, Tec-9
                 // 0,79, MAC-10 0,80), quase nada em rifle (AK 0,98). Distância em unidades do CS (a nossa horizontal x4)
-                bool rifleQ = TeamBrain.EXP.Contains("quedaDanoRifle");   /* rifle/AWP: opt-in — com a calibração atual o TR subia +5 (M4 cai mais que a AK) */
+                bool rifleQ = TeamBrain.EXPF.Contains("quedaDanoRifle");   /* rifle/AWP: opt-in — com a calibração atual o TR subia +5 (M4 cai mais que a AK) */
                 float rm = shooter.gunId switch { "ak" => rifleQ ? 0.98f : 1f, "m4" => rifleQ ? 0.97f : 1f, "m4s" => rifleQ ? 0.94f : 1f, "awp" => rifleQ ? 0.99f : 1f, "galil" => rifleQ ? 0.98f : 1f, "famas" => rifleQ ? 0.96f : 1f, "mp9" => 0.87f, "mac10" => 0.80f, "glock" => 0.85f, "usp" => 0.91f, "deagle" => 0.85f, "p250" => 0.90f, "tec9" => 0.79f, "fiveseven" => 0.81f, _ => 1f };
                 float distCs = (victim.pos - shooter.pos).Len * 4f;
                 d *= MathF.Pow(rm, distCs / 500f);

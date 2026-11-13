@@ -167,7 +167,7 @@ namespace CSM.View
         public void Update(float dt)
         {
             age += dt;
-            bool velha = TeamBrain.EXP.Contains("smokeVelha");
+            bool velha = TeamBrain.EXPF.Contains("smokeVelha");
             float k = dt * (velha ? 1 / 1.4f : HE_K), kt = dt * TIRO_K;
             for (int i = 0; i < clear.Length; i++)
             {
@@ -190,7 +190,7 @@ namespace CSM.View
         {
             tunnels.Add((a, b, 0f));
             V3 d = b - a; float L = d.Len; if (L < 1e-3f) return;
-            if (TeamBrain.EXP.Contains("smokeVelha")) { for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 3.5f, 0.7f); return; }
+            if (TeamBrain.EXPF.Contains("smokeVelha")) { for (float s = 0; s <= L; s += C * 0.5f) Clear(a + d * (s / L), 3.5f, 0.7f); return; }
             float ent = -1, sai = -1;
             for (float s = 0; s <= L; s += C * 0.5f) if (Base(a + d * (s / L)) > 0.05f) { if (ent < 0) ent = s; sai = s; }
             if (ent < 0) return;
@@ -206,7 +206,7 @@ namespace CSM.View
         /// </summary>
         public void HE(V3 p, float r, float velhoAmount)
         {
-            if (TeamBrain.EXP.Contains("smokeVelha")) { Clear(p, r, velhoAmount); return; }
+            if (TeamBrain.EXPF.Contains("smokeVelha")) { Clear(p, r, velhoAmount); return; }
             Furo(clear, new V3(p.x, p.y, p.z + 6), r, 2f, HE_A);
         }
 

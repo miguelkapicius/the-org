@@ -84,6 +84,79 @@ namespace CSM.EditorTools
         }
 
         /// <summary>
+        /// Painel de compra do começo do round (arma, colete, C4, kit, granadas, dinheiro) nos rounds 2 a 4, já todo
+        /// aberto. Saída Logs/hud/economia_rN.png. Batch: -executeMethod CSM.EditorTools.HudCaptura.EconomiaBatch [-hud_seed 15]
+        /// </summary>
+        public static void EconomiaBatch()
+        {
+            try
+            {
+                M("Setup")?.Invoke(null, null);
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.seed = (int)Arg("-hud_seed", 15);
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                const string DIR = "Logs/hud"; Directory.CreateDirectory(DIR);
+                var salvar = M("Salvar"); var rtMan = new RenderTexture(320, 180, 24);
+                for (int r = 2; r <= 4; r++)
+                {
+                    p.PularAte(r);
+                    float t = 0, dt = 1 / 30f; int passo = 0;
+                    // painel abre de 0,3 s a 7,5 s do começo do freeze; foto com ele inteiro (todas as linhas já entraram)
+                    while (!(p.Hud.Freeze > 0 && Match.FREEZE - p.Hud.Freeze > 3f) && t < 60)
+                    {
+                        p.Simular(dt); t += dt;
+                        if (++passo % 15 == 0) { p.Cenario.cam.targetTexture = rtMan; p.Cenario.cam.Render(); p.Cenario.cam.targetTexture = null; }
+                    }
+                    salvar.Invoke(null, new object[] { p.Cenario.cam, $"{DIR}/economia_r{r}.png", 1920, 1080, p.Hud });
+                    Debug.Log($"[HUD] foto economia round {p.Round}");
+                }
+                rtMan.Release();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Rádio do time (painel de comunicação): fotos no round 2 aos -hud_t segundos (padrão 8, 20 e 35), time A e,
+        /// na última, time B. Saída Logs/hud/radio_*.png. Batch: -executeMethod CSM.EditorTools.HudCaptura.RadioBatch
+        /// </summary>
+        public static void RadioBatch()
+        {
+            try
+            {
+                M("Setup")?.Invoke(null, null);
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.seed = (int)Arg("-hud_seed", 15);
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                p.PularAte((int)Arg("-hud_round", 2));
+                const string DIR = "Logs/hud"; Directory.CreateDirectory(DIR);
+                var salvar = M("Salvar"); var rtMan = new RenderTexture(320, 180, 24);
+                float[] horas = { 8, 20, 35, 35 }; float t = 0, dt = 1 / 30f; int passo = 0;
+                for (int k = 0; k < horas.Length; k++)
+                {
+                    while ((p.Hud.Freeze > 0 || p.Partida.t < horas[k]) && !p.Partida.over && t < 300)
+                    {
+                        p.Simular(dt); t += dt;
+                        if (++passo % 15 == 0) { p.Cenario.cam.targetTexture = rtMan; p.Cenario.cam.Render(); p.Cenario.cam.targetTexture = null; }
+                    }
+                    CSM.View3D.Hud3D.RadioTime = k == 3 ? 1 : 0;
+                    p.Simular(dt);
+                    string nome = $"radio_{(k == 3 ? "B" : "A")}_{horas[k]:0}s";
+                    salvar.Invoke(null, new object[] { p.Cenario.cam, $"{DIR}/{nome}.png", 1920, 1080, p.Hud });
+                    Debug.Log($"[HUD] foto {nome}: t={p.Partida.t:0.0}, falas {p.Partida.falas.Count}");
+                }
+                CSM.View3D.Hud3D.RadioTime = 0;
+                rtMan.Release();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
         /// Vídeo de um round inteiro como sai na transmissão (diretor automático + HUD + replay de melhores momentos e
         /// câmera lenta): do freeze até o round seguinte começar. Quadros em Logs/hud/video/q_NNNN.png; o mp4 sai pelo
         /// frames_to_mp4.py (Blender). Batch: -executeMethod CSM.EditorTools.HudCaptura.VideoBatch [-hud_seed 15]

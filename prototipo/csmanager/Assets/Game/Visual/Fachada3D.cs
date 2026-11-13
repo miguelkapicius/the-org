@@ -30,7 +30,7 @@ namespace CSM.View3D
             Plantas.Clear(); Packs3D.LimparFachada();
             int NX = MapData.NX, NY = MapData.NY, NZ = MapVoxels.NZ;
             var walk = MapData.walk; var floor = MapData.floor;
-            int Top(int x, int y) => walk[x, y] ? floor[x, y] : (MapData.solid[x, y] > 0 ? MapData.solid[x, y] : MapData.BlockH(x, y));
+            int Top(int x, int y) => MapVoxels.Topo(x, y);
             bool In(int x, int y) => x >= 0 && y >= 0 && x < NX && y < NY;
             var o = new Obra3D();
             for (int x = 0; x < NX - 1; x++)
@@ -66,7 +66,7 @@ namespace CSM.View3D
                     if (H >= 30 && k >= 30 && k < 54 && v <= 4) Limpa(fz + 8, fz + 27);
                     // pontas de viga (usuário: "essas pintas na parede... um componentezinho 3d"): o MapVoxels pintava 1 x 2
                     // voxels de madeira escura 5-6 abaixo do topo a cada 12 casas; vira a ponta roliça da viga saindo do adobe
-                    bool viga = H >= 30 && k % 12 == 0;
+                    bool viga = H >= 30 && k % 36 == 0;   // (era a cada 12: usuário, "menos tacos de madeira nas paredes")
                     // só onde tem parede de verdade em volta da tora (usuário: "tocos de madeira voando"): muro com 3+ de
                     // fundo na altura dela, parede dos dois lados (não é ponta de muro nem quina) e rua livre na frente
                     if (viga)
@@ -119,7 +119,10 @@ namespace CSM.View3D
                             case 2: Prateleira(o, face, n, t, semente); break;
                             case 3: break;   // a janelinha com floreira saiu (usuário: "horrível"); a parede fica lisa
                             // azulejo com lanterna saiu (usuário: "quadrinho uma bosta"): bandeirola do Kenney (Packs3D)
-                            case 4: if (Packs3D.Pronto) Packs3D.Bandeira(face.x + n.x * 0.4f, face.y + n.y * 0.4f, face.z, new Vector2(n.x, n.y), semente);
+                            // Vila de adobe: a bandeirola do Kenney (pano verde-claro ou vermelho) destoava e caía em cima da barra de
+                            // azulejo do palácio (usuário: "verde tá esquisito"); lá vira o tapete de parede, igual ao caso 0
+                            case 4: if (CSM.Map.MapData.MAPA != "brasa") Tapete(o, face, n, t, semente);
+                                    else if (Packs3D.Pronto) Packs3D.Bandeira(face.x + n.x * 0.4f, face.y + n.y * 0.4f, face.z, new Vector2(n.x, n.y), semente);
                                     else { Lanterna(o, face + Vector3.forward * 19, n, t, false); Zellige(o, face, n, t, semente); } break;
                         }
                 }
@@ -170,6 +173,8 @@ namespace CSM.View3D
 
         static void Vaso(Obra3D o, Vector3 f, Vector3 n, Vector3 t, int sem)
         {
+            // Vila de adobe (deserto): os vasinhos de planta verde na parede e na porta saíram (usuário: "tira as plantas do mapa que não fazem sentido"); ficam só as palmeiras de fora
+            if (CSM.Map.MapData.MAPA != "brasa") return;
             var rng = new System.Random(sem);
             // vaso de parede saiu (planta enfiada no cilindro, "bugado"): no pé da parede, um vaso alto e um baixinho do
             // Kenney lado a lado
@@ -288,6 +293,8 @@ namespace CSM.View3D
         /// <summary>Vaso de barro com arbusto do lado da porta (no pé da parede; sai no máximo 2,9 do muro).</summary>
         static void VasoPorta(Obra3D o, Vector3 f, Vector3 n, Vector3 t, int sem)
         {
+            // Vila de adobe (deserto): os vasinhos de planta verde na parede e na porta saíram (usuário: "tira as plantas do mapa que não fazem sentido"); ficam só as palmeiras de fora
+            if (CSM.Map.MapData.MAPA != "brasa") return;
             var rng = new System.Random(sem);
             // vaso alto do Kenney (barro com a planta de verdade, peça única: nada enfiado dentro), 12 de altura e ~4,4 de
             // largura, o centro a 2,3 do muro

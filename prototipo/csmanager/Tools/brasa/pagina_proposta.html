@@ -1,0 +1,176 @@
+<title>Brasa v7</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* layout: folha de prancheta — título curto, plantas lado a lado, depois as réguas em tabelas estreitas */
+:root {
+  --bg: #f3f1ec; --fg: #23211d; --muted: #6d675c; --line: #d8d2c6; --panel: #fbfaf7;
+  --accent: #0f7c86; --warn: #b5651d; --bad: #a3322a; --good: #2f7a3d;
+  --m-predio: #e1dacb; --m-rua: #c9b48d; --m-meio: #b9a37c; --m-site: #e0a458; --m-tr: #c96b4a; --m-ct: #5f8fb4;
+  --m-andar: #8f7a5c; --m-alto: #a98e62; --m-escada: #7c6a50; --m-cob: #5b4a36;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b1a17; --fg: #ece7dd; --muted: #a59d8e; --line: #38342d; --panel: #23211d;
+  --accent: #4fc1cb; --warn: #e09a55; --bad: #e0776d; --good: #79c48a;
+  --m-predio: #2e2b26; --m-rua: #8d7a58; --m-meio: #7f6c4c; --m-site: #c98a3e; --m-tr: #b45c3e; --m-ct: #4f7ea3;
+  --m-andar: #6b5a42; --m-alto: #7d6948; --m-escada: #5c4e3a; --m-cob: #e8dcc4; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #1b1a17; --fg: #ece7dd; --muted: #a59d8e; --line: #38342d; --panel: #23211d;
+  --accent: #4fc1cb; --warn: #e09a55; --bad: #e0776d; --good: #79c48a;
+  --m-predio: #2e2b26; --m-rua: #8d7a58; --m-meio: #7f6c4c; --m-site: #c98a3e; --m-tr: #b45c3e; --m-ct: #4f7ea3;
+  --m-andar: #6b5a42; --m-alto: #7d6948; --m-escada: #5c4e3a; --m-cob: #e8dcc4; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; }
+main { max-width: 1080px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); line-height: 1; }
+h2 { font-size: 1.7rem; line-height: 1.1; }
+p { margin: 0; max-width: 68ch; }
+.topo { display: grid; gap: 10px; }
+.selo { font-family: var(--mono); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.lead { font-size: 1.08rem; color: var(--fg); }
+.sec { display: grid; gap: 16px; }
+.plantas { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+figure { margin: 0; display: grid; gap: 8px; min-width: 0; }
+figcaption { font-family: var(--display); font-size: 1.25rem; font-weight: 500; }
+.planta { width: 100%; height: auto; background: var(--m-predio); border: 1px solid var(--line); display: block; }
+.planta .muda { fill: none; stroke: var(--accent); stroke-width: 1.5; }
+.planta .plant { fill: none; stroke: var(--fg); stroke-width: 1; stroke-dasharray: 3 2; opacity: .7; }
+.planta .letra { font-family: var(--display); font-weight: 700; font-size: 22px; fill: var(--fg); text-anchor: middle; opacity: .55; }
+.planta .porta { fill: var(--accent); stroke: var(--bg); stroke-width: 1.5; }
+.planta .num { font-family: var(--mono); font-size: 9px; font-weight: 600; fill: var(--bg); text-anchor: middle; }
+.planta .rot { font-family: var(--body); font-size: 9.5px; font-weight: 600; fill: var(--fg); paint-order: stroke; stroke: var(--m-predio); stroke-width: 3px; }
+.legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: .84rem; color: var(--muted); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 12px; height: 12px; display: inline-block; border: 1px solid var(--line); }
+.mudancas { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.mud { background: var(--panel); border: 1px solid var(--line); padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
+.mud h3 { margin: 0; font-family: var(--display); font-size: 1.3rem; font-weight: 700; }
+.mud .onde { font-family: var(--mono); font-size: .76rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+.mud p { font-size: .94rem; }
+.troca { color: var(--muted); }
+.tabs { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+.tab { overflow-x: auto; min-width: 0; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-family: var(--mono); font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.pin { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); color: var(--bg);
+  font-family: var(--mono); font-size: .7rem; font-weight: 600; margin-right: 8px; }
+td.ok { color: var(--good); } td.perto { color: var(--warn); } td.longe { color: var(--bad); }
+td.meta { color: var(--muted); }
+tr.mudou td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.nota { font-size: .86rem; color: var(--muted); }
+.fatos { display: grid; gap: 6px; font-size: .92rem; }
+.fatos div { display: grid; grid-template-columns: 9.5rem 1fr; gap: 12px; }
+.fatos b { font-weight: 600; color: var(--muted); }
+.aberto { border-left: 3px solid var(--warn); padding-left: 14px; display: grid; gap: 8px; }
+ol { margin: 0; padding-left: 1.3rem; display: grid; gap: 6px; max-width: 70ch; }
+@media (max-width: 520px) { .fatos div { grid-template-columns: 1fr; gap: 0; } }
+</style>
+
+<main>
+  <header class="topo">
+    <div class="selo">Brasa · proposta v7 · não aplicada</div>
+    <h1>Brasa v7</h1>
+    <p class="lead">Hoje o CT retoma o A quase só pela biblioteca e o B quase só pela construção. A proposta dá três entradas de retake com motivo em cada bomb, com tempo e risco diferentes, sem mexer no banana nem no meio. Nada foi aplicado no jogo: só muda se você aprovar.</p>
+  </header>
+
+  <section class="sec">
+    <h2>Planta</h2>
+    <div class="plantas">
+      <figure><figcaption>Hoje (v6)</figcaption>{{SVG_A}}</figure>
+      <figure><figcaption>Proposta (v7)</figcaption>{{SVG_B}}</figure>
+    </div>
+    <div class="legenda">
+      <span><i class="sw" style="background:var(--m-site)"></i>bomb</span>
+      <span><i class="sw" style="background:var(--m-rua)"></i>rua</span>
+      <span><i class="sw" style="background:var(--m-andar)"></i>2º andar / sacada</span>
+      <span><i class="sw" style="background:var(--m-alto)"></i>plataforma alta</span>
+      <span><i class="sw" style="background:var(--m-cob)"></i>cobertura</span>
+      <span><i class="sw" style="background:var(--m-ct)"></i>base CT</span>
+      <span><i class="sw" style="background:var(--m-tr)"></i>base TR</span>
+      <span><i class="sw" style="border:2px solid var(--accent);background:transparent"></i>casa que muda</span>
+      <span><span class="pin">1</span>entrada de retake (número igual nas tabelas)</span>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>O que muda e por quê</h2>
+    <div class="mudancas">
+      <article class="mud">
+        <div class="onde">Bomb A · longo</div>
+        <h3>O longo passa a ligar no arco</h3>
+        <p>Hoje o longo é um beco sem saída: só se chega nele pelo próprio A. Abrindo duas casas de parede ele vira a entrada oeste do retake, pelo arco, em 11,2 s.</p>
+        <p class="troca">Troca: é rápida, mas cai de lado no site, sem cobertura até a areia. O TR que segura o arco do alto do meio pega quem desce.</p>
+      </article>
+      <article class="mud">
+        <div class="onde">Bomb A · biblioteca</div>
+        <h3>A biblioteca desce no cemitério</h3>
+        <p>A rampa que descia no meio do lado norte do A some. A biblioteca segue pro leste e entra no alto do cemitério, por cima do site. O CT leva 11,4 s em vez de 9,0 e para de ganhar de tudo.</p>
+        <p class="troca">Troca: chega no alto, vendo o A inteiro, mas fica exposto de todo o site enquanto desce a escada. O CT ainda pisa no A em 9,5 s (Inferno × 1,25: 9,6 s).</p>
+      </article>
+      <article class="mud">
+        <div class="onde">Bomb B · construção</div>
+        <h3>Sacada da construção pro corredor do banana</h3>
+        <p>Uma escada no fundo da construção sobe numa salinha com sacada. O CT pula no corredor do banana e entra no B pela porta do banana, por trás de quem plantou, em 15,4 s.</p>
+        <p class="troca">Troca: é a mais lenta e não tem volta: o TR não sobe por ali. Ela também deixa o CT chegar no carro em 12,3 s, a mesma meta da Inferno. O TR continua ganhando o meio do banana.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="sec">
+    <h2>Retake: tempo do CT até o plant, só com aquela entrada aberta</h2>
+    <div class="tabs">
+      <div class="tab">
+        <table>
+          <thead><tr><th>Bomb A</th><th class="n">hoje</th><th class="n">v7</th><th class="n">do B</th><th class="n">no site</th></tr></thead>
+          <tbody>{{RET_A}}</tbody>
+        </table>
+      </div>
+      <div class="tab">
+        <table>
+          <thead><tr><th>Bomb B</th><th class="n">hoje</th><th class="n">v7</th><th class="n">do A</th><th class="n">no site</th></tr></thead>
+          <tbody>{{RET_B}}</tbody>
+        </table>
+      </div>
+    </div>
+    <p class="nota">"Hoje" e "v7" são medidos a partir do spawn CT. "Do B/do A" é o tempo de quem vem do outro bomb. "No site" é quanto tempo o CT anda dentro do bomb, na mira, até o plant. Um traço quer dizer que a entrada não existe ou não dá pra chegar nela. No A, a curta e a varanda continuam como entradas mais lentas, passando pelo alto do meio e pelo apê.</p>
+  </section>
+
+  <section class="sec">
+    <h2>Régua do mapa todo</h2>
+    <div class="tab">
+      <table>
+        <thead><tr><th>ponto</th><th class="n">TR hoje</th><th class="n">CT hoje</th><th class="n">TR v7</th><th class="n">CT v7</th><th class="n">meta TR / CT</th></tr></thead>
+        <tbody>{{REGUA}}</tbody>
+      </table>
+    </div>
+    <p class="nota">Segundos de fuzil desde o spawn. A meta é a Inferno medida no radar × 1,25. Cor do número: verde = até 1,5 s da meta, laranja = até 3 s, vermelho = mais longe. A faixa na esquerda marca o que mudou.</p>
+    <div class="fatos">
+      <div><b>Primeiro a pisar</b><span>{{PISA}}</span></div>
+      <div><b>Rotações</b><span>{{ROT}}</span></div>
+      <div><b>Ângulos</b><span>Regras do banana e do B (tiradas da Inferno): {{REGRAS}}</span></div>
+    </div>
+  </section>
+
+  <section class="sec aberto">
+    <h2>O que continua fora da meta</h2>
+    <p>O TR leva 26,6 s pra pisar no B; a meta é 22,3. Testei baixar a porta do banana pra encurtar o corredor: ganha 1,5 s, mas o TR passa a ver quatro posições do B de fora da porta e o topo do corredor passa a ver as toras. Ficou de fora.</p>
+    <p>A rotação do TR do banana pra varanda é 20,6 s; a meta é 13,9. A Brasa é mais larga que a Inferno, então isso só muda mexendo na base TR. Prefiro tratar isso numa próxima rodada, se você quiser.</p>
+  </section>
+
+  <section class="sec">
+    <h2>Se aprovar</h2>
+    <ol>
+      <li>A proposta vira a planta oficial (a v6 fica guardada).</li>
+      <li>Regero o mapa do jogo e a maquete 3D da Brasa. A Vila não muda.</li>
+      <li>A sessão dos bots mede o retake de novo e reconverte o banco de estratégias da Brasa onde as regiões mudaram.</li>
+    </ol>
+  </section>
+</main>

@@ -66,6 +66,9 @@ Shader "CSM/FumacaVolume"
                     float luz = smoothstep(0.04, 0.9, exp(-sh * 0.95));
                     float baixo = saturate((p.z - mn.z) / 18.0);
                     half3 c = lerp(_CorSombra.rgb, _CorLuz.rgb * sol.color, luz) * lerp(0.78, 1.0, baixo);
+                    // rolos de luz e sombra andando na superfície (o mesmo fluxo do FumDens, ruído mais miúdo): a smoke
+                    // ativa lê como fumaça revirando, não como algodão parado
+                    c *= lerp(0.86, 1.07, FumRola(p, k, 1.8));
                     c += SampleSH(float3(0, 1, 0)) * 0.07 + (1 - s) * 0.05;   // fiapo ralo da borda clareia
                     cor += T * a * c; T *= 1 - a;
                     if (T < 0.015) { T = 0; break; }

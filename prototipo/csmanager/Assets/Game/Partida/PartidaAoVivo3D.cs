@@ -14,7 +14,7 @@ namespace CSM.View3D
     /// A partida ao vivo no visual de maquete: a MESMA simulação da PartidaAoVivo (2D), desenhada em 3D — bonecos do
     /// Blender (Boneco3D) com a escolha de animação (câmera e passo em Transmissao), smoke por volume (Fumaca3D), fogo do
     /// molotov, rastro de tiro, granada voando, armas no chão e C4. Câmera segue a ação como no 2D (Transmissao.Mirar).
-    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, Esc câmera automática, roda do mouse = zoom.
+    /// Teclas: espaço pausa, 1-4 velocidade, N pula o round, P painel, R rádio do time (A/B/desligado), Esc câmera automática, roda do mouse = zoom.
     /// </summary>
     public partial class PartidaAoVivo3D : MonoBehaviour
     {
@@ -127,37 +127,13 @@ namespace CSM.View3D
         public int Round => rn;
 
         /// <summary>Um quadro: simulação (ou fim de round/replay), câmera, bonecos, partículas.</summary>
-        /// <summary>Torcida da transmissão no fim do round: clutch (o último vivo do time vencedor ganhou um 1vX com X ≥ 2),
-        /// ace (5 abates de um jogador no round) e ace de destaque (1v5, ou os 5 em até 10 s). Lê o killfeed.</summary>
-        void Torcida()
-        {
-            bool tr = m.winner == "TR";
-            int vivosV = 0, vivosP = 0; foreach (var a in m.agents) { if (a.IsT == tr) vivosV++; else vivosP++; }
-            int x = 0; bool viu1 = false;
-            var abates = new Dictionary<string, List<float>>();
-            foreach (var (t, s0) in m.feed)
-            {
-                int a0 = s0.IndexOf(" ["), a1 = s0.IndexOf("] "); if (a0 <= 0 || a1 <= a0) continue;
-                string k = s0.Substring(0, a0), v = s0.Substring(a1 + 2).Replace(" (HS)", "");
-                var va = m.agents.Find(z => z.name == v); var ka = m.agents.Find(z => z.name == k);
-                if (va == null) continue;
-                if (va.IsT == tr) vivosV--; else vivosP--;
-                if (!viu1 && vivosV == 1) { viu1 = true; x = vivosP; }   // o time vencedor ficou com 1: contra quantos
-                if (ka != null && ka.IsT != va.IsT) { if (!abates.TryGetValue(k, out var l)) abates[k] = l = new List<float>(); l.Add(t); }
-            }
-            foreach (var kv in abates)
-                if (kv.Value.Count >= 5)
-                {
-                    bool absurdo = kv.Value[kv.Value.Count - 1] - kv.Value[kv.Value.Count - 5] <= 10f || (viu1 && x >= 5);
-                    Som3D.Torcida(absurdo ? "ace_absurdo" : "ace"); return;
-                }
-            if (viu1 && x >= 2 && m.agents.Count(z => z.alive && z.IsT == tr) == 1) Som3D.Torcida("clutch");
-        }
         string vozVitoria; float vozVitoriaEm;   // anúncio de quem venceu (espera o "bomba desarmada" terminar)
         void Passo(float dt, bool anda, bool limitarTempo)
         {
             Som3D.Relogio(replay != null ? replay.t : m.t);   // recarga agendada no tempo do jogo (em 4x o pente batia depois)
             if (replay != null) { if (anda) ReplayPasso(dt); return; }
+            // torcida de arena (Som3D.Plateia): multi-kill, ace, jogada e "ohhh" na hora
+            Som3D.PlateiaQuadro(m);
             if (anda)
             {
                 if (m.over || m.t > 200)
@@ -168,7 +144,7 @@ namespace CSM.View3D
                     {
                         tFim = m.t;
                         // locutor: "bomba desarmada" (se foi) e depois quem venceu, como no CS
-                        if (m.over) { if (m.defused) Som3D.Anuncio("bomba_desarmada"); vozVitoria = m.winner == "TR" ? "vitoria_tr" : "vitoria_ct"; vozVitoriaEm = m.defused ? 1.6f : 0f; Torcida(); }
+                        if (m.over) { if (m.defused) Som3D.Anuncio("bomba_desarmada"); vozVitoria = m.winner == "TR" ? "vitoria_tr" : "vitoria_ct"; vozVitoriaEm = m.defused ? 1.6f : 0f; Som3D.PlateiaFimRound(m); }
                     }
                     fimT += dt;
                     if (vozVitoria != null && fimT >= vozVitoriaEm) { Som3D.Anuncio(vozVitoria); vozVitoria = null; }
@@ -241,8 +217,7 @@ namespace CSM.View3D
 
         static Mesh Malha(PrimitiveType t) { var g = GameObject.CreatePrimitive(t); var me = g.GetComponent<MeshFilter>().sharedMesh; Apagar(g); return me; }
 
-        // Vindo do manager (CSM.Manager), a partida já vem montada com o elenco dele; sozinha, a cena usa o time padrão.
-        void NovaPartida() { pt = CSM.Manager.Carreira.TomarPendente() ?? new Sim.Partida(seed, null, null); acabou = false; NovoRound(); }
+        void NovaPartida() { pt = new Sim.Partida(seed, null, null); Som3D.PlateiaComecar(seed, !Vitrine); acabou = false; NovoRound(); }
 
         // ---- menu (Menu3D): vitrine = partida de outra semente rodando atrás do menu, sem HUD e sem controles
         Menu3D menu;
@@ -296,7 +271,7 @@ namespace CSM.View3D
             if (Desempenho.Ativo) Desempenho.Soma(5, ref tm);
         }
 
-        void FechaRound() { long tm = Desempenho.Agora; pt.Fechar(m); if (Desempenho.Ativo) Desempenho.Soma(4, ref tm); if (pt.acabou) { acabou = true; pausado = true; } else NovoRound(); }
+        void FechaRound() { long tm = Desempenho.Agora; pt.Fechar(m); if (Desempenho.Ativo) Desempenho.Soma(4, ref tm); if (pt.acabou) { acabou = true; pausado = true; Som3D.PlateiaFimPartida(); } else NovoRound(); }
 
         /// <summary>Pula direto pro round n (simula os anteriores sem desenhar).</summary>
         public void PularAte(int n) { while (rn < n && !acabou) PulaRound(); }
@@ -373,6 +348,7 @@ namespace CSM.View3D
             if (Input.GetKeyDown(KeyCode.Alpha3)) velocidade = 4; if (Input.GetKeyDown(KeyCode.Alpha4)) velocidade = 8;
             if (Input.GetKeyDown(KeyCode.N)) PulaRound();
             if (Input.GetKeyDown(KeyCode.P)) painel = !painel;
+            if (Input.GetKeyDown(KeyCode.R)) Hud3D.RadioTime = Hud3D.RadioTime == 0 ? 1 : Hud3D.RadioTime == 1 ? -1 : 0;   // rádio: time A, time B, desligado
             if (Input.GetKeyDown(KeyCode.Escape)) seguir = -1;
             float w = Input.mouseScrollDelta.y; if (w != 0) zoom = Mathf.Clamp(zoom * (1 - 0.1f * w), 4f, 40f);
         }
@@ -410,29 +386,6 @@ namespace CSM.View3D
             x = 14; y += 26;
             if (B("Próximo round", 96)) PulaRound();
             if (B(painel ? "Sem pensamento" : "Pensamento (P)", 110)) painel = !painel;
-            // partida vinda do manager: no fim, fecha a partida da carreira (prêmio, salários) e volta ao painel do clube
-            var carreira = CSM.Manager.Carreira.Atual;
-            if (acabou && carreira != null && carreira.emPartida)
-            {
-                bool venceu = pt.vencedor == pt.A;
-                var r = new Rect(W / 2 - 190, H / 2 - 60, 380, 120);
-                GUI.Box(r, GUIContent.none, sCaixa);
-                GUI.Label(new Rect(r.x + 12, r.y + 10, r.width - 24, 50), $"<b>{(venceu ? "Vitória" : "Derrota")}</b>  {pt.A.nome} {pt.A.placar} x {pt.B.placar} {pt.B.nome}", sTxt);
-                if (GUI.Button(new Rect(r.x + 12, r.y + 66, r.width - 24, 40), "Voltar ao manager", sBotao))
-                {
-                    // números reais de cada jogador, vindos da simulação (viram a tela de pós-partida)
-                    var desempenho = new List<CSM.Manager.Desempenho>();
-                    for (int jj = 0; jj < pt.A.js.Length; jj++)
-                    {
-                        var pj = pt.A.js[jj];
-                        desempenho.Add(new CSM.Manager.Desempenho { nome = pj.nome, funcao = pj.roleT, k = pj.k, d = pj.d, hs = pj.hs, dano = pj.dano, fk = pj.fk, rounds = Mathf.Max(1, pj.rounds) });
-                    }
-                    carreira.Registrar(venceu, pt.A.placar, pt.B.placar, true, desempenho);
-                    CSM.ManagerUI.Salvamento.Salvar(carreira);
-                    UnityEngine.SceneManagement.SceneManager.LoadScene("Manager");
-                    return;
-                }
-            }
             // o que o jogador seguido está pensando (explicação dos bots)
             if (!painel || seguir < 0) return;
             var s = m.agents[seguir];

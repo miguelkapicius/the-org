@@ -25,7 +25,7 @@ namespace CSM.Sim
             public int transIni = 2, transFim = 5;
             public float inStandAlt, inCrouchAlt;   // AWP na luneta
             // AWP fica com a cadência do CS2 (1,46 s): com o "10% mais rápido" ela dava tiro demais
-            public float Interval => 60f / rpmCs2 * (id == "awp" && !TeamBrain.EXP.Contains("awpRapida") ? 1f : SPEEDUP);   // segundos entre tiros (nosso)
+            public float Interval => 60f / rpmCs2 * (id == "awp" && !TeamBrain.EXPF.Contains("awpRapida") ? 1f : SPEEDUP);   // segundos entre tiros (nosso)
             public float Reload => reloadCs2 * SPEEDUP;        // segundos de recarga (nosso)
             public float Rpm => 60f / Interval;
         }

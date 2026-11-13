@@ -11,10 +11,12 @@ namespace CSM.Map
     /// Fonte única: o visual (voxels) e a navegação saem daqui. Coordenadas: x = leste, y = sul; alturas em voxels
     /// (o pé pisa no topo da coluna).
     /// </summary>
-    public static class MapData
+    public static partial class MapData
     {
         public const int Q = 25;                  // unidades por quadradinho da planta
-        public const int NX = 40 * Q, NY = 35 * Q;
+        /// <summary>Mapa montado: "vila" (padrão) ou "brasa" (MapaEscolhido, antes do primeiro acesso).</summary>
+        public static readonly string MAPA = MapaEscolhido.Qual() == "brasa" ? "brasa" : "vila";
+        public static readonly int NX = MAPA == "brasa" ? BRASA_NX : 40 * Q, NY = MAPA == "brasa" ? BRASA_NY : 35 * Q;
         public const int GZ = 8;                  // chão
         public const int UP = GZ + 30;            // 2º andar (palácio, janelão, casarão)
         public const int CAS = UP;
@@ -41,6 +43,8 @@ namespace CSM.Map
         public static readonly bool[,] walk = new bool[NX, NY];
         public static readonly int[,] floor = new int[NX, NY];       // z do piso
         public static readonly int[,] solid = new int[NX, NY];       // topo do prédio onde não anda (0 = automático)
+        /* bx: célula de PRÉDIO (parede de casa/interior), não muro: o clip da granada sobe nela (o visual não usa) */
+        public static readonly bool[,] predio = new bool[NX, NY];
         public static readonly Floor[,] fmat = new Floor[NX, NY];
         public static readonly int[,] coverH = new int[NX, NY];      // cobertura acima do piso (0 = livre)
         public static readonly bool[,] stair = new bool[NX, NY];     // escada/rampa (piso inclinado)
@@ -114,7 +118,7 @@ namespace CSM.Map
                                 int u = x + dx, v = y + dy;
                                 near = InMap(u, v) && walk[u, v] && s.has(u, v);
                             }
-                        if (near) solid[x, y] = top;
+                        if (near) { solid[x, y] = top; predio[x, y] = true; }
                     }
             }
         }
@@ -186,9 +190,32 @@ namespace CSM.Map
             return true;
         }
 
+        /* raioRampaLigado: o Raio de chão reto dava "parede a 30" pra quem olha escada/rampa acima (o piso sobe acima do olho) —
+           o bot achava que estava de cara pra parede e virava a mira pra outro lado, e as quinas da tabela nasciam tortas perto de
+           escada. Aqui o raio segue o relevo: vai até onde ainda daria pra ver a cabeça de alguém em pé (horizonte, como o Viewshed). */
+        static readonly Lazy<bool> raioRampa = new Lazy<bool>(() => Velho("raioRampaLigado"));
+        public static bool RaioRampa => raioRampa.Value;
+        public static float RaioHorizonte(V2 a, float zA, V2 dir, float max, float eye)
+        {
+            float olho = zA + eye, horizonte = float.NegativeInfinity, ultimo = 0;
+            for (float s = 2; s < max; s += 2)
+            {
+                int x = (int)MathF.Floor(a.x + dir.x * s), y = (int)MathF.Floor(a.y + dir.y * s);
+                if (!InMap(x, y) || !walk[x, y]) return MathF.Min(s, ultimo + 2);
+                float fl = floor[x, y], ch = coverH[x, y], topo = fl + ch;
+                if (fl > GZ + 1 && !stair[x, y] && fmat[x, y] != Floor.Cart) topo = MathF.Max(topo, fl + 8);
+                if (ch > 0) { float sc = (topo - olho) / s; if (sc > horizonte) horizonte = sc; }
+                if ((fl + eye - olho) / s >= horizonte) ultimo = s;
+                else if (s - ultimo > 80) return ultimo + 2;
+                float sl = (topo - olho) / s; if (sl > horizonte) horizonte = sl;
+            }
+            return ultimo >= max - 4 ? max : ultimo + 2;
+        }
+
         /// <summary>Até onde o olho enxerga numa direção (na altura do olho, chão reto), de 2 em 2 unidades.</summary>
         public static float Raio(V2 a, float zA, V2 dir, float max, float eye)
         {
+            if (RaioRampa) return RaioHorizonte(a, zA, dir, max, eye);
             float h = zA + eye;
             for (float s = 2; s < max; s += 2)
             {
@@ -289,6 +316,7 @@ namespace CSM.Map
 
         static MapData()
         {
+            if (MAPA == "brasa") { MontaBrasa(); return; }   // mapa 2 (MapDataBrasa.cs, gerado do Tools/brasa)
             // Mesma planta aprovada (Tools/planta.ps1), na mesma ordem. Função de cada lugar está na planta.
             // ---- spawns
             Blk("CT", "base CT", 16, 24, 1, 4, GZ, Floor.Tile);
@@ -328,7 +356,7 @@ namespace CSM.Map
             Blk("Rato_fundo", "fundos do janelão", 15, 15, 6, 7, UP, Floor.Stone);
             for (int x = 16 * Q; x < 17 * Q; x++)
                 for (int y = 8 * Q; y < 14 * Q; y++)
-                    if (!walk[x, y]) solid[x, y] = y < 10 * Q ? UP + 8 : GZ + 20;   // casa do lado da escada, muro reto no beco
+                    if (!walk[x, y]) { solid[x, y] = y < 10 * Q ? UP + 8 : GZ + 20; predio[x, y] = y < 10 * Q; }   // casa do lado da escada, muro reto no beco
             // ---- conector meio -> A
             Blk("Conector", "conector", 21, 26, 12, 13, GZ, Floor.Dirt);
             Blk("Conector_dobra", "dobra do conector", 25, 26, 10, 11, GZ, Floor.Dirt);
@@ -435,6 +463,20 @@ namespace CSM.Map
             int row = y / 38;
             int col = (x + (row % 2) * 25) / 50;
             return GZ + HS[Hash(col + 11, row + 5) % HS.Length];
+        }
+
+        /// <summary>
+        /// bx: CLIP da granada (como nos mapas de CS: parede invisível na altura real do prédio). A casa do visual tem 1 andar
+        /// (36-44); a granada passava por cima de tudo e o teto baixo (165) segurava — o resolvedor quicava no céu. Aqui a
+        /// casa tem 2-3 andares (90/110/130 acima do chão, por lote) e a parede de prédio em volta de interior/terraço sobe
+        /// pra 100; muro baixo continua muro. Só a física da granada usa (visão, andar e visual seguem o Top).
+        /// </summary>
+        public static int ClipNade(int x, int y)
+        {
+            if (!InMap(x, y)) return 999;
+            if (walk[x, y]) return floor[x, y] + coverH[x, y];
+            if (solid[x, y] == 0) { int row = y / 38, col = (x + (row % 2) * 25) / 50; return GZ + 90 + 20 * (Hash(col + 3, row + 17) % 3); }
+            return predio[x, y] ? Math.Max(solid[x, y], GZ + 100) : solid[x, y];
         }
 
         /// <summary>Topo do que ocupa a coluna (piso + cobertura onde anda, prédio onde não anda).</summary>

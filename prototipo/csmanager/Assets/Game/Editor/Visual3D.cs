@@ -169,7 +169,7 @@ namespace CSM.EditorTools
             var gs = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/GraphicsSettings.asset")[0]);
             var lista = gs.FindProperty("m_AlwaysIncludedShaders");
             bool mudou = false;
-            foreach (var nome in new[] { "CSM/Maquete", "CSM/Nuvem", "CSM/Brilho", "CSM/Disco", "CSM/FumacaVolume", "CSM/Silhueta", "CSM/Mancha", "TextMeshPro/Distance Field" })
+            foreach (var nome in new[] { "CSM/Maquete", "CSM/Boneco", "CSM/Nuvem", "CSM/Brilho", "CSM/Disco", "CSM/FumacaVolume", "CSM/Silhueta", "CSM/Mancha", "TextMeshPro/Distance Field" })
             {
                 var sh = Shader.Find(nome);
                 if (sh == null) { Debug.LogWarning("[Visual3D] shader não achado: " + nome); continue; }
@@ -820,6 +820,7 @@ namespace CSM.EditorTools
                 p.LabCamera(c, Arg("-v3d_zoom", 3.4f));
                 var arM = System.Environment.GetCommandLineArgs(); int qm = System.Array.IndexOf(arM, "-v3d_casos");
                 CSM.View3D.Ragdoll3D.EmbaloVelho = System.Array.IndexOf(arM, "-v3d_embalo_velho") >= 0;
+                CSM.View3D.Ragdoll3D.PernasVelho = System.Array.IndexOf(arM, "-v3d_pernas_velho") >= 0;
                 p.LabMortes(c, Arg("-v3d_giro", 120), 0.3f, qm >= 0 && qm + 1 < arM.Length ? arM[qm + 1] : "0,1,2,3,4,5,6,7");
                 string dir = "Logs/visual3d/mortes";
                 if (Directory.Exists(dir)) Directory.Delete(dir, true);
@@ -1307,6 +1308,56 @@ namespace CSM.EditorTools
             catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }
 
+        /// <summary>Maquete do mapa montado (rodar com "-mapa brasa"): mapa inteiro, bombs e os lugares com placa
+        /// (MapData.BRASA_NOMES). Saída Logs/visual3d/mapa_&lt;mapa&gt;/*.png. -v3d_so "Banana,Bomb A" limita os lugares.</summary>
+        public static void CapturarMapaBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var cen = new GameObject("Cenário 3D").AddComponent<CSM.View3D.Cenario3D>();
+                cen.Montar();
+                string pasta = "Logs/visual3d/mapa_" + CSM.Map.MapData.MAPA;
+                Directory.CreateDirectory(pasta);
+                Debug.Log($"[Visual3D] mapa {CSM.Map.MapData.MAPA} {CSM.Map.MapData.NX}x{CSM.Map.MapData.NY}: malha {CSM.View3D.Cenario3D.msMalha:F0} ms, {Tris(cen.mapa)} triângulos");
+                string so = ArgS("-v3d_so", "");
+                var tiros = new System.Collections.Generic.List<(string nome, Vector2 alvo, float quadro)>
+                {
+                    ("mapa", new Vector2(CSM.Map.MapData.NX * 0.5f, CSM.Map.MapData.NY * 0.55f), CSM.Map.MapData.NY / 18f),
+                    ("bomb_a", CSM.Map.MapData.SITES["A"].Center is var a ? new Vector2(a.x, a.y) : Vector2.zero, 14f),
+                    ("bomb_b", CSM.Map.MapData.SITES["B"].Center is var b ? new Vector2(b.x, b.y) : Vector2.zero, 14f),
+                };
+                if (CSM.Map.MapData.MAPA == "brasa")
+                    foreach (var (nome, x, y) in CSM.Map.MapData.BRASA_NOMES)
+                        tiros.Add((nome, new Vector2(x * CSM.Map.MapData.Q, y * CSM.Map.MapData.Q), 9f));
+                var feitos = new System.Collections.Generic.HashSet<string>();
+                foreach (var t in tiros)
+                {
+                    if (so.Length > 0 && !so.Split(',').Contains(t.nome) && t.nome != "mapa") continue;
+                    string arq = new string(t.nome.ToLowerInvariant().Select(ch => char.IsLetterOrDigit(ch) ? ch : '_').ToArray());
+                    while (!feitos.Add(arq)) arq += "2";
+                    cen.alvoJogo = t.alvo; cen.enquadrar = t.quadro; cen.Enquadrar();
+                    Salvar(cen.cam, $"{pasta}/{arq}.png", 1920, 1080);
+                }
+                // vista de cima (ortográfica, norte em cima, 2 px por unidade do jogo): pra achar as coisas pela planta
+                if (Arg("-v3d_topo", 1) > 0)
+                {
+                    int NXm = CSM.Map.MapData.NX, NYm = CSM.Map.MapData.NY; float E = CSM.View3D.MalhaMapa.ESC;
+                    if (cen.vol != null) cen.vol.enabled = false;
+                    cen.cam.orthographic = true; cen.cam.orthographicSize = NYm * E * 0.5f;
+                    cen.cam.transform.position = CSM.View3D.MalhaMapa.ParaUnity(NXm * 0.5f, NYm * 0.5f, 300);
+                    cen.cam.transform.rotation = Quaternion.Euler(90, 0, 0);
+                    cen.cam.farClipPlane = 600;
+                    Salvar(cen.cam, $"{pasta}/topo.png", NXm * 2, NYm * 2);
+                }
+                Debug.Log("[Visual3D] prints em " + pasta);
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
         /// <summary>
         /// Tamanho da smoke: raio (unidades da Sim, média de 16 direções, na altura do olho) da smoke que os bots usam
         /// (células, Sample) e da que a tela desenha (esferas do Fumaca3D) com vários RAIO/ESCALA. Smoke cheia no meio do A.
@@ -1470,6 +1521,158 @@ namespace CSM.EditorTools
                 Salvar(cen.cam, "Logs/visual3d/kit_brasa.png", 1920, 1080);
                 Debug.Log($"[Visual3D] kit da Brasa: {kit.Length - falta} props, {falta} faltando");
                 EditorApplication.Exit(falta == 0 ? 0 : 2);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Retrato dos bonecos (usuário: "cara de bonequinho do Animal Crossing, mais soft, um brilhinho"): colunas = o
+        /// material de hoje (Maquete) e variações do CSM/Boneco, CT em cima e TR embaixo, num estúdio com a luz do jogo.
+        /// Logs/visual3d/retrato_perto.png (de perto) e retrato_jogo.png (na distância da câmera do jogo).
+        /// </summary>
+        public static void CapturarRetratoBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                var cg = new GameObject("Câmera 3D") { tag = "MainCamera" }; cg.AddComponent<Camera>();
+                var cen = new GameObject("Cenário 3D").AddComponent<CSM.View3D.Cenario3D>();
+                cen.Montar(); cen.cam.aspect = 16f / 9f;
+                cen.mapa.SetActive(false);
+                foreach (Transform f in cen.transform) if (f.name == "Arredores") f.gameObject.SetActive(false);
+                var chao = GameObject.CreatePrimitive(PrimitiveType.Plane);
+                chao.transform.localScale = Vector3.one * 4;
+                var mc = new Material(Shader.Find("CSM/Maquete")); mc.SetFloat("_UsarVertice", 0); mc.SetColor("_BaseColor", new Color(0.93f, 0.86f, 0.72f).linear);
+                chao.GetComponent<MeshRenderer>().sharedMaterial = mc;
+                var sh = Shader.Find("CSM/Boneco");
+                Material Var(float enrola, float degrau, float sombraCor, float faixa, float veludo, float pot, float brilho, float tecido, float pastel, float borda, float ambiente = 1, float sombraMin = 0.35f)
+                {
+                    var m = new Material(sh);
+                    m.SetFloat("_Ambiente", ambiente); m.SetFloat("_SombraMin", sombraMin);
+                    m.SetFloat("_Enrola", enrola); m.SetFloat("_Degrau", degrau); m.SetFloat("_SombraCor", sombraCor); m.SetFloat("_Faixa", faixa);
+                    m.SetFloat("_Veludo", veludo); m.SetFloat("_VeludoPot", pot); m.SetFloat("_Brilho", brilho); m.SetFloat("_Tecido", tecido);
+                    m.SetFloat("_Pastel", pastel); m.SetFloat("_Borda", borda); m.SetFloat("_SombraGorda", 0.006f);
+                    m.SetFloat("_FreqTecido", Arg("-v3d_trama", 90));
+                    return m;
+                }
+                // (o matCorpo do jogo já é o "C + sombra"; a coluna "no jogo" mostra ele)
+                var colunas = new (Material mat, string rot)[]
+                {
+                    (null, "no jogo"),
+                    (Var(0.7f, 0.45f, 0.8f, 0.5f, 0.9f, 2.5f, 0.3f, 0.8f, 0.45f, 0.25f), "C: bem fofo"),
+                    (Var(0.45f, 0.55f, 0.8f, 0.5f, 0.8f, 2.7f, 0.3f, 0.8f, 0.45f, 0.22f, 0.78f, 0.25f), "C + sombra"),
+                    (Var(0.3f, 0.65f, 0.85f, 0.55f, 0.75f, 2.8f, 0.3f, 0.8f, 0.45f, 0.2f, 0.62f, 0.15f), "C + mais sombra"),
+                };
+                var pai = new GameObject("Retrato").transform; var fonte = CSM.View3D.UiKit.Fonte;
+                var eixo = new Vector3(1, 0, 1).normalized; var fundo = new Vector3(-1, 0, 1).normalized;
+                var rotulos = new System.Collections.Generic.List<Transform>();
+                var times = new[] { ("ct", "mira_M4A4"), ("tr", "mira_AK47") };
+                for (int c = 0; c < colunas.Length; c++)
+                    for (int l = 0; l < times.Length; l++)
+                    {
+                        var b = CSM.View3D.Boneco3D.Criar(times[l].Item1, pai);
+                        b.transform.position = eixo * ((c - (colunas.Length - 1) / 2f) * 1.05f) + fundo * ((0.5f - l) * 1.25f);
+                        b.transform.rotation = Quaternion.Euler(0, Arg("-v3d_rot", 120), 0);
+                        b.Pose(times[l].Item2, 0, 0);
+                        if (colunas[c].mat != null)
+                            foreach (var r in b.GetComponentsInChildren<MeshRenderer>())
+                                if (r.sharedMaterial == CSM.View3D.Boneco3D.matCorpo) r.sharedMaterial = colunas[c].mat;
+                        if (l == times.Length - 1)
+                        {
+                            var tg = new GameObject("rótulo"); tg.transform.SetParent(pai, false);
+                            tg.transform.position = b.transform.position - fundo * 0.6f + Vector3.up * 0.02f;
+                            var tm = tg.AddComponent<TextMesh>(); tm.text = colunas[c].rot; tm.font = fonte; tm.fontSize = 64; tm.characterSize = 0.03f;
+                            tm.anchor = TextAnchor.MiddleCenter; tm.color = new Color(0.25f, 0.18f, 0.12f);
+                            tg.GetComponent<MeshRenderer>().sharedMaterial = fonte.material; rotulos.Add(tg.transform);
+                        }
+                    }
+                Directory.CreateDirectory("Logs/visual3d");
+                foreach (var (zoom, arq) in new[] { (Arg("-v3d_zoom", 3.4f), "retrato_perto"), (14f, "retrato_jogo") })
+                {
+                    cen.alvoJogo = new Vector2(0, -0.25f / CSM.View3D.MalhaMapa.ESC); cen.enquadrar = zoom; cen.Enquadrar();
+                    cen.cam.transform.position -= Vector3.up * (CSM.Map.MapData.GZ * CSM.View3D.MalhaMapa.ESC);
+                    foreach (var r in rotulos) r.rotation = cen.cam.transform.rotation;
+                    Salvar(cen.cam, $"Logs/visual3d/{arq}.png", 1920, 1080);
+                }
+                // bem de perto no CT da 1ª coluna (o do jogo): máscara, lente e tecido
+                pai.position = eixo * ((colunas.Length - 1) / 2f * 1.05f) - fundo * 0.55f;
+                foreach (var r in rotulos) r.gameObject.SetActive(false);
+                cen.enquadrar = 1.3f; cen.Enquadrar(); cen.cam.transform.position -= Vector3.up * (CSM.Map.MapData.GZ * CSM.View3D.MalhaMapa.ESC);
+                Salvar(cen.cam, "Logs/visual3d/retrato_close.png", 1920, 1080);
+                Debug.Log("[Visual3D] retrato dos bonecos ok");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
+
+        /// <summary>
+        /// Laboratório do sangue e do fogo no corpo (Logs/visual3d/sangue/q_NNNN.png): perto do A, 3 CTs de costas pra uma
+        /// parede (1 leva tiro no peito e fica, 1 morre de HS, 1 de peito), tiros errados na parede (faísca) e um TR
+        /// pegando fogo de 0,5 s a 4 s (depois apaga devagar). Mais o quadro final na distância da câmera do jogo.
+        /// </summary>
+        public static void CapturarSangueFogoBatch()
+        {
+            try
+            {
+                Setup();
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                new GameObject("Câmera 3D") { tag = "MainCamera" }.AddComponent<Camera>();
+                var p = new GameObject("Partida 3D").AddComponent<CSM.View3D.PartidaAoVivo3D>();
+                p.Iniciar(); p.Cenario.cam.aspect = 16f / 9f;
+                var A = CSM.Map.MapData.SITES["A"].Center;
+                // ponto de chão plano com parede a ~18 unidades num dos 4 eixos, o mais perto do centro do A
+                CSM.Sim.V2 ponto = new CSM.Sim.V2(A.x, A.y), parede = new CSM.Sim.V2(1, 0); bool achou = false;
+                int Top(float x, float y) => CSM.Map.MapData.Top(Mathf.FloorToInt(x), Mathf.FloorToInt(y));
+                for (int r = 10; r < 220 && !achou; r += 6)
+                    for (int k = 0; k < 24 && !achou; k++)
+                    {
+                        float ang = k * Mathf.PI * 2 / 24; var c = new CSM.Sim.V2(A.x + Mathf.Cos(ang) * r, A.y + Mathf.Sin(ang) * r);
+                        int t0 = Top(c.x, c.y); bool plano = true;
+                        for (int dx = -40; dx <= 40 && plano; dx += 8) for (int dy = -40; dy <= 40 && plano; dy += 8)
+                            if (Mathf.Abs(dx) + Mathf.Abs(dy) <= 40 && Top(c.x + dx * 0.5f, c.y + dy * 0.5f) != t0) plano = false;
+                        if (!plano) continue;
+                        // só parede do lado de lá (a câmera olha pro noroeste, jogo -x/-y): a face manchada fica virada pra câmera
+                        foreach (var e in new[] { new CSM.Sim.V2(-1, 0), new CSM.Sim.V2(0, -1) })
+                        {
+                            var w = c + e * 22f; var lado = new CSM.Sim.V2(-e.y, e.x);
+                            if (Top(w.x, w.y) > t0 + 20 && Top(w.x + lado.x * 16, w.y + lado.y * 16) > t0 + 20 && Top(w.x - lado.x * 16, w.y - lado.y * 16) > t0 + 20
+                                && Top(c.x + lado.x * 16, c.y + lado.y * 16) == t0 && Top(c.x - lado.x * 16, c.y - lado.y * 16) == t0)
+                            { ponto = c; parede = e; achou = true; break; }
+                        }
+                    }
+                Debug.Log($"[Visual3D] sangue: parede {(achou ? "achada" : "NÃO achada")} em {ponto.x:0},{ponto.y:0} pro lado {parede.x:0},{parede.y:0}");
+                var lado2 = new CSM.Sim.V2(-parede.y, parede.x);
+                // olhando pra longe da parede (a bala vem pela frente e vai pra parede atrás dele). Jogo (x, y) -> Unity (x, -z)
+                float giro = Quaternion.LookRotation(new Vector3(-parede.x, 0, parede.y)).eulerAngles.y;
+                p.LabParede(ponto, giro, lado2, 0.4f);
+                var fogoEm = ponto - parede * 40f + lado2 * 26f;
+                p.LabQueimando(fogoEm, giro + 30, 0.5f, 4.0f);
+                var meio = ponto - parede * 18f + lado2 * 8f;
+                p.LabCamera(meio, Arg("-v3d_zoom", 4.2f));
+                string dir = "Logs/visual3d/sangue";
+                if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                Directory.CreateDirectory(dir);
+                const float DT = 1 / 30f; int N = (int)Arg("-v3d_quadros", 180), tiros = 0;
+                float z = CSM.Map.NavGrid.ZAt(ponto);
+                videoRodando = true;
+                for (int f = 0; f < N; f++)
+                {
+                    float t = f * DT;
+                    // tiros errados na parede (entre os bonecos), um a cada 0,15 s a partir de 2,8 s
+                    if (t >= 2.8f && tiros < 4 && t >= 2.8f + tiros * 0.15f)
+                    {
+                        var alvo = ponto + parede * 22f + lado2 * ((tiros - 1.5f) * 9f);
+                        var de = ponto - parede * 110f + lado2 * ((tiros - 1.5f) * 5f);
+                        p.LabTiro(new CSM.View.V3(de.x, de.y, z + 16), new CSM.View.V3(alvo.x, alvo.y, z + 14 + tiros * 2)); tiros++;
+                    }
+                    p.LabPasso(DT);
+                    Salvar(p.Cenario.cam, $"{dir}/q_{f:0000}.png", 1280, 720);
+                }
+                p.LabCamera(meio, 14f); p.LabPasso(DT);
+                Salvar(p.Cenario.cam, $"{dir}/jogo.png", 1920, 1080);
+                Debug.Log($"[Visual3D] sangue e fogo: {N} quadros");
+                EditorApplication.Exit(0);
             }
             catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
         }

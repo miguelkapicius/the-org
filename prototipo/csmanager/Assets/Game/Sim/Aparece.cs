@@ -12,7 +12,7 @@ namespace CSM.Sim
     public static class Aparece
     {
         public const int BINS = 72, FAIXAS = 5, CEL = 36;
-        public const string ARQ = "Assets/Game/Sim/aparece.bin";
+        public static readonly string ARQ = MapaEscolhido.Arq("Assets/Game/Sim/aparece.bin");   // por mapa (Vila no lugar de sempre)
         static readonly int NX = MapData.NX / CEL + 1, NY = MapData.NY / CEL + 1;
         static float[] tab; static bool tentou; static readonly object trava = new object();
 

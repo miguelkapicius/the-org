@@ -13,6 +13,7 @@ Shader "CSM/Maquete"
         _Flash ("Piscar branco", Range(0, 1)) = 0
         [NoScaleOffset] _Topo ("Mapa visto de cima (rgb cor, a altura)", 2D) = "black" {}
         [NoScaleOffset] _Escada ("Escadas (r madeira + 2 x piso, gb descida, a degrau)", 2D) = "black" {}
+        [NoScaleOffset] _Mistura ("Mistura laje (1) / areia (0), borrada", 2D) = "black" {}
         [Toggle] _UsarTopo ("Usar mapa de cima no que olha pra cima", Float) = 0
         _Esc ("Unidade Unity por unidade do jogo", Float) = 0.04
         _SombraGorda ("Engorda só a sombra (unid. Unity)", Float) = 0
@@ -30,6 +31,8 @@ Shader "CSM/Maquete"
         CBUFFER_END
         TEXTURE2D(_Topo);
         TEXTURE2D(_Escada);   // Cenario3D/MalhaMapa.Escada: por coluna, r = madeira?, gb = direção de descida no jogo, a = altura do degrau (0 = não é escada)
+        TEXTURE2D(_Mistura);   // MalhaMapa.Mistura (amostrada com o sampler_LinearClamp do URP)
+        float4 _CorLaje, _CorAreia;   // globais (Cenario3D): cor da laje e da areia do chão de jogo
         float4 _EscPedra, _EscMadeira;   // globais (MalhaMapa.Escada): cor do degrau de pedra / de madeira
         float _QuinaViva;   // global (Cenario3D): quina viva no mapa (0 = arredondado de antes)
 
@@ -193,6 +196,7 @@ Shader "CSM/Maquete"
                     float altP = g2.z - 8.0;
                     half3 pe = madE ? _EscMadeira.rgb * 0.62 : half3(0.871, 0.693, 0.423) * lerp(0.74, 1.0, saturate(altP / 16.0)) * lerp(1.0, 1.05, saturate((altP - 20.0) / 20.0));
                     // (só no que já é parede/terra: a ponta de viga marrom e outros enfeites no muro do lado passam batido)
+                    if (i.color.a < 0.4) pe = base;   // parede de adobe do ksar: o pé do muro é do tom da própria casa
                     bool pareceParede = base.r > 0.28 && base.g > 0.12;
                     if (!pareceParede) rodape = 0;
                     if (rodape > 0 && n.y <= 0.6)
@@ -204,7 +208,7 @@ Shader "CSM/Maquete"
                     {
                         float H = es.a, kz = (g2.z - 8.0) / H, fk = frac(kz), ak = max(fwidth(kz), 1e-4);   // 8 = MapData.GZ
                         float3 hor = float3(d2.x, 0, -d2.y);                       // (y do jogo = -z da Unity)
-                        float rf = 0.4;
+                        float rf = 0.26;   // espelho fino: com 40% da faixa a escada parecia listrada
                         float espelho = saturate((fk - (1 - rf)) / ak);
                         float fundo = saturate(1 - ((1 - rf) - fk) / (ak * 3.0)) * (1 - espelho);   // canto do piso com o espelho
                         float bico = saturate(1 - fk / (ak * 1.5));                                // risco claro na quina
@@ -213,9 +217,152 @@ Shader "CSM/Maquete"
                         float lj = 1 - saturate((min(frac(w), 1 - frac(w)) - 0.02) / max(fwidth(w), 1e-4));
                         float tomD = 0.94 + 0.1 * Hash3(float3(floor(kz), floor(w), 5));
                         half3 corD = corE * tomD * (1 - 0.4 * fundo) * (1 + 0.14 * bico) * (1 - 0.3 * baixoBico) * (1 - 0.25 * lj * (1 - espelho));
-                        corD *= lerp(1.0, 1.1, espelho);   // espelho um tico mais claro (na sombra ficava marrom chapado)
+                        corD *= lerp(1.0, 0.80, espelho);   // espelho mais escuro que o piso (pedra na sombra): o degrau lê como degrau
                         base = corD;
                         n = normalize(lerp(float3(0, 1, 0), hor, espelho));
+                    }
+                    else if (n.y > 0.8 && i.color.a > 0.48 && i.color.a < 0.77)
+                    {   // chão de jogo da Vila (Pisos3D.Chao): calçamento de lajes (alfa 0,55) e areia (0,70) com transição de verdade
+                        // (usuário: "sutilmente vai pra areia"): a mistura borrada do mapa diz o quanto ali é laje; perto da areia a
+                        // junta alarga e enche de areia, e as lajes vão faltando uma a uma (cada laje decide por inteiro)
+                        float bm = SAMPLE_TEXTURE2D(_Mistura, sampler_LinearClamp, g2.xy * _Topo_TexelSize.xy).r;
+                        float lb = dot(base, half3(0.3, 0.5, 0.2)), cL = lb / max(dot(_CorLaje.rgb, half3(0.3, 0.5, 0.2)), 1e-3), cA = lb / max(dot(_CorAreia.rgb, half3(0.3, 0.5, 0.2)), 1e-3);
+                        float claro = abs(cL - 1) < abs(cA - 1) ? cL : cA;   // tom do mapa (manchas largas), medido contra o material que o texel realmente é
+                        // areia
+                        float trecho = smoothstep(0.42, 0.58, Ruido(float3(g2.xy / 60.0, 3.3)));
+                        float w5 = (g2.y + 7.0 * Ruido(float3(g2.xy / 38.0, 1.0)) + 2.5 * sin(g2.x / 11.0)) / 3.6;
+                        float crista = abs(frac(w5) - 0.5) * 2.0;
+                        half3 areiaC = _CorAreia.rgb * claro * (1 + trecho * (0.05 * smoothstep(0.55, 0.95, crista) - 0.04 * smoothstep(0.55, 0.95, 1 - crista)));
+                        areiaC *= 0.965 + 0.07 * Ruido(float3(g2.xy / 23.0, 2.2));
+                        float pk5 = Hash3(float3(floor(g2.xy * 0.8), 9.0));
+                        areiaC *= 1 - 0.14 * step(pk5, 0.012);
+                        // lajes
+                        float2 pp = g2.xy / 9.0, ip = floor(pp); float f1 = 9, f2 = 9; float2 idl = ip;
+                        [unroll] for (int k4 = 0; k4 < 9; k4++)
+                        {
+                            float2 cc = ip + float2(k4 % 3, k4 / 3) - 1;
+                            float2 oo = float2(Hash3(float3(cc, 1)), Hash3(float3(cc, 2))) * 0.7 + 0.15;
+                            float dd = max(abs(cc.x + oo.x - pp.x), abs(cc.y + oo.y - pp.y)) * 0.75 + length(cc + oo - pp) * 0.25;
+                            if (dd < f1) { f2 = f1; f1 = dd; idl = cc; } else if (dd < f2) f2 = dd;
+                        }
+                        float e4 = f2 - f1, ae4 = max(fwidth(e4), 1e-4);
+                        float perto = saturate(bm * 1.1);                                   // 1 = calçamento cheio
+                        float larg = lerp(0.30, 0.07, perto * perto);
+                        float junta4 = 1 - saturate((e4 - larg) / ae4);
+                        half3 lajeC = _CorLaje.rgb * claro * (0.93 + 0.12 * Hash3(float3(idl, 3))) * (0.97 + 0.06 * Ruido(float3(g2.xy / 2.6, 5.5)));
+                        half3 juntaC = lerp(areiaC * 0.94, lajeC * 0.70, smoothstep(0.55, 0.95, bm));
+                        float tem = step(0.5, bm + (Hash3(float3(idl, 11.0)) - 0.5) * 0.9 + (Ruido(float3(g2.xy / 26.0, 4.7)) - 0.5) * 0.35);   // esta laje existe?
+                        base = lerp(areiaC, lerp(lajeC, juntaC, junta4), tem);
+                    }
+                    else if (abs(n.y) < 0.35 && i.color.a < 0.4)
+                    {   // parede de adobe do ksar (Vila marroquina de terra, foto de Aït Benhaddou; Pisos3D.Ksar marca a classe no
+                        // alfa do vértice): fiadas de taipa de 9 de altura com emenda falhada e um tom por pano, pedrinha e palha,
+                        // manchas largas, pé do muro úmido e roído, escorrido de chuva saindo do alto e, nas paredes altas, a
+                        // faixa de losangos vazados perto do topo (o enfeite das casbás)
+                        // quina arredondada (usuário, dois prints: "tá bugado", "ainda tá bugada"): o desenho escolhia o eixo da parede
+                        // pela normal, e na curva da quina a escolha trocava de pixel em pixel — losangos e fiadas viravam um
+                        // serrilhado. Agora nada depende de escolher eixo: a coordenada ao longo do muro é x + y (contínua na
+                        // quina, anda igual nas duas paredes), o "pra dentro" é a própria normal da malha, e os losangos somem
+                        // na faixa da quina.
+                        float3 nr = normalize(i.normalWS);
+                        float reto = smoothstep(0.93, 0.995, max(abs(nr.x), abs(nr.z)) / max(length(nr.xz), 1e-4));
+                        float u = g2.x + g2.y, vv = g2.z;
+                        int2 limW = int2(_Topo_TexelSize.zw) - 1;
+                        float2 dentroJ = normalize(float2(-nr.x, nr.z) + 1e-5) * 1.3;
+                        float4 sT = LOAD_TEXTURE2D(_Topo, clamp(int2(floor(g2.xy + dentroJ * 2.0)), 0, limW));
+                        float4 sF = LOAD_TEXTURE2D(_Topo, clamp(int2(floor(g2.xy - dentroJ * 2.0)), 0, limW));
+                        float hT = sT.a > 256 ? sT.a - 512 : sT.a, hF = sF.a > 256 ? sF.a - 512 : sF.a;
+                        float doAlto = hT - vv, doChao = vv - hF;
+                        bool temAlto = doAlto > -0.5 && doAlto < 90, temChao = doChao > -1.0 && doChao < 90 && hF < hT - 6;
+                        float lt = (vv + 1.6 * Ruido(float3(u / 23.0, 0.3, 1.1))) / 9.0, il = floor(lt), flt = frac(lt), alt2 = max(fwidth(lt), 1e-4);
+                        float emenda = (1 - saturate((min(flt, 1 - flt) - 0.035) / alt2)) * step(0.35, Ruido(float3(u / 9.0, il * 1.7, 5.0)));
+                        base *= 0.955 + 0.09 * Hash3(float3(il, floor(u / 37.0 + il * 0.31), 2.0));
+                        base *= 1 - 0.11 * emenda;
+                        float fk = Hash3(float3(floor(u * 1.3), floor(vv * 1.3), 3.0));
+                        // palácio (alfa 0,36): cal rosada mais lisa, barra de azulejo (zellige) no pé e o friso de losangos sempre
+                        bool pal = i.color.a > 0.33;
+                        base *= 1 + (pal ? 0.3 : 1.0) * (0.10 * step(0.945, fk) - 0.09 * step(fk, 0.045));
+                        base *= 0.93 + 0.14 * Ruido(float3(u / 17.0, vv / 13.0, 7.7));
+                        // (a barra pintada do pé do muro do palácio saiu a pedido do usuário: "tira só a barra"; o muro fica de cal, com o
+                        //  mesmo pé escurecido das outras casas. O código fica aqui desligado.)
+                        if (false && temChao && pal && abs(es.a) < 0.5)
+                        {
+                            float zd = doChao, az = max(fwidth(zd), 1e-4);
+                            float2 tz = float2(u, zd) / 2.6, fz = abs(frac(tz) - 0.5); float dz = fz.x + fz.y;
+                            float miolo = 1 - saturate((dz - 0.27) / max(fwidth(dz), 1e-4));
+                            // cores da própria vila (usuário: a barra azul e verde "não combina com o resto do mapa"): barro vermelho e ocre, miolo creme
+                            half3 peca = fmod(floor(tz.x) + floor(tz.y), 2.0) > 0.5 ? half3(0.42, 0.10, 0.045) : half3(0.62, 0.30, 0.07);
+                            half3 azul = lerp(peca, half3(0.87, 0.80, 0.66), miolo) * (0.94 + 0.1 * Hash3(float3(floor(tz), 6.0)));
+                            float naBarra = (1 - saturate((zd - 10.4) / az)) * saturate((zd - 0.6) / az);
+                            float cinta = (1 - saturate((abs(zd - 11.2) - 0.8) / az));
+                            // na quina a barra vira um cunhal liso no azul da cinta (a peça solta dava uma faixa verde ou azul borrada: usuário, "verde tá esquisito")
+                            base = lerp(base, lerp(half3(0.20, 0.07, 0.035), azul, reto), naBarra);
+                            base = lerp(base, half3(0.20, 0.07, 0.035), cinta);
+                        }
+                        else if (temChao)
+                        {
+                            float beira = doChao - (5.0 + 4.0 * Ruido(float3(u / 7.0, 0.5, 6.3)) + 1.2 * Ruido(float3(u / 1.9, 0.5, 1.9)));
+                            float ab = max(fwidth(beira), 1e-4);
+                            base = lerp(base, base * half3(0.80, 0.72, 0.66), 1 - saturate(beira / ab));
+                            base *= 1 - 0.13 * saturate(1 - abs(beira) / (ab * 1.5));
+                        }
+                        if (temAlto)
+                        {
+                            float veio = Ruido(float3(u / 2.4, 1.3, 4.4)) * 0.7 + Ruido(float3(u / 0.9, 1.3, 8.1)) * 0.3, avz = max(fwidth(veio), 1e-4);
+                            float comprido = 6.0 + 18.0 * Ruido(float3(u / 5.0, 2.7, 0.6));
+                            base *= 1 - 0.16 * saturate((veio - 0.6) / avz) * saturate(1 - doAlto / comprido);
+                            if (temChao && hT - hF > (pal ? 20 : 30))
+                            {
+                                float sel = pal ? 1.0 : step(0.4, Hash3(float3(floor(hT), floor((g2.x + g2.y) / 120.0), 4.0)));
+                                float bz = (doAlto - 7.0) / 6.0;
+                                float cu = u / 4.0, dl = abs(frac(cu) - 0.5) * 2.0 + abs(bz - 0.5) * 2.0;
+                                float loz = (1 - saturate((dl - 0.62) / max(fwidth(dl), 1e-4))) * step(0.0, bz) * step(bz, 1.0);
+                                float ad = max(fwidth(doAlto), 1e-4);
+                                float fr = (1 - saturate((abs(doAlto - 6.0) - 0.3) / ad)) + (1 - saturate((abs(doAlto - 14.0) - 0.3) / ad));
+                                base *= 1 - sel * (0.45 * loz * reto + 0.16 * fr);
+                            }
+                        }
+                    }
+                    else if (n.y > 0.8 && i.color.a < 0.4)
+                    {   // em cima do adobe: terraço de terra batida (alfa 0,15) com manchas, trincas finas de barro seco e
+                        // pedrinhas; o topo da platibanda e das ameias (alfa 0,30) só um tico mais claro, de sol
+                        if (i.color.a < 0.10)
+                        {   // ladrilho do casarão (alfa 0,05): quadrados de barro claro de 7 em diagonal, dois tons alternados,
+                            // junta fina e uma estrelinha verde-água a cada dois cruzamentos (o verde da lajota do bomb A)
+                            float2 dg = float2(g2.x + g2.y, g2.x - g2.y) / 9.9, fd = frac(dg), idg = floor(dg);
+                            float2 bd = min(fd, 1 - fd); float aw = max(max(fwidth(dg.x), fwidth(dg.y)), 1e-4);
+                            float jd = 1 - saturate((min(bd.x, bd.y) - 0.03) / aw);
+                            base *= (fmod(abs(idg.x + idg.y), 2.0) > 0.5 ? 0.93 : 1.0) * (0.97 + 0.06 * Hash3(float3(idg, 7.0))) * (1 - 0.26 * jd);
+                            float2 cid = floor(dg + 0.5); float rs = bd.x + bd.y;
+                            float estrela = (1 - saturate((rs - 0.2) / max(fwidth(rs), 1e-4))) * step(fmod(abs(cid.x) + abs(cid.y), 2.0), 0.5);
+                            base = lerp(base, half3(0.05, 0.38, 0.35), estrela);
+                        }
+                        else if (i.color.a < 0.22 && base.g > base.r * 1.15)
+                        {   // telhado do palácio: telha canal verde vidrada (canudo de 5, telha de 6 desencontrada, sombra da de cima)
+                            float colV = g2.x / 5.0, fcV = frac(colV), ciV = floor(colV);
+                            float linV = g2.y / 6.0 + fmod(abs(ciV), 2.0) * 0.5, flV = frac(linV), liV = floor(linV);
+                            float canalV = 1 - saturate((min(fcV, 1 - fcV) - 0.06) / max(fwidth(colV), 1e-4));
+                            float sombraV = 1 - saturate((flV - 0.14) / max(fwidth(linV), 1e-4));
+                            base *= (0.88 + 0.2 * Hash3(float3(ciV, liV, 7.0))) * (1 - 0.42 * canalV) * (1 - 0.28 * sombraV);
+                            n = normalize(n + float3(-cos(fcV * 3.14159) * 0.6, 0, 0) * (1 - canalV));
+                        }
+                        else if (i.color.a < 0.22)
+                        {
+                            base *= 0.92 + 0.12 * Ruido(float3(g2.xy / 19.0, 1.3)) + 0.06 * Ruido(float3(g2.xy / 6.0, 4.1));
+                            float2 pp = g2.xy / 18.0, ip = floor(pp); float f1 = 9, f2 = 9;
+                            [unroll] for (int k3 = 0; k3 < 9; k3++)
+                            {
+                                float2 cc = ip + float2(k3 % 3, k3 / 3) - 1;
+                                float2 oo = float2(Hash3(float3(cc, 1)), Hash3(float3(cc, 2))) * 0.8 + 0.1;
+                                float dd = length(cc + oo - pp);
+                                if (dd < f1) { f2 = f1; f1 = dd; } else if (dd < f2) f2 = dd;
+                            }
+                            float e3 = f2 - f1;
+                            base *= 1 - 0.09 * (1 - saturate((e3 - 0.022) / max(fwidth(e3), 1e-4))) * step(0.45, Ruido(float3(g2.xy / 31.0, 8.0)));
+                            float pk = Hash3(float3(floor(g2.xy * 0.9), 6.0));
+                            base *= 1 + 0.10 * step(0.965, pk) - 0.10 * step(pk, 0.03);
+                        }
+                        else base *= 1.05;
                     }
                     else if (n.y > 0.8 && base.r > 0.3 && gr > 0.15 && gr < 0.32 && br < 0.12)
                     {   // telha canal (usuário: "arruma a textura das tampas"; a de 3 x 3,2 com os pontinhos do material 51 lia
@@ -233,6 +380,12 @@ Shader "CSM/Maquete"
                         float sombra = 1 - saturate((fl - 0.14) / al);
                         float beira = saturate((fl - 0.93) / al);
                         base = telha * tom * (1 - 0.18 * velha) * (1 - 0.45 * canal) * (1 - 0.3 * sombra) * (1 + 0.1 * beira);
+                        // telhado com mais vida (usuário: a câmera mostra muito telhado): manchas que seguem as telhas — trechos
+                        // desbotados de sol, trechos mais queimados/sujos e uma ou outra telha trocada, mais clara
+                        float sol = Ruido(float3(ci / 6.0, li / 5.0, 5.5)) * 0.7 + Ruido(float3(ci / 2.2, li / 2.0, 1.2)) * 0.3;
+                        base = lerp(base, base * half3(1.12, 1.2, 1.28) + 0.015, step(0.6, sol));
+                        base *= 1 - 0.13 * step(sol, 0.33);
+                        base *= 1 + 0.2 * step(0.97, Hash3(float3(ci, li, 29)));
                         n = normalize(n + float3(-cos(fc * 3.14159) * 0.6, 0, 0) * (1 - canal));
                     }
                     else if (n.y > 0.8 && base.r > 0.8 && gr > 0.82 && gr < 0.93 && br > 0.53 && br < 0.7)
@@ -255,7 +408,7 @@ Shader "CSM/Maquete"
                     }
                     else if (abs(n.y) < 0.35 && base.r > 0.45 && gr > 0.6 && gr < 0.95 && br > 0.3 && br < 0.72)
                     {   // reboco descascado: mancha esparsa (ruído, borda de 1 px e contorno escuro) com tijolo de adobe 5 x 2,4
-                        float u = abs(n.x) > abs(n.z) ? g2.y : g2.x, vv = g2.z;
+                        float u = g2.x + g2.y, vv = g2.z;   // contínuo na quina (escolher o eixo pela normal serrilhava a quina arredondada)
                         float mk = Ruido(float3(u / 11.0, vv / 7.0, 3.1)) * 0.75 + Ruido(float3(u / 4.0, vv / 3.0, 9.7)) * 0.25;
                         float am = max(fwidth(mk), 1e-4);
                         float dentro = saturate((mk - 0.675) / am);   // ~8% da parede (0,64 dava ~15%: muita mancha)
@@ -267,6 +420,54 @@ Shader "CSM/Maquete"
                         tijolo = lerp(tijolo, base * 0.55, jt * 0.8);
                         base = lerp(base, tijolo, dentro);
                         base *= 1 - 0.3 * contorno;
+                        // parede com mais desenho (usuário: "melhora o visual da vila, textura"): camadas da taipa (linhas finas
+                        // falhadas a cada 7 de altura), barrado pintado no pé do muro com a borda irregular, escorrido de chuva
+                        // descendo do alto e a sombra fina debaixo do arremate. Alturas do chão/do topo vêm do mapa de cima
+                        // (2 texels pra fora / pra dentro da parede). Tudo com borda de 1 pixel, como o resto.
+                        int2 limW = int2(_Topo_TexelSize.zw) - 1;
+                        float3 nrR = normalize(i.normalWS); float2 dentroJ = normalize(float2(-nrR.x, nrR.z) + 1e-5) * 1.3;   // pra dentro do muro (jogo), pela normal da malha
+                        float4 sT = LOAD_TEXTURE2D(_Topo, clamp(int2(floor(g2.xy + dentroJ * 2.0)), 0, limW));
+                        float4 sF = LOAD_TEXTURE2D(_Topo, clamp(int2(floor(g2.xy - dentroJ * 2.0)), 0, limW));
+                        float hT = sT.a > 256 ? sT.a - 512 : sT.a, hF = sF.a > 256 ? sF.a - 512 : sF.a;
+                        float doAlto = hT - vv, doChao = vv - hF;
+                        bool temAlto = doAlto > -0.5 && doAlto < 90, temChao = doChao > -1.0 && doChao < 90 && hF < hT - 6;
+                        float lt = vv / 12.0, flt = frac(lt), alt2 = max(fwidth(lt), 1e-4);
+                        float camada = (1 - saturate((min(flt, 1 - flt) - 0.035) / alt2)) * step(0.55, Ruido(float3(u / 14.0, floor(lt + 0.5) * 3.7, 2.2)));
+                        base *= 1 - 0.06 * camada * (1 - dentro);
+                        if (temChao)
+                        {
+                            float beira = doChao - (6.5 + 2.2 * Ruido(float3(u / 6.0, 0.5, 6.3)) + 0.8 * Ruido(float3(u / 1.7, 0.5, 1.9)));
+                            float barrado = 1 - saturate(beira / max(fwidth(beira), 1e-4));
+                            float fio = saturate(1 - abs(beira) / (max(fwidth(beira), 1e-4) * 1.5));
+                            base = lerp(base, base * half3(0.83, 0.70, 0.60), barrado * (1 - dentro));
+                            base *= 1 - 0.14 * fio;
+                        }
+                        if (temAlto)
+                        {
+                            float veio = Ruido(float3(u / 2.4, 1.3, 4.4)) * 0.7 + Ruido(float3(u / 0.9, 1.3, 8.1)) * 0.3, avz = max(fwidth(veio), 1e-4);
+                            float comprido = 5.0 + 16.0 * Ruido(float3(u / 5.0, 2.7, 0.6));
+                            float escorre = saturate((veio - 0.6) / avz) * saturate(1 - doAlto / comprido);
+                            base *= 1 - 0.17 * escorre * (1 - dentro);
+                            base *= 1 - 0.14 * (1 - saturate((doAlto - 1.4) / max(fwidth(doAlto), 1e-4)));
+                        }
+                    }
+                    else if (abs(n.y) < 0.35 && base.r > 0.4 && gr > 0.88 && gr < 0.96 && br > 0.73 && br < 0.83)
+                    {   // parede de cimento (bloco do janelão; usuário: "dá uma texturizada pra não ficar lisa"): marca das tábuas
+                        // da fôrma (faixas de 7 de altura, cada uma um tom), emenda vertical desencontrada a cada 26, furinhos
+                        // de tirante, escorrido escuro descendo de cima e a base mais suja perto do chão
+                        float uc = g2.x + g2.y, vc = g2.z;   // contínuo na quina
+                        float lt2 = vc / 7.0, il = floor(lt2), fl2 = frac(lt2), al2 = max(fwidth(lt2), 1e-4);
+                        float lu2 = uc / 26.0 + il * 0.37, fu2 = frac(lu2), au2 = max(fwidth(lu2), 1e-4);
+                        float jh = 1 - saturate((min(fl2, 1 - fl2) - 0.04) / al2);
+                        float jv = 1 - saturate((min(fu2, 1 - fu2) - 0.012) / au2);
+                        float tomC = 0.95 + 0.09 * Hash3(float3(il, floor(lu2), 4));
+                        float2 fq = float2(frac(lu2 * 2.0) - 0.5, fl2 - 0.5) * float2(13.0, 7.0);
+                        float furo = 1 - saturate((length(fq) - 0.7) / max(fwidth(length(fq)), 1e-4));
+                        float ve = Ruido(float3(uc / 3.0, 0.7, 2.9)) * 0.7 + Ruido(float3(uc / 1.1, 0.7, 6.1)) * 0.3, ave = max(fwidth(ve), 1e-4);
+                        float mz = Ruido(float3(uc / 14.0, vc / 9.0, 8.8));
+                        base *= tomC * (1 - 0.16 * jh) * (1 - 0.12 * jv) * (1 - 0.3 * furo);
+                        base *= 1 - 0.1 * saturate((ve - 0.62) / ave) * saturate(mz * 1.6);
+                        base *= lerp(0.86, 1.0, saturate((vc - 8.0) / 10.0));
                     }
                 }
                 half3 albedo = base * (1.0 + (rz - 0.5) * 2.0 * _Variacao);

@@ -17,7 +17,7 @@ namespace CSM.Audio
     /// a câmera fica longe e alta; quem assiste "está" no lance.
     /// Chamadas são estáticas e seguras: sem clipe = silêncio (os sons vão chegando aos poucos).
     /// </summary>
-    public class Som3D : MonoBehaviour
+    public partial class Som3D : MonoBehaviour
     {
         // 1 unidade Unity = 25 unidades do jogo; 1 do jogo = 2,9 do CS (Match.PULO = 301.99/2.9)
         public const float CS_POR_UNITY = 25f * 2.9f;
@@ -78,6 +78,7 @@ namespace CSM.Audio
         public static void Tiro(Vector3 boca, string arma, int quem = -1)
         {
             var s = Eu(); if (s == null || string.IsNullOrEmpty(arma)) return;
+            s.plUltTiro = Time.unscaledTime;   // a cama da torcida abaixa no tiroteio (Som3D.Plateia)
             var (vp, vd, cp, cd) = PerfilTiro(arma);
             string dono = "tiro" + quem;
             s.ApagarDono(dono, 0.1f);   // fadetime_volume_mapping_curve do CS2: o anterior some em 0,1 s
@@ -147,6 +148,13 @@ namespace CSM.Audio
         public static void MolotovNoAr(Vector3 p) => Eu()?.Tocar("granada/molotov_ar", p, C_HE, 0.8f, null, 3);
         public static void FogoApagou(Vector3 p) => Eu()?.Tocar("granada/apagou", p, C_FOGO, 0.8f, null, 2);
         public static void Quique(Vector3 p, string tipo, bool parede) => Eu()?.Tocar("granada/quique_" + (tipo == "molotov" ? "vidro" : "metal"), p, C_QUIQUE, parede ? 0.7f : 0.5f, null, 1);
+        /// <summary>Granada largada no chão (dropou pro colega, ou caiu de quem morreu): o mesmo quique da granada lançada,
+        /// n = 0 no 1º toque e cada quique seguinte mais baixo, como a arma caindo. Kit não é granada: fica mudo.</summary>
+        public static void GranadaCaiu(Vector3 p, string nade, int n = 0)
+        {
+            if (string.IsNullOrEmpty(nade) || nade == "kit") return;
+            Eu()?.Tocar("granada/quique_" + (nade == "molotov" ? "vidro" : "metal"), p, C_QUIQUE, 0.45f * Mathf.Pow(0.6f, n), null, 0);
+        }
         public static void Arremesso(Vector3 p, int quem = -1) => Eu()?.Tocar("granada/arremesso", p, C_FOLEY, 0.6f, "arr" + quem, 1);
         public static void Pino(Vector3 p, int quem = -1) => Eu()?.Tocar("granada/pino", p, C_FOLEY, 0.5f, "pin" + quem, 1);
 
@@ -261,7 +269,24 @@ namespace CSM.Audio
             Eu()?.Tocar(WeaponStats.Pistola(arma) ? "arma/cai_pistola_quique" : "arma/cai_fuzil_quique", p, C_QUIQUE, 0.45f * Mathf.Pow(0.6f, Mathf.Max(0, n - 1)), null, 0);
         public static void Pegar(Vector3 p) => Eu()?.Tocar("arma/pegar", p, C_FOLEY, 0.45f, null, 0);
         public static void Zumbido(float forca) => Eu()?.TocarNoOuvido("granada/zumbido", Mathf.Clamp01(forca) * 0.35f);
-        public static void Queimando(Vector3 p, int quem) => Eu()?.Tocar("granada/queimando", p, C_FOLEY, 0.5f, "fogo" + quem, 1);
+        /// <summary>Jogador dentro do fogo: chamar TODO QUADRO enquanto ele queima (usuário 2026-11-06: "tem que tocar enquanto
+        /// ele está queimando"). O clipe é um chiado curto (0,48 s); como no CS, que chia a cada tique de dano, ele repete a cada
+        /// ~0,45 s com tom e volume um pouco diferentes, e para sozinho quando as chamadas param (saiu do fogo ou morreu).
+        /// Depois de 0,3 s sem chamada, conta como entrada nova e chia na hora.</summary>
+        public static void Queimando(Vector3 p, int quem)
+        {
+            var s = Eu(); if (s == null) return;
+            float agora = Time.time;
+            if (!s.queima.TryGetValue(quem, out var q) || agora - q.y > 0.3f) q.x = agora;   // entrou agora: chia já
+            if (agora >= q.x)
+            {
+                var v = s.Tocar("granada/queimando", p, C_FOLEY, 0.5f * Random.Range(0.8f, 1f), "fogo" + quem, 1);
+                if (v != null) v.src.pitch = Random.Range(0.93f, 1.07f);
+                q.x = agora + Random.Range(0.38f, 0.5f);
+            }
+            q.y = agora; s.queima[quem] = q;
+        }
+        readonly Dictionary<int, Vector2> queima = new Dictionary<int, Vector2>();   // quem -> (próximo chiado, última chamada)
         public static void C4Pegar(Vector3 p) => Eu()?.Tocar("c4/pegar", p, C_FOLEY, 0.5f, null, 1);
         public static void C4Largar(Vector3 p) => Eu()?.Tocar("c4/largar", p, C_FOLEY, 0.5f, null, 1);
         /// <summary>Aterrissou de um pulo/queda. chao: pedra, madeira, metal (caixa de madeira, telhado de zinco...).</summary>
@@ -281,7 +306,8 @@ namespace CSM.Audio
         public static void Hud(string nome, float vol = 0.6f) => Eu()?.TocarNoOuvido("hud/" + nome, nome == "match_point" ? 0.5f : vol);   // match point = fala do narrador (sem BAM): no nível dos anúncios
         /// <summary>Torcida do campeonato (transmissão): "clutch" quando alguém vence um 1vX; "ace" quando um jogador mata os 5;
         /// "ace_absurdo" pro ace de highlight (ex.: ace em 1v5, ou as 5 mortes em poucos segundos).</summary>
-        public static void Torcida(string nome, float vol = 0.5f) => Eu()?.TocarNoOuvido("torcida/" + nome, vol);
+        /// (2026-11-07: 0,5 -> VOL_REACAO 0,9, usuário: "muito baixo"; e respeita plateiaLigada. O novo é PlateiaFimRound.)
+        public static void Torcida(string nome, float vol = -1f) { if (plateiaLigada) Eu()?.TocarNoOuvido("torcida/" + nome, vol < 0 ? VOL_REACAO : vol); }
         /// <summary>Locutor (só os clássicos): "bomba_plantada", "bomba_desarmada", "vitoria_ct", "vitoria_tr".</summary>
         public static void Anuncio(string nome) { Debug.Log("[Som3D] narrador: " + nome); Eu()?.TocarNoOuvido("voz/anuncio_" + nome, 0.45f); }
         /// <summary>"Go, go, go!" no fim do freeze (voz de rádio do time; ct = qual time a câmera está seguindo, ou o CT por padrão).</summary>
@@ -406,7 +432,7 @@ namespace CSM.Audio
         {
             if (clipes.TryGetValue(nome, out var c)) return c;
             var lista = new List<AudioClip>();
-            for (int k = 0; k < 8; k++) { var a = Resources.Load<AudioClip>("Sons/" + nome + "_" + k); if (a == null) break; lista.Add(a); }
+            for (int k = 0; k < 16; k++) { var a = Resources.Load<AudioClip>("Sons/" + nome + "_" + k); if (a == null) break; lista.Add(a); }
             c = lista.ToArray(); clipes[nome] = c; return c;
         }
 
@@ -512,7 +538,7 @@ namespace CSM.Audio
             // ar come o agudo com a distância; parede abafa forte
             float f = Mathf.Lerp(22000, 5500, Mathf.Clamp01(d / 2500f));
             if (alcance) f = Mathf.Max(f, 9000);
-            if (v.oclusao > 0) f = Mathf.Min(f, alcance ? 6000 : 2200);
+            if (v.oclusao > 0) f = Mathf.Min(f, alcance ? 6000 : 4500);   // 2200 abafava demais quase todo tiro fora da tela (Gabriel, 2026-11-11)
             v.lp.cutoffFrequency = f;
             // perto é largo (quase sem panorâmica), longe é pontual
             v.src.spatialBlend = Mathf.Lerp(0.35f, 0.9f, Mathf.Clamp01(d / 700f));
@@ -530,6 +556,7 @@ namespace CSM.Audio
                 agenda.Clear(); return;
             }
             PosicionarOuvido();
+            PlateiaTick();   // cama da torcida (Som3D.Plateia.cs)
             for (int i = agenda.Count - 1; i >= 0; i--)
                 if (agenda[i].t <= Agora) { var a = agenda[i]; agenda.RemoveAt(i); Tocar(a.nome, a.pos, a.curva, a.vol, a.dono, 1); }
             foreach (var v in vozes)

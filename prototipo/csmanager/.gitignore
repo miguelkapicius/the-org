@@ -7,3 +7,5 @@
 *.csproj.user
 *.sln
 .vs/
+.env
+*.env

@@ -40,6 +40,8 @@ namespace CSM.View3D
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
             // caixas de madeira saem do borrão (viravam saco de areia) e entram como caixote de quina viva
             // enfeites de fachada "pintados" viram objetos 3D (a pintura sai das voxels antes do borrão)
+            // paleta do mapa montado (a Brasa tem o clima da Inferno: pedra bege, reboco ocre, telha queimada)
+            if (MapData.MAPA == "brasa") Paleta3D.UsarBrasa(); else Paleta3D.UsarVila();
             var G = MapVoxels.Build();
             var enfeites = Fachada3D.Montar(G, matMapa, transform);
             Natureza3D.Plantar(Fachada3D.Plantas, transform);   // plantas do pack nos vasos que a fachada marcou
@@ -49,6 +51,8 @@ namespace CSM.View3D
             var GM = Pisos3D.Harmonizar(Pisos3D.Madeira(Packs3D.SemPocos(Packs3D.SemBancas(Adornos3D.Limpar(Caixas3D.SemCaixas(Pilar3D.SemPilares(Chafariz3D.SemChafariz(G))))))));   // bancas do Kenney (Packs3D), piso dos nichos (Pisos3D)   // + deck de madeira da banca do B (Pisos3D)   // pilares também (Kenney, Pilar3D)
             var ps = MalhaMapa.Gerar(GM, SigmaTeste > 0 ? SigmaTeste : arredondado, 100, linear);
             matMapa.SetTexture("_Topo", MalhaMapa.Topo(GM, linear)); matMapa.SetFloat("_UsarTopo", 1); matMapa.SetFloat("_Esc", MalhaMapa.ESC);
+            matMapa.SetTexture("_Mistura", MalhaMapa.Mistura(GM));   // transição suave laje/areia no chão de jogo da Vila
+            Shader.SetGlobalColor("_CorLaje", Paleta3D.Vertice(Paleta3D.LAJE, linear)); Shader.SetGlobalColor("_CorAreia", Paleta3D.Vertice(Paleta3D.AREIA, linear));
             matMapa.SetTexture("_Escada", MalhaMapa.Escada(linear));   // degraus desenhados na rampa lisa da escada (Maquete.shader)
             Shader.SetGlobalFloat("_QuinaViva", QuinaViva);
             mapa = MalhaMapa.Montar(ps, matMapa, transform);
@@ -56,7 +60,9 @@ namespace CSM.View3D
             Chafariz3D.Montar(matMapa, mapa.transform, linear);
             Pilar3D.Montar(matMapa, mapa.transform, linear);
             Adornos3D.Montar(matMapa, mapa.transform);
+            Tapetes3D.Montar(matMapa, mapa.transform);   // tapetes marroquinos nos terraços da Vila (e potes, que entram no Packs3D)
             Packs3D.Montar(matMapa, mapa.transform, linear);   // barris, sacos e caixotes de pack (o Adornos3D marcou onde)
+            Brasa3D.Montar(matMapa, mapa.transform, linear);   // Brasa: caixas, toras, carroças, fonte e sacos do kit dela
             enfeites.transform.SetParent(mapa.transform, true);
             msMalha = sw.Elapsed.TotalMilliseconds;
             if (matCor == null)

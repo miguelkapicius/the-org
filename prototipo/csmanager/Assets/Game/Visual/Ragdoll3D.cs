@@ -36,7 +36,11 @@ namespace CSM.View3D
         readonly List<(float t, Vector3[] p, Quaternion[] r)> fita = new List<(float, Vector3[], Quaternion[])>();
 
         static string Nome(Transform t) => t.name.Length > 2 ? t.name.Substring(2) : t.name;
-        static readonly string[] CABECA = { "cabeca", "mascara", "focinho", "filtro", "tampa", "aro", "lente", "reflexo", "furo", "boca", "labio", "branco", "olho", "brilho", "estrela" };
+        // efeito de estado (estrelas do cego, clarão, cápsula, fogo, pino, granada na mão...) não vai pro corpo: morto não fica
+        // cego nem atirando (usuário: "quando o cara tá cego e morre ainda fica com uns negocinhos na cabeça"). Antes as
+        // estrelas estavam na lista da cabeça e congelavam no corpo.
+        static readonly string[] EFEITO = { "estrela", "clarao", "capsula", "rastro", "chama", "fogo", "isq", "pino", "sm_", "fl_", "mo_", "he_", "luneta" };
+        static readonly string[] CABECA = { "cabeca", "mascara", "focinho", "filtro", "tampa", "aro", "lente", "reflexo", "furo", "boca", "labio", "branco", "olho", "brilho" };
         static readonly string[] TRONCO = { "tronco", "colete", "gola", "pente", "bolsinho", "radio", "antena", "alca", "placa", "quadril", "cinto", "bolsa", "fivela" };
 
         /// <summary>Pontas de uma peça de segmento (place_seg: elipsoide esticado no eixo local Y do Unity).</summary>
@@ -97,7 +101,9 @@ namespace CSM.View3D
                 Liga((int)o, (int)c, 1f); Liga((int)c, (int)m, 1f); Liga((int)q, (int)j, 1f); Liga((int)j, (int)tz, 1f);
                 float lb = (x[(int)o] - x[(int)c]).magnitude + (x[(int)c] - x[(int)m]).magnitude;
                 float lp_ = (x[(int)q] - x[(int)j]).magnitude + (x[(int)j] - x[(int)tz]).magnitude;
-                minimo.Add(((int)o, (int)m, 0.4f * lb)); minimo.Add(((int)q, (int)tz, 0.55f * lp_));
+                // (pernas do CS: o joelho fecha até ~100°, quadril-tornozelo >= 0,75 da perna; 0,55 deixava a perna toda
+                // encolhida embaixo do corpo)
+                minimo.Add(((int)o, (int)m, 0.4f * lb)); minimo.Add(((int)q, (int)tz, (PernasVelho ? 0.55f : 0.75f) * lp_));
                 minimo.Add(((int)m, (int)P.Cabeca, raio[(int)P.Cabeca] + raio[(int)m]));   // a mão não entra na cabeça
             }
             // velocidade inicial (xa = x - v dt). Morrer = desligar: o corpo cai pelo próprio peso (joelhos cedem pra FRENTE
@@ -169,6 +175,7 @@ namespace CSM.View3D
         static int OssoDe(string nm, bool tr)
         {
             bool Comeca(string[] l) { foreach (var s in l) if (nm.StartsWith(s)) return true; return false; }
+            if (Comeca(EFEITO)) return -1;
             if (Comeca(CABECA)) return (int)Osso.Cabeca;
             if (nm.StartsWith("coldre") || nm.StartsWith("perneira")) return (int)Osso.CoxaR;   // coldre, aba, cabo, alça e as duas faixas
             if (Comeca(TRONCO)) return (int)Osso.Tronco;
@@ -222,6 +229,12 @@ namespace CSM.View3D
             t += dt;
             int sub = Mathf.Clamp(Mathf.CeilToInt(dt * 60), 1, 6); float h = dt / sub;
             for (int s = 0; s < sub; s++) Sub(h);
+            {   // medição (laboratório): joelho/pé passou pro lado da outra perna?
+                var lq = x[(int)P.QuadrilL] - x[(int)P.QuadrilR]; float wq = lq.magnitude;
+                if (wq > 1e-5f)
+                    foreach (var (a, c) in new[] { (P.JoelhoL, P.JoelhoR), (P.TornozeloL, P.TornozeloR) })
+                        Cruzou = Mathf.Max(Cruzou, -Vector3.Dot(x[(int)a] - x[(int)c], lq / wq) / wq);
+            }
             // dorme quando quase não mexe mais (corpo assentado)
             float mov = 0; for (int i = 0; i < (int)P.N; i++) mov = Mathf.Max(mov, (x[i] - xa[i]).magnitude / h);
             // medição (laboratório): quanto o tronco girou em volta da vertical desde a morte
@@ -267,6 +280,11 @@ namespace CSM.View3D
             }
             for (int it = 0; it < 10; it++)
             {
+                // (pernas do CS) as travas mexem fora da linha das juntas e dão torque: o corpo correndo saía rodando como
+                // pião (482° pro mesmo lado). O giro em volta da vertical que as travas criarem (tudo menos o chão) é
+                // desfeito no corpo todo
+                float L0 = 0, I0 = 0; Vector3 cg = default;
+                if (!PernasVelho) L0 = GiroYaw(h, out cg, out I0);
                 foreach (var (a, c, d, k) in liga)
                 {
                     var dd = x[c] - x[a]; float L = dd.magnitude; if (L < 1e-6f) continue;
@@ -287,8 +305,98 @@ namespace CSM.View3D
                     // joelho, a cada subpasso, injetava giro e o corpo deitado ficava rodando no chão)
                     if (f < 0) { var c = frente * (-f * 0.5f); x[(int)j] += c; x[(int)q] -= c * 0.5f; x[(int)tz] -= c * 0.5f; }
                 }
+                if (!PernasVelho)
+                {
+                    PernasCS();
+                    float L1 = GiroYaw(h, out _, out _);
+                    if (I0 > 1e-6f)
+                    {
+                        float dw = (L1 - L0) / I0;
+                        for (int i = 0; i < (int)P.N; i++) { var r = x[i] - cg; r.y = 0; x[i] -= new Vector3(r.z, 0, -r.x) * dw * h; }
+                    }
+                }
                 Chao();
             }
+        }
+
+        /// <summary>
+        /// Pernas no jeito do ragdoll do CS (usuário: "as pernas sempre se entrelaçam" / "ficam esquisitinhas"; no Source
+        /// cada osso é um corpo rígido com limite de junta por eixo, $jointconstrain, e as partes colidem entre si):
+        ///  - quadril em cone: a coxa abre pra fora até ~45°, fecha pra dentro só ~12° (não passa da linha do meio) e vai pra
+        ///    trás até ~35°; pra frente é livre (sentado);
+        ///  - joelho dobradiça: a canela fica no plano da coxa com a frente do corpo (não torce pro lado);
+        ///  - perna não atravessa a outra: coxas e canelas são cápsulas que se empurram (iguais e opostas: sem giro).
+        /// O quanto o joelho fecha (quadril-tornozelo mínimo) é na lista "minimo" (0,75 da perna: antes 0,55 encolhia tudo).
+        /// </summary>
+        void PernasCS()
+        {
+            var cima = x[(int)P.Peito] - x[(int)P.Pelve]; if (cima.sqrMagnitude < 1e-10f) return; cima.Normalize();
+            var esq = x[(int)P.QuadrilL] - x[(int)P.QuadrilR]; esq -= cima * Vector3.Dot(esq, cima);
+            if (esq.sqrMagnitude < 1e-10f) return; esq.Normalize();
+            var fr = Vector3.Cross(cima, esq);
+            foreach (var (q, j, tz, s) in new[] { (P.QuadrilL, P.JoelhoL, P.TornozeloL, 1f), (P.QuadrilR, P.JoelhoR, P.TornozeloR, -1f) })
+            {
+                int iq = (int)q, ij = (int)j, it = (int)tz;
+                // quadril em cone
+                var t = x[ij] - x[iq]; float L = t.magnitude; if (L < 1e-6f) continue;
+                var d = t / L;
+                float df = Vector3.Dot(d, fr), dl = Vector3.Dot(d, esq) * s, db = -Vector3.Dot(d, cima);
+                float df2 = Mathf.Max(df, -0.57f), dl2 = Mathf.Clamp(dl, -0.2f, 0.7f);
+                if (df2 != df || dl2 != dl)
+                {
+                    float resto = Mathf.Max(0, 1 - df2 * df2 - dl2 * dl2);
+                    var nd = fr * df2 + esq * (dl2 * s) - cima * (Mathf.Sqrt(resto) * (db >= 0 ? 1 : -1));
+                    // gira a coxa em volta do meio dela (joelho e quadril andam igual e oposto: não empurra o corpo — com
+                    // 0,75/0,25 o corpo saía deslizando dezenas de unidades no chão)
+                    var corr = (x[iq] + nd.normalized * L - x[ij]) * 0.5f;
+                    x[ij] += corr; x[iq] -= corr;
+                }
+                // joelho dobradiça: tira da canela o que sai do plano (coxa, frente)
+                var coxa = x[ij] - x[iq]; var n = Vector3.Cross(coxa, fr);
+                if (n.sqrMagnitude < 1e-10f) n = esq; else n.Normalize();
+                float lat = Vector3.Dot(x[it] - x[ij], n);
+                if (Mathf.Abs(lat) > 1e-6f) { var c = n * (lat * 0.5f); x[it] -= c; x[ij] += c; }
+            }
+            // cápsulas das pernas: coxa x coxa, canela x canela e as cruzadas
+            float rp = raio[(int)P.JoelhoL];
+            foreach (var (a0, a1, b0, b1) in new[] {
+                (P.QuadrilL, P.JoelhoL, P.QuadrilR, P.JoelhoR), (P.JoelhoL, P.TornozeloL, P.JoelhoR, P.TornozeloR),
+                (P.QuadrilL, P.JoelhoL, P.JoelhoR, P.TornozeloR), (P.JoelhoL, P.TornozeloL, P.QuadrilR, P.JoelhoR) })
+            {
+                Segmentos(x[(int)a0], x[(int)a1], x[(int)b0], x[(int)b1], out float u, out float w, out var pa, out var pb);
+                var dd = pa - pb; float dist = dd.magnitude, mn = rp * 2f;
+                if (dist >= mn) continue;
+                var nn = dist > 1e-6f ? dd / dist : esq;
+                var c = nn * ((mn - dist) * 0.5f);
+                x[(int)a0] += c * (1 - u); x[(int)a1] += c * u;
+                x[(int)b0] -= c * (1 - w); x[(int)b1] -= c * w;
+            }
+        }
+
+        /// <summary>Momento angular em volta da vertical (velocidade = (x - xa) / h), centro e inércia horizontal.</summary>
+        float GiroYaw(float h, out Vector3 c, out float I)
+        {
+            c = Vector3.zero; for (int i = 0; i < (int)P.N; i++) c += x[i]; c /= (int)P.N;
+            float L = 0; I = 0;
+            for (int i = 0; i < (int)P.N; i++)
+            {
+                var r = x[i] - c; r.y = 0; var v = (x[i] - xa[i]) / h;
+                L += r.z * v.x - r.x * v.z; I += r.sqrMagnitude;
+            }
+            return L;
+        }
+
+        /// <summary>Pontos mais próximos entre os segmentos p0-p1 e q0-q1 (u, w = parâmetro 0..1 em cada).</summary>
+        static void Segmentos(Vector3 p0, Vector3 p1, Vector3 q0, Vector3 q1, out float u, out float w, out Vector3 pa, out Vector3 pb)
+        {
+            var d1 = p1 - p0; var d2 = q1 - q0; var r = p0 - q0;
+            float a = Vector3.Dot(d1, d1), e = Vector3.Dot(d2, d2), f = Vector3.Dot(d2, r), c = Vector3.Dot(d1, r), b = Vector3.Dot(d1, d2);
+            float den = a * e - b * b;
+            u = den > 1e-8f ? Mathf.Clamp01((b * f - c * e) / den) : 0;
+            w = e > 1e-8f ? (b * u + f) / e : 0;
+            if (w < 0) { w = 0; u = a > 1e-8f ? Mathf.Clamp01(-c / a) : 0; }
+            else if (w > 1) { w = 1; u = a > 1e-8f ? Mathf.Clamp01((b - c) / a) : 0; }
+            pa = p0 + d1 * u; pb = q0 + d2 * w;
         }
 
         Vector3 frente0, fUlt;
@@ -298,6 +406,9 @@ namespace CSM.View3D
         public Vector3 CabecaMenosPelve => x[(int)P.Cabeca] - x[(int)P.Pelve];
         /// <summary>Laboratório (A/B): true = embalo antigo (85% da velocidade viva, sem teto).</summary>
         public static bool EmbaloVelho;
+        /// <summary>Laboratório (A/B): true = pernas sem a trava de não cruzar. Cruzou = quanto um joelho/pé passou pro lado
+        /// da outra perna antes da correção (fração da largura do quadril; 0 = nunca).</summary>
+        public static bool PernasVelho; public float Cruzou;
         /// <summary>Laboratório: quanto a pelve andou no chão desde a morte (u da Unity).</summary>
         public float Deslize { get { var d = x[(int)P.Pelve] - pelveIni; d.y = 0; return d.magnitude; } }
         Vector3 pelveIni;

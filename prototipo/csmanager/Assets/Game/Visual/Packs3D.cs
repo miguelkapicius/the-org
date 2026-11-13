@@ -12,8 +12,8 @@ namespace CSM.View3D
     /// </summary>
     public static class Packs3D
     {
-        enum Tipo { Barril, Sacos, Caixote, Bandeira, Banca, Vaso }
-        struct Item { public Tipo tipo; public float x, y, f, h, lado; public int sem; public Vector2 n; }
+        enum Tipo { Barril, Sacos, Caixote, Bandeira, Banca, Vaso, Modelo }
+        struct Item { public Tipo tipo; public float x, y, f, h, lado; public int sem; public Vector2 n; public string nome; }
         static readonly List<Item> itens = new List<Item>(), fachada = new List<Item>();
         static readonly string[] CAIXOTES = { "caixote_cebola", "caixote_batata", "caixote_tomate", "caixote_alface", "caixote_cenoura" };
 
@@ -67,8 +67,13 @@ namespace CSM.View3D
             }
             return g;
         }
-        public static void Barril(float x, float y, float f, float h) => itens.Add(new Item { tipo = Tipo.Barril, x = x, y = y, f = f, h = h });
+        /// <summary>Barril de pack (diâmetro d do jogo; padrão 7,4 = o da Vila).</summary>
+        public static void Barril(float x, float y, float f, float h, float d = 7.4f) => itens.Add(new Item { tipo = Tipo.Barril, x = x, y = y, f = f, h = h, lado = d });
         public static void Sacos(float x, float y, float f, int sem) => itens.Add(new Item { tipo = Tipo.Sacos, x = x, y = y, f = f, sem = sem });
+        /// <summary>Modelo qualquer do Resources/Packs pelo nome (Fantasy Props MegaKit: fp_*), na proporção dele: lado = maior
+        /// medida no chão (jogo), giro em graus.</summary>
+        public static void Modelo(string nome, float x, float y, float f, float lado, float giro) => itens.Add(new Item { tipo = Tipo.Modelo, nome = nome, x = x, y = y, f = f, lado = lado, h = giro, sem = (int)(x * 7 + y * 13) });
+        public static bool TemModelos => Resources.Load<GameObject>("Packs/fp_Barrel") != null;
         public static void Caixote(float x, float y, float f, int sem) => itens.Add(new Item { tipo = Tipo.Caixote, x = x, y = y, f = f, sem = sem });
 
         public static GameObject Montar(Material mat, Transform pai, bool linear)
@@ -90,6 +95,11 @@ namespace CSM.View3D
                 me.CombineMeshes(cis.ToArray(), true, true);
                 var cs = me.colors;
                 if (cs == null || cs.Length != me.vertexCount) { cs = new Color[me.vertexCount]; for (int i = 0; i < cs.Length; i++) cs[i] = Color.white; }
+                // Fantasy Props: a madeira e a juta do pack saem quase brancas na cor de vértice; puxa pro tom dos props da vila
+                if (nome.StartsWith("fp_Barrel") || nome.StartsWith("fp_Crate_Wooden") || nome.StartsWith("fp_Bucket"))
+                    for (int i = 0; i < cs.Length; i++) { var c0 = cs[i]; bool claro = c0.g > 0.45f && Mathf.Abs(c0.r - c0.g) < 0.2f; if (claro) cs[i] = new Color(c0.r * 0.78f, c0.g * 0.56f, c0.b * 0.38f, 1); }
+                else if (nome == "fp_Bag")
+                    for (int i = 0; i < cs.Length; i++) { var c0 = cs[i]; cs[i] = new Color(c0.r * 0.88f, c0.g * 0.74f, c0.b * 0.54f, 1); }
                 if (linear) for (int i = 0; i < cs.Length; i++) cs[i] = cs[i].linear;
                 me.colors = cs; me.RecalculateBounds();
                 r = (me, me.bounds); malhas[nome] = r; return r;
@@ -110,7 +120,8 @@ namespace CSM.View3D
             foreach (var it in todos)
             {
                 var rng = new System.Random(it.sem * 7 + 3);
-                string nome = it.tipo == Tipo.Barril ? "barril" : it.tipo == Tipo.Sacos ? "sacos"
+                // a Brasa tem cara própria (usuário: não repetir os props da Vila): barril do Survival Kit
+                string nome = it.tipo == Tipo.Modelo ? it.nome : it.tipo == Tipo.Barril ? (MapData.MAPA == "brasa" ? "ksv_barrel" : "barril") : it.tipo == Tipo.Sacos ? "sacos"
                     : it.tipo == Tipo.Bandeira ? (rng.Next(2) == 0 ? "kenney_banner-red" : "kenney_banner-green")
                     : it.tipo == Tipo.Banca ? (rng.Next(2) == 0 ? "kenney_stall-red" : "kenney_stall-green")
                     : it.tipo == Tipo.Vaso ? (it.lado > 0 ? "kenney_pottedPlant" : VASOS_BAIXOS[rng.Next(VASOS_BAIXOS.Length)]) : CAIXOTES[rng.Next(CAIXOTES.Length)];
@@ -119,9 +130,13 @@ namespace CSM.View3D
                 go.AddComponent<MeshFilter>().sharedMesh = me;
                 var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat; mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 Vector3 esc; float giro;
-                if (it.tipo == Tipo.Barril)
+                if (it.tipo == Tipo.Modelo)
+                {
+                    float k = it.lado * MalhaMapa.ESC / Mathf.Max(b.size.x, b.size.z); esc = Vector3.one * k; giro = it.h;
+                }
+                else if (it.tipo == Tipo.Barril)
                 {   // um tico maior que a cobertura (usuário: "aumenta um pouco o tamanho dos barris"): 7,4 de diâmetro e 20% mais alto
-                    float d = 7.4f * MalhaMapa.ESC;
+                    float d = (it.lado > 0 ? it.lado : 7.4f) * MalhaMapa.ESC;
                     esc = new Vector3(d / b.size.x, it.h * 1.2f * MalhaMapa.ESC / b.size.y, d / b.size.z); giro = (float)rng.NextDouble() * 360f;
                 }
                 else if (it.tipo == Tipo.Sacos)
@@ -182,19 +197,22 @@ namespace CSM.View3D
                     go.transform.position = pe + Vector3.up * subir * E - go.transform.rotation * cc;
                     n++;
                 }
-                // um tico maior (usuário: "aumenta um pouco o tamanho... do poço"): aro passa a borda da cobertura
+                // Vila marroquina: o poço do Kenney com telhadinho vermelho "não fazia tanto sentido" (usuário). Agora é poço
+                // de aldeia: aro grosso de adobe com a boca escura, duas forquilhas de tronco de palmeira, travessão, corda e
+                // um balde do pack ao lado. Mesma pegada e altura da cobertura.
                 float aro = d * 1.15f, h = Mathf.Max(15f, c.h + 3f);
-                Peca("kenney_fountain-round", new Vector3(aro, 5.5f, aro), 0);
-                // postes: o kit traz os dois num modelo (finos num eixo, separados no outro); atravessam o aro
-                var (mp, bp) = Malha("kenney_poles");
-                if (mp != null)
-                {
-                    bool finoX = bp.size.x < bp.size.z;
-                    Peca("kenney_poles", finoX ? new Vector3(0.9f, h + 1f, aro * 0.92f) : new Vector3(aro * 0.92f, h + 1f, 0.9f), 0);
-                }
-                // telhadinho do tamanho do aro e pontudo (com 1,2 do aro e baixo ele parecia guarda-sol)
-                Peca("kenney_roof-point", new Vector3(aro * 1.02f, 4.6f, aro * 1.02f), h, new Color(0xE0 / 255f, 0x70 / 255f, 0x3F / 255f));
-            }
+                var ob = new Obra3D(); Color adobe = Paleta3D.Srgb(Paleta3D.ADOBE + 3), tronco = new Color(0x7E / 255f, 0x5A / 255f, 0x3A / 255f);
+                Vector3 Up(float dz) => Vector3.up * dz * E;
+                ob.Cilindro(pe, Up(1.0f), aro * 0.56f * E, aro * 0.56f * E, 14, adobe * 0.9f);
+                ob.Cilindro(pe + Up(1.0f), Up(4.6f), aro * 0.5f * E, aro * 0.47f * E, 14, adobe, adobe * 1.06f);
+                ob.Cilindro(pe + Up(5.6f), Up(0.06f), aro * 0.33f * E, aro * 0.33f * E, 14, new Color(0.10f, 0.13f, 0.16f), new Color(0.10f, 0.13f, 0.16f));   // boca
+                var lado = Quaternion.Euler(0, giro, 0) * Vector3.right * aro * 0.5f * E;
+                foreach (int sd in new[] { -1, 1 }) ob.Cilindro(pe + lado * sd, Up(h), 0.75f * E, 0.6f * E, 8, tronco);
+                ob.Cilindro(pe - lado * 1.12f + Up(h - 1.2f), lado * 2.24f, 0.5f * E, 0.5f * E, 8, tronco * 0.9f);                       // travessão
+                ob.Cilindro(pe + Up(5.6f), Up(h - 1.6f - 5.6f), 0.14f * E, 0.14f * E, 5, new Color(0.78f, 0.68f, 0.5f));                 // corda
+                var mtp = new Material(mat) { name = "Maquete poço" }; mtp.SetFloat("_UsarTopo", 0);
+                ob.Montar("poço de aldeia", mtp, raiz.transform); n++;
+                            }
             Debug.Log($"[Packs3D] {n} props de pack ({itens.Count} marcados)");
             return raiz;
         }

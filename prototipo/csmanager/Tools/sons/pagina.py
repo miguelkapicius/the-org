@@ -110,9 +110,17 @@ def comparacao(add):
     nomes_awp = ['nº 7 de antes (referência)', 'sem o "chak" sintético', 'sem nada sintético (estalo da gravação)',
                  'sem sintético + estalo suave', 'sem sintético + mais soco', 'sem sintético + corpo mais longo', 'sem sintético e sem sub extra']
     nomes_fe = ['atual', 'novo A', 'novo B', 'novo C (trava num clique só)', 'novo D']
-    for chave, rot, pref in (('awp', 'AWP RODADA 3 — TRIPLE KILL (sem ferrolho): em volta da 7, tirando o que é sintético', 'awp_r_'),
-                             ('awps', 'AWP RODADA 3: só o tiro', 'awp_rs_'),
-                             ('awpf', 'FERROLHO DA AWP: agora toca depois de CADA tiro, no tempo da mão na animação (tiro = referência)', 'awp_f_'),
+    # AWP rodada 3 decidida (tiro nº 6, ferrolho nº 4): seções tiradas pra caber a torcida
+    for chave, rot, pref in (('plcena', 'TORCIDA — CENA DE 45 s: murmúrio da arena + começo, aplauso de round, multi-kill, jogada e clutch por cima do tiroteio', 'plcena_'),
+                             ('plm', 'TORCIDA — MURMÚRIO (a cama: 15 trechos; no jogo tocam 2 cruzando, ordem sorteada por partida). 10 s de cada; marca os que soam errado (música, fala, estalo)', 'plm_'),
+                             ('plinicio', 'TORCIDA — COMEÇO DA PARTIDA', 'plinicio_'),
+                             ('plfim', 'TORCIDA — FIM DA PARTIDA (ovação)', 'plfim_'),
+                             ('plround', 'TORCIDA — APLAUSO NO FIM DO ROUND', 'plround_'),
+                             ('plmultikill', 'TORCIDA — MULTI-KILL (3ª e 4ª morte do mesmo jogador, na hora)', 'plmultikill_'),
+                             ('pljogada', 'TORCIDA — JOGADA (duas mortes em 1 s, desarme no último segundo ou ninja)', 'pljogada_'),
+                             ('plquase', 'TORCIDA — "OHHH" (o clutch que começou bem e morreu)', 'plquase_'),
+                             ('plclutch', 'TORCIDA — CLUTCH (novos; somam com os 4 que já tinha)', 'plclutch_'),
+                             ('place', 'TORCIDA — ACE (novos; somam com os 5 que já tinha)', 'place_'),
                              ('c4h', 'C4 HARMÔNICA: últimos 13 s — bip normal (o aprovado, não muda), bips dos 10 s e apito final terminando na explosão', 'c4h_'),
                              ('ui', 'INTERFACE (botões): passa o mouse 3x, clica, passa e clica — o clique é o mesmo material do estalinho', 'ui_'),
                              ('mpsimples', 'MATCH POINT do zero: mesma voz e tratamento dos anúncios aprovados — 1-2 padrão, 3-4 empolgado', 'mpsimples_'),):

@@ -148,7 +148,11 @@ namespace CSM.View3D
                     var boca = alvoP - dir * 3f;
                     fx.Tiro(boca, dir, Vector3.Cross(Vector3.up, dir), false, false); fx.Rastro(boca, alvoP);
                     fx.Impacto(alvoP, dir, true, al.hs, al.prot);
-                    if (al.mata) { b.Golpe(0); al.rg = new Ragdoll3D(b, dir, al.forca, 7 + labAlvos.IndexOf(al), al.hs, b.transform.forward * al.velFrente); }
+                    if (al.mata)
+                    {
+                        b.Golpe(0); al.rg = new Ragdoll3D(b, dir, al.forca, 7 + labAlvos.IndexOf(al), al.hs, b.transform.forward * al.velFrente);
+                        fx.SangueMorte(alvoP, dir, al.hs);   // o mesmo espirro do abate na partida
+                    }
                     else b.Golpe(0.35f + 0.6f, al.hs, 1);
                 }
                 if (al.rg != null) al.rg.Passo(dt);
@@ -188,15 +192,50 @@ namespace CSM.View3D
                 if (al.rg == null) continue;
                 var cp = al.rg.CabecaMenosPelve; cp.y = 0; cp.Normalize();
                 var fr = al.b.transform.forward; fr.y = 0; fr.Normalize();
-                sb.AppendLine($"[Visual3D] MORTE {al.nome}: giro {al.rg.Giro:0}° (líquido {al.rg.GiroLiq:+0;-0}°), cabeça caiu {Vector3.Dot(cp, al.dir):+0.00;-0.00} na direção da bala, {Vector3.Dot(cp, fr):+0.00;-0.00} pra frente do corpo{(al.rg.dormindo ? "" : " (ainda mexendo)")} [frente do tronco x do boneco {al.rg.FrenteConfere:+0.00;-0.00}], deslizou {al.rg.Deslize / MalhaMapa.ESC:0.0} da Sim");
+                sb.AppendLine($"[Visual3D] MORTE {al.nome}: giro {al.rg.Giro:0}° (líquido {al.rg.GiroLiq:+0;-0}°), cabeça caiu {Vector3.Dot(cp, al.dir):+0.00;-0.00} na direção da bala, {Vector3.Dot(cp, fr):+0.00;-0.00} pra frente do corpo{(al.rg.dormindo ? "" : " (ainda mexendo)")} [frente do tronco x do boneco {al.rg.FrenteConfere:+0.00;-0.00}], deslizou {al.rg.Deslize / MalhaMapa.ESC:0.0} da Sim, pernas cruzaram {al.rg.Cruzou:0.00}");
             }
             return sb.ToString();
+        }
+
+        /// <summary>Laboratório do sangue na parede: 3 CTs lado a lado de costas pra parede (giro = pra onde olham, lado =
+        /// direção ao longo da parede em unidades do jogo): o 1º leva um tiro no peito e fica, o 2º morre de HS, o 3º de peito.</summary>
+        public void LabParede(V2 p, float giro, V2 lado, float t0 = 0.4f)
+        {
+            var casos = new (bool hs, bool mata)[] { (false, false), (true, true), (false, true) };
+            for (int i = 0; i < casos.Length; i++)
+            {
+                var q = p + lado * ((i - 1) * 16f);
+                var b = Boneco3D.Criar("ct", transform);
+                b.transform.SetPositionAndRotation(MalhaMapa.ParaUnity(q.x, q.y, NavGrid.ZAt(q)), Quaternion.Euler(0, giro, 0));
+                b.Pose("mira_M4A4", 0, 0);
+                labAlvos.Add(new AlvoLab { b = b, hs = casos[i].hs, mata = casos[i].mata, t = t0 + 0.8f * i, forca = 0.28f, anim = "mira_M4A4", nome = "parede " + i });
+            }
+        }
+        // laboratório do fogo no corpo: boneco parado que pega fogo de "de" até "ate" (e depois apaga devagar)
+        readonly List<(Boneco3D b, float de, float ate)> labQueimando = new List<(Boneco3D, float, float)>();
+        public void LabQueimando(V2 p, float giro, float de, float ate)
+        {
+            var b = Boneco3D.Criar("tr", transform);
+            b.transform.SetPositionAndRotation(MalhaMapa.ParaUnity(p.x, p.y, NavGrid.ZAt(p)), Quaternion.Euler(0, giro, 0));
+            b.Pose("mira_AK47", 0, 0);
+            labQueimando.Add((b, de, ate));
+        }
+        void LabQueimandoPasso(float dt)
+        {
+            foreach (var (b, de, ate) in labQueimando)
+            {
+                bool fogo = LabT >= de && LabT < ate;
+                if (fogo) fx.Queimando(b.transform.position, dt);
+                b.Queimar(fogo, dt);
+                b.Pose("mira_AK47", 0, dt);
+            }
         }
 
         public void LabPasso(float dt)
         {
             LabT += dt;
             LabTirosPasso(dt);
+            LabQueimandoPasso(dt);
             foreach (var s in labSmokes) s.Update(dt);
             foreach (var f in labFogos) f.Update(dt);
             // mesma regra da partida: chama acesa coberta pela smoke apaga o fogo inteiro
@@ -207,7 +246,7 @@ namespace CSM.View3D
                     if (labSmokes.Exists(s => s.Sample(q, LabT) > 0.3f)) { LabApagaFogo(f); break; }
                 }
             Fumacas(labSmokes, LabT);
-            fx.Fogos(labFogos, dt); fx.Atualizar(dt);
+            fx.Fogos(labFogos, dt); fx.Atualizar(dt); fx.FimChamas();
             foreach (var ac in armasChao.Values) Fisica(ac, dt);
             rastro.Inicio();
             foreach (var (a, b, t0) in labTiros)

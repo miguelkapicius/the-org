@@ -162,7 +162,7 @@ namespace CSM.View3D
         static readonly Color MAPA_SITE = Hx("#F2C200"), MAPA_SPAWN = new Color(0.16f, 0.55f, 0.3f, 0.85f), MARCA_TXT = Hx("#1A1714");
         static readonly Color MARCA_T = Hx("#F2C76B"), MARCA_CT = Hx("#8EC0F5"), C4_MAPA = Hx("#FF4A3D");
         // economia (começo do round)
-        class LinhaEco { public Text nome, dinheiro, tags; public RawImage icone; public RawImage[] nades = new RawImage[4]; }
+        class LinhaEco { public Text nome, dinheiro; public RawImage icone, colete, c4, kit; public RawImage[] nades = new RawImage[4]; }
         RectTransform eco; Image ecoFundo; Text[] ecoTime = new Text[2], ecoTipo = new Text[2], ecoValor = new Text[2];
         readonly LinhaEco[,] ecoLinhas = new LinhaEco[2, 5];
         // replay
@@ -190,7 +190,7 @@ namespace CSM.View3D
             raiz = (RectTransform)go.transform;
 
             this.principal = principal;
-            MontarPlacar(); MontarC4(); MontarCards(); MontarObservado(); MontarMapa(minimapa); MontarEconomia();
+            MontarPlacar(); MontarC4(); MontarCards(); MontarObservado(); MontarMapa(minimapa); MontarEconomia(); MontarRadio();
             jogo = No("jogo", raiz, new Vector2(0.5f, 0.5f), Vector2.zero, Vector2.zero);
             jogo.anchorMin = Vector2.zero; jogo.anchorMax = Vector2.one; jogo.offsetMin = jogo.offsetMax = Vector2.zero;
             jogoGrupo = jogo.gameObject.AddComponent<CanvasGroup>(); jogoGrupo.blocksRaycasts = false; jogoGrupo.interactable = false;
@@ -526,6 +526,8 @@ namespace CSM.View3D
             }
         }
 
+        const float ECO_ARMA_X = 166, ECO_ARMA_W = 92;   // centro e largura máxima da vaga da arma no painel de compra
+
         void MontarEconomia()
         {
             ecoFundo = Painel("economia", raiz, new Vector2(0.5f, 0), new Vector2(0, 150), new Vector2(980, 318), ESCURO, new Vector2(0.5f, 0), true);
@@ -541,10 +543,15 @@ namespace CSM.View3D
                     var l = new LinhaEco(); float y = -76 - i * 46;
                     Painel("linha", eco, new Vector2(0, 1), new Vector2(x0, y), new Vector2(460, 40), new Color(1, 1, 1, 0.05f), new Vector2(0, 1));
                     l.nome = Texto("nome", eco, new Vector2(0, 1), new Vector2(x0 + 12, y), new Vector2(140, 40), "", 18, CREME, TextAnchor.MiddleLeft, false, new Vector2(0, 1));
-                    l.icone = No("ícone", eco, new Vector2(0, 1), new Vector2(x0 + 150, y - 8), new Vector2(72, 24), new Vector2(0, 1)).gameObject.AddComponent<RawImage>();
+                    // arma centrada numa vaga fixa (antes presa à esquerda: cada arma começava num lugar e terminava noutro)
+                    l.icone = No("ícone", eco, new Vector2(0, 1), new Vector2(x0 + ECO_ARMA_X, y - 20), new Vector2(72, 24), new Vector2(0.5f, 0.5f)).gameObject.AddComponent<RawImage>();
                     l.icone.raycastTarget = false;
-                    l.tags = Texto("tags", eco, new Vector2(0, 1), new Vector2(x0 + 245, y), new Vector2(80, 40), "", 15, CREME, TextAnchor.MiddleLeft, false, new Vector2(0, 1), false);
-                    for (int k = 0; k < 4; k++) { l.nades[k] = IconeUi("nade", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f)); l.nades[k].rectTransform.anchoredPosition = new Vector2(x0 + 336 + k * 16, y - 20); }
+                    // colete/capacete, C4, kit e granadas em ícone, um atrás do outro (como nos cards); antes era texto
+                    // "COLETE+CAP KIT C4" que encavalava nas granadas
+                    l.colete = IconeUi("colete", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f));
+                    l.c4 = IconeUi("c4", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f));
+                    l.kit = IconeUi("kit", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f));
+                    for (int k = 0; k < 4; k++) l.nades[k] = IconeUi("nade", eco, new Vector2(0, 1), new Vector2(0.5f, 0.5f));
                     l.dinheiro = Texto("dinheiro", eco, new Vector2(0, 1), new Vector2(x0 + 448, y), new Vector2(90, 40), "", 17, VERDE, TextAnchor.MiddleRight, true, new Vector2(1, 1), false);
                     ecoLinhas[t, i] = l;
                 }
@@ -730,13 +737,22 @@ namespace CSM.View3D
                     int v = Preco(a); total += v; n++;
                     l.nome.text = a.name;
                     var ic = Icone(a.Primaria ?? a.gunId); l.icone.texture = ic; l.icone.gameObject.SetActive(ic != null);
-                    if (ic != null) l.icone.rectTransform.sizeDelta = TamArma(ic, a.Primaria ?? a.gunId, 24, 92);
+                    if (ic != null) l.icone.rectTransform.sizeDelta = TamArma(ic, a.Primaria ?? a.gunId, 24, ECO_ARMA_W);
                     // as linhas entram uma por uma
                     float k = Mathf.Clamp01((Ti(m) - 0.3f - i * 0.08f - t * 0.04f) / 0.3f) * ecoK;
                     l.nome.color = new Color(CREME.r, CREME.g, CREME.b, k); l.icone.color = new Color(1, 1, 1, k);
-                    l.tags.text = (a.armor > 0 ? (a.helmet ? "COLETE+CAP " : "COLETE ") : "") + (!a.IsT && a.hasKit ? "<color=#9CC2FF>KIT</color> " : "") + (a.hasBomb ? "<color=#FF6A5E>C4</color>" : "");
-                    l.tags.color = new Color(1, 1, 1, k);
-                    for (int q = 0; q < 4; q++) { bool tem = q < a.nades.Count; l.nades[q].gameObject.SetActive(tem); if (tem) { PorIcone(l.nades[q], "nade_" + a.nades[q], 20); l.nades[q].color = new Color(1, 1, 1, k); } }
+                    float xl = (t == 0 ? 20 : 500) + ECO_ARMA_X + ECO_ARMA_W / 2 + 14, yl = -76 - i * 46 - 20;
+                    void Item(RawImage ri, bool tem, string tex, float h, Color cor, float folga)
+                    {
+                        ri.gameObject.SetActive(tem);
+                        if (!tem) return;
+                        float w = PorIcone(ri, tex, h); ri.color = new Color(cor.r, cor.g, cor.b, k);
+                        ri.rectTransform.anchoredPosition = new Vector2(xl + w / 2, yl); xl += w + folga;
+                    }
+                    Item(l.colete, a.armor > 0, a.helmet ? "ui_colete_capacete" : "ui_colete", 20, CREME, 12);
+                    Item(l.c4, a.hasBomb, "ui_bomba", 19, new Color(1f, 0.42f, 0.37f), 10);
+                    Item(l.kit, !a.IsT && a.hasKit, "ui_alicate", 15, new Color(0.61f, 0.76f, 1f), 10);
+                    for (int q = 0; q < 4; q++) { bool tem = q < a.nades.Count; Item(l.nades[q], tem, tem ? "nade_" + a.nades[q] : null, 20, CREME, 5); }
                     l.dinheiro.text = $"${j.dinheiro:N0}".Replace(",", "."); l.dinheiro.color = new Color(VERDE.r, VERDE.g, VERDE.b, k);
                 }
                 int media = n > 0 ? total / n : 0;
@@ -747,6 +763,107 @@ namespace CSM.View3D
             }
         }
         float ecoK;
+
+        // ------------------------------------------------------------------ rádio do time (painel de comunicação)
+        // o diálogo de UM time (o "nosso"): calls do IGL com o motivo, info cantada no rádio e o plano de cada um nos
+        // momentos-chave (Match.falas, da Sim; t já vem com o atraso do rádio). Coluna no lado do time, em cima dos
+        // cards; as últimas falas, a mais nova embaixo, somem com o tempo. Fica no grupo "jogo": some no replay.
+        /// <summary>Time do rádio: 0 = time A (esquerda), 1 = time B (direita), -1 desligado. Tecla R troca.</summary>
+        public static int RadioTime = 0;
+        const int RADIO_N = 7; const float RADIO_W = 420, RADIO_TOPO = -386, RADIO_BASE = -735, RADIO_VIDA = 11f;
+        RectTransform radio; TMPro.TextMeshProUGUI radioTitulo;
+        readonly RectTransform[] radioLinha = new RectTransform[RADIO_N];
+        readonly CanvasGroup[] radioGrupo = new CanvasGroup[RADIO_N];
+        readonly Image[] radioFundo = new Image[RADIO_N], radioBarra = new Image[RADIO_N];
+        readonly TMPro.TextMeshProUGUI[] radioTxt = new TMPro.TextMeshProUGUI[RADIO_N];
+        readonly List<Match.Fala> radioVisiveis = new List<Match.Fala>();
+        static readonly Color OURO_IGL = Hx("#FFD25A");
+
+        void MontarRadio()
+        {
+            radio = No("rádio", raiz, new Vector2(0, 1), new Vector2(22, RADIO_TOPO), new Vector2(RADIO_W, RADIO_TOPO - RADIO_BASE), new Vector2(0, 1));
+            // faixa escura atrás do título (o nome do time na cor dele sumia no chão laranja do mapa)
+            Painel("título fundo", radio, new Vector2(0, 1), Vector2.zero, new Vector2(RADIO_W, 24), ESCURO, new Vector2(0, 1));
+            radioTitulo = Texto("título", radio, new Vector2(0, 1), new Vector2(12, 0), new Vector2(RADIO_W - 24, 24), "", 17, CREME, TextAnchor.MiddleLeft, false, new Vector2(0, 1));
+            for (int i = 0; i < RADIO_N; i++)
+            {
+                var r = No("fala", radio, new Vector2(0, 1), Vector2.zero, new Vector2(RADIO_W, 30), new Vector2(0, 1));
+                radioGrupo[i] = r.gameObject.AddComponent<CanvasGroup>(); radioGrupo[i].blocksRaycasts = false; radioGrupo[i].interactable = false;
+                radioFundo[i] = Painel("fundo", r, new Vector2(0, 1), Vector2.zero, new Vector2(RADIO_W, 30), new Color(ESCURO.r, ESCURO.g, ESCURO.b, 0.78f), new Vector2(0, 1));
+                radioBarra[i] = Painel("barra", r, new Vector2(0, 1), new Vector2(0, 0), new Vector2(4, 30), CREME, new Vector2(0, 1));
+                var t = Texto("texto", r, new Vector2(0, 1), new Vector2(14, -5), new Vector2(RADIO_W - 24, 30), "", 16, CREME, TextAnchor.UpperLeft, false, new Vector2(0, 1), false);
+                t.textWrappingMode = TMPro.TextWrappingModes.Normal;
+                radioTxt[i] = t; radioLinha[i] = r; r.gameObject.SetActive(false);
+            }
+            radio.gameObject.SetActive(false);
+        }
+
+        void Radio(Sim.Partida pt, Match m, bool aT)
+        {
+            bool liga = RadioTime >= 0 && !replayLigado && !SemEconomia;
+            radio.gameObject.SetActive(liga);
+            if (!liga) return;
+            bool timeA = RadioTime == 0, tr = timeA ? aT : !aT;
+            var lado = tr ? Team.T : Team.CT; var cor = Lado(tr);
+            // lado da tela do time (A à esquerda, B à direita, em cima dos cards dele)
+            radio.anchorMin = radio.anchorMax = radio.pivot = new Vector2(timeA ? 0 : 1, 1);
+            radio.anchoredPosition = new Vector2(timeA ? 22 : -22, RADIO_TOPO);
+            radioTitulo.alignment = timeA ? TMPro.TextAlignmentOptions.MidlineLeft : TMPro.TextAlignmentOptions.MidlineRight;
+            radioTitulo.text = $"RÁDIO  <color={Hex(cor)}>{(timeA ? pt.A.nome : pt.B.nome).ToUpper()}</color>";
+            // as últimas falas que o time já ouviu (o t traz o atraso do rádio) e ainda não sumiram
+            radioVisiveis.Clear();
+            for (int i = m.falas.Count - 1; i >= 0 && radioVisiveis.Count < RADIO_N; i--)
+            {
+                var f = m.falas[i];
+                if (f.team != lado || f.t > m.t) continue;
+                if (m.t - f.t > RADIO_VIDA) break;
+                radioVisiveis.Add(f);
+            }
+            radioVisiveis.Reverse();
+            // monta de cima pra baixo; se passar da altura, as mais velhas saem
+            float[] alto = new float[radioVisiveis.Count]; float total = 0;
+            for (int i = 0; i < radioVisiveis.Count; i++)
+            {
+                radioTxt[i].text = Fala(radioVisiveis[i], cor);
+                alto[i] = Mathf.Ceil(radioTxt[i].GetPreferredValues(radioTxt[i].text, RADIO_W - 24, 0).y) + 10;
+                total += alto[i] + 5;
+            }
+            int ini = 0; float disp = RADIO_TOPO - RADIO_BASE - 28;
+            while (total > disp && ini < radioVisiveis.Count) { total -= alto[ini] + 5; ini++; }
+            float y = -28;
+            for (int k = 0; k < RADIO_N; k++)
+            {
+                int i = ini + k; bool tem = i < radioVisiveis.Count;
+                radioLinha[k].gameObject.SetActive(tem);
+                if (!tem) continue;
+                var f = radioVisiveis[i];
+                if (k != i) radioTxt[k].text = radioTxt[i].text;
+                float h = alto[i];
+                radioLinha[k].anchorMin = radioLinha[k].anchorMax = radioLinha[k].pivot = new Vector2(timeA ? 0 : 1, 1);
+                radioLinha[k].anchoredPosition = new Vector2(0, y); radioLinha[k].sizeDelta = new Vector2(RADIO_W, h);
+                radioFundo[k].rectTransform.sizeDelta = new Vector2(RADIO_W, h); radioBarra[k].rectTransform.sizeDelta = new Vector2(4, h);
+                radioTxt[k].rectTransform.sizeDelta = new Vector2(RADIO_W - 24, h);
+                bool igl = f.tipo == "IGL";
+                radioBarra[k].color = igl ? OURO_IGL : cor;
+                radioFundo[k].color = igl ? new Color(0.24f, 0.19f, 0.08f, 0.85f) : new Color(ESCURO.r, ESCURO.g, ESCURO.b, 0.78f);
+                // entra deslizando e some no fim da vida
+                float idade = m.t - f.t;
+                radioGrupo[k].alpha = Mathf.Clamp01(idade / 0.25f) * Mathf.Clamp01((RADIO_VIDA - idade) / 1.5f);
+                radioTxt[k].rectTransform.anchoredPosition = new Vector2(14 - 12 * (1 - Mathf.Clamp01(idade / 0.25f)), -5);
+                y -= h + 5;
+            }
+        }
+
+        static string Fala(Match.Fala f, Color cor)
+        {
+            string tag = f.tipo == "IGL" ? $"<color={Hex(OURO_IGL)}>IGL</color>  " : f.tipo == "plano" ? "<size=12><color=#FFF4E28C>PLANO</color></size>  " : "";
+            // a Sim às vezes começa a fala com o nome de quem fala ("TROVAO: smoke da viela"): o nome já vem na frente
+            string txt = f.texto ?? "";
+            if (f.quem != null && txt.StartsWith(f.quem + ":")) txt = txt.Substring(f.quem.Length + 1).TrimStart();
+            string s = $"{tag}<color={Hex(cor)}>{f.quem}</color>  {txt}";
+            if (!string.IsNullOrEmpty(f.porque)) s += "\n<size=13><color=#FFF4E28C>" + f.porque + "</color></size>";
+            return s;
+        }
 
         void ReplayHud(float dt)
         {
@@ -852,6 +969,7 @@ namespace CSM.View3D
             if (Cabeca != null) Etiquetas(m, Cabeca, dt);
             Banners(pt, m, rn, aT);
             Economia(pt, m, rn, aT, jog, dt);
+            Radio(pt, m, aT);
             ReplayHud(dt);
             Minimapa(m, seguir);
             corteT += dt;

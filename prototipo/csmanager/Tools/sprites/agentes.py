@@ -203,6 +203,15 @@ def ell(name, mat, seg=24):
     o.data.materials.append(mat); outline(o)
     return o
 
+def cyl(name, mat, seg=24, bevel=0.12):
+    bpy.ops.mesh.primitive_cylinder_add(vertices=seg, radius=1, depth=2)
+    o = bpy.context.active_object; o.name = name
+    for p in o.data.polygons: p.use_smooth = len(p.vertices) == 4
+    o.data.materials.append(mat)
+    bv = o.modifiers.new("bv", "BEVEL"); bv.width = bevel; bv.segments = 2; bv.limit_method = "ANGLE"
+    outline(o, 0.005)
+    return o
+
 def box(name, mat, half, bevel=0.008):
     bpy.ops.mesh.primitive_cube_add(size=2)
     o = bpy.context.active_object; o.name = name
@@ -465,12 +474,13 @@ class Gun:
 
 # ------------------------------------------------------------------ agentes
 CORES = {
-    "ct": dict(pele="#e2ad86", capuz="#2c3446", borracha="#4a4e52", aro="#b3b9c0", vidro="#5e9fb2", brilho="#ffffff", valvula="#25272b",
-               filtro="#62676d", farda="#3a4562", colete="#5c6644", preto="#1f2024", luva="#2b2c30", bota="#1d1d20"),
-    # TR mercenário de balaclava: camiseta cinza, colete grafite com placa, calça cáqui manchada, coldre de couro
-    "tr": dict(pele="#c68a62", balaclava="#3a2a22", olho="#1a1414", brilho="#ffffff", labio="#a0574a", branco="#f2ede6",
+    "ct": dict(pele="#e2ad86", capuz="#3a4152", borracha="#3b3f44", aro="#565c64", vidro="#b9cbd6", brilho="#ffffff", valvula="#25272b",
+               filtro="#6a7078", selo="#2c2f33", anel="#3f78c9", rotulo="#c9c3a8", farda="#525c73", colete="#69724f", bolsaT="#a59c7a",
+               joelho="#9aa1a6", aba="#857d5f", sola="#17181b", preto="#1f2024", luva="#5d646b", bota="#2a2c31"),
+    # TR mercenário: balaclava de tricô verde-oliva, camisa xadrez de manga dobrada, colete claro com bolsos, calça cargo oliva, bota caramelo
+    "tr": dict(pele="#c68a62", balaclava="#3a2a22", malha="#4b372d", olho="#1a1414", brilho="#ffffff", labio="#a0574a", branco="#f2ede6",
                camiseta="#6f7175", colete="#3a3b40", placa="#46474c", couro="#4e3220", fivela="#b8923e",
-               calca="#b4a68a", luva="#1e1e22", bota="#4a3020"),
+               calca="#b4a68a", luva="#1e1e22", bota="#4a3020", bolso="#4b4c52", reforco="#9c8f74", sola="#2a1c12", velcro="#26272b"),
 }
 XADREZ = {}
 
@@ -494,6 +504,8 @@ PROP_COR = {"sm_corpo": "#7a7d80", "sm_faixa": "#d8d8d0", "sm_topo": "#2a2b2e", 
             "alca_arma": "#2a2420", "isqueiro": "#b9bec4", "isq_tampa": "#8d9298"}
 # peças da cabeça (giram juntas no "cego")
 HEAD_KEYS = ["cabeca", "mascara", "focinho", "filtro", "tampa", "aroL", "aroR", "lenteL", "lenteR", "reflexoL", "reflexoR",
+             "mascaraSelo", "mascaraQueixo", "filtroRosca", "filtroAnel0", "filtroAnel1", "filtroRotulo", "filtroFuro",
+             "cabecaBarra", "cabecaOlhoL", "cabecaOlhoR", "cabecaBoca",
              *["mascaraV%d" % i for i in range(3)], "furoL", "furoR", "boca", "labio", "brancoL", "brancoR", "olhoL", "olhoR", "brilhoL", "brilhoR"]
 PROP_BRILHO = {"clarao": "#ffd25a", "clarao2": "#fff6d8", "estrela0": "#ffe36a", "estrela1": "#ffe36a", "estrela2": "#ffe36a",
                "visor": "#ff3a2a", "luneta": "#9fe6ff", **{"rastro%d" % i: "#f6f4ea" for i in range(10)},
@@ -557,7 +569,7 @@ def glow(name, col):
     return m
 
 # textura das roupas: trama de tecido (mottle) e fitas costuradas no colete (molle)
-TECIDO = {"farda", "camiseta", "calca", "balaclava", "capuz"}
+TECIDO = {"farda", "camiseta", "calca", "balaclava", "capuz", "malha"}
 FITAS = {"colete", "placa"}
 
 class Agent:
@@ -567,41 +579,55 @@ class Agent:
              for k, v in C.items()}
         s.root = bpy.data.objects.new(team, None); sc.collection.objects.link(s.root)
         s.P = {}
-        def E(key, mat, seg=24): o = ell(team + key, M[mat], seg); o.parent = s.root; s.P[key] = o
+        def E(key, mat, seg=24):
+            o = ell(team + key, M[mat], seg); o.parent = s.root; s.P[key] = o
+            if mat in TECIDO: o["mancha"] = 0.05
         def B(key, mat, half, bev=0.008): o = box(team + key, M[mat], half, bev); o.parent = s.root; s.P[key] = o
+        def Cy(key, mat, seg=24): o = cyl(team + key, M[mat], seg); o.parent = s.root; s.P[key] = o
         legs = "farda" if ct else "calca"
         for sd in ("L", "R"):
             E("coxa" + sd, legs); E("canela" + sd, legs); E("bota" + sd, "bota")
-            if ct: E("joelheira" + sd, "preto")
+            E("joelheira" + sd, "joelho" if ct else "reforco"); E("botaSola" + sd, "sola")
+        B("coxaBolsoL", "preto" if ct else "calca", (0.022, 0.03, 0.042), 0.008)
         E("quadril", legs)
         E("cinto", "preto" if ct else "couro")
         if ct:
             B("coldre", "preto", (0.034, 0.02, 0.07), 0.012); E("perneira", "preto"); E("perneira2", "preto")
             B("coldreAba", "preto", (0.037, 0.024, 0.013), 0.008); B("coldreCabo", "luva", (0.015, 0.012, 0.028), 0.006); E("coldreAlca", "preto")
             E("tronco", "farda"); B("colete", "colete", (0.106, 0.134, 0.094), 0.018)
-            for i in range(3): B("pente%d" % i, "colete", (0.022, 0.026, 0.042), 0.006)
-            for i in range(2): B("bolsinho%d" % i, "colete", (0.018, 0.03, 0.02), 0.005)
+            for i in range(3): B("pente%d" % i, "bolsaT", (0.022, 0.026, 0.042), 0.006)
+            for i in range(2): B("bolsinho%d" % i, "bolsaT", (0.018, 0.03, 0.02), 0.005)
             B("radio", "preto", (0.02, 0.018, 0.034), 0.005); E("antena", "preto")
+            for i in range(3): B("penteAba%d" % i, "aba", (0.024, 0.0275, 0.009), 0.004)
             for sd in ("L", "R"): B("alca" + sd, "colete", (0.07, 0.03, 0.012), 0.005)
             E("gola", "farda")
-            E("cabeca", "capuz", 32); E("mascara", "borracha", 32); B("focinho", "borracha", (0.022, 0.044, 0.034), 0.014); E("filtro", "filtro"); E("tampa", "aro")
+            E("cabeca", "capuz", 32); E("mascara", "borracha", 32); Cy("focinho", "borracha"); Cy("filtro", "filtro"); Cy("tampa", "aro")
+            E("mascaraSelo", "selo", 32); E("mascaraQueixo", "borracha")
+            Cy("filtroRosca", "borracha"); Cy("filtroAnel0", "anel"); Cy("filtroAnel1", "anel"); Cy("filtroRotulo", "rotulo"); Cy("filtroFuro", "anel", 16)
             for i in range(3): B("mascaraV%d" % i, "valvula", (0.004, 0.024, 0.004), 0.002)   # grade da válvula de fala   # tiras da máscara por cima do capuz (aparecem de cima)
             for sd in ("L", "R"):
-                E("aro" + sd, "aro"); E("lente" + sd, "vidro"); E("reflexo" + sd, "brilho")
+                Cy("aro" + sd, "aro", 28); E("lente" + sd, "vidro"); E("reflexo" + sd, "brilho")
 
         else:
             B("bolsa", "couro", (0.03, 0.02, 0.035)); B("fivela", "fivela", (0.006, 0.02, 0.014), 0.003)
             B("coldre", "couro", (0.034, 0.02, 0.07), 0.012); E("perneira", "couro"); E("perneira2", "couro")
             B("coldreAba", "couro", (0.037, 0.024, 0.013), 0.008); B("coldreCabo", "luva", (0.015, 0.012, 0.028), 0.006); E("coldreAlca", "couro")
-            E("tronco", "camiseta"); B("colete", "colete", (0.104, 0.134, 0.092), 0.016)
-            B("placa", "placa", (0.012, 0.085, 0.07), 0.01)
-            for i in range(2): B("pente%d" % i, "colete", (0.02, 0.028, 0.03), 0.006)
+            E("tronco", "camiseta"); s.P["tronco"]["xadrez"] = 9; B("colete", "colete", (0.104, 0.134, 0.092), 0.016)
+            B("placa", "placa", (0.011, 0.07, 0.03), 0.008)
+            for i in range(2): B("pente%d" % i, "bolso", (0.017, 0.042, 0.027), 0.006); B("penteAba%d" % i, "colete", (0.019, 0.044, 0.008), 0.004)
+            for i in range(2): B("bolsinho%d" % i, "bolso", (0.013, 0.034, 0.026), 0.005); B("bolsinhoAba%d" % i, "colete", (0.015, 0.036, 0.007), 0.003)
+            B("placaVelcro", "velcro", (0.004, 0.024, 0.012), 0.002)
+            for k_ in ("coxaL", "coxaR", "canelaL", "canelaR", "quadril"): s.P[k_]["camu"] = 1
             for sd in ("L", "R"): B("alca" + sd, "colete", (0.07, 0.03, 0.012), 0.005)
             E("gola", "camiseta")
-            E("cabeca", "balaclava", 32); E("furoL", "pele"); E("furoR", "pele"); E("boca", "pele"); E("labio", "labio")
+            E("cabeca", "balaclava", 48); s.P["cabeca"]["tramaV"] = 48
+            E("cabecaBarra", "malha", 32); s.P["cabecaBarra"]["trama"] = 8
+            E("cabecaOlhoL", "malha"); E("cabecaOlhoR", "malha"); E("cabecaBoca", "malha")
+            E("furoL", "pele"); E("furoR", "pele"); E("boca", "pele"); E("labio", "labio")
             for sd in ("L", "R"): E("branco" + sd, "branco"); E("olho" + sd, "olho"); E("brilho" + sd, "brilho")
         for sd in ("L", "R"):
             E("braco" + sd, "farda" if ct else "camiseta")
+            if not ct: s.P["braco" + sd]["xadrez"] = 7
             E("ante" + sd, "farda" if ct else "pele")
             if not ct: E("pulso" + sd, "pele")   # TR (manga curta): pele do braço até o cotovelo + antebraço
             E("mao" + sd, "luva")
@@ -747,7 +773,12 @@ class Agent:
             place_seg(P["coxa" + sd], hip, knee, 0.054); place_seg(P["canela" + sd], knee, ank, 0.046)
             place(P["bota" + sd], ank + Vector((0.03, 0, -0.03)), (0.078, 0.05, 0.042))
             LOWER += [P["coxa" + sd], P["canela" + sd], P["bota" + sd]]
-            if ct: place(P["joelheira" + sd], knee + Vector((0.038, 0, 0)), (0.026, 0.042, 0.04)); LOWER.append(P["joelheira" + sd])
+            place(P["joelheira" + sd], knee + Vector((0.038, 0, 0)), (0.026, 0.042, 0.04) if ct else (0.02, 0.04, 0.044)); LOWER.append(P["joelheira" + sd])
+            place(P["botaSola" + sd], ank + Vector((0.032, 0, -0.058)), (0.082, 0.053, 0.016)); LOWER.append(P["botaSola" + sd])
+            if sd == "L":   # bolso cargo na coxa esquerda (a direita tem o coldre)
+                upL = (hip - knee).normalized(); foraL = Vector((0, 1, 0)); foraL = (foraL - upL * foraL.dot(upL)).normalized()
+                qL = Matrix((foraL.cross(upL) * -1, foraL, upL)).transposed().to_quaternion()
+                place(P["coxaBolsoL"], hip.lerp(knee, 0.55) + foraL * 0.05, None, qL); LOWER.append(P["coxaBolsoL"])
             if sd == "R":   # coldre de perna (os dois times): segue a coxa, duas faixas em volta dela, alça no cinto
                 up = (hip - knee).normalized(); fora = Vector((0, -1, 0)); fora = (fora - up * fora.dot(up)).normalized()
                 qc = Matrix((fora.cross(up), fora, up)).transposed().to_quaternion()   # X frente, Y fora, Z sobe a coxa
@@ -771,14 +802,18 @@ class Agent:
         place(P["colete"], ch + Vector((0.0, 0, 0.005)))   # centrado no tronco: cobre frente E costas
         for sd, sg in (("L", 1), ("R", -1)): place(P["alca" + sd], ch + Vector((0, sg * 0.085, 0.1)))
         if ct:
-            for i in range(3): place(P["pente%d" % i], ch + Vector((0.1, (i - 1) * 0.06, -0.035)))
+            for i in range(3):
+                place(P["pente%d" % i], ch + Vector((0.1, (i - 1) * 0.06, -0.035))); place(P["penteAba%d" % i], ch + Vector((0.101, (i - 1) * 0.06, -0.002)))
             for i in range(2): place(P["bolsinho%d" % i], ch + Vector((0.098, (i - 0.5) * 0.08, 0.05)))
             place(P["radio"], ch + Vector((0.07, 0.095, 0.075)))
             place_seg(P["antena"], ch + Vector((0.07, 0.1, 0.11)), ch + Vector((0.055, 0.11, 0.21)), 0.006)
             place(P["gola"], ch + Vector((0, 0, 0.12)), (0.07, 0.09, 0.035))
         else:
-            place(P["placa"], ch + Vector((0.104, 0, 0.012)))
-            for i in range(2): place(P["pente%d" % i], ch + Vector((0.098, (i - 0.5) * 0.1, -0.06)))
+            place(P["placa"], ch + Vector((0.104, 0, 0.002)))
+            for i in range(2):
+                place(P["pente%d" % i], ch + Vector((0.099, (i - 0.5) * 0.1, -0.062))); place(P["penteAba%d" % i], ch + Vector((0.1, (i - 0.5) * 0.1, -0.04)))
+                place(P["bolsinho%d" % i], ch + Vector((0.103, (i - 0.5) * 0.118, 0.052))); place(P["bolsinhoAba%d" % i], ch + Vector((0.104, (i - 0.5) * 0.118, 0.072)))
+            place(P["placaVelcro"], ch + Vector((0.117, 0, 0.058)))
             place(P["bolsa"], Vector((0.03, -0.12, hipz + 0.02))); place(P["fivela"], Vector((0.098, 0, hipz + 0.045)))
             place(P["gola"], ch + Vector((0, 0, 0.12)), (0.068, 0.088, 0.032))
         # cabeça
@@ -792,20 +827,32 @@ class Agent:
             # filtro curto na bochecha esquerda (traços no alto do rosto: a câmera vem de cima)
             # borracha cinza (contrasta com o capuz azul) e aro de metal claro nas lentes
             place(P["mascara"], hc + Vector((0.09, 0, -0.015)), (0.105, 0.148, 0.13))
+            # borda de vedação (borracha escura por trás da peça do rosto: aparece como um friso em volta) e a copa do queixo
+            place(P["mascaraSelo"], hc + Vector((0.068, 0, -0.018)), (0.106, 0.159, 0.141))
+            place(P["mascaraQueixo"], hc + Vector((0.142, 0, -0.098)), (0.05, 0.07, 0.04))
+            # lentes: aro de metal em cilindro (não bolota), viradas um pouco pra fora e pra cima; vidro abaulado com reflexo
             for sd, sg in (("L", 1), ("R", -1)):
-                place(P["aro" + sd], hc + Vector((0.166, sg * 0.06, 0.04)), (0.02, 0.058, 0.058))
-                place(P["lente" + sd], hc + Vector((0.178, sg * 0.06, 0.04)), (0.012, 0.045, 0.045))
-                place(P["reflexo" + sd], hc + Vector((0.188, sg * 0.048, 0.06)), (0.005, 0.015, 0.012))
-            # máscara S10/FM12 (CT SAS do CS): na frente só a válvula de exalação baixa e larga, colada na borracha, com
-            # a grade de fala; o filtro é uma lata redonda rosqueada de lado, na bochecha esquerda, apontando pra baixo
-            qv = Quaternion((0, 1, 0), math.radians(28))   # a frente da válvula olha pra frente e pra baixo
-            vf = hc + Vector((0.186, 0, -0.066))
-            place(P["focinho"], vf, (0.022, 0.044, 0.034), qv)
-            for i in range(3): place(P["mascaraV%d" % i], vf + qv @ Vector((0.022, 0, 0.016 - i * 0.016)), (0.004, 0.026 - abs(i - 1) * 0.005, 0.004), qv)
-            eixo = Vector((0.62, 0.62, -0.48)).normalized()   # pra frente, pra fora e pra baixo
+                nl = Vector((1.0, sg * 0.3, 0.16)).normalized(); ql = nl.to_track_quat("Z", "X")
+                cl = hc + Vector((0.166, sg * 0.062, 0.04))
+                place(P["aro" + sd], cl, (0.058, 0.058, 0.015), ql)
+                place(P["lente" + sd], cl + nl * 0.012, (0.046, 0.046, 0.013), ql)
+                place(P["reflexo" + sd], cl + nl * 0.024 + Vector((0, sg * -0.014, 0.018)), (0.013, 0.016, 0.004), ql)
+            # válvula de fala na frente: cilindro curto com a grade, olhando pra frente e pra baixo
+            qv = Quaternion((0, 1, 0), math.radians(28))
+            av = qv @ Vector((1, 0, 0)); vf = hc + Vector((0.184, 0, -0.064))
+            place(P["focinho"], vf, (0.036, 0.036, 0.02), av.to_track_quat("Z", "X"))
+            for i in range(3): place(P["mascaraV%d" % i], vf + qv @ Vector((0.021, 0, 0.014 - i * 0.014)), (0.004, 0.024 - abs(i - 1) * 0.006, 0.004), qv)
+            # filtro: lata rosqueada na bochecha esquerda (pra frente, pra fora e pra baixo): rosca de borracha, lata com
+            # dois anéis prensados e faixa de rótulo, tampa de metal com o furo de entrada de ar
+            eixo = Vector((0.62, 0.62, -0.48)).normalized(); qe = eixo.to_track_quat("Z", "X")
             base = hc + Vector((0.15, 0.095, -0.088))
-            place(P["filtro"], base + eixo * 0.026, (0.042, 0.042, 0.034), eixo.to_track_quat("Z", "X"))
-            place(P["tampa"], base + eixo * 0.058, (0.034, 0.034, 0.007), eixo.to_track_quat("Z", "X"))
+            place(P["filtroRosca"], base + eixo * 0.008, (0.03, 0.03, 0.012), qe)
+            place(P["filtro"], base + eixo * 0.042, (0.045, 0.045, 0.026), qe)
+            place(P["filtroAnel0"], base + eixo * 0.022, (0.0475, 0.0475, 0.0045), qe)
+            place(P["filtroAnel1"], base + eixo * 0.062, (0.0475, 0.0475, 0.0045), qe)
+            place(P["filtroRotulo"], base + eixo * 0.042, (0.0462, 0.0462, 0.009), qe)
+            place(P["tampa"], base + eixo * 0.07, (0.04, 0.04, 0.005), qe)
+            place(P["filtroFuro"], base + eixo * 0.074, (0.02, 0.02, 0.004), qe)
         else:
             # balaclava lisa: furos dos olhos e da boca são "adesivos" achatados deitados na superfície da cabeça
             # (nada sai pra fora), com o olho por cima em camadas finas: pele, branco, pupila, brilho
@@ -813,13 +860,16 @@ class Agent:
                 p = surf(hc + d, 1.0); q = p - hc
                 n = Vector((q.x / hr.x ** 2, q.y / hr.y ** 2, q.z / hr.z ** 2)).normalized()
                 place(o, p + n * off, (thick, w, h), n.to_track_quat("X", "Z"))
+            place(P["cabecaBarra"], hc + Vector((-0.004, 0, -0.148)), (0.112, 0.118, 0.034))       # barra enrolada no pescoço
             for sd, sg in (("L", 1), ("R", -1)):
-                decal(P["furo" + sd], Vector((0.15, sg * 0.054, 0.05)), 0.036, 0.024, 0.0)
-                decal(P["branco" + sd], Vector((0.15, sg * 0.054, 0.05)), 0.024, 0.016, 0.002)
-                decal(P["olho" + sd], Vector((0.15, sg * 0.05, 0.05)), 0.012, 0.014, 0.004)
-                decal(P["brilho" + sd], Vector((0.15, sg * 0.046, 0.056)), 0.004, 0.004, 0.006)
-            decal(P["boca"], Vector((0.15, 0, -0.06)), 0.026, 0.014, 0.0)
-            decal(P["labio"], Vector((0.15, 0, -0.06)), 0.017, 0.005, 0.002)
+                decal(P["cabecaOlho" + sd], Vector((0.15, sg * 0.054, 0.05)), 0.044, 0.032, 0.0, 0.0045)     # borda costurada
+                decal(P["furo" + sd], Vector((0.15, sg * 0.054, 0.05)), 0.035, 0.023, 0.0025)
+                decal(P["branco" + sd], Vector((0.15, sg * 0.054, 0.05)), 0.024, 0.016, 0.0045)
+                decal(P["olho" + sd], Vector((0.15, sg * 0.05, 0.05)), 0.012, 0.014, 0.0065)
+                decal(P["brilho" + sd], Vector((0.15, sg * 0.046, 0.056)), 0.004, 0.004, 0.0085)
+            decal(P["cabecaBoca"], Vector((0.15, 0, -0.06)), 0.034, 0.021, 0.0, 0.0045)
+            decal(P["boca"], Vector((0.15, 0, -0.06)), 0.026, 0.014, 0.0025)
+            decal(P["labio"], Vector((0.15, 0, -0.06)), 0.017, 0.005, 0.0045)
         # ---------------------------------------------------------- arma e mãos
         PR = s.props
         def c4(c, q=None):
@@ -1061,7 +1111,8 @@ class Agent:
             passa = ch + Vector((0.05, -0.31, -0.07)) if jeito == "baixo" else orelha + Vector((0.03, 0.02, -0.06))
             volta = [(0.86, ch + Vector((0.09, -0.27, -0.16)))] if jeito == "baixo" else []
             if anim == "granada":
-                rh_t = trilha(t, [(0.0, W(G.grip)), (0.05, ch + Vector((0.14, -0.12, -0.04))), (0.12, pouch), (0.2, chest), (0.4, chest), (0.58, passa),
+                segura = ch + Vector((0.2, -0.1, 0.0))
+                rh_t = trilha(t, [(0.0, W(G.grip)), (0.05, ch + Vector((0.14, -0.12, -0.04))), (0.1, pouch), (0.13, segura), (0.2, segura), (0.27, chest), (0.4, chest), (0.58, passa),
                                   (0.72, orelha), *volta, (1.0, solta)])
                 if mol:   # a esquerda pega o isqueiro na cintura, acende o pano e vai pra frente
                     isq = ch + Vector((0.13, 0.17, -0.1)); acende = chest + Vector((0.0, 0.07, 0.12))
@@ -1069,7 +1120,8 @@ class Agent:
                                       (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
                 else:     # a esquerda tira o pino e vai pra frente apontando
                     pino = chest + Vector((0.02, 0.04, 0.07))
-                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.1, ch + Vector((0.12, 0.13, -0.04))), (0.24, pino), (0.3, pino), (0.38, pino + Vector((0.0, 0.1, 0.04))),
+                    solta_e = ch + Vector((0.13, 0.16, -0.07))
+                    lh_t = trilha(t, [(0.0, W(G.fore)), (0.1, solta_e), (0.2, solta_e), (0.28, pino), (0.33, pino), (0.4, pino + Vector((0.0, 0.1, 0.04))),
                                       (0.5, ch + Vector((0.12, 0.2, 0.06))), (0.72, aponta), (1.0, aponta + Vector((-0.08, 0.04, -0.12)))])
                 twist = tw_a * (sm(k(0.42, 0.72)) - sm(k(0.72, 1.0))) + tw_s * sm(k(0.82, 1.0))
                 lean = ln_a * (sm(k(0.42, 0.72)) - sm(k(0.72, 0.9))) + ln_s * sm(k(0.85, 1.0))

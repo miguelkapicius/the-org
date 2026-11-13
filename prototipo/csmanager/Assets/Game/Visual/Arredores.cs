@@ -58,7 +58,9 @@ namespace CSM.View3D
             var o = new Obra3D();
             var rng = new System.Random(semente);
             float R(float a, float b) => a + (float)rng.NextDouble() * (b - a);
-            Color[] reboco = { Hex(0xE0A47E), Hex(0xD98F6B), Hex(0xEBC39A), Hex(0xF0D6AE), Hex(0xCF8462), Hex(0xE6B68C) };
+            // mesmos 8 tons de adobe das casas de dentro (usuário: "o cenário começa a ficar destoante do resto")
+            var reboco = new Color[Paleta3D.NTONS]; for (int t = 0; t < reboco.Length; t++) { reboco[t] = Paleta3D.Srgb(Paleta3D.ADOBE + t); reboco[t].a = 1; }
+            Color cal = Hex(0xEFE3CC);
             Color escuro = Hex(0x4A3428), creme = Hex(0xF4E4C4), telhaVerde = Hex(0x3E8C6A), madeira = Hex(0x8F5A32);
 
             // casario: quarteirões de casas coladas (grade irregular), fora do mapa e sem entrar na trilha
@@ -78,8 +80,11 @@ namespace CSM.View3D
                 // baixo perto do mapa (a câmera olha por cima dele) e subindo longe
                 float hMax = Mathf.Lerp(0.5f, 3.6f, Mathf.SmoothStep(1.2f, 12f, dist));
                 float h = R(0.55f, 1f) * hMax;
-                var cor = reboco[rng.Next(reboco.Length)] * R(0.94f, 1.04f);
+                // uma em cada oito é caiada (branca, lisa), pra quebrar o mar de terra; as outras são adobe com a textura do shader
+                bool caiada = rng.NextDouble() < 0.12;
+                var cor = (caiada ? cal : reboco[rng.Next(reboco.Length)]) * R(0.94f, 1.04f);
                 var c = new Vector3(x, y0 + h / 2 + 0.1f, z);
+                o.Alfa = caiada ? 1f : 0.30f;
                 o.Caixa(c, new Vector3(w / 2, h / 2 + 0.1f, d / 2), cor);
                 // mureta no telhado (parapeito) e telhado um tom mais claro
                 float yt = y0 + h + 0.2f;
@@ -87,7 +92,28 @@ namespace CSM.View3D
                 o.Caixa(new Vector3(x, yt + 0.06f, z + d / 2 - 0.05f), new Vector3(w / 2, 0.08f, 0.05f), cor * 1.06f);
                 o.Caixa(new Vector3(x - w / 2 + 0.05f, yt + 0.06f, z), new Vector3(0.05f, 0.08f, d / 2), cor * 1.06f);
                 o.Caixa(new Vector3(x + w / 2 - 0.05f, yt + 0.06f, z), new Vector3(0.05f, 0.08f, d / 2), cor * 1.06f);
-                // janelinhas escuras (portas em arco viram retângulo escuro com batente claro) nas 4 faces
+                // ameias em degrau nas quinas (como nas casas de dentro); as casas altas viram torre com a platibanda toda dentada
+                if (!caiada && rng.NextDouble() < 0.7)
+                    foreach (var (sx, sz) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
+                    {
+                        o.Caixa(new Vector3(x + sx * (w / 2 - 0.11f), yt + 0.2f, z + sz * (d / 2 - 0.11f)), new Vector3(0.11f, 0.14f, 0.11f), cor * 1.04f);
+                        o.Caixa(new Vector3(x + sx * (w / 2 - 0.06f), yt + 0.4f, z + sz * (d / 2 - 0.06f)), new Vector3(0.06f, 0.07f, 0.06f), cor * 1.04f);
+                    }
+                if (!caiada && h > 2.2f && rng.NextDouble() < 0.6)
+                {
+                    int nmx = Mathf.Max(2, Mathf.FloorToInt(w / 0.42f)), nmz = Mathf.Max(2, Mathf.FloorToInt(d / 0.42f));
+                    for (int j = 1; j < nmx; j += 2) foreach (int sd in new[] { -1, 1 }) o.Caixa(new Vector3(x - w / 2 + (j + 0.5f) * w / nmx, yt + 0.2f, z + sd * (d / 2 - 0.05f)), new Vector3(w / nmx * 0.5f, 0.07f, 0.05f), cor * 1.04f);
+                    for (int j = 1; j < nmz; j += 2) foreach (int sd in new[] { -1, 1 }) o.Caixa(new Vector3(x + sd * (w / 2 - 0.05f), yt + 0.2f, z - d / 2 + (j + 0.5f) * d / nmz), new Vector3(0.05f, 0.07f, d / nmz * 0.5f), cor * 1.04f);
+                }
+                // terraço de terra batida (mesma classe do de dentro)
+                if (!caiada) { o.Alfa = 0.15f; o.Caixa(new Vector3(x, yt + 0.004f, z), new Vector3(w / 2 - 0.1f, 0.004f, d / 2 - 0.1f), cor * 0.86f); o.Alfa = 0.30f; }
+                // barrado no pé da casa (tom mais escuro do próprio reboco) e friso claro no alto, debaixo da mureta
+                o.Caixa(new Vector3(x, y0 + 0.2f, z), new Vector3(w / 2 + 0.012f, 0.2f, d / 2 + 0.012f), cor * 0.84f);
+                o.Caixa(new Vector3(x, yt - 0.04f, z), new Vector3(w / 2 + 0.012f, 0.03f, d / 2 + 0.012f), Color.Lerp(cor, creme, caiada ? 0.55f : 0.25f));
+                o.Alfa = 1f;
+                creme = caiada ? Hex(0xF4E4C4) : Color.Lerp(cor, Hex(0xF4E4C4), 0.4f);   // moldura de janela no tom da casa (a creme pura destoava do adobe)
+                // janelas com moldura clara, peitoril e folha colorida (azul, verde ou madeira); porta com moldura no térreo
+                Color[] folha = { Hex(0x2F6FB0), telhaVerde, madeira, escuro, escuro, escuro, madeira };
                 int nj = Mathf.Max(1, Mathf.FloorToInt(w / 0.9f));
                 for (int j = 0; j < nj; j++)
                     for (int andar = 0; andar < Mathf.Max(1, Mathf.FloorToInt(h / 0.9f)); andar++)
@@ -95,26 +121,51 @@ namespace CSM.View3D
                         if (rng.NextDouble() < 0.35) continue;
                         float jx = x - w / 2 + (j + 0.5f) * w / nj, jy = y0 + 0.55f + andar * 0.9f;
                         if (jy + 0.25f > yt) continue;
-                        bool verde = rng.NextDouble() < 0.25;
+                        var cj = folha[rng.Next(folha.Length)];
+                        bool porta = andar == 0 && rng.NextDouble() < 0.3;
                         foreach (int sd in new[] { -1, 1 })
-                            o.Caixa(new Vector3(jx, jy, z + sd * (d / 2 + 0.01f)), new Vector3(0.12f, 0.18f, 0.02f), verde ? telhaVerde : escuro);
+                        {
+                            float zf = z + sd * (d / 2 + 0.01f);
+                            if (porta)
+                            {
+                                o.Caixa(new Vector3(jx, y0 + 0.42f, zf), new Vector3(0.17f, 0.34f, 0.015f), creme);
+                                o.Caixa(new Vector3(jx, y0 + 0.4f, zf + sd * 0.012f), new Vector3(0.13f, 0.3f, 0.015f), cj == escuro ? madeira : cj);
+                            }
+                            else
+                            {
+                                o.Caixa(new Vector3(jx, jy, zf), new Vector3(0.155f, 0.215f, 0.015f), creme);
+                                o.Caixa(new Vector3(jx, jy, zf + sd * 0.012f), new Vector3(0.12f, 0.18f, 0.015f), cj);
+                                o.Caixa(new Vector3(jx, jy - 0.21f, zf + sd * 0.02f), new Vector3(0.18f, 0.02f, 0.03f), creme);
+                            }
+                        }
                     }
                 int nk = Mathf.Max(1, Mathf.FloorToInt(d / 0.9f));
                 for (int j = 0; j < nk; j++)
-                {
-                    if (rng.NextDouble() < 0.4) continue;
-                    float jz = z - d / 2 + (j + 0.5f) * d / nk, jy = y0 + 0.55f;
-                    foreach (int sd in new[] { -1, 1 })
-                        o.Caixa(new Vector3(x + sd * (w / 2 + 0.01f), jy, jz), new Vector3(0.02f, 0.18f, 0.12f), escuro);
-                }
+                    for (int andar = 0; andar < Mathf.Max(1, Mathf.FloorToInt(h / 0.9f)); andar++)
+                    {
+                        if (rng.NextDouble() < 0.4) continue;
+                        float jz = z - d / 2 + (j + 0.5f) * d / nk, jy = y0 + 0.55f + andar * 0.9f;
+                        if (jy + 0.25f > yt) continue;
+                        var cj = folha[rng.Next(folha.Length)];
+                        foreach (int sd in new[] { -1, 1 })
+                        {
+                            float xf = x + sd * (w / 2 + 0.01f);
+                            o.Caixa(new Vector3(xf, jy, jz), new Vector3(0.015f, 0.215f, 0.155f), creme);
+                            o.Caixa(new Vector3(xf + sd * 0.012f, jy, jz), new Vector3(0.015f, 0.18f, 0.12f), cj);
+                            o.Caixa(new Vector3(xf + sd * 0.02f, jy - 0.21f, jz), new Vector3(0.03f, 0.02f, 0.18f), creme);
+                        }
+                    }
                 // coisas no telhado: caixa d'água, antena parabólica, cúpula, varal de tapetes
                 double sorte = rng.NextDouble();
-                if (sorte < 0.18) o.Cilindro(new Vector3(x + R(-w, w) * 0.25f, yt, z + R(-d, d) * 0.25f), Vector3.up * 0.32f, 0.17f, 0.17f, 10, Hex(0xBFB8AA), Hex(0xA9A294));
+                if (sorte < 0.07) o.Cilindro(new Vector3(x + R(-w, w) * 0.25f, yt, z + R(-d, d) * 0.25f), Vector3.up * 0.32f, 0.17f, 0.17f, 10, Hex(0xBFB8AA), Hex(0xA9A294));
                 else if (sorte < 0.3)
-                {
-                    var p = new Vector3(x + R(-w, w) * 0.25f, yt + 0.12f, z + R(-d, d) * 0.25f);
-                    o.Cilindro(p - Vector3.up * 0.12f, Vector3.up * 0.12f, 0.02f, 0.02f, 4, Hex(0x777777));
-                    o.Bola(p, new Vector3(0.14f, 0.05f, 0.14f), Hex(0xE8E6E0), 8);
+                {   // tapete estendido no terraço (a antena parabólica saiu: não combina com a vila de terra)
+                    Color[] campo = { Hex(0xB3322B), Hex(0xD98A2B), Hex(0x2F5E8E), Hex(0xA83A6A), Hex(0xE9DFC8) };
+                    var p = new Vector3(x + R(-w, w) * 0.12f, yt + 0.012f, z + R(-d, d) * 0.12f); bool emX = w > d;
+                    float tw = Mathf.Min(Mathf.Min(w, d) * 0.2f, 0.34f), tl = Mathf.Min(Mathf.Max(w, d) * 0.24f, 0.55f); var cf = campo[rng.Next(campo.Length)];
+                    o.Caixa(p, new Vector3(emX ? tl : tw, 0.006f, emX ? tw : tl), Hex(0x4A2A1E));
+                    o.Caixa(p + Vector3.up * 0.006f, new Vector3((emX ? tl : tw) - 0.05f, 0.004f, (emX ? tw : tl) - 0.05f), cf);
+                    o.Caixa(p + Vector3.up * 0.01f, new Vector3((emX ? tl : tw) * 0.35f, 0.003f, (emX ? tw : tl) * 0.35f), Hex(0xF0E2C0));
                 }
                 else if (sorte < 0.38 && dist > 5)
                 {
@@ -131,27 +182,43 @@ namespace CSM.View3D
                 }
             }
 
-            // palmeiras: tronco em gomos levemente curvo + folhas compridas caindo em volta
+            // palmeiras (usuário: "coqueiros bem zoados"): tronco fino e curvo em anéis que afinam, com a base mais grossa;
+            // copa em duas rodas de folhas compridas em arco (4 gomos cada, afinando e caindo), as de baixo mais caídas e
+            // escuras; miolo e cacho de tâmaras
             void Palmeira(Vector3 b, float alt)
             {
-                var dir = new Vector3(R(-0.15f, 0.15f), 1, R(-0.15f, 0.15f)).normalized; var p = b;
-                int gomos = 7;
+                var tomba = new Vector3(R(-1f, 1f), 0, R(-1f, 1f)).normalized * R(0.05f, 0.22f); var p = b;
+                int gomos = 12; Color casca = Hex(0x8E6B48);
                 for (int g = 0; g < gomos; g++)
                 {
-                    var e = (dir + new Vector3(dir.x, 0, dir.z) * g * 0.08f).normalized * (alt / gomos);
-                    o.Cilindro(p, e, 0.085f - g * 0.004f, 0.075f - g * 0.004f, 7, Hex(0x9A7552) * (g % 2 == 0 ? 1f : 0.9f), null, false);
+                    float u = g / (float)gomos;
+                    var e = (Vector3.up + tomba * (0.3f + 1.6f * u)).normalized * (alt / gomos);
+                    float r0 = Mathf.Lerp(0.085f, 0.05f, u) + (g == 0 ? 0.03f : 0), r1 = Mathf.Lerp(0.085f, 0.05f, u + 1f / gomos);
+                    o.Cilindro(p, e, r0, r1, 8, casca * (g % 2 == 0 ? 1f : 0.86f), null, false);
                     p += e;
                 }
-                for (int f = 0; f < 9; f++)
+                o.Bola(p + Vector3.up * 0.02f, new Vector3(0.1f, 0.09f, 0.1f), Hex(0x6E5A32), 8);
+                for (int roda = 0; roda < 2; roda++)
                 {
-                    float a = f * Mathf.PI * 2 / 9 + R(0, 0.4f);
-                    var fora = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a));
-                    var meio = p + fora * 0.42f + Vector3.up * 0.06f; var ponta = p + fora * 0.85f - Vector3.up * 0.28f;
-                    var cor = f % 2 == 0 ? Hex(0x4F9A3E) : Hex(0x3C7F33);
-                    o.Bloco((p + meio) / 2, (meio - p) / 2, Vector3.Cross(fora, Vector3.up) * 0.1f, Vector3.up * 0.015f, cor);
-                    o.Bloco((meio + ponta) / 2, (ponta - meio) / 2, Vector3.Cross(fora, Vector3.up) * 0.075f, Vector3.up * 0.015f, cor * 0.92f);
+                    int nf = roda == 0 ? 9 : 8; float comp = roda == 0 ? R(0.95f, 1.15f) : R(0.8f, 0.95f);
+                    for (int f = 0; f < nf; f++)
+                    {
+                        float a = (f + roda * 0.5f) * Mathf.PI * 2 / nf + R(-0.15f, 0.15f);
+                        var fora = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)); var lado = Vector3.Cross(fora, Vector3.up);
+                        var cor = (roda == 0 ? Hex(0x58A53F) : Hex(0x3F8434)) * R(0.92f, 1.06f);
+                        float sobe = roda == 0 ? 0.55f : 0.12f, cai = roda == 0 ? 0.55f : 0.95f;
+                        var ant = p + Vector3.up * 0.04f;
+                        for (int sg = 1; sg <= 4; sg++)
+                        {
+                            float t = sg / 4f;
+                            var pt = p + Vector3.up * 0.04f + fora * (comp * t) + Vector3.up * (comp * (sobe * t - cai * t * t));
+                            float larg = Mathf.Lerp(0.11f, 0.02f, t) * (sg == 1 ? 0.8f : 1f);
+                            o.Bloco((ant + pt) / 2, (pt - ant) / 2, lado * larg, Vector3.Cross(lado, (pt - ant).normalized) * 0.012f, cor * (1f - 0.06f * sg));
+                            ant = pt;
+                        }
+                    }
                 }
-                o.Bola(p, Vector3.one * 0.09f, Hex(0x7A5A2E), 6);   // cocos/tâmaras
+                for (int c = 0; c < 3; c++) o.Bola(p + new Vector3(R(-0.09f, 0.09f), -0.07f, R(-0.09f, 0.09f)), Vector3.one * 0.045f, Hex(0xB9772E), 6);
             }
             for (int n = 0; n < 220; n++)
             {

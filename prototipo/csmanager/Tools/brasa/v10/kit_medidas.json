@@ -1,0 +1,2941 @@
+{
+"Balcony_Cross_Corner": {
+"min": [
+-1.0,
+-1.0,
+-0.105
+],
+"max": [
+1.104,
+1.104,
+1.125
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 504
+},
+"Balcony_Cross_Straight": {
+"min": [
+-1.0,
+-1.104,
+-0.105
+],
+"max": [
+1.0,
+-0.898,
+1.125
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 252
+},
+"Balcony_Simple_Corner": {
+"min": [
+-1.0,
+-1.0,
+-0.105
+],
+"max": [
+1.104,
+1.104,
+1.125
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 3456
+},
+"Balcony_Simple_Straight": {
+"min": [
+-1.0,
+-1.104,
+-0.105
+],
+"max": [
+1.0,
+-0.898,
+1.125
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 1728
+},
+"Corner_ExteriorWide_Brick": {
+"min": [
+-0.49,
+-0.534,
+-0.019
+],
+"max": [
+0.222,
+0.222,
+3.024
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 2249
+},
+"Corner_ExteriorWide_Wood": {
+"min": [
+-0.145,
+-0.166,
+-0.0
+],
+"max": [
+0.145,
+0.166,
+3.0
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 48
+},
+"Corner_Exterior_Brick": {
+"min": [
+-0.353,
+-0.377,
+-0.007
+],
+"max": [
+0.178,
+0.199,
+3.009
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 2424
+},
+"Corner_Exterior_TopDown": {
+"min": [
+-0.092,
+-0.092,
+0.65
+],
+"max": [
+0.001,
+0.001,
+3.117
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 34
+},
+"Corner_Exterior_TopOnly": {
+"min": [
+-0.092,
+-0.092,
+2.883
+],
+"max": [
+0.001,
+0.001,
+3.117
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 18
+},
+"Corner_Exterior_Wood": {
+"min": [
+-0.105,
+-0.12,
+-0.0
+],
+"max": [
+0.105,
+0.12,
+3.0
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 24
+},
+"Corner_Interior_Big": {
+"min": [
+-0.009,
+-0.044,
+-0.0
+],
+"max": [
+0.324,
+0.324,
+3.0
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 36
+},
+"Corner_Interior_Small": {
+"min": [
+0.195,
+0.18,
+-0.0
+],
+"max": [
+0.405,
+0.42,
+3.0
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 24
+},
+"DoorFrame_Flat_Brick": {
+"min": [
+-0.788,
+-0.199,
+-0.002
+],
+"max": [
+0.786,
+0.295,
+2.374
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 1489
+},
+"DoorFrame_Flat_WoodDark": {
+"min": [
+-0.786,
+-0.145,
+-0.009
+],
+"max": [
+0.788,
+0.243,
+2.304
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 108
+},
+"DoorFrame_Round_Brick": {
+"min": [
+-0.804,
+-0.182,
+-0.002
+],
+"max": [
+0.799,
+0.295,
+2.584
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 1616
+},
+"DoorFrame_Round_WoodDark": {
+"min": [
+-0.703,
+-0.299,
+-0.009
+],
+"max": [
+0.703,
+0.24,
+2.555
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 364
+},
+"Door_1_Flat": {
+"min": [
+-0.046,
+-0.063,
+0.035
+],
+"max": [
+1.072,
+0.058,
+2.135
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim"
+],
+"verts": 576
+},
+"Door_1_Round": {
+"min": [
+-0.046,
+-0.063,
+0.033
+],
+"max": [
+1.074,
+0.058,
+2.351
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim"
+],
+"verts": 772
+},
+"Door_2_Flat": {
+"min": [
+-0.043,
+-0.127,
+0.04
+],
+"max": [
+1.071,
+0.134,
+2.14
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 4004
+},
+"Door_2_Round": {
+"min": [
+-0.043,
+-0.127,
+0.028
+],
+"max": [
+1.073,
+0.134,
+2.356
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 4336
+},
+"Door_4_Flat": {
+"min": [
+-0.046,
+-0.092,
+0.035
+],
+"max": [
+1.072,
+0.118,
+2.127
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 1548
+},
+"Door_4_Round": {
+"min": [
+-0.043,
+-0.092,
+0.033
+],
+"max": [
+1.072,
+0.118,
+2.356
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 1737
+},
+"Door_8_Flat": {
+"min": [
+-0.046,
+-0.092,
+0.035
+],
+"max": [
+1.072,
+0.108,
+2.135
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 1253
+},
+"Door_8_Round": {
+"min": [
+-0.063,
+-0.092,
+0.033
+],
+"max": [
+1.088,
+0.108,
+2.357
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_WoodTrim_Wear"
+],
+"verts": 1551
+},
+"Floor_Brick": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 8
+},
+"Floor_RedBrick": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_RedBrick"
+],
+"verts": 8
+},
+"Floor_UnevenBrick": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_UnevenBrick"
+],
+"verts": 8
+},
+"Floor_WoodDark": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 64
+},
+"Floor_WoodDark_Half1": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+0.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 62
+},
+"Floor_WoodDark_Half2": {
+"min": [
+0.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 62
+},
+"Floor_WoodDark_Half3": {
+"min": [
+-1.0,
+-0.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 32
+},
+"Floor_WoodDark_OverhangCorner": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+-0.0,
+0.756,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 32
+},
+"Floor_WoodDark_OverhangCorner2": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+-0.043,
+0.75,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 54
+},
+"Floor_WoodLight": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+1.0,
+1.0,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 64
+},
+"Floor_WoodLight_OverhangCorner": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+-0.0,
+0.756,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 32
+},
+"Floor_WoodLight_OverhangCorner2": {
+"min": [
+-1.0,
+-1.0,
+-0.01
+],
+"max": [
+-0.043,
+0.75,
+0.01
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 54
+},
+"HoleCover_90Angle": {
+"min": [
+-1.0,
+-1.0,
+-0.105
+],
+"max": [
+1.12,
+1.12,
+0.105
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 40
+},
+"HoleCover_90Half": {
+"min": [
+-0.0,
+-0.0,
+-0.105
+],
+"max": [
+1.12,
+1.12,
+0.105
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 32
+},
+"HoleCover_90Stairs": {
+"min": [
+0.796,
+-1.0,
+-0.105
+],
+"max": [
+1.12,
+1.12,
+0.105
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 36
+},
+"HoleCover_Straight": {
+"min": [
+-1.0,
+0.88,
+-0.105
+],
+"max": [
+1.0,
+1.12,
+0.105
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 24
+},
+"HoleCover_StraightHalf": {
+"min": [
+-0.5,
+0.88,
+-0.105
+],
+"max": [
+0.5,
+1.12,
+0.105
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 20
+},
+"Overhang_Plaster_Corner": {
+"min": [
+-2.0,
+-2.0,
+0.0
+],
+"max": [
+1.101,
+1.101,
+3.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 536
+},
+"Overhang_Plaster_Corner_Front": {
+"min": [
+-2.0,
+-2.0,
+-0.023
+],
+"max": [
+1.118,
+1.118,
+3.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 254
+},
+"Overhang_Plaster_Long": {
+"min": [
+-1.0,
+-2.0,
+0.0
+],
+"max": [
+1.0,
+0.2,
+3.028
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 262
+},
+"Overhang_Plaster_Short": {
+"min": [
+-1.0,
+-1.123,
+0.0
+],
+"max": [
+1.0,
+0.2,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 262
+},
+"Overhang_RoofIncline_Plaster": {
+"min": [
+-1.0,
+-0.408,
+-0.324
+],
+"max": [
+1.0,
+1.022,
+-0.059
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 72
+},
+"Overhang_RoofIncline_UnevenBricks": {
+"min": [
+-1.0,
+-0.408,
+-0.324
+],
+"max": [
+1.0,
+1.022,
+-0.059
+],
+"mats": [
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 72
+},
+"Overhang_Roof_Plaster": {
+"min": [
+-1.0,
+-1.0,
+-0.324
+],
+"max": [
+1.0,
+1.022,
+-0.059
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 76
+},
+"Overhang_Roof_UnevenBricks": {
+"min": [
+-1.0,
+-1.0,
+-0.324
+],
+"max": [
+1.0,
+1.022,
+-0.059
+],
+"mats": [
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 76
+},
+"Overhang_Side_Plaster_Long_L": {
+"min": [
+-1.165,
+-2.0,
+-0.0
+],
+"max": [
+-0.686,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 446
+},
+"Overhang_Side_Plaster_Long_R": {
+"min": [
+0.686,
+-2.0,
+-0.0
+],
+"max": [
+1.165,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 446
+},
+"Overhang_Side_Plaster_Short_L": {
+"min": [
+-1.165,
+-1.123,
+-0.0
+],
+"max": [
+-0.686,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 418
+},
+"Overhang_Side_Plaster_Short_R": {
+"min": [
+0.686,
+-1.123,
+-0.0
+],
+"max": [
+1.165,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 418
+},
+"Overhang_Side_UnevenBrick_Long_L": {
+"min": [
+-1.165,
+-2.0,
+-0.0
+],
+"max": [
+-0.686,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 404
+},
+"Overhang_Side_UnevenBrick_Long_R": {
+"min": [
+0.686,
+-2.0,
+-0.0
+],
+"max": [
+1.165,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 404
+},
+"Overhang_Side_UnevenBrick_Short_L": {
+"min": [
+-1.165,
+-1.123,
+-0.0
+],
+"max": [
+-0.686,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 402
+},
+"Overhang_Side_UnevenBrick_Short_R": {
+"min": [
+0.686,
+-1.123,
+-0.0
+],
+"max": [
+1.165,
+0.314,
+6.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 402
+},
+"Overhang_UnevenBrick_Corner": {
+"min": [
+-2.0,
+-2.0,
+0.0
+],
+"max": [
+1.101,
+1.101,
+3.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 500
+},
+"Overhang_UnevenBrick_Corner_Front": {
+"min": [
+-2.0,
+-2.0,
+0.0
+],
+"max": [
+1.118,
+1.118,
+3.117
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 103
+},
+"Overhang_UnevenBrick_Long": {
+"min": [
+-1.0,
+-2.0,
+0.0
+],
+"max": [
+1.0,
+0.2,
+3.028
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 246
+},
+"Overhang_UnevenBrick_Short": {
+"min": [
+-1.0,
+-1.123,
+0.0
+],
+"max": [
+1.0,
+0.2,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 246
+},
+"Prop_Brick1": {
+"min": [
+-0.168,
+-0.125,
+-0.11
+],
+"max": [
+0.178,
+0.125,
+0.098
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 82
+},
+"Prop_Brick2": {
+"min": [
+-0.19,
+-0.109,
+-0.112
+],
+"max": [
+0.205,
+0.108,
+0.133
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 77
+},
+"Prop_Brick3": {
+"min": [
+-0.183,
+-0.107,
+-0.115
+],
+"max": [
+0.198,
+0.109,
+0.135
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 98
+},
+"Prop_Brick4": {
+"min": [
+-0.128,
+-0.103,
+-0.115
+],
+"max": [
+0.128,
+0.113,
+0.135
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 98
+},
+"Prop_Chimney": {
+"min": [
+-0.5,
+-0.5,
+0.0
+],
+"max": [
+0.446,
+0.5,
+3.178
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 524
+},
+"Prop_Chimney2": {
+"min": [
+-0.5,
+-0.494,
+0.0
+],
+"max": [
+0.446,
+0.494,
+3.0
+],
+"mats": [
+"MI_UnevenBrick"
+],
+"verts": 122
+},
+"Prop_Crate": {
+"min": [
+-0.542,
+-0.542,
+0.003
+],
+"max": [
+0.542,
+0.542,
+1.063
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 460
+},
+"Prop_ExteriorBorder_Corner": {
+"min": [
+-0.7,
+-0.7,
+0.0
+],
+"max": [
+0.0,
+0.0,
+0.134
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 34
+},
+"Prop_ExteriorBorder_Straight1": {
+"min": [
+-1.0,
+-0.7,
+0.0
+],
+"max": [
+1.0,
+0.0,
+0.134
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 28
+},
+"Prop_ExteriorBorder_Straight2": {
+"min": [
+-1.0,
+-0.7,
+0.0
+],
+"max": [
+1.0,
+0.0,
+0.134
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 28
+},
+"Prop_MetalFence_Ornament": {
+"min": [
+-0.973,
+-0.078,
+-0.0
+],
+"max": [
+0.979,
+0.078,
+2.852
+],
+"mats": [
+"MI_MetalOrnaments"
+],
+"verts": 3966
+},
+"Prop_MetalFence_Simple": {
+"min": [
+-0.97,
+-0.078,
+-0.0
+],
+"max": [
+0.979,
+0.078,
+2.868
+],
+"mats": [
+"MI_MetalOrnaments"
+],
+"verts": 2718
+},
+"Prop_Support": {
+"min": [
+-0.099,
+-1.918,
+1.211
+],
+"max": [
+0.099,
+0.118,
+2.92
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 32
+},
+"Prop_Vine1": {
+"min": [
+-0.783,
+-0.174,
+-2.121
+],
+"max": [
+0.753,
+0.045,
+0.482
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 159
+},
+"Prop_Vine2": {
+"min": [
+-0.494,
+-0.169,
+-2.121
+],
+"max": [
+0.892,
+0.045,
+0.482
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 88
+},
+"Prop_Vine4": {
+"min": [
+-0.718,
+-0.123,
+-1.014
+],
+"max": [
+0.298,
+0.027,
+0.574
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 61
+},
+"Prop_Vine5": {
+"min": [
+-1.318,
+-0.102,
+-1.955
+],
+"max": [
+0.983,
+1.024,
+1.031
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 185
+},
+"Prop_Vine6": {
+"min": [
+-2.035,
+-0.102,
+-1.072
+],
+"max": [
+2.102,
+1.369,
+1.396
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 178
+},
+"Prop_Vine9": {
+"min": [
+-2.035,
+-0.718,
+-0.633
+],
+"max": [
+2.102,
+0.752,
+0.834
+],
+"mats": [
+"MI_Vine"
+],
+"verts": 72
+},
+"Prop_Wagon": {
+"min": [
+-0.979,
+-0.874,
+0.003
+],
+"max": [
+0.972,
+3.15,
+1.532
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 2331
+},
+"Prop_WoodenFence_Extension1": {
+"min": [
+-1.012,
+-0.055,
+-0.028
+],
+"max": [
+1.033,
+0.055,
+0.81
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 64
+},
+"Prop_WoodenFence_Extension2": {
+"min": [
+-0.994,
+-0.055,
+-0.028
+],
+"max": [
+1.033,
+0.055,
+0.81
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 56
+},
+"Prop_WoodenFence_Single": {
+"min": [
+-1.031,
+-0.06,
+-0.028
+],
+"max": [
+1.033,
+0.06,
+0.81
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 80
+},
+"Roof_2x4_RoundTile": {
+"min": [
+-1.647,
+-2.108,
+-0.342
+],
+"max": [
+1.647,
+2.125,
+2.324
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 1342
+},
+"Roof_Dormer_RoundTile": {
+"min": [
+-0.066,
+-1.22,
+0.03
+],
+"max": [
+1.9,
+1.22,
+2.703
+],
+"mats": [
+"MI_Plaster",
+"MI_RoundTiles",
+"MI_WindowGlass",
+"MI_WoodTrim"
+],
+"verts": 1392
+},
+"Roof_FrontSupports": {
+"min": [
+-2.743,
+-0.627,
+-0.118
+],
+"max": [
+2.743,
+0.027,
+0.113
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 120
+},
+"Roof_Front_Brick2": {
+"min": [
+-1.332,
+-0.416,
+-0.133
+],
+"max": [
+1.275,
+0.335,
+1.642
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 148
+},
+"Roof_Front_Brick4": {
+"min": [
+-2.184,
+-0.794,
+-0.132
+],
+"max": [
+2.216,
+0.335,
+2.937
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 368
+},
+"Roof_Front_Brick4_Half_L": {
+"min": [
+-2.281,
+-0.155,
+-0.132
+],
+"max": [
+0.129,
+0.335,
+3.065
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 218
+},
+"Roof_Front_Brick4_Half_R": {
+"min": [
+-0.129,
+-0.155,
+-0.132
+],
+"max": [
+2.287,
+0.335,
+3.065
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 230
+},
+"Roof_Front_Brick6": {
+"min": [
+-3.347,
+-0.794,
+-0.132
+],
+"max": [
+3.348,
+0.335,
+4.384
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 524
+},
+"Roof_Front_Brick6_Half_L": {
+"min": [
+-3.364,
+-0.155,
+-0.132
+],
+"max": [
+0.05,
+0.335,
+4.384
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 308
+},
+"Roof_Front_Brick6_Half_R": {
+"min": [
+-0.05,
+-0.155,
+-0.132
+],
+"max": [
+3.35,
+0.335,
+4.384
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 308
+},
+"Roof_Front_Brick8": {
+"min": [
+-4.255,
+-0.794,
+-0.132
+],
+"max": [
+4.256,
+0.335,
+5.314
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 612
+},
+"Roof_Front_Brick8_Half_L": {
+"min": [
+-4.276,
+-0.155,
+-0.132
+],
+"max": [
+0.05,
+0.335,
+5.314
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 352
+},
+"Roof_Front_Brick8_Half_R": {
+"min": [
+-0.05,
+-0.155,
+-0.132
+],
+"max": [
+4.299,
+0.335,
+5.314
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 352
+},
+"Roof_Log": {
+"min": [
+-0.586,
+-5.348,
+3.849
+],
+"max": [
+0.563,
+5.348,
+5.236
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 176
+},
+"Roof_Modular_RoundTiles": {
+"min": [
+-0.332,
+-1.046,
+0.006
+],
+"max": [
+0.331,
+1.206,
+0.512
+],
+"mats": [
+"MI_RoundTiles"
+],
+"verts": 160
+},
+"Roof_RoundTile_2x1": {
+"min": [
+-1.649,
+-1.483,
+-0.342
+],
+"max": [
+1.649,
+0.469,
+2.317
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 870
+},
+"Roof_RoundTile_2x1_Long": {
+"min": [
+-2.174,
+-1.483,
+-1.008
+],
+"max": [
+2.174,
+0.469,
+2.317
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 904
+},
+"Roof_RoundTiles_4x4": {
+"min": [
+-2.757,
+-2.822,
+-0.516
+],
+"max": [
+2.757,
+2.74,
+3.734
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 2380
+},
+"Roof_RoundTiles_4x6": {
+"min": [
+-2.757,
+-3.786,
+-0.516
+],
+"max": [
+2.757,
+3.786,
+3.718
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 2868
+},
+"Roof_RoundTiles_4x8": {
+"min": [
+-2.757,
+-4.854,
+-0.516
+],
+"max": [
+2.757,
+4.829,
+3.713
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 3466
+},
+"Roof_RoundTiles_6x10": {
+"min": [
+-4.125,
+-5.955,
+-0.782
+],
+"max": [
+4.125,
+5.898,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 4608
+},
+"Roof_RoundTiles_6x12": {
+"min": [
+-4.125,
+-6.829,
+-0.782
+],
+"max": [
+4.125,
+6.829,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 5024
+},
+"Roof_RoundTiles_6x14": {
+"min": [
+-4.125,
+-7.829,
+-0.782
+],
+"max": [
+4.125,
+7.877,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 5512
+},
+"Roof_RoundTiles_6x4": {
+"min": [
+-4.125,
+-4.854,
+-0.782
+],
+"max": [
+4.125,
+0.138,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 2530
+},
+"Roof_RoundTiles_6x6": {
+"min": [
+-4.125,
+-4.094,
+-0.782
+],
+"max": [
+4.125,
+3.938,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 3700
+},
+"Roof_RoundTiles_6x8": {
+"min": [
+-4.125,
+-4.854,
+-0.782
+],
+"max": [
+4.125,
+4.829,
+4.89
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 4124
+},
+"Roof_RoundTiles_8x10": {
+"min": [
+-4.976,
+-6.007,
+-0.78
+],
+"max": [
+4.976,
+5.852,
+6.001
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 4972
+},
+"Roof_RoundTiles_8x12": {
+"min": [
+-4.976,
+-7.015,
+-0.78
+],
+"max": [
+4.976,
+7.117,
+6.001
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 7004
+},
+"Roof_RoundTiles_8x14": {
+"min": [
+-4.976,
+-7.829,
+-0.78
+],
+"max": [
+4.976,
+7.877,
+6.001
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 5755
+},
+"Roof_RoundTiles_8x8": {
+"min": [
+-4.976,
+-5.247,
+-0.78
+],
+"max": [
+4.976,
+5.085,
+6.001
+],
+"mats": [
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 4300
+},
+"Roof_Support2": {
+"min": [
+-0.1,
+-0.765,
+-0.677
+],
+"max": [
+0.1,
+0.0,
+0.066
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 124
+},
+"Roof_Tower_RoundTiles": {
+"min": [
+-2.825,
+-2.714,
+-0.572
+],
+"max": [
+2.825,
+2.714,
+6.789
+],
+"mats": [
+"MI_MetalOrnaments",
+"MI_RockTrim",
+"MI_RoundTiles",
+"MI_WoodTrim"
+],
+"verts": 4479
+},
+"Roof_Wooden_2x1": {
+"min": [
+-1.129,
+-1.519,
+-0.161
+],
+"max": [
+1.129,
+0.041,
+1.087
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 444
+},
+"Roof_Wooden_2x1_Center": {
+"min": [
+-1.0,
+-1.499,
+-0.145
+],
+"max": [
+1.0,
+0.0,
+1.062
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 104
+},
+"Roof_Wooden_2x1_Center_Mirror": {
+"min": [
+-1.0,
+-0.0,
+-0.145
+],
+"max": [
+1.0,
+1.499,
+1.062
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 104
+},
+"Roof_Wooden_2x1_Corner": {
+"min": [
+-0.101,
+-0.114,
+-0.169
+],
+"max": [
+1.443,
+1.443,
+1.014
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 160
+},
+"Roof_Wooden_2x1_L": {
+"min": [
+-1.129,
+-1.519,
+-0.161
+],
+"max": [
+1.0,
+0.041,
+1.087
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 312
+},
+"Roof_Wooden_2x1_Middle": {
+"min": [
+-1.0,
+-1.0,
+0.924
+],
+"max": [
+1.0,
+1.0,
+1.062
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 48
+},
+"Roof_Wooden_2x1_R": {
+"min": [
+-1.0,
+-1.519,
+-0.161
+],
+"max": [
+1.129,
+0.041,
+1.087
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 312
+},
+"Stair_Interior_Rails": {
+"min": [
+-0.858,
+-0.244,
+0.023
+],
+"max": [
+0.858,
+4.319,
+3.953
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 3640
+},
+"Stair_Interior_Simple": {
+"min": [
+-0.835,
+-0.035,
+-0.01
+],
+"max": [
+0.841,
+4.585,
+3.025
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 416
+},
+"Stair_Interior_Solid": {
+"min": [
+-0.884,
+-0.358,
+-0.018
+],
+"max": [
+0.884,
+4.352,
+3.028
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 606
+},
+"Stair_Interior_SolidExtended": {
+"min": [
+-0.884,
+-0.358,
+-0.018
+],
+"max": [
+0.884,
+5.8,
+3.028
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 722
+},
+"Stairs_Exterior_NoFirstStep": {
+"min": [
+-1.0,
+-1.0,
+-0.0
+],
+"max": [
+1.0,
+1.077,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 100
+},
+"Stairs_Exterior_Platform": {
+"min": [
+-1.0,
+-1.001,
+-0.0
+],
+"max": [
+1.0,
+1.001,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 63
+},
+"Stairs_Exterior_Platform45": {
+"min": [
+-1.0,
+-1.001,
+-0.0
+],
+"max": [
+1.001,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 87
+},
+"Stairs_Exterior_Platform45Clean": {
+"min": [
+-1.0,
+-1.001,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 67
+},
+"Stairs_Exterior_PlatformU": {
+"min": [
+-1.0,
+-1.001,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 94
+},
+"Stairs_Exterior_SidePlatform": {
+"min": [
+-1.0,
+-1.001,
+-0.0
+],
+"max": [
+1.0,
+1.001,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 55
+},
+"Stairs_Exterior_Sides": {
+"min": [
+-1.0,
+-1.0,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 32
+},
+"Stairs_Exterior_Sides45": {
+"min": [
+-1.0,
+-1.0,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 42
+},
+"Stairs_Exterior_SidesU": {
+"min": [
+-1.0,
+-1.0,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 76
+},
+"Stairs_Exterior_SingleSide": {
+"min": [
+-1.0,
+-1.0,
+0.0
+],
+"max": [
+-0.8,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 24
+},
+"Stairs_Exterior_SingleSideThick": {
+"min": [
+-0.2,
+-1.0,
+0.0
+],
+"max": [
+0.2,
+1.0,
+1.0
+],
+"mats": [
+"MI_Brick"
+],
+"verts": 24
+},
+"Stairs_Exterior_Straight": {
+"min": [
+-1.0,
+-1.001,
+-0.204
+],
+"max": [
+1.0,
+1.077,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 118
+},
+"Stairs_Exterior_Straight_Center": {
+"min": [
+-1.0,
+-1.001,
+-0.204
+],
+"max": [
+1.0,
+1.077,
+0.818
+],
+"mats": [
+"MI_RockTrim"
+],
+"verts": 90
+},
+"Stairs_Exterior_Straight_L": {
+"min": [
+-1.0,
+-1.001,
+-0.204
+],
+"max": [
+1.0,
+1.077,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 104
+},
+"Stairs_Exterior_Straight_R": {
+"min": [
+-1.0,
+-1.001,
+-0.204
+],
+"max": [
+1.0,
+1.077,
+1.0
+],
+"mats": [
+"MI_Brick",
+"MI_RockTrim"
+],
+"verts": 104
+},
+"Wall_Arch": {
+"min": [
+-1.0,
+-0.064,
+-0.0
+],
+"max": [
+1.0,
+0.0,
+3.0
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 260
+},
+"Wall_BottomCover": {
+"min": [
+-1.0,
+-0.118,
+-0.117
+],
+"max": [
+1.0,
+0.314,
+0.121
+],
+"mats": [
+"MI_WoodTrim"
+],
+"verts": 48
+},
+"Wall_Plaster_Door_Flat": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_RockTrim",
+"MI_WoodTrim"
+],
+"verts": 156
+},
+"Wall_Plaster_Door_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_RockTrim",
+"MI_WoodTrim"
+],
+"verts": 201
+},
+"Wall_Plaster_Door_RoundInset": {
+"min": [
+-1.0,
+-0.092,
+-0.0
+],
+"max": [
+1.0,
+1.0,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_RockTrim",
+"MI_WoodTrim"
+],
+"verts": 209
+},
+"Wall_Plaster_Straight": {
+"min": [
+-1.0,
+-0.092,
+-0.002
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 134
+},
+"Wall_Plaster_Straight_Base": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 92
+},
+"Wall_Plaster_Straight_L": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.002,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 108
+},
+"Wall_Plaster_Straight_R": {
+"min": [
+-1.002,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 108
+},
+"Wall_Plaster_Window_Thin_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 214
+},
+"Wall_Plaster_Window_Wide_Flat": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 120
+},
+"Wall_Plaster_Window_Wide_Flat2": {
+"min": [
+-1.0,
+-0.092,
+-0.023
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 170
+},
+"Wall_Plaster_Window_Wide_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Brick",
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 148
+},
+"Wall_Plaster_WoodGrid": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_WoodTrim"
+],
+"verts": 394
+},
+"Wall_UnevenBrick_Door_Flat": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 96
+},
+"Wall_UnevenBrick_Door_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 142
+},
+"Wall_UnevenBrick_Straight": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 76
+},
+"Wall_UnevenBrick_Window_Thin_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 165
+},
+"Wall_UnevenBrick_Window_Wide_Flat": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 102
+},
+"Wall_UnevenBrick_Window_Wide_Round": {
+"min": [
+-1.0,
+-0.092,
+0.0
+],
+"max": [
+1.0,
+0.314,
+3.123
+],
+"mats": [
+"MI_Plaster",
+"MI_UnevenBrick",
+"MI_WoodTrim"
+],
+"verts": 130
+},
+"WindowShutters_Thin_Flat_Closed": {
+"min": [
+-0.419,
+-0.307,
+1.093
+],
+"max": [
+0.433,
+-0.171,
+2.517
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 192
+},
+"WindowShutters_Thin_Flat_Open": {
+"min": [
+-0.693,
+-0.514,
+1.093
+],
+"max": [
+0.661,
+-0.137,
+2.517
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 192
+},
+"WindowShutters_Thin_Round_Closed": {
+"min": [
+-0.429,
+-0.288,
+1.093
+],
+"max": [
+0.439,
+-0.152,
+2.612
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 220
+},
+"WindowShutters_Thin_Round_Open": {
+"min": [
+-0.82,
+-0.436,
+1.093
+],
+"max": [
+0.787,
+-0.059,
+2.612
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 220
+},
+"WindowShutters_Wide_Flat_Closed": {
+"min": [
+-0.673,
+-0.288,
+1.093
+],
+"max": [
+0.673,
+-0.152,
+2.517
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 240
+},
+"WindowShutters_Wide_Flat_Open": {
+"min": [
+-1.239,
+-0.593,
+1.093
+],
+"max": [
+1.242,
+-0.137,
+2.517
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 240
+},
+"WindowShutters_Wide_Round_Closed": {
+"min": [
+-0.673,
+-0.288,
+1.093
+],
+"max": [
+0.673,
+-0.152,
+2.74
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 268
+},
+"WindowShutters_Wide_Round_Open": {
+"min": [
+-1.2,
+-0.563,
+1.093
+],
+"max": [
+1.104,
+-0.091,
+2.74
+],
+"mats": [
+"MI_WoodTrim_Wear"
+],
+"verts": 268
+},
+"Window_Roof_Thin": {
+"min": [
+-0.39,
+-1.101,
+1.338
+],
+"max": [
+0.462,
+0.078,
+2.516
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 92
+},
+"Window_Roof_Wide": {
+"min": [
+-0.661,
+-1.101,
+1.338
+],
+"max": [
+0.756,
+0.078,
+2.519
+],
+"mats": [
+"MI_WoodTrim",
+"MI_WoodTrim_Wear"
+],
+"verts": 132
+},
+"Window_Thin_Flat1": {
+"min": [
+-0.405,
+-0.169,
+0.975
+],
+"max": [
+0.383,
+0.267,
+2.533
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim"
+],
+"verts": 218
+},
+"Window_Thin_Round1": {
+"min": [
+-0.444,
+-0.092,
+1.016
+],
+"max": [
+0.444,
+0.252,
+2.621
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim_Wear"
+],
+"verts": 583
+},
+"Window_Wide_Flat1": {
+"min": [
+-0.804,
+-0.417,
+0.944
+],
+"max": [
+0.804,
+0.267,
+2.524
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim"
+],
+"verts": 317
+},
+"Window_Wide_Round1": {
+"min": [
+-0.682,
+-0.277,
+1.016
+],
+"max": [
+0.682,
+0.252,
+2.742
+],
+"mats": [
+"MI_WindowGlass",
+"MI_WoodTrim_Wear"
+],
+"verts": 492
+}
+}

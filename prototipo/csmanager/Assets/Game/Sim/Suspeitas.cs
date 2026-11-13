@@ -49,6 +49,7 @@ namespace CSM.Sim
             for (int i = 0; i < N; i++) { ordens[i] = new List<float>(); apanhou[i] = -99; }
         }
 
+        readonly HashSet<int> audPlant = new HashSet<int>();
         void Marca(Agent a, string tipo, string grau, string texto)
         {
             if (!uma.Add(tipo + a.id)) return;
@@ -94,7 +95,7 @@ namespace CSM.Sim
                 // "abrir o bomb" é na entrada: o time já executando, ou o portador na zona do bomb. Antes disso é disputa de
                 // mapa — o portador morrer no meio aos 15 s acontece no pro também (vai pra nota de atenção)
                 var ig = m.igl[(int)Team.T];
-                bool entrando = ig.Executou || Places.Zona(v.pos) == m.planSite.ToString() || ig.EntraEm > 0 && m.t > ig.EntraEm - 5 || TeamBrain.EXP.Contains("c4AbriuVelho");
+                bool entrando = ig.Executou || Places.Zona(v.pos) == m.planSite.ToString() || ig.EntraEm > 0 && m.t > ig.EntraEm - 5 || TeamBrain.EXPF.Contains("c4AbriuVelho");
                 if (entrando) Marca(v, "C4 abriu o bomb", jaTeveContato ? ATENCAO : GRAVE, $"{v.name} morreu com o C4 na frente de {colegas} colegas em {Places.Region(v.pos)}: o C4 entra atrás de quem abre");
                 else Marca(v, "C4 morreu no controle de mapa", ATENCAO, $"{v.name} morreu com o C4 em {Places.Region(v.pos)} aos {m.t:0} s, antes da entrada, sem ninguém mais perto do bomb");
             }
@@ -110,6 +111,7 @@ namespace CSM.Sim
         public void Morte(Agent v, Agent por)
         {
             ultimoTiro = m.t; caidos.Add((m.t, v.team));
+            if (Match.Auditar) m.mede?.Morte(v, por);   /* bx: pós-plant (só mede) */
             if (caidos.Count == 1 && Match.Auditar)
             {
                 string on = v.brain.order.name; int sp = on.IndexOf(':'); if (sp > 0) on = on.Substring(0, sp);
@@ -203,7 +205,7 @@ namespace CSM.Sim
                 // segurando ângulo (as micro-ações do segurar: quieto, pausa, jiggle...), esperando a vez/o colega/a smoke ou o
                 // C4 esperando quem abre não é "sem posição" — ele está jogando; o defeito é parado sem fazer nenhuma dessas
                 string f = b.fase ?? "";
-                bool jogando = !TeamBrain.EXP.Contains("semPosicaoVelho") && (f.StartsWith("quieto") || f.StartsWith("pausa") || f.StartsWith("esperando") || f.StartsWith("segurando")
+                bool jogando = !TeamBrain.EXPF.Contains("semPosicaoVelho") && (f.StartsWith("quieto") || f.StartsWith("pausa") || f.StartsWith("esperando") || f.StartsWith("segurando")
                     || f == "jiggle" || f == "wide" || f == "ajeitar" || f == "trocar de ângulo" || f == "bang e peek" || f.StartsWith("C4 atrás")
                     || f == "dando pezinho" || f == "indo pro pezinho" || f == "subindo no pezinho");   /* boost montando: é jogada */
                 if (a.paradoHa > 10 && !jogando && b.order.hold == null && !b.order.malote && t >= b.order.notBefore && !a.guardando && !b.order.name.StartsWith("girando") && !b.order.name.StartsWith("juntar") && !b.order.name.StartsWith("levando"))
@@ -217,7 +219,7 @@ namespace CSM.Sim
                     int perto = 0; foreach (var x in m.agents) if (x.alive && x.team == a.team && (x.pos - a.pos).Len < 70) perto++;
                     // junto esperando a entrada (a vez, a smoke, a hora do plano, o execute) é stack de pro, não amontoado
                     var ig = m.igl[(int)Team.T];
-                    bool esperandoEntrada = !TeamBrain.EXP.Contains("amontoadoVelho") && (b.fase.StartsWith("esperando") || b.order.waitSmoke || t < b.order.notBefore
+                    bool esperandoEntrada = !TeamBrain.EXPF.Contains("amontoadoVelho") && (b.fase.StartsWith("esperando") || b.order.waitSmoke || t < b.order.notBefore
                         || ig.Executou || ig.EntraEm > 0 && ig.EntraEm - t < 15 || b.order.name.StartsWith("juntando") || b.order.name.StartsWith("juntar"));
                     amontoado[a.id] = perto >= 3 && a.Speed < 30 && !esperandoEntrada ? amontoado[a.id] + 1 : 0;
                     if (amontoado[a.id] >= 5) MarcaTime(Team.T, "time amontoado", ATENCAO, $"{perto} TR colados há 5 s em {Places.Region(a.pos)}, sem ninguém pegando espaço");
@@ -272,7 +274,7 @@ namespace CSM.Sim
                 // erro é o C4 parado lá, ou ainda lá depois dos 45 s
                 bool naBaseC4 = Places.Region(a.pos) == "base TR";
                 c4ParadoBase = naBaseC4 && a.Speed < 15 ? c4ParadoBase + 1 : 0;
-                if (t > 35 && vivos >= 2 && !b.order.plant && naBaseC4 && (c4ParadoBase >= 3 || t > 45 || TeamBrain.EXP.Contains("c4BaseDetVelho"))) Marca(a, "C4 na base", GRAVE, $"C4 ainda na base TR aos {t:0} s com {a.name} ({b.order.name}, {b.fase})");
+                if (t > 35 && vivos >= 2 && !b.order.plant && naBaseC4 && (c4ParadoBase >= 3 || t > 45 || TeamBrain.EXPF.Contains("c4BaseDetVelho"))) Marca(a, "C4 na base", GRAVE, $"C4 ainda na base TR aos {t:0} s com {a.name} ({b.order.name}, {b.fase})");
             }
             if (m.bombDropped)
             {
@@ -286,7 +288,7 @@ namespace CSM.Sim
                 // esperando CT segurando ele (no pro o C4 na mira do CT também fica no chão) não é esquecer
                 foreach (var a in m.agents) if (a.alive && a.IsT && a.brain.order.name.StartsWith("pegar o bomb")) c4Indo = t;
                 foreach (var a in m.agents) if (!a.alive && a.IsT && t - a.diedAt < 1.1f && (a.pos - m.droppedBomb).Len < 300) c4Indo = t;
-                bool disputado = !TeamBrain.EXP.Contains("c4EsquecidoVelho") && (t - c4Indo < 15 || m.intel[(int)Team.T].Esperados(m.droppedBomb, 400) > 0.6f);
+                bool disputado = !TeamBrain.EXPF.Contains("c4EsquecidoVelho") && (t - c4Indo < 15 || m.intel[(int)Team.T].Esperados(m.droppedBomb, 400) > 0.6f);
                 if (t - c4CaiuEm > prazo && vivos >= 2 && m.RoundLeft > 10 && !vigiado && !disputado && !(m.bombGuardado && t < 50)) MarcaTime(Team.T, "C4 esquecido no chão", GRAVE, $"C4 há {t - c4CaiuEm:0} s no chão em {Places.Region(m.droppedBomb)} com {vivos} TR vivos e ninguém indo buscar");
                 if (t > 35 && base_ && vivos >= 2) MarcaTime(Team.T, "C4 na base", GRAVE, $"C4 no chão da base TR aos {t:0} s");
                 if (vivos == 1 && m.RoundLeft < 20)
@@ -300,7 +302,7 @@ namespace CSM.Sim
         void Parado(float t)
         {
             if (t < 50 || m.bombPlanted || m.Alive(Team.T) < 3 || m.RoundLeft < 8) return;
-            if (!TeamBrain.EXP.Contains("paradoVelho"))
+            if (!TeamBrain.EXPF.Contains("paradoVelho"))
             {   // régua pro: sem ninguém morrer por mais tempo que em 90% dos rounds pro (contando da última morte)
                 float ultMorte = caidos.Count > 0 ? caidos[caidos.Count - 1].t : 0;
                 if (t - ultMorte >= PARADO_PRO) MarcaTime(Team.T, "round parado", ATENCAO, $"{t - ultMorte:0} s sem ninguém morrer com {m.Alive(Team.T)} TR vivos (90% dos rounds pro têm menos que {PARADO_PRO:0} s)");
@@ -320,7 +322,16 @@ namespace CSM.Sim
             {
                 if (!a.alive || a.IsT || a.guardando || a.brain.target != null) continue;
                 float chega = NavGrid.PathLen(a.pos, plantador.pos) / MathF.Max(a.MaxSpeed, 1);
-                if (chega < resta + 0.6f && a.Speed < 30) Marca(a, "viu o plant passar", GRAVE, $"{a.name} a {chega:0.0} s do {plantador.name} plantando ({resta:0.0} s de plant) e ficou parado");
+                if (chega < resta + 0.6f && a.Speed < 30)
+                {
+                    if (Match.Auditar && audPlant.Add(a.id))
+                    {   /* bx: por quê ficou parado (só lê) */
+                        bool sm = m.SmokeBlocks(a.pos, a.z + a.Eye, plantador.pos, plantador.z + plantador.Eye);
+                        string ord = a.brain.order?.name == "cortar o plant" ? "ordem: cortar" : "outra ordem";
+                        m.Aud("viu o plant passar: fase · smoke na frente · ordem", (a.brain.fase ?? "?") + " · " + (sm ? "smoke na frente" : "sem smoke") + " · " + ord);
+                    }
+                    Marca(a, "viu o plant passar", GRAVE, $"{a.name} a {chega:0.0} s do {plantador.name} plantando ({resta:0.0} s de plant) e ficou parado");
+                }
             }
         }
 
@@ -380,7 +391,7 @@ namespace CSM.Sim
             var b = a.brain;
             if (b.target != null || b.action != null || a.Speed > 30 || a.Blind(t)) return;
             var por = quemAtirou[a.id];   // já mirando pra quem atirou é reação, mesmo sem ele à vista
-            if (por == null || por.team == a.team && !TeamBrain.EXP.Contains("tiroAmigoConta")) return;   // bala de colega (fogo amigo): não tem pra onde reagir
+            if (por == null || por.team == a.team && !TeamBrain.EXPF.Contains("tiroAmigoConta")) return;   // bala de colega (fogo amigo): não tem pra onde reagir
             if (MathF.Abs(MathX.AngDiff((por.pos - a.pos).Atan2, a.aim)) < 0.8f) return;
             if (!uma.Contains("levou tiro e não reagiu" + a.id)) m.Aud("levou tiro e não reagiu: fase · ainda reagindo · viu o atirador há", $"{b.fase} · {(b.Reagindo ? "sim" : "não")} · {(t - b.ViuEm(por) < 3 ? "<3 s" : "não viu")}");
             if (a.guardando) Marca(a, "guardando sob fogo", GRAVE, $"{a.name} levou tiro guardando a arma e ficou parado em {Places.Region(a.pos)}");

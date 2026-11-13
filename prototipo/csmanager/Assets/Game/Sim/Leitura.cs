@@ -28,6 +28,8 @@ namespace CSM.Sim
         public string modo = "";   // "" adapta; "semAdaptar" e "previsivel" são adversários de teste (Headless -partidas)
         public bool Adapta => modo == "";
         public readonly Intencao intencao = new Intencao();
+        /// <summary>Táticas criadas pelo clube que passaram no treino (Taticas.cs); null = time só com o banco.</summary>
+        public Repertorio repertorio;
 
         // o adversário jogando de TR (deduzido)
         public int trRounds, trA, trB, trFake, trRush, trLento;
@@ -178,6 +180,9 @@ namespace CSM.Sim
 
         /// <summary>Planos do banco que a gente já usou nesta partida (não repetir a mesma jogada; o adversário anota).</summary>
         public readonly List<int> bancoUsados = new List<int>();
+        public readonly List<string> aberturasTR = new List<string>();
+        public readonly List<string> callsTR = new List<string>();
+        public readonly List<string> estilosTR = new List<string>();   /* bx: estilo do round (agressivo/equilibrado/defensivo) */   /* bx: tipo da call TR de cada round (rush/fake/execução/explorar) */   /* bx: assinatura da abertura (A/M/B aos 10-20 s) dos planos TR usados */
 
         /// <summary>Quanto o plano vem dando certo pra nós (0..1, começa em 0,5).</summary>
         public float Sucesso(string plano) { meus.TryGetValue(plano, out var x); return Taxa(x.w, x.n); }

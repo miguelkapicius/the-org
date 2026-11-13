@@ -1,0 +1,54 @@
+{
+ "arma/cai_fuzil": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "arma/cai_pistola": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "bala/passando": {
+  "opcoes": 5,
+  "laser_descartados": 3
+ },
+ "bala/passando_sub": {
+  "opcoes": 2,
+  "laser_descartados": 6
+ },
+ "bala/ricochete": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "c4/largar": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "c4/sacar": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "faca/sacar": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "granada/molotov_ar": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "granada/queimando": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "granada/sacar": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "hud/compra": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ },
+ "hud/inicio_round": {
+  "opcoes": 8,
+  "laser_descartados": 0
+ }
+}

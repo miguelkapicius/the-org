@@ -76,6 +76,25 @@ def info_mat(m):
         c = tuple(pint.inputs[1].default_value[:3]); im = ("pint", im, reg)
     return c, im, brilha
 
+def desenho(o, c):
+    """desenho na cor da peça (o export só leva cor): tricô em carreiras (trama) ou em gomos (tramaV), xadrez da camisa."""
+    f = 1.0; t = int(o.get("trama", 0)); tv = int(o.get("tramaV", 0)); xa = int(o.get("xadrez", 0))
+    m = float(o.get("mancha", 0)); cm = int(o.get("camu", 0))
+    def h_(a, b, c_): return (math.sin(a * 127.1 + b * 311.7 + c_ * 74.7) * 43758.5453) % 1.0
+    if m: f *= 1 + m * (h_(round(c[0] * 9), round(c[1] * 9), round(c[2] * 9)) * 2 - 1)
+    if cm:
+        v = h_(round(c[0] * 2.2 + 0.3), round(c[1] * 2.2), round(c[2] * 2.6))
+        f *= 0.82 if v < 0.3 else 1.12 if v > 0.72 else 1.0
+    if not (t or tv or xa): return f
+    r = math.sqrt(sum(v * v for v in c)) or 1.0
+    lat = math.acos(max(-1.0, min(1.0, c[2] / r))) / math.pi; lon = (math.atan2(c[1], c[0]) + math.pi) / (2 * math.pi)
+    if t: f *= 1.09 if int(lat * t) % 2 else 0.92
+    if tv: f *= 1.055 if int(lon * tv) % 2 else 0.945
+    if xa:
+        a = int(lat * xa) % 2; b = int(lon * xa * 2) % 2
+        f *= 0.72 if (a and b) else 0.88 if (a or b) else 1.07
+    return f
+
 def malha(o):
     """Malha avaliada (com bevel, sem o contorno) em coordenadas locais da peça, cor por canto de face."""
     mods = [md for md in o.modifiers if md.type == "SOLIDIFY"]
@@ -90,6 +109,8 @@ def malha(o):
         me.calc_normals_split(); ln = [l.normal.copy() for l in me.loops]
     V, N, C, T = [], [], [], []
     brilho = False
+    zs_ = [v.co.z for v in me.vertices]; zmin_, zalt_ = min(zs_), max(max(zs_) - min(zs_), 1e-6)
+    trama = int(o.get("trama", 0))
     for tri in me.loop_triangles:
         mi = min(tri.material_index, len(mats) - 1)
         c0, im, br = mats[mi]
@@ -111,6 +132,10 @@ def malha(o):
                     xm, zm, zn = im[2]
                     c = tuple(ci * k for ci in c0) if (co.x < xm and zn < co.z < zm) else tuple(float(x) for x in s)
                 else: c = tuple(float(x) for x in s)
+            elif not br:
+                f = 0.92 + 0.08 * (co.z - zmin_) / zalt_                      # sombreado leve: mais escuro embaixo da peça
+                f *= desenho(o, [sum(me.vertices[me.loops[l2].vertex_index].co[i_] for l2 in tri.loops) / 3.0 for i_ in range(3)])
+                c = tuple(ci * f for ci in c0)
             T.append(len(V)); V.append(tuple(co)); N.append(tuple(ln[li])); C.append(tuple(c))
     ev.to_mesh_clear()
     for md in mods: md.show_viewport = True

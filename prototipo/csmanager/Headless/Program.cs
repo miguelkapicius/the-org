@@ -83,8 +83,10 @@ namespace CSM.Headless
             {
                 var evs = new System.Collections.Generic.Dictionary<string, int>();
                 var calls = new System.Collections.Generic.List<(char site, string tipo, int idx, int ctA, int ctB, int ctIdx, char foi)>();
-                var p = new Partida(seed0 + i); p.Jogar(m => { { var et = m.igl[0].Estr; var ec = m.igl[1].Estr; int nA = 0, nB = 0; if (ec != null) for (int k = 0; k < 5; k++) { var z = ec.ZonaEntre(k, 15, 25); if (z == "A") nA++; else if (z == "B") nB++; } calls.Add((et?.site ?? '?', et?.Tipo ?? m.igl[0].plan, et?.idx ?? -1, nA, nB, ec?.idx ?? -1, m.bombPlanted ? m.planSite : '-')); } foreach (var k in m.ev) if (k.Key.Contains("lembrado") || k.Key.Contains("queimado") || k.Key.StartsWith("FIM") || k.Key.StartsWith("PLANT") || k.Key.Contains("guardou")) { evs.TryGetValue(k.Key, out int v); evs[k.Key] = v + k.Value; }
+                var rotasP = new System.Collections.Generic.List<(string rotaTR, string entradasTR, int idx, char site, char plant, string retake, int nRetake, int dif)>();
+                var p = new Partida(seed0 + i); p.Jogar(m => { if (Match.Rotas) rotasP.Add(RotaDoRound(m)); { var et = m.igl[0].Estr; var ec = m.igl[1].Estr; int nA = 0, nB = 0; if (ec != null) for (int k = 0; k < 5; k++) { var z = ec.ZonaEntre(k, 15, 25); if (z == "A") nA++; else if (z == "B") nB++; } calls.Add((et?.site ?? '?', et?.Tipo ?? m.igl[0].plan, et?.idx ?? -1, nA, nB, ec?.idx ?? -1, m.bombPlanted ? m.planSite : '-')); } foreach (var k in m.ev) if (k.Key.Contains("lembrado") || k.Key.Contains("queimado") || k.Key.StartsWith("FIM") || k.Key.StartsWith("PLANT") || k.Key.Contains("guardou")) { evs.TryGetValue(k.Key, out int v); evs[k.Key] = v + k.Value; }
                     void Soma(string c, int x) { evs.TryGetValue(c, out int v); evs[c] = v + x; }   // sinais do visual: compras no freeze e clique seco
+                    if (Match.Auditar) foreach (var k in m.ev) if (k.Key.StartsWith("AUD leitura") || k.Key.StartsWith("AUD pós-plant") || k.Key.StartsWith("AUD abertura") || k.Key.StartsWith("AUD info TR") || k.Key.StartsWith("AUD roda") || k.Key.StartsWith("AUD call") || k.Key.StartsWith("AUD estilo") || k.Key.StartsWith("AUD rota TR") || k.Key.StartsWith("AUD TR morto") || k.Key.StartsWith("AUD C4:") || k.Key.StartsWith("AUD arma do chão") || k.Key.StartsWith("arma do chão")) Soma(k.Key, k.Value);   /* bx: MedeLeitura nas partidas (economia real) */   /* arma do chão: eco só existe em partida inteira */
                     Soma("SINAL rounds", 1); foreach (var dr in m.drops) if (dr.para != null && dr.de != null && dr.de.team == dr.para.team && dr.t < 15) Soma("ECO drop da compra que ninguém pegou", 1); foreach (var dr in m.drops) if (dr.t < 20 && !WeaponStats.Pistola(dr.gun) && ((dr.pos - CSM.Map.MapData.SPAWN_T[2]).Len < 320 || (dr.pos - CSM.Map.MapData.SPAWN_CT[2]).Len < 320)) Soma("ECO arma primária esquecida na base (" + (dr.para != null ? "drop pra alguém" : dr.de != null ? "largada por " + dr.de.brain.order.name.Split(':')[0] : "sem dono") + ")", 1); Soma("SINAL compras", m.compras.Count); foreach (var cp in m.compras) if (cp.item == "galil" || cp.item == "famas") Soma("COMPRA galil/famas", 1); else if (cp.item == "ak" || cp.item == "m4" || cp.item == "m4s") Soma("COMPRA ak/m4", 1); else if (cp.item == "mp9" || cp.item == "mac10") Soma("COMPRA smg", 1); foreach (var cp in m.compras) { bool tr = cp.quem.IsT; string it = cp.item; if (tr ? it == "famas" || it == "m4" || it == "m4s" || it == "mp9" || it == "fiveseven" : it == "galil" || it == "ak" || it == "mac10" || it == "tec9") Soma("COMPRA DO OUTRO LADO: " + (tr ? "TR " : "CT ") + it, 1); } Soma("SINAL cliques secos", m.cliques.Count);
                     foreach (var g in System.Linq.Enumerable.GroupBy(m.compras, c => c.quem)) { var ts = System.Linq.Enumerable.ToList(System.Linq.Enumerable.Select(g, c => c.t)); for (int q = 1; q < ts.Count; q++) if (ts[q] - ts[q - 1] < 0.25f) Soma("SINAL compra colada (<0,25 s)", 1); if (ts.Count > 0 && (ts[0] < -Match.FREEZE || ts[^1] > 0)) Soma("SINAL compra fora do freeze", 1); }
                 });
@@ -112,10 +114,12 @@ namespace CSM.Headless
                     }
                     for (int k = 0; k < 4; k++) for (int c = 0; c < 2; c++) rep[k, c] += p.A.leitura.repete[k, c] + p.B.leitura.repete[k, c];
                     IglVariedade(p, calls);
+                    if (Match.Rotas) RotasVariedade(p, rotasP);
                 }
             });
             var sb = new StringBuilder();
             sb.Append(IglTexto());
+            if (Match.Rotas) sb.Append(RotasTexto());
             sb.AppendLine($"{n} partidas, {rs} rounds, {sw.Elapsed.TotalMinutes:0.0} min. A [{modoA}] x B [{modoB}]");
             sb.AppendLine($"A ganhou {100f * vA / n:0.0}% das partidas; TR ganhou {100f * winsT / roundsT:0.0}% dos rounds");
             for (int t = 0; t < 2; t++) { var D = Partida.Diag; float r = Math.Max(1, D[t, 0]); sb.AppendLine($"  compra cheia {(t == 0 ? "TR" : "CT")}: {D[t, 0]} rounds, AWP com o AWPer {100 * D[t, 1] / r:0}%, primária {D[t, 2] / r:0.0}/5, capacete {D[t, 3] / r:0.0}/5, granadas {D[t, 4] / r:0.0}, kits {D[t, 5] / r:0.0}"); }
@@ -174,6 +178,107 @@ namespace CSM.Headless
                 IV("metade · CT repetiu o setup seguido %", ctPar > 0 ? 100.0 * ctRep / ctPar : 0);
             }
         }
+        /* bx: TÁTICA MEDIDA — a rota do TR por zona de função (Places.Zona: Mid/A/B), por onde entrou no bomb, e o retake do CT */
+        static (string, string, int, char, char, string, int, int) RotaDoRound(Match m)
+        {
+            var et = m.igl[0].Estr; float tp = m.PlantadoEm;
+            var caminhos = new System.Collections.Generic.List<string>(); var entradas = new System.Collections.Generic.SortedSet<string>();
+            var retake = new System.Collections.Generic.SortedSet<string>();
+            foreach (var a in m.agents)
+            {
+                var l = a.id < m.rotaDe.Length ? m.rotaDe[a.id] : null; if (l == null) continue;
+                bool site(string ar) => ar == "A" || ar == "B";
+                if (a.IsT)
+                {   /* zonas por onde passou (sem o spawn), até entrar no bomb ou o plant */
+                    var z = new System.Collections.Generic.List<string>(); string ant = null;
+                    foreach (var (ar, t) in l)
+                    {
+                        if (tp > 0 && t > tp) break;
+                        if (site(ar)) { if (ant != null) entradas.Add(ar + "<" + ant); z.Add(ar + "!"); break; }
+                        var zz = Places.ZonaDaArea(ar);
+                        if (zz != "Spawn" && (z.Count == 0 || z[^1] != zz)) z.Add(zz);
+                        ant = ar;
+                    }
+                    if (z.Count > 0) caminhos.Add(string.Join(">", z));
+                }
+                else if (tp > 0)
+                {   /* retake: por onde o CT entrou no bomb plantado depois do plant */
+                    string ant = null;
+                    foreach (var (ar, t) in l) { if (t < tp) { ant = ar; continue; } if (ar == m.planSite.ToString() && ant != null && ant != ar) { retake.Add(ant); break; } ant = ar; }
+                }
+            }
+            caminhos.Sort(string.CompareOrdinal);
+            var cont = new System.Collections.Generic.SortedDictionary<string, int>(); foreach (var c in caminhos) { cont.TryGetValue(c, out int v); cont[c] = v + 1; }
+            var sbr = new StringBuilder(); foreach (var kv in cont) sbr.Append((sbr.Length > 0 ? " + " : "") + kv.Value + "×" + kv.Key);
+            return (sbr.ToString(), string.Join(",", entradas), et?.idx ?? -1, et?.site ?? '?', m.bombPlanted ? m.planSite : '-', string.Join(",", retake), retake.Count, m.ctNoPlant > 0 ? m.ctNoPlant - m.trNoPlant : -9);
+        }
+        static readonly System.Collections.Generic.SortedDictionary<string, double> rotV = new System.Collections.Generic.SortedDictionary<string, double>();
+        static void RV(string k, double x) { rotV.TryGetValue(k, out double v); rotV[k] = v + x; }
+        static double RG(string k) => rotV.TryGetValue(k, out double v) ? v : 0;
+        static void RotasVariedade(Partida p, System.Collections.Generic.List<(string rotaTR, string entradasTR, int idx, char site, char plant, string retake, int nRetake, int dif)> rs)
+        {
+            int n = Math.Min(rs.Count, p.historico.Count);
+            for (int lado = 0; lado < 2; lado++)
+            {
+                var seq = new System.Collections.Generic.List<int>();
+                for (int r = 0; r < n; r++) if ((p.historico[r].ladoA == "TR") == (lado == 0)) seq.Add(r);
+                for (int j = 0; j < seq.Count; j++)
+                {
+                    var c = rs[seq[j]]; var h = p.historico[seq[j]]; bool tG = (h.ladoA == "TR") == h.timeAvenceu;
+                    /* a rota "principal": a zona-caminho do maior grupo */
+                    string princ = Principal(c.rotaTR);
+                    RV("TR rota principal · " + princ, 1); RV("TR rota principal · " + princ + " · venceu", tG ? 1 : 0); RV("TR rounds", 1);
+                    foreach (var e in c.entradasTR.Split(',')) if (e != "") RV("TR entrou no bomb por · " + e, 1);
+                    RV("TR plano do banco · rounds", 1); if (c.idx >= 0) RV("TR plano do banco idx · " + c.idx, 1);
+                    if (c.plant != '-' && c.dif > -9)
+                    {   /* régua dos pros: por vantagem no plant, quantos entram no bomb e por quantas portas */
+                        string dk = c.dif >= 1 ? "a +1 ou mais" : c.dif == 0 ? "b igual" : c.dif == -1 ? "c -1" : "d -2 ou pior";
+                        RV("retake por vantagem · " + dk + " · n", 1); if (c.nRetake > 0) RV("retake por vantagem · " + dk + " · entrou", 1); if (c.nRetake >= 2) RV("retake por vantagem · " + dk + " · 2+", 1);
+                    }
+                    if (c.plant != '-')
+                    {
+                        RV("retake · rounds com plant", 1); RV("retake · entradas distintas = " + c.nRetake, 1);
+                        foreach (var e in c.retake.Split(',')) if (e != "") RV("retake · CT entrou no bomb " + c.plant + " por · " + e, 1);
+                    }
+                    if (j == 0) continue;
+                    var a = rs[seq[j - 1]];
+                    bool mesma = Principal(a.rotaTR) == princ;
+                    RV("TR pares", 1); if (mesma) RV("TR repetiu a rota principal seguida", 1);
+                    if (c.idx >= 0 && c.idx == a.idx) RV("TR repetiu o plano do banco seguido", 1);
+                    RV("TR " + (mesma ? "repetindo a rota" : "rota diferente") + " · rounds", 1); if (tG) RV("TR " + (mesma ? "repetindo a rota" : "rota diferente") + " · venceu", 1);
+                    /* repetiu 3+ seguidas (a 3ª é a que o CT já devia ler) */
+                    if (j >= 2 && mesma && Principal(rs[seq[j - 2]].rotaTR) == princ) { RV("TR 3ª seguida na mesma rota · rounds", 1); if (tG) RV("TR 3ª seguida na mesma rota · venceu", 1); }
+                }
+            }
+        }
+        static string Principal(string rota)
+        {
+            if (string.IsNullOrEmpty(rota)) return "-";
+            string best = "-"; int bn = 0;
+            foreach (var part in rota.Split(" + ")) { int x = part.IndexOf('×'); if (x < 0) continue; int k = int.Parse(part.Substring(0, x)); if (k > bn) { bn = k; best = part.Substring(x + 1); } }
+            return best;
+        }
+        static string RotasTexto()
+        {
+            var sb = new StringBuilder("TÁTICA MEDIDA (rota do TR por zona; retake do CT)" + Environment.NewLine);
+            double tr = Math.Max(1, RG("TR rounds")), pr = Math.Max(1, RG("TR pares")), rp = Math.Max(1, RG("retake · rounds com plant"));
+            sb.AppendLine($"  TR repetiu a rota principal seguida: {100 * RG("TR repetiu a rota principal seguida") / pr:0.0}%  ·  repetiu o plano do banco seguido: {100 * RG("TR repetiu o plano do banco seguido") / pr:0.0}%");
+            foreach (var k in new[] { "repetindo a rota", "rota diferente", "3ª seguida na mesma rota" }) { double r = RG($"TR {k} · rounds"); if (r > 0) sb.AppendLine($"  TR {k}: venceu {100 * RG($"TR {k} · venceu") / r:0.0}% de {r:0}"); }
+            var rotas = new System.Collections.Generic.List<(string k, double v)>(); foreach (var kv in rotV) if (kv.Key.StartsWith("TR rota principal · ") && !kv.Key.EndsWith(" · venceu")) rotas.Add((kv.Key, kv.Value));
+            rotas.Sort((x, y) => y.v.CompareTo(x.v));
+            foreach (var (k, v) in rotas) if (v >= 3) sb.AppendLine($"  {k,-48} {100 * v / tr:0.0}%  venceu {100 * RG(k + " · venceu") / v:0.0}%");
+            var ent = new System.Collections.Generic.List<(string k, double v)>(); foreach (var kv in rotV) if (kv.Key.StartsWith("TR entrou no bomb por")) ent.Add((kv.Key, kv.Value)); ent.Sort((x, y) => y.v.CompareTo(x.v));
+            foreach (var (k, v) in ent) sb.AppendLine($"  {k,-48} {100 * v / tr:0.0}% dos rounds");
+            var idx = new System.Collections.Generic.List<double>(); foreach (var kv in rotV) if (kv.Key.StartsWith("TR plano do banco idx")) idx.Add(kv.Value); idx.Sort((x, y) => y.CompareTo(x));
+            double sIdx = 0; foreach (var v in idx) sIdx += v; double top10 = 0; for (int i = 0; i < Math.Min(10, idx.Count); i++) top10 += idx[i];
+            sb.AppendLine($"  planos do banco usados: {idx.Count} diferentes em {sIdx:0} rounds; os 10 mais usados = {100 * top10 / Math.Max(1, sIdx):0.0}%");
+            sb.AppendLine($"  retake (rounds com plant {rp:0}):");
+            foreach (var dk in new[] { "a +1 ou mais", "b igual", "c -1", "d -2 ou pior" }) { double nn = RG("retake por vantagem · " + dk + " · n"), en = RG("retake por vantagem · " + dk + " · entrou"); if (nn > 0) sb.AppendLine($"    vantagem {dk,-14} n={nn,4:0}  entrou {100 * en / nn:0.0}%  · dos que entram, 2+ portas {100 * RG("retake por vantagem · " + dk + " · 2+") / Math.Max(1, en):0.0}%   (pros: +1 56/57 · igual 42/36 · -1 25/18 · -2 9/10)"); }
+            for (int k = 0; k <= 5; k++) { double v = RG("retake · entradas distintas = " + k); if (v > 0) sb.AppendLine($"    CT entrou no bomb por {k} entrada(s) diferente(s): {100 * v / rp:0.0}%"); }
+            var rt = new System.Collections.Generic.List<(string k, double v)>(); foreach (var kv in rotV) if (kv.Key.StartsWith("retake · CT entrou")) rt.Add((kv.Key, kv.Value)); rt.Sort((x, y) => y.v.CompareTo(x.v));
+            foreach (var (k, v) in rt) sb.AppendLine($"    {k,-46} {100 * v / rp:0.0}% dos retakes");
+            return sb.ToString();
+        }
         static string IglTexto()
         {
             var sb = new StringBuilder("IGL: VARIEDADE DAS CALLS (por metade de TR = um time atacando)\n");
@@ -196,7 +301,7 @@ namespace CSM.Headless
         public static int Main(string[] a)
         {
             int n =int.Parse(Arg(a, "-n", "320")), seed0 = int.Parse(Arg(a, "-seed", "900"));
-            TeamBrain.EXP = Arg(a, "-exp", ""); NavGrid.PathLenSoCampo = TeamBrain.EXP.Contains("pathLenCampo"); Partida.SemLeitura = Array.IndexOf(a, "-semLeitura") >= 0;
+            TeamBrain.EXP = Arg(a, "-exp", ""); if (TeamBrain.EXP.Contains("miraPadrao")) Skill.MIRA_PADRAO = TeamBrain.ExpNum("miraPadrao", Skill.MIRA_PADRAO);   /* calibração da mira da mão */ NavGrid.PathLenSoCampo = TeamBrain.EXP.Contains("pathLenCampo"); Partida.SemLeitura = Array.IndexOf(a, "-semLeitura") >= 0;
             NavGrid.PorRound = !TeamBrain.EXP.Contains("cacheDivididoVelho");
             if (Arg(a, "-armaCT", "") != "") Match.ArmaCT = Arg(a, "-armaCT", "");   // teste de arma: todo CT (menos o AWPer) com ela   // determinístico: cache de campos, fila e orçamento por round
             if (Array.IndexOf(a, "-auditar") >= 0) { Match.Auditar = true; Brain.Explicar = true; }
@@ -420,6 +525,35 @@ namespace CSM.Headless
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(lugar, x => x.Value), 15)) Console.WriteLine($"    {kv.Key,-50} {kv.Value}");
                 return 0;
             }
+            if (Array.IndexOf(a, "-tempos") >= 0 && MapData.MAPA == "brasa")
+            {   /* Brasa: régua do Tools/brasa/brasa.py (Inferno medida no radar × 1,25, fuzil) — caminho (A*) e chegada REAL dos bots
+                   (o 1º de cada time a passar a 40 do ponto, em N rounds de -n) */
+                var pts = new (string n, float x, float y, float mt, float mc)[] {
+                    ("Pé da banana (toras)", 11, 31, 11.9f, 19.0f), ("Meio da banana", 14, 24, 14.6f, 17.0f), ("Carro (alto da banana)", 18, 17, 19.1f, 12.4f),
+                    ("Bomb B", 9, 13, 22.3f, 12.8f), ("Meio de baixo", 17, 32, 11.5f, 16.3f), ("Meio (centro)", 30, 31, 14.1f, 13.8f), ("Alto do meio", 39, 29, 18.0f, 9.8f),
+                    ("Varanda", 47, 30, 20.4f, 13.5f), ("Poço", 51, 32, 24.9f, 12.6f), ("Construção", 25, 8, 24.9f, 7.0f), ("Bomb A", 48, 19, 23.9f, 9.6f) };
+                const float FUZIL = 0.88f;
+                int nr = int.Parse(Arg(a, "-n", "0"));
+                var chegT = new List<float>[pts.Length]; var chegC = new List<float>[pts.Length];
+                for (int k = 0; k < pts.Length; k++) { chegT[k] = new List<float>(); chegC[k] = new List<float>(); }
+                if (nr > 0)
+                    Parallel.For(0, nr, new ParallelOptions { MaxDegreeOfParallelism = int.Parse(Arg(a, "-hilos", Environment.ProcessorCount.ToString())) }, i =>
+                    {
+                        var m = new Match(seed0 + i); var ft = new float[pts.Length]; var fc = new float[pts.Length]; Array.Fill(ft, -1); Array.Fill(fc, -1);
+                        while (!m.over && m.t < 60) { m.Step(); for (int k = 0; k < pts.Length; k++) { var q = new V2((pts[k].x + 0.5f) * MapData.Q, (pts[k].y + 0.5f) * MapData.Q); foreach (var ag in m.agents) { if (!ag.alive || (ag.pos - q).Len > 40) continue; if (ag.team == Team.T) { if (ft[k] < 0) ft[k] = m.t; } else if (fc[k] < 0) fc[k] = m.t; } } }
+                        lock (chegT) for (int k = 0; k < pts.Length; k++) { if (ft[k] >= 0) chegT[k].Add(ft[k]); if (fc[k] >= 0) chegC[k].Add(fc[k]); }
+                    });
+                string Med(List<float> l) { if (l.Count == 0) return "   -  "; l.Sort(); return $"{l[l.Count / 2],5:0.0}s"; }
+                Console.WriteLine($"{"ponto",-24} {"meta TR",7} {"A* TR",6} {"bots TR",8} | {"meta CT",7} {"A* CT",6} {"bots CT",8}   (bots: mediana do 1º a chegar, n = rounds em que alguém chegou)");
+                for (int k = 0; k < pts.Length; k++)
+                {
+                    var q = new V2((pts[k].x + 0.5f) * MapData.Q, (pts[k].y + 0.5f) * MapData.Q);
+                    float M(V2[] sp) { float sm = 0; foreach (var o in sp) sm += NavGrid.PathLen(o, q); return sm / sp.Length / (MapCheck.RUN * FUZIL); }
+                    Console.WriteLine($"{pts[k].n,-24} {pts[k].mt,6:0.0}s {M(MapData.SPAWN_T),5:0.0}s {Med(chegT[k])} n={chegT[k].Count,-3}| {pts[k].mc,6:0.0}s {M(MapData.SPAWN_CT),5:0.0}s {Med(chegC[k])} n={chegC[k].Count}");
+                }
+                Console.WriteLine($"rotação CT A -> B (A*, fuzil): {NavGrid.PathLen(Places.PlantA, Places.PlantB) / (MapCheck.RUN * FUZIL):0.0} s   (meta ~22 s)");
+                return 0;
+            }
             if (Array.IndexOf(a, "-tempos") >= 0)
             {
                 var alvos = new (string n, V2 p)[] { ("bomb A", Places.PlantA), ("bomb B", Places.PlantB), ("meio", Places.Meio_Norte), ("topo da rampa", Places.A_Rampa), ("tapete", Places.B_Tapete), ("curta", Places.B_Curta), ("conector", Places.A_Conector), ("janelão", Places.Janelao) };
@@ -433,6 +567,7 @@ namespace CSM.Headless
             }
             if (Array.IndexOf(a, "-lineups") >= 0)
             {   // cada lineup do mapa com o arremesso do CS2: cai onde? de que jeito? quanto voa?
+                Places.AjustaClip(); foreach (var s in Places.AjusteClipLog) Console.WriteLine("AJUSTE CLIP " + s);   /* bx: com -exp bxClipNadeLigado */
                 foreach (var l in Places.TREINADAS)
                 {
                     var pl = Arremesso.Resolve(l.from, NavGrid.ZAt(l.from), l.to, l.kind);
@@ -604,7 +739,7 @@ namespace CSM.Headless
             if (Array.IndexOf(a, "-perf") >= 0) { LIMIAR_DETALHE = double.Parse(Arg(a, "-detalhe", "100"), System.Globalization.CultureInfo.InvariantCulture); CPU = Array.IndexOf(a, "-cpu") >= 0; if (CPU) CalibraCpu(); }
             if (Array.IndexOf(a, "-perf") >= 0)
             {   // tempo de CPU de cada m.Step (o jogo ao vivo roda um por quadro): distribuição e os piores, pra achar o pico
-                Match.Perf = true; NavGrid.Medir = true; if (Array.IndexOf(a, "-gigantes") >= 0) NavGrid.Gigantes = new System.Collections.Generic.List<string>(); Match.Perfil = true; NavGrid.QuemPede = Array.IndexOf(a, "-quemPede") >= 0 ? new System.Collections.Generic.Dictionary<string, int>() : null; var detal = new System.Collections.Generic.List<(double ms, string s)>(); var swP = new System.Diagnostics.Stopwatch(); var piores = new System.Collections.Generic.List<(double ms, int seed, float t)>(); var hist = new int[6]; long tot = 0; double soma = 0;
+                Match.Perf = true; NavGrid.Medir = true; if (Array.IndexOf(a, "-gigantes") >= 0) NavGrid.Gigantes = new System.Collections.Generic.List<string>(); Match.Perfil = true; NavGrid.QuemPede = Array.IndexOf(a, "-quemPede") >= 0 ? new System.Collections.Generic.Dictionary<string, int>() : null; Arremesso.QuemBusca = new System.Collections.Generic.Dictionary<string, (int n, double ms)>(); var detal = new System.Collections.Generic.List<(double ms, string s)>(); var swP = new System.Diagnostics.Stopwatch(); var piores = new System.Collections.Generic.List<(double ms, int seed, float t)>(); var hist = new int[6]; long tot = 0; double soma = 0;
                 var iniT = new Dictionary<string, double>(); var iniP = new Dictionary<string, long>(); int iniN = 0;   // o 1º passo de cada round, por parte
                 for (int rr = 0; rr < n; rr++)
                 {
@@ -634,6 +769,7 @@ namespace CSM.Headless
                 Console.WriteLine($"  1º passo do round ({iniN} rounds), ms por round:");
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(iniT, q => q.Value), 25)) Console.WriteLine($"    {kv.Value / Math.Max(1, iniN),8:0.00}  {kv.Key}");
                 foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(iniP, q => q.Value), 15)) Console.WriteLine($"    {kv.Value * 1000.0 / System.Diagnostics.Stopwatch.Frequency / Math.Max(1, iniN),8:0.00}  (dentro do cérebro) {kv.Key}");
+                Console.WriteLine($"  SOLVER de granada: {Arremesso.nBusca} buscas, {Arremesso.msBusca / Math.Max(1, Arremesso.nBusca):0.00} ms cada, {Arremesso.msBusca / tot:0.000} ms/passo"); foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(Arremesso.QuemBusca, q => q.Value.ms), 25)) Console.WriteLine($"    {kv.Value.ms / tot,7:0.000} ms/passo {kv.Value.n,6}x {kv.Value.ms / kv.Value.n,6:0.00} ms  {kv.Key}");
                 if (NavGrid.Gigantes != null) { Console.WriteLine($"A* gigantes (>40k células): {NavGrid.Gigantes.Count}"); foreach (var gq in NavGrid.Gigantes) Console.WriteLine("  " + gq); }
                 if (NavGrid.QuemPede != null) foreach (var kv in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(NavGrid.QuemPede, q => q.Value), 600)) Console.WriteLine($"  A* {kv.Value,7}  {kv.Key}");
                 return 0;
@@ -665,6 +801,27 @@ namespace CSM.Headless
                 foreach (var l in m.log) Console.WriteLine(l);
                 return 0;
             }
+            if (Array.IndexOf(a, "-fluidez") >= 0) return Fluidez.Rodar(int.Parse(Arg(a, "-fluidez", "8")), seed0);   /* duelos, movimento em contato, distância por arma */
+            if (Array.IndexOf(a, "-diagC4") >= 0) return DiagC4.Rodar(int.Parse(Arg(a, "-diagC4", "200")), seed0, Arg(a, "-saida", "base"), int.Parse(Arg(a, "-hilos", Environment.ProcessorCount.ToString())));   /* sim-apoio: diagnóstico da cena "C4 no bomb sem plantar" */
+            if (Array.IndexOf(a, "-rotaHumana") >= 0) return RotaHumanaTeste.Rodar(int.Parse(Arg(a, "-rotaHumana", "1000")), seed0);   /* sim-apoio: confere a API RotaHumana */
+            if (Array.IndexOf(a, "-memoria") >= 0) return Memoria.Rodar(int.Parse(Arg(a, "-memoria", "200")), seed0, Arg(a, "-saida", "base"));   /* sim-apoio: crença, memória e som */
+            if (Array.IndexOf(a, "-morteRegiao") >= 0) return MorteRegiao.Rodar(int.Parse(Arg(a, "-morteRegiao", "200")), seed0, Arg(a, "-saida", "base"));   /* sim-apoio: "morreu na região do colega" medido como no pro */
+            if (Array.IndexOf(a, "-planoRegioes") >= 0) return PlanoRegioesTeste.Rodar(int.Parse(Arg(a, "-planoRegioes", "400")), seed0);   /* sim-apoio: confere o PlanoRegioes contra a régua do pro */
+            if (Array.IndexOf(a, "-rotasPro") >= 0) return RotasPro.Rodar();   /* "onde costuma estar" tirado dos pros (rotas_pro.bin) */
+            if (Array.IndexOf(a, "-ocioso") >= 0) return MedeOcioso.Rodar(int.Parse(Arg(a, "-ocioso", "200")), seed0, Arg(a, "-saida", "base"));   /* CT parado longe do bomb plantado; bomba que explode sem TR vivo */
+            if (Array.IndexOf(a, "-duelo") >= 0) return MedeDuelo.Rodar(int.Parse(Arg(a, "-duelo", "200")), seed0, Arg(a, "-saida", "base"), int.Parse(Arg(a, "-clipes", "0")));   /* medidor de duelo: duração, como acaba, parado ou não */
+            if (Array.IndexOf(a, "-humano") >= 0) return Humano.Rodar(int.Parse(Arg(a, "-humano", "200")), seed0, Arg(a, "-saida", "base"));   /* validador de humanidade: cenas que um pro não faz */
+            if (Array.IndexOf(a, "-pracc") >= 0) return Pracc.Rodar(int.Parse(Arg(a, "-pracc", "8")), int.Parse(Arg(a, "-np", "200")), seed0, Arg(a, "-leitura", ""), Array.IndexOf(a, "-ct") >= 0);   /* treino de táticas criadas */
+            if (Array.IndexOf(a, "-clubes") >= 0) return Fichas.Clubes(seed0);
+            if (Array.IndexOf(a, "-base") >= 0) return Fichas.Base(int.Parse(Arg(a, "-base", "5000")), seed0);   /* status dos jogadores (Jogadores.cs) */
+            if (Array.IndexOf(a, "-fichas") >= 0) return Fichas.Rodar(Arg(a, "-fichas", "eq"), int.Parse(Arg(a, "-np", "16")), seed0);
+            if (Array.IndexOf(a, "-rotas") >= 0) Match.Rotas = true;
+            if (Array.IndexOf(a, "-portas") >= 0) { foreach (char st in new[] { 'A', 'B' }) foreach (var (po, ju, _) in Places.PortasDoBomb(st)) Console.WriteLine($"bomb {st}: porta {po} · junta em {Places.Region(ju)} ({ju.x:0},{ju.y:0})"); return 0; }   /* bx: portas do bomb tiradas do mapa */   /* bx: medição de tática no -partidas */
+            if (Array.IndexOf(a, "-gradeAreas") >= 0) return GradeAreas.Rodar();   /* área e zona de cada célula, pros scripts de Tools/pro */
+            if (Array.IndexOf(a, "-analiseMapa") >= 0) return AnaliseMapaTeste.Rodar();   /* leitura geométrica do mapa pro gerador de táticas (AnaliseMapa) */
+            if (Array.IndexOf(a, "-cenas") >= 0) return Cenas.Rodar(int.Parse(Arg(a, "-cenas", "300")), seed0, Arg(a, "-saida", "base"));   /* bancada de cenas de comportamento (PLANO_SIMULACAO.md) */
+            if (Array.IndexOf(a, "-tabelaDuelo") >= 0) return MedeTabelaDuelo.Rodar(int.Parse(Arg(a, "-tabelaDuelo", "300")), seed0, Arg(a, "-saida", "base"));   /* tabela de chance de duelo do avaliador (PLANO_SIMULACAO.md 4.1) */
+            if (Array.IndexOf(a, "-bolo") >= 0) return MedeBolo.Rodar(int.Parse(Arg(a, "-bolo", "20")), seed0, Arg(a, "-saida", "base"));   /* todo mundo junto, em partida inteira */
             if (Array.IndexOf(a, "-partidas") >= 0) return Partidas(int.Parse(Arg(a, "-partidas", "100")), seed0, Arg(a, "-modoA", ""), Arg(a, "-modoB", ""), Arg(a, "-saida", "adapta"));
             if (Array.IndexOf(a, "-treino") >= 0) return Treino(int.Parse(Arg(a, "-passos", "60")), n, seed0);
             var mt = new Metricas(); var trava = new object(); int feitos = 0;

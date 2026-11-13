@@ -20,6 +20,8 @@ namespace CSM.Sim
         {
             public int idx; public bool tr; public string compra, id; public bool ganhou; public char site;
             public float plant, comprometeu, duracao; public Jogador[] js;
+            /// <summary>Tática criada pelo time (Taticas.cs): de qual veio, por que nasceu e quem deu o pedaço enxertado.</summary>
+            public string motivo; public int pai = -1, doador = -1; public bool criada;
             /// <summary>Onde o jogador k está (área) no instante t pela rota real; null antes do 1º passo ou depois que morreu.</summary>
             public string Onde(int k, float t)
             {
@@ -61,12 +63,12 @@ namespace CSM.Sim
                 // o time se comprometeu antes de alguém pisar no bomb (rush que segurou no casarão/na curta): a hora é a do
                 // compromisso — senão um "rush" virava entrada aos 77 s
                 // (só no rush: nos outros o "comprometeu" do pro é tomar o mapa, e entrar nele adiantava o round ~10 s)
-                if (comprometeu >= 0 && comprometeu < 25 && !TeamBrain.EXP.Contains("horaVelha")) h = MathF.Min(h, comprometeu + 8);
+                if (comprometeu >= 0 && comprometeu < 25 && !TeamBrain.EXPF.Contains("horaVelha")) h = MathF.Min(h, comprometeu + 8);
                 // até ~80 s: o mapa daqui é mais curto que a Mirage e entrar depois disso é o tempo acabar (real 7,6%)
                 if (h < float.MaxValue) return MathX.Clamp(h - 4, 3, 80);
                 return plant > 0 ? MathX.Clamp(plant - 12, 3, 80) : MathF.Min(padrao, 72);
             }
-            public string Nome => $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo})";
+            public string Nome => criada ? $"{(tr ? "TR" : "CT")} {compra} criada #{idx - Taticas.BASE_IDX} ({Tipo}: {motivo})" : $"{(tr ? "TR" : "CT")} {compra} #{idx} ({Tipo})";
             public string Tipo => !tr ? "setup" : comprometeu >= 0 && comprometeu < 25 ? "rush" : comprometeu >= 0 && comprometeu < 50 ? "execução" : "default";
         }
 
@@ -77,7 +79,7 @@ namespace CSM.Sim
         {
             var l = new List<Plano>(DADOS.Length);
             var ci = CultureInfo.InvariantCulture;
-            foreach (var linha in DADOS)
+            foreach (var linha in MapData.MAPA == "brasa" ? DADOS_BRASA : DADOS)   /* banco por mapa: Vila (Mirage) / Brasa (Inferno, EstrategiasDadosBrasa.cs) */
             {
                 var c = linha.Split(';');
                 var p = new Plano
@@ -170,7 +172,7 @@ namespace CSM.Sim
             // ponto atrás de colega, mirando o mesmo lado através dele, não vê nada (e o outro fica com a mira nas costas)
             bool atras(V2 q, V2 alvo)
             {
-                if (TeamBrain.EXP.Contains("espalhaAtras")) return false;
+                if (TeamBrain.EXPF.Contains("espalhaAtras")) return false;
                 V2 d = alvo - q; float L = d.Len; if (L < 1) return false; d = d * (1 / L);
                 foreach (var o in ocupados) { V2 w = o - q; float ao = w.x * d.x + w.y * d.y; if (ao > 20 && ao < L && MathF.Abs(w.x * d.y - w.y * d.x) < 18) return true; }
                 return false;
@@ -192,7 +194,7 @@ namespace CSM.Sim
                 float sc = -0.02f * (q - h.pos).Len + (MapData.LosWalk(q, NavGrid.ZAt(q), olha, NavGrid.ZAt(olha), 18f) ? 3 : 0) + rng.Uniform(0, 0.5f) - (atras(q, olha) ? 3 : 0);
                 if (sc > bs) { bs = sc; best = q; }
             }
-            if (bs == float.MinValue && !TeamBrain.EXP.Contains("espalhaVelho"))
+            if (bs == float.MinValue && !TeamBrain.EXPF.Contains("espalhaVelho"))
             {   // lugar apertado (nenhum ponto a 70 de todo mundo): o mais afastado que der, de preferência vendo o mesmo lado —
                 // desistir deixava 3 no mesmo pixel
                 float f0 = folga(h.pos);

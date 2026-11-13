@@ -53,30 +53,30 @@ namespace CSM.View3D
         /// um tom abaixo. Mesma altura da cobertura e pegada de ~7 (colisão e navmesh da Sim não mudam).</summary>
         public static GameObject Montar(Material mat, Transform pai, bool linear)
         {
+            // Vila marroquina: a coluna roliça de arenito "não fazia tanto sentido" (usuário: "fazer mais grossos ou botar outra
+            // coisa ali"). Agora é uma pilastra quadrada de adobe, grossa, como os pés de portão das casbás: soco largo em
+            // dois degraus, corpo liso, cinta saliente perto do alto, laje e uma ameia em cada quina. Mesmo adobe (tom e
+            // textura do shader) das casas; a altura é a da cobertura e a pegada passa pouco da colisão (4,2 de meia largura).
             var o = new Obra3D(); float E = MalhaMapa.ESC;
-            Color pedra = new Color(0xE2 / 255f, 0xD2 / 255f, 0xB2 / 255f), escura = new Color(0xC8 / 255f, 0xB4 / 255f, 0x90 / 255f);
-            int n = 0;
+            Color adobe = Paleta3D.Srgb(Paleta3D.ADOBE + 2), escuro = Paleta3D.Srgb(Paleta3D.ADOBE + 3);
+            int n = 0; o.Alfa = 0.30f;
             foreach (var c in Pilares())
             {
                 float cx = (c.r.x0 + c.r.x1) / 2f, cy = (c.r.y0 + c.r.y1) / 2f, z0 = Base(c), h = c.h;
                 Vector3 U(float dz) => MalhaMapa.ParaUnity(cx, cy, z0 + dz);
-                Vector3 Cima(float dz) => Vector3.up * dz * E;
-                // base: dois degraus quadrados
-                o.Caixa(U(1.0f), new Vector3(3.6f, 1.0f, 3.6f) * E, escura);
-                o.Caixa(U(2.6f), new Vector3(3.15f, 0.6f, 3.15f) * E, escura);
-                o.Cilindro(U(3.2f), Cima(0.8f), 2.95f * E, 2.7f * E, 16, pedra);                     // toro da base
-                // fuste
-                o.Cilindro(U(4.0f), Cima(h - 4.0f - 4.4f), 2.6f * E, 2.3f * E, 16, pedra);
-                o.Cilindro(U(h - 4.4f), Cima(0.6f), 2.55f * E, 2.55f * E, 16, escura);               // colarinho
-                // capitel abrindo e laje
-                o.Cilindro(U(h - 3.8f), Cima(1.8f), 2.35f * E, 3.2f * E, 16, pedra);
-                o.Caixa(U(h - 1.0f), new Vector3(3.6f, 1.0f, 3.6f) * E, escura);
+                o.Caixa(U(0.9f), new Vector3(4.9f, 0.9f, 4.9f) * E, escuro);
+                o.Caixa(U(2.4f), new Vector3(4.5f, 0.6f, 4.5f) * E, escuro);
+                o.Caixa(U(3.0f + (h - 3.0f - 4.4f) / 2f), new Vector3(4.0f, (h - 3.0f - 4.4f) / 2f, 4.0f) * E, adobe);     // corpo
+                o.Caixa(U(h - 4.9f), new Vector3(4.35f, 0.5f, 4.35f) * E, escuro);                                         // cinta
+                o.Caixa(U(h - 2.9f), new Vector3(4.0f, 1.5f, 4.0f) * E, adobe);
+                o.Caixa(U(h - 0.9f), new Vector3(4.7f, 0.9f, 4.7f) * E, escuro);                                           // laje
+                foreach (var (sx, sy) in new[] { (-1, -1), (1, -1), (-1, 1), (1, 1) })
+                    o.Caixa(MalhaMapa.ParaUnity(cx + sx * 3.5f, cy + sy * 3.5f, z0 + h + 1.1f), new Vector3(1.2f, 1.1f, 1.2f) * E, adobe);
                 n++;
-                Debug.Log($"[Pilar3D] coluna em ({cx:0},{cy:0}) altura {h} do jogo");
+                Debug.Log($"[Pilar3D] pilastra de adobe em ({cx:0},{cy:0}) altura {h} do jogo");
             }
             if (n == 0) return null;
-            mat = new Material(mat) { name = "Maquete pilar" }; mat.SetFloat("_UsarTopo", 0); mat.SetFloat("_UsarVertice", 1);
-            return o.Montar("Pilares (coluna)", mat, pai);
+            return o.Montar("Pilares (pilastra de adobe)", mat, pai);
         }
 
         /// <summary>Versão antiga (pillar-stone do Kenney), guardada pra comparação.</summary>

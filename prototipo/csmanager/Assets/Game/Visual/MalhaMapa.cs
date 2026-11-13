@@ -210,7 +210,7 @@ namespace CSM.View3D
         static Color Tom(Color c, int m, float x, float y, float z, Vector3 n, bool linear)
         {
             float k = 1;
-            bool telha = m == 50 || m == 51, parede = m == 6 || m == 7 || m == 8;
+            bool telha = m == 50 || m == 51, parede = m == 6 || m == 7 || m == 8 || (m >= Paleta3D.ADOBE && m < Paleta3D.ADOBE + Paleta3D.NTONS);
             if (telha)
             {
                 // só o brilho: o desvio de matiz (±0,025) deixava telhado avermelhado fora da faixa de cor que o
@@ -275,12 +275,39 @@ namespace CSM.View3D
         /// <summary>Escadas pro Maquete.shader desenhar degrau na rampa lisa (1 texel = 1 coluna, igual ao Topo): rgb = cor do
         /// degrau (pedra clara; madeira na escada do deck da banca), a = altura de cada degrau no jogo (inclinação x 7, entre
         /// 2,5 e 4,5: o piso de cada degrau fica com ~7 de fundo). 0 = não é escada. A escada de mão do janelão fica fora.</summary>
+        /// <summary>Mistura de laje com areia pro chão de jogo da Vila (usuário: "queria uma transição sutil entre um chão e o
+        /// outro", hoje "tem claramente a demarcação do bloco de textura"): 1 texel por coluna, 1 = calçamento de laje, 0 =
+        /// areia, borrado num raio de ~20 só entre colunas de chão de jogo. O Maquete.shader usa isso pra ir soltando as lajes
+        /// uma a uma e alargando a junta com areia até virar areia.</summary>
+        public static Texture2D Mistura(byte[] G)
+        {
+            int NX = MapData.NX, NY = MapData.NY, NZ = MapVoxels.NZ;
+            var m = new float[NX * NY]; var v = new float[NX * NY];
+            for (int x = 0; x < NX; x++)
+                for (int y = 0; y < NY; y++)
+                {
+                    int z = NZ - 1; while (z >= 0 && G[(x * NY + y) * NZ + z] == 0) z--;
+                    if (z < 0) continue;
+                    int mat = G[(x * NY + y) * NZ + z];
+                    if (mat == Paleta3D.LAJE) { m[y * NX + x] = 1; v[y * NX + x] = 1; } else if (mat == Paleta3D.AREIA) v[y * NX + x] = 1;
+                }
+            const int R = 20; var w = new float[2 * R + 1];
+            for (int d = -R; d <= R; d++) w[d + R] = MathF.Exp(-d * d / (2f * 9f * 9f));
+            var m2 = new float[NX * NY]; var v2 = new float[NX * NY];
+            Parallel.For(0, NY, y => { for (int x = 0; x < NX; x++) { float a = 0, b = 0; for (int d = -R; d <= R; d++) { int xx = x + d; if (xx < 0 || xx >= NX) continue; a += m[y * NX + xx] * w[d + R]; b += v[y * NX + xx] * w[d + R]; } m2[y * NX + x] = a; v2[y * NX + x] = b; } });
+            var px = new Color[NX * NY];
+            Parallel.For(0, NY, y => { for (int x = 0; x < NX; x++) { float a = 0, b = 0; for (int d = -R; d <= R; d++) { int yy = y + d; if (yy < 0 || yy >= NY) continue; a += m2[yy * NX + x] * w[d + R]; b += v2[yy * NX + x] * w[d + R]; } float r = b > 1e-4f ? a / b : m[y * NX + x]; px[y * NX + x] = new Color(r, r, r, 1); } });
+            var t = new Texture2D(NX, NY, TextureFormat.R8, false, true) { name = "mistura laje/areia", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
+            t.SetPixels(px); t.Apply(false, true);
+            return t;
+        }
+
         public static Texture2D Escada(bool linear)
         {
             int NX = MapData.NX, NY = MapData.NY;
             var px = new Color[NX * NY];
-            var pedra = new Color(0xE2 / 255f, 0xD2 / 255f, 0xB2 / 255f); if (linear) pedra = pedra.linear;
-            var madeira = Paleta3D.Vertice(46, linear);
+            var pedra = new Color(0xEA / 255f, 0xDB / 255f, 0xBC / 255f);   // a mesma pedra clara das lajes do chão de jogo   // arenito no tom do chão (o cinza claro destoava da vila) if (linear) pedra = pedra.linear;
+            var madeira = Color.Lerp(Paleta3D.Vertice(52, linear), Paleta3D.Vertice(53, linear), 0.5f);   // mesmo tom médio das tábuas do deck
             Shader.SetGlobalColor("_EscPedra", pedra); Shader.SetGlobalColor("_EscMadeira", madeira);
             int n = 0;
             foreach (var s in MapData.areas)
@@ -298,7 +325,15 @@ namespace CSM.View3D
                     }
                 float incl = (float)System.Math.Max(cx > 0 ? sx / cx : 0, cy > 0 ? sy / cy : 0);
                 if (incl <= 0) continue;
-                float H = Mathf.Clamp(incl * 7f, 2.5f, 4.5f);
+                // degrau menor (piso de ~4,6 de fundo): com 7 eram poucos degraus largos e a escada lia como rampa listrada (usuário: "as escadas não são coerentes")
+                float H = Mathf.Clamp(incl * 4.6f, 1.8f, 3.2f);
+                // número inteiro de degraus do pé ao alto (usuário: "alguns tamanhos do degrau mudam"): com a altura solta o
+                // último degrau saía pela metade. O desnível da escada dividido em degraus iguais.
+                int fmin = int.MaxValue, fmax = int.MinValue;
+                for (int x = x0; x < x1; x++)
+                    for (int y = y0; y < y1; y++)
+                        if (s.has == null || s.has(x, y)) { fmin = Mathf.Min(fmin, MapData.floor[x, y]); fmax = Mathf.Max(fmax, MapData.floor[x, y]); }
+                if (fmax > fmin) H = (fmax - fmin) / (float)Mathf.Max(1, Mathf.RoundToInt((fmax - fmin) / H));
                 bool deck = s.name == "Esc_banca";
                 // pra onde desce (no jogo): contra o gradiente do piso. A normal da malha não serve na escada suave (a
                 // viela sobe 0,16 por casa e o borrão deixa ondinhas de piso plano no meio)

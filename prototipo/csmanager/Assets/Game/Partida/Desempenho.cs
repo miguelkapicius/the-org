@@ -228,6 +228,33 @@ namespace CSM.View3D
             log.AppendLine($"GPU {SystemInfo.graphicsDeviceName} | CPU {SystemInfo.processorType} | {Screen.width}x{Screen.height} | sombra {res} | MSAA {msaa}");
         }
 
+        // ---- cada quadro lento (> 33 ms) na base: quanto foi de cada parte do código, se teve coleta de lixo, e o resto
+        // (o que nenhum cronômetro pegou: render, física da Unity, carregamento, outro processo tomando a CPU) ----
+        struct Lento { public float ms, quando; public double[] partes; public int gc; }
+        readonly List<Lento> lentos = new List<Lento>();
+        readonly double[] somaAnt = new double[6]; int gcAnt = -1;
+        void QuadroLento(float ms)
+        {
+            int gc = System.GC.CollectionCount(0);
+            var d = new double[6];
+            for (int i = 0; i < 6; i++) { d[i] = soma[i] - somaAnt[i]; somaAnt[i] = soma[i]; }
+            if (gcAnt >= 0 && ms > 33f) lentos.Add(new Lento { ms = ms, quando = Time.realtimeSinceStartup, partes = d, gc = gc - gcAnt });
+            gcAnt = gc;
+        }
+        void RelatorioLentos(StringBuilder l)
+        {
+            if (lentos.Count == 0) { l.AppendLine("  quadros > 33 ms: nenhum"); return; }
+            string[] curto = { "sim", "visual", "efeitos", "HUD", "troca sim", "troca visual" };
+            int comGc = lentos.Count(x => x.gc > 0);
+            double Resto(Lento x) => x.ms - x.partes.Sum();
+            int Dono(Lento x) { int k = -1; double m = Resto(x); for (int i = 0; i < 6; i++) if (x.partes[i] > m) { m = x.partes[i]; k = i; } return k; }
+            float intervalo = lentos.Count > 1 ? (lentos[lentos.Count - 1].quando - lentos[0].quando) / (lentos.Count - 1) : 0;
+            l.AppendLine($"  QUADROS > 33 ms: {lentos.Count} | com coleta de lixo no quadro: {comGc} | intervalo médio entre eles {intervalo:0.0} s");
+            l.AppendLine("  maior parte de cada quadro lento: " + string.Join(", ", lentos.GroupBy(Dono).OrderByDescending(gq => gq.Count()).Select(gq => $"{(gq.Key < 0 ? "resto (render/fora do código)" : curto[gq.Key])} {gq.Count()}")));
+            foreach (var x in lentos.OrderByDescending(x => x.ms).Take(30))
+                l.AppendLine($"    {x.ms,6:0.0} ms em {x.quando,6:0.0} s | " + string.Join(" ", Enumerable.Range(0, 6).Where(i => x.partes[i] > 0.5).Select(i => $"{curto[i]} {x.partes[i]:0.0}")) + $" | resto {Resto(x):0.0} | GC +{x.gc}");
+        }
+
         static float Media(List<float> l) => l.Count > 0 ? l.Average() : 0;
         static float Pior(List<float> l, float p) { if (l.Count == 0) return 0; var o = l.OrderBy(x => x).ToList(); return o[Mathf.Min(o.Count - 1, (int)(o.Count * p))]; }
 
@@ -242,11 +269,13 @@ namespace CSM.View3D
             if (etapa == -1)
             {
                 q[0].Add(ms); g[0].Add(gpu);
+                QuadroLento(ms);
                 if (relogio < BASE) return;
                 int n = q[0].Count;
                 log.AppendLine($"BASE {n} quadros: média {Media(q[0]):0.00} ms ({1000 / Mathf.Max(Media(q[0]), 0.01f):0} fps) | pior 5% {Pior(q[0], 0.95f):0.0} ms | pior 1% {Pior(q[0], 0.99f):0.0} ms | pior {q[0].Max():0.0} ms | GPU {g[0].Average():0.00} ms");
                 log.AppendLine($"  quadros acima de 16,7 ms: {q[0].Count(x => x > 16.7f) * 100f / n:0}% | acima de 33 ms: {q[0].Count(x => x > 33f)} | coletas de lixo: {System.GC.CollectionCount(0) - gc0}");
                 for (int i = 0; i < 6; i++) log.AppendLine($"  CPU {PARTES[i],-32} média {soma[i] / n:0.00} ms | pico {pico[i]:0.0} ms");
+                RelatorioLentos(log);
                 Ativo = false; RelatorioSim(log, n); Match.Perf = false; NavGrid.Medir = false; Match.Perfil = false;
                 // -csm_base: só a base (comparar versões da Sim), sem os testes de recurso
                 if (System.Array.IndexOf(System.Environment.GetCommandLineArgs(), "-csm_base") >= 0) { System.IO.File.WriteAllText(saida, log.ToString()); Application.Quit(); return; }

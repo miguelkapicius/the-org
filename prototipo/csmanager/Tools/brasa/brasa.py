@@ -76,6 +76,9 @@ bloco('o', 20, 20, 17, 18); nome("Barris (carro)", 23, 17.6)
 bloco('o', 15, 15, 17, 17); nome("Caixa", 13, 16.6)
 bloco('r', 17, 19, 9, 15); nome("Corredor", 21.2, 13.4)
 bloco('r', 16, 16, 9, 10)                                                    # porta do banana no B, no alto do corredor
+# v7: sacada da construção — o CT sobe a escada na construção, atravessa a salinha e PULA no corredor (não tem volta:
+#     o TR não sobe por ali). É a 3a porta do retake do B (por trás de quem plantou) e um jeito do CT voltar pro banana.
+bloco('s', 22, 22, 13, 13); bloco('k', 21, 21, 12, 13); bloco('~', 20, 20, 12, 12); nome("Sacada", 21.5, 11.4)   # escada no fundo da construção
 
 # ---- BOMB B (fechado, cheio de canto: quem entra pela porta do banana tem que limpar escuro, 1ª caixa, fonte, tripla
 #      e o caixão lá em cima, um de cada vez)
@@ -89,7 +92,7 @@ bloco('o', 13, 14, 13, 14); nome("1ª caixa", 12, 15.4)                      # e
 bloco('o', 4, 4, 9, 9);   nome("Cimento", 4, 10.2)                           # saiu da quina do plant (com o escuro fazia um esconderijo)
 # CT -> B: pista (por cima, porta no norte do B), construção (porta no leste, na quina do escuro)
 bloco('r', 8, 27, 2, 4); bloco('r', 26, 30, 4, 6);  nome("Pista", 21, 1.4)       # passagem larga (3) da base CT pra pista
-bloco('r', 9, 11, 5, 5); nome("Porta da pista", 10, 1.2)                     # a pista segue pra esquerda e entra no B por cima
+bloco('r', 9, 11, 5, 5); nome("Porta da pista", 10, 1.2)
 bloco('o', 19, 20, 4, 4); bloco('o', 14, 14, 2, 2)                            # barris e caixote: quebram a linha da base CT até o B
 bloco('r', 23, 27, 6, 13); nome("Construção", 25, 9.4)
 bloco('o', 24, 25, 10, 10)
@@ -108,11 +111,11 @@ nome("NIP", 40.6, 26.2); nome("Xuxa", 42.6, 33.6)                          # NIP
 faixa('r', [(40.5, 8), (40.5, 13), (36, 17), (36, 24.5)], 3); nome("Arco", 37.6, 11)
 
 # ---- A: curta (do alto do meio), longo (do arco), biblioteca (da base CT), varanda (do apê) e poço
-bloco('r', 40, 42, 18, 20); nome("Longo", 42, 17)
+bloco('r', 38, 42, 18, 20); nome("Longo", 42, 17)                          # v7: liga no arco (era beco sem saída)
 bloco('r', 42, 42, 22, 26); nome("Curta", 44, 21.2)
 bloco('o', 42, 42, 22, 22); nome("Carroça", 40, 21.4)
-bloco('r', 42, 48, 5, 7);   nome("Biblioteca", 45, 4.2)
-bloco('r', 47, 48, 8, 11)
+bloco('r', 42, 52, 5, 7);   nome("Biblioteca", 45, 4.2)
+bloco('s', 51, 52, 8, 8); bloco('n', 51, 52, 9, 11)        # v7: desce no cemitério (alto do A), não no meio do site
 bloco('a', 43, 53, 12, 27); nome("Bomb A", 48.5, 19)
 bloco('n', 50, 53, 12, 14); nome("Cemitério", 51.5, 15.4)
 bloco('s', 49, 49, 12, 13)
@@ -261,6 +264,9 @@ area("Banana", F([(11.5, 28.5), (17.5, 19.5)], 3.6), lin('y', 28.5, 6, 19.5, 18)
 area("Alto do banana", R(14, 21, 16, 19), 18, 'Dirt')
 area("Banana", R(14, 14, 20, 20), lin('y', 28.5, 6, 19.5, 18), 'Dirt')
 area("Corredor do banana", [R(17, 19, 9, 15), R(16, 16, 9, 10)], 18)
+area("Sacada", R(22, 22, 13, 13), 24)
+RAMPA[13][22] = True
+area("Sacada", [R(21, 21, 12, 13), R(20, 20, 12, 12)], 30, 'Wood')
 area("Meio de baixo", R(15, 22, 30, 36), 6)
 area("Bomb B", R(3, 15, 6, 14), 18, 'Tile')
 area("Caixão", R(3, 6, 6, 8), 30, 'Wood')
@@ -271,15 +277,15 @@ area("Pista", [R(8, 27, 2, 4), R(26, 30, 4, 6), R(9, 11, 5, 5)], 18)
 area("Construção", [R(23, 27, 6, 13), R(24, 25, 5, 5), R(16, 22, 6, 7)], 18, 'Dirt')
 area("Base CT", R(31, 41, 2, 8), 18)
 area("Arco", F([(40.5, 8), (40.5, 13), (36, 17), (36, 24.5)], 3), lin('y', 9, 18, 24, 6))
-area("Longo", R(40, 42, 18, 20), lin('x', 40, 10, 43, 6))
+area("Longo", R(38, 42, 18, 20), lin('x', 38, 10.4, 43, 6))
 area("Meio", R(23, 36, 29, 33), 6, 'Tile')
 area("Alto do meio", R(35, 41, 25, 33), 6, 'Tile')
 area("Curta", R(42, 42, 22, 26), 6)
 area("Bomb A", R(43, 53, 12, 27), 6, 'Tile')
 area("Cemitério", R(50, 53, 12, 14), 18, 'Dirt')
 area("Cemitério", R(49, 49, 12, 13), lin('x', 48.5, 6, 50.5, 18))
-area("Biblioteca", R(42, 48, 5, 7), 18, 'Wood')
-area("Biblioteca", R(47, 48, 8, 11), lin('y', 8, 18, 12, 6))
+area("Biblioteca", R(42, 52, 5, 7), 18, 'Wood')
+area("Biblioteca", R(51, 52, 8, 11), 18, 'Wood')
 area("Poço", R(49, 53, 28, 35), 0, 'Dirt')
 area("Poço", R(49, 53, 28, 29), lin('y', 27.5, 6, 30, 0), 'Dirt')
 area("Varanda", R(47, 48, 28, 31), 30, 'Wood')
